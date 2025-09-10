@@ -35,6 +35,7 @@ try:
     from src.inference.inference import get_inference_instance
     from src.web.chess_game import ChessGame, ChessRAG
     from src.web.stockfish_match import StockfishMatch
+    from src.inference.uci_utils import extract_first_uci, is_legal_uci
 except ImportError as e:
     print(f"Warning: Could not import required module: {e}")
     torch = None
@@ -279,7 +280,6 @@ def debug_compare():
         from src.inference.inference import get_inference_instance
         from src.inference.chess_engine import ChessEngineManager
         import chess
-        import re
 
         inf = get_inference_instance()
         if not inf.load_model():
@@ -287,30 +287,21 @@ def debug_compare():
 
         board = chess.Board(fen)
 
-        def parse_uci(text: str):
-            m = re.findall(r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b', text.lower())
-            for u in m:
-                try:
-                    mv = chess.Move.from_uci(u)
-                    if mv in board.legal_moves:
-                        return u
-                except Exception:
-                    continue
-            return None
-
         # Engine mode
         eng = inf.generate_response(
             f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move.",
             mode='engine', max_new_tokens=12
         )
-        eng_move = parse_uci(eng.get('response', ''))
+        eng_mv = extract_first_uci(eng.get('response', ''))
+        eng_move = eng_mv if eng_mv and is_legal_uci(fen, eng_mv) else None
 
         # Tutor mode
         tut = inf.generate_response(
             f"Position: {fen}\nMode: Tutor\nAnalyze step-by-step and end with a single UCI move line.",
             mode='tutor', max_new_tokens=160
         )
-        tut_move = parse_uci(tut.get('response', ''))
+        tut_mv = extract_first_uci(tut.get('response', ''))
+        tut_move = tut_mv if tut_mv and is_legal_uci(fen, tut_mv) else None
 
         # Stockfish
         with ChessEngineManager() as ce:
@@ -626,7 +617,7 @@ Respond with your chosen move first, then your analysis."""
         
         # Try to extract a move from the response
         response_text = result.get('response', '')
-        move_uci = extract_move_from_response(response_text, legal_moves)
+        move_uci = extract_first_uci(response_text)
         
         print(f"AI Response: {response_text[:200]}...")
         print(f"Extracted move: {move_uci}")
@@ -638,7 +629,7 @@ Respond with your chosen move first, then your analysis."""
         print(f"🚀 AI Tokens/Second: {tokens_per_second:.1f}")
         print(f"📊 AI Response Length: {len(response_text)} chars")
         
-        if move_uci and move_uci in legal_moves:
+        if move_uci and is_legal_uci(fen, move_uci):
             # Make the AI move
             move_result = chess_game.make_move(move_uci)
             move_result['ai_response'] = response_text
@@ -663,51 +654,6 @@ Respond with your chosen move first, then your analysis."""
     except Exception as e:
         print(f"AI move error: {e}")
         return jsonify({'error': str(e)}), 500
-
-
-def extract_move_from_response(response: str, legal_moves: List[str]) -> Optional[str]:
-    """Extract a legal move from AI response text."""
-    import re
-    
-    print(f"Extracting move from: {response[:200]}...")
-    print(f"Legal moves: {legal_moves}")
-    
-    # Look for UCI format moves (e.g., e2e4, g1f3)
-    uci_pattern = r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b'
-    matches = re.findall(uci_pattern, response.lower())
-    
-    print(f"Found UCI matches: {matches}")
-    
-    for match in matches:
-        if match in legal_moves:
-            print(f"✅ Found legal UCI move: {match}")
-            return match
-    
-    # Look for partial matches (e.g., if AI says "e2e4" but we have "e2e4" in legal moves)
-    for move in legal_moves:
-        if move.lower() in response.lower():
-            print(f"✅ Found partial UCI match: {move}")
-            return move
-    
-    # Look for SAN format moves and try to convert (simplified)
-    san_pattern = r'\b([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?)\b'
-    san_matches = re.findall(san_pattern, response)
-    
-    print(f"Found SAN matches: {san_matches}")
-    
-    # Try to find moves mentioned in explanations
-    explanation_pattern = r'(?:move|play|choose|select).*?([a-h][1-8][a-h][1-8])'
-    explanation_matches = re.findall(explanation_pattern, response.lower())
-    print(f"Found explanation matches: {explanation_matches}")
-    
-    # Check explanation matches
-    for move in explanation_matches:
-        if move in legal_moves:
-            print(f"✅ Found move in explanation: {move}")
-            return move
-    
-    print("❌ No valid move found in response")
-    return None
 
 
 def find_free_port(start_port=5000, max_attempts=10):

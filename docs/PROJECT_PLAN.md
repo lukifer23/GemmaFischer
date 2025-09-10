@@ -446,9 +446,9 @@
   - [ ] Remove duplicate `Position:` injection in engine prompts
   - [ ] Update callers that currently embed `Position:` (web, eval scripts, docs examples)
 
-- [ ] Central UCI parsing/validation:
-  - [ ] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
-  - [ ] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
+- [x] Central UCI parsing/validation:
+  - [x] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
+  - [x] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
 
 - [ ] Deterministic engine decoding defaults:
   - [ ] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)

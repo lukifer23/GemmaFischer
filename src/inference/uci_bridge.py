@@ -22,6 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.inference.inference import ChessModelInterface
 from src.inference.chess_engine import ChessEngineManager
+from src.inference.uci_utils import extract_first_uci, is_legal_uci
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -384,25 +385,16 @@ Respond with the best move in UCI format at the end."""
     def _parse_move_from_response(self, response: str, board: chess.Board) -> Optional[chess.Move]:
         """Parse a move from the model response"""
         try:
-            # Look for UCI move format in the response
-            import re
-            uci_pattern = r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b'
-            matches = re.findall(uci_pattern, response.lower())
-            
-            for match in matches:
-                try:
-                    move = chess.Move.from_uci(match)
-                    if move in board.legal_moves:
-                        return move
-                except ValueError:
-                    continue
-            
+            mv_str = extract_first_uci(response)
+            if mv_str and is_legal_uci(board.fen(), mv_str):
+                return chess.Move.from_uci(mv_str)
+
             # If no legal UCI move was parsed, try fallback to Stockfish
             if self.chess_engine:
                 return self.chess_engine.get_best_move(board, depth=self.options.depth, time_limit_ms=self.options.time_limit)
 
             return None
-            
+
         except Exception as e:
             logger.error(f"Error parsing move from response: {e}")
             return None

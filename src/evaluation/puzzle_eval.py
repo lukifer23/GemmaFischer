@@ -7,25 +7,13 @@ Outputs: prints summary and optional JSON report when --out is provided.
 
 import argparse
 import json
-import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 import chess
 
 from src.inference.inference import ChessGemmaInference
-
-
-def parse_first_uci(text: str, board: chess.Board) -> Optional[str]:
-    pattern = r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b"
-    for m in re.findall(pattern, text.lower()):
-        try:
-            mv = chess.Move.from_uci(m)
-            if mv in board.legal_moves:
-                return m
-        except Exception:
-            continue
-    return None
+from src.inference.uci_utils import extract_first_uci, is_legal_uci
 
 
 def load_puzzles(path: Path, limit: int) -> List[Dict[str, Any]]:
@@ -75,7 +63,8 @@ def main():
         board = chess.Board(fen)
         prompt = f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
         out = inf.generate_response(prompt, mode='engine', max_new_tokens=12)
-        mv = parse_first_uci(out.get('response', ''), board)
+        mv_candidate = extract_first_uci(out.get('response', ''))
+        mv = mv_candidate if mv_candidate and is_legal_uci(fen, mv_candidate) else None
         first = (mv == sol[0]) if mv else False
         if first:
             first_ok += 1

@@ -7,7 +7,6 @@ Outputs: prints summary and optional JSON report when --out is provided.
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
@@ -15,18 +14,7 @@ import chess
 
 from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
-
-
-def parse_uci_from_text(text: str, board: chess.Board) -> Optional[chess.Move]:
-    pattern = r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b"
-    for m in re.findall(pattern, text.lower()):
-        try:
-            mv = chess.Move.from_uci(m)
-            if mv in board.legal_moves:
-                return mv
-        except Exception:
-            continue
-    return None
+from src.inference.uci_utils import extract_first_uci, is_legal_uci
 
 
 def load_fens(path: Path, limit: Optional[int]) -> List[str]:
@@ -78,7 +66,8 @@ def main():
             q = f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
             gen = inference.generate_response(q, mode="engine", max_new_tokens=12)
             model_text = gen.get("response", "")
-            model_move = parse_uci_from_text(model_text, board)
+            mv_str = extract_first_uci(model_text)
+            model_move = chess.Move.from_uci(mv_str) if mv_str and is_legal_uci(fen, mv_str) else None
 
             # Stockfish best move
             sf_move = engine.get_best_move(board, depth=args.depth, time_limit_ms=0)

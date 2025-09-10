@@ -15,7 +15,8 @@ from pathlib import Path
 
 from src.evaluation.stockfish_match_eval import load_fens as _load_fens
 from src.evaluation.puzzle_eval import load_puzzles as _load_puzzles
-from src.evaluation.puzzle_eval import ChessGemmaInference, parse_first_uci
+from src.inference.inference import ChessGemmaInference
+from src.inference.uci_utils import extract_first_uci, is_legal_uci
 import chess
 
 
@@ -35,7 +36,7 @@ def eval_legality_syntax(sample_questions):
 
 
 def eval_stockfish_match(fens_file: Path, limit: int, depth: int):
-    from src.evaluation.stockfish_match_eval import ChessGemmaInference, ChessEngineManager, parse_uci_from_text
+    from src.evaluation.stockfish_match_eval import ChessGemmaInference, ChessEngineManager
     fens = _load_fens(fens_file, limit)
     if not fens:
         return {'top1_match': 0.0, 'count': 0}
@@ -48,9 +49,10 @@ def eval_stockfish_match(fens_file: Path, limit: int, depth: int):
             board = chess.Board(fen)
             q = f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
             gen = inf.generate_response(q, mode='engine', max_new_tokens=12)
-            mv = parse_uci_from_text(gen.get('response', ''), board)
+            mv_str = extract_first_uci(gen.get('response', ''))
+            mv = chess.Move.from_uci(mv_str) if mv_str and is_legal_uci(fen, mv_str) else None
             sf = engine.get_best_move(board, depth=depth, time_limit_ms=0)
-            if mv and sf and mv == sf.uci():
+            if mv and sf and mv == sf:
                 match += 1
     return {'top1_match': match / len(fens), 'count': len(fens)}
 
@@ -69,7 +71,8 @@ def eval_puzzles(puzzles_file: Path, limit: int):
         board = chess.Board(fen)
         q = f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
         gen = inf.generate_response(q, mode='engine', max_new_tokens=12)
-        mv = parse_first_uci(gen.get('response', ''), board)
+        mv_str = extract_first_uci(gen.get('response', ''))
+        mv = mv_str if mv_str and is_legal_uci(fen, mv_str) else None
         if mv == sol[0]:
             ok += 1
     return {'first_move_accuracy': ok / len(puzzles), 'count': len(puzzles)}

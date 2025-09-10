@@ -12,6 +12,8 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 
+from src.inference.uci_utils import extract_first_uci, is_legal_uci
+
 @dataclass
 class MoveResult:
     move: str
@@ -224,9 +226,9 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
         print(f"Response Length: {len(response_text)} chars")
         
         # Extract move from response
-        move_uci = self._extract_move_from_response(response_text, legal_moves)
-        
-        if not move_uci:
+        move_uci = extract_first_uci(response_text)
+
+        if not move_uci or not is_legal_uci(self.board.fen(), move_uci):
             # Fallback to random move
             import random
             move_uci = random.choice(legal_moves)
@@ -253,25 +255,6 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
         print(f"💭 Response: {response_text[:200]}...")
         
         return move_result
-    
-    def _extract_move_from_response(self, response: str, legal_moves: List[str]) -> Optional[str]:
-        """Extract a legal move from model response."""
-        import re
-        
-        # Look for UCI format moves
-        uci_pattern = r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b'
-        matches = re.findall(uci_pattern, response.lower())
-        
-        for match in matches:
-            if match in legal_moves:
-                return match
-        
-        # Look for partial matches
-        for move in legal_moves:
-            if move.lower() in response.lower():
-                return move
-        
-        return None
     
     def _analyze_position(self) -> str:
         """Analyze the current position and provide context."""
