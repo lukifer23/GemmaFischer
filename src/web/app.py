@@ -300,14 +300,14 @@ def debug_compare():
 
         # Engine mode
         eng = inf.generate_response(
-            f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move.",
+            f"FEN: {fen}\nMove:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move.",
             mode='engine', max_new_tokens=12
         )
         eng_move = parse_uci(eng.get('response', ''))
 
         # Tutor mode
         tut = inf.generate_response(
-            f"Position: {fen}\nMode: Tutor\nAnalyze step-by-step and end with a single UCI move line.",
+            f"FEN: {fen}\nQuestion: Analyze step-by-step and end with a single UCI move line.\nMode: Tutor",
             mode='tutor', max_new_tokens=160
         )
         tut_move = parse_uci(tut.get('response', ''))
@@ -593,7 +593,7 @@ def get_ai_move():
         
         start_time = time.time()
         print(f"\n🤖 AI MOVE REQUEST")
-        print(f"Position: {fen}")
+        print(f"FEN: {fen}")
         print(f"Player: {current_player}")
         print(f"Legal moves: {legal_moves}")
         

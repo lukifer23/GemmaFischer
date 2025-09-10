@@ -75,7 +75,7 @@ def main():
         for i, fen in enumerate(fens, 1):
             board = chess.Board(fen)
             # Model move (engine mode)
-            q = f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+            q = f"FEN: {fen}\nMove:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
             gen = inference.generate_response(q, mode="engine", max_new_tokens=12)
             model_text = gen.get("response", "")
             model_move = parse_uci_from_text(model_text, board)

@@ -160,8 +160,8 @@
 
 ### Immediate Steps (Inference/UCI)
 
-- [ ] Normalize engine prompt to match training: `FEN: <fen>\nMove:`
-- [ ] Remove duplicate `Position:` injection when a FEN is already supplied
+- [x] Normalize engine prompt to match training: `FEN: <fen>\nMove:`
+- [x] Remove duplicate `Position:` injection when a FEN is already supplied
 - [ ] Deterministic decoding for engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
 - [ ] Strengthen UCI post-processing:
   - [ ] Regex clamp first token `^[a-h][1-8][a-h][1-8][qrbn]?$`
@@ -441,10 +441,10 @@
 
 ### Unification Checklist
 
-- [ ] Prompt format (engine):
-  - [ ] Standardize to `FEN: <fen>\nMove:` across code, web, and docs
-  - [ ] Remove duplicate `Position:` injection in engine prompts
-  - [ ] Update callers that currently embed `Position:` (web, eval scripts, docs examples)
+- [x] Prompt format (engine):
+  - [x] Standardize to `FEN: <fen>\nMove:` across code, web, and docs
+  - [x] Remove duplicate `Position:` injection in engine prompts
+  - [x] Update callers that currently embed `Position:` (web, eval scripts, docs examples)
 
 - [ ] Central UCI parsing/validation:
   - [ ] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`

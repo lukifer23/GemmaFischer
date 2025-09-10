@@ -355,7 +355,8 @@ class UCIBridge:
         fen = board.fen()
         style = self.options.style
         
-        prompt = f"""Position: {fen}
+        prompt = f"""FEN: {fen}
+Move:
 Style: {style}
 Mode: Engine
 Generate the best move in UCI format (e.g., e2e4). Respond with only the move."""
@@ -367,11 +368,11 @@ Generate the best move in UCI format (e.g., e2e4). Respond with only the move.""
         fen = board.fen()
         style = self.options.style
         
-        prompt = f"""Position: {fen}
+        prompt = f"""FEN: {fen}
+Question: Analyze this position step by step.
 Style: {style}
 Mode: Tutor
 
-Analyze this position step by step:
 1. Evaluate the current position
 2. Identify key threats and opportunities
 3. Consider candidate moves
