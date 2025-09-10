@@ -155,6 +155,17 @@ python src/training/train.py --do_train --max_steps 10
 python src/training/train_lora_poc.py --config src/training/configs/lora_finetune.yaml
 ```
 
+#### Curriculum preset
+```bash
+python src/training/train_lora_poc.py --config src/training/configs/curriculum_chess.yaml
+```
+Phases (current preset):
+- Phase 1: instruct-only warmup (stability)
+- Phase 2: puzzles (rating 1000–2000) emphasis
+- Phase 3–4: increased puzzles with optional additions (openings/commentary when available)
+
+Runtime metrics now include CPU and RAM in the step log for quick resource awareness on M3/MPS.
+
 #### Full Training
 ```bash
 # Full training run

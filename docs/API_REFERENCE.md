@@ -487,6 +487,9 @@ Request body:
 
 Response includes moves for quick triage.
 
+#### Runtime Metrics
+Training logs include CPU and RAM usage per step for quick monitoring on macOS MPS.
+
 #### Usage Examples
 
 ```python

@@ -182,6 +182,15 @@ python scripts/ingest_lichess_puzzles.py
 # Output: data/datasets/lichess_puzzles_1000_2000.jsonl
 ```
 
+If you have the official compressed archive (`lichess_db_puzzle.csv.zst`), place it at `data/raw/lichess_puzzles.csv.zst` or `data/raw/lichess/puzzles/lichess_puzzles.csv.zst` and install streaming support:
+
+```bash
+pip install zstandard
+PUZZLES_LIMIT=50000 python scripts/ingest_lichess_puzzles.py
+```
+
+The script auto-detects `.zst` and `.csv` inputs in common locations and respects `PUZZLES_LIMIT` to cap the number of filtered rows ingested.
+
 ### 4. Annotated Game Datasets
 
 #### Master Game Collections
