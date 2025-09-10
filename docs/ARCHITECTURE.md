@@ -161,6 +161,17 @@ Chess Engine Layer
 - Threat and opportunity detection
 - Move quality assessment
 
+### Unified Fallback Strategy
+
+All move-generating entry points share a common safety net:
+
+1. The language model proposes a move in text form.
+2. The system extracts the first UCI token from the response.
+3. The token is validated against the current FEN.
+4. If extraction fails or the move is illegal, `ChessEngineManager` queries Stockfish for a legal move.
+
+This policy is applied in the core inference module, the UCI bridge, and the web API to ensure that callers always receive a legal move.
+
 ### 4. Embedding System (Planned)
 
 **Purpose**: Similar position retrieval and context enhancement
