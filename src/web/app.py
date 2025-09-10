@@ -30,9 +30,10 @@ sys.path.append(str(project_root))
 # Import required modules
 try:
     import torch
+    import chess
     from src.inference.inference import get_inference_instance
     from src.web.chess_game import ChessGame, ChessRAG
-from src.web.stockfish_match import StockfishMatch
+    from src.web.stockfish_match import StockfishMatch
 except ImportError as e:
     print(f"Warning: Could not import required module: {e}")
     torch = None
