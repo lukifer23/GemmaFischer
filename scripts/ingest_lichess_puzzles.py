@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, List
 
 
-PUZZLES_CSV = Path("data/raw/lichess_puzzles.csv")
+PUZZLES_CSV = Path("data/raw/lichess/puzzles/lichess_puzzles.csv.zst")
 OUT = Path("data/datasets/lichess_puzzles_1000_2000.jsonl")
 
 

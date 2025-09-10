@@ -1,7 +1,7 @@
 {
-  "start_time": "2025-09-10T15:07:44.642865",
+  "start_time": "2025-09-10T15:44:03.733765",
   "steps_completed": [
-    "download",
+    "download_skipped",
     "lichess_puzzles",
     "cot_generation",
     "validation",
@@ -15,6 +15,6 @@
     "cot_reasoning",
     "combined_dataset"
   ],
-  "total_processing_time": 13.834668636322021,
-  "end_time": "2025-09-10T15:07:58.477534"
+  "total_processing_time": 0.8062598705291748,
+  "end_time": "2025-09-10T15:44:04.540029"
 }
