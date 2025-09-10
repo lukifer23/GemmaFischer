@@ -454,10 +454,10 @@
   - [ ] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
   - [ ] Add `do_sample` parameter to `ChessGemmaInference.generate_response` and set by mode
 
-- [ ] Stockfish fallback policy:
-  - [ ] Remove hardcoded fallback like `"e2e4"`
-  - [ ] Enforce: extract UCI → legality check → on fail, fallback to Stockfish
-  - [ ] Ensure UCI bridge and web endpoints follow the same policy
+- [x] Stockfish fallback policy:
+  - [x] Remove hardcoded fallback like `"e2e4"`
+  - [x] Enforce: extract UCI → legality check → on fail, fallback to Stockfish
+  - [x] Ensure UCI bridge and web endpoints follow the same policy
 
 - [ ] Evaluation CLI unification:
   - [ ] Import `ChessGemmaInference` directly from `src.inference.inference` in eval scripts

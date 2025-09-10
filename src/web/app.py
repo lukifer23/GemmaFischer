@@ -33,6 +33,7 @@ try:
     import torch
     import chess
     from src.inference.inference import get_inference_instance
+    from src.inference.chess_engine import ChessEngineManager
     from src.web.chess_game import ChessGame, ChessRAG
     from src.web.stockfish_match import StockfishMatch
 except ImportError as e:
@@ -643,21 +644,36 @@ Respond with your chosen move first, then your analysis."""
             move_result = chess_game.make_move(move_uci)
             move_result['ai_response'] = response_text
             move_result['ai_confidence'] = result.get('confidence', 0.0)
-            
+
             print(f"AI Move: {move_uci}")
             print(f"Success: {move_result['success']}")
-            
+
             return jsonify(move_result)
         else:
-            # Fallback: choose a random legal move
-            import random
-            fallback_move = random.choice(legal_moves)
+            # Fallback: use ChessEngineManager to find a legal move
+            fallback_move = None
+            try:
+                with ChessEngineManager() as ce:
+                    board = chess.Board(fen)
+                    engine_move = ce.get_best_move(board, depth=12, time_limit_ms=5000)
+                    if engine_move:
+                        fallback_move = engine_move.uci()
+            except Exception as e:
+                print(f"Engine fallback error: {e}")
+
+            if not fallback_move:
+                import random
+                fallback_move = random.choice(legal_moves)
+                fallback_text = f"AI chose: {fallback_move} (random fallback)"
+            else:
+                fallback_text = f"AI chose: {fallback_move} (engine fallback)"
+
             print(f"Using fallback move: {fallback_move}")
-            
+
             move_result = chess_game.make_move(fallback_move)
-            move_result['ai_response'] = f"AI chose: {fallback_move} (fallback)"
+            move_result['ai_response'] = fallback_text
             move_result['ai_confidence'] = 0.5
-            
+
             return jsonify(move_result)
             
     except Exception as e:

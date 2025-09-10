@@ -311,43 +311,41 @@ class UCIBridge:
     def _generate_engine_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
         """Generate a move in engine mode (fast, minimal output)"""
         try:
-            if self.model_interface and not self.options.use_stockfish_fallback:
-                # Use the model for move generation
+            move = None
+            if self.model_interface:
                 prompt = self._create_engine_prompt(board)
                 response = self.model_interface.generate_response(prompt)
                 move = self._parse_move_from_response(response, board)
-                if move:
-                    return move
-            
-            # Fallback to Stockfish
-            if self.chess_engine:
+
+            if not move and self.options.use_stockfish_fallback and self.chess_engine:
                 return self.chess_engine.get_best_move(board, depth, time_limit)
-            
-            return None
-            
+
+            return move
+
         except Exception as e:
             logger.error(f"Error in engine mode: {e}")
+            if self.options.use_stockfish_fallback and self.chess_engine:
+                return self.chess_engine.get_best_move(board, depth, time_limit)
             return None
     
     def _generate_tutor_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
         """Generate a move in tutor mode (with explanations)"""
         try:
+            move = None
             if self.model_interface:
-                # Use the model for move generation with explanations
                 prompt = self._create_tutor_prompt(board)
                 response = self.model_interface.generate_response(prompt)
                 move = self._parse_move_from_response(response, board)
-                if move:
-                    return move
-            
-            # Fallback to Stockfish
-            if self.chess_engine:
+
+            if not move and self.options.use_stockfish_fallback and self.chess_engine:
                 return self.chess_engine.get_best_move(board, depth, time_limit)
-            
-            return None
-            
+
+            return move
+
         except Exception as e:
             logger.error(f"Error in tutor mode: {e}")
+            if self.options.use_stockfish_fallback and self.chess_engine:
+                return self.chess_engine.get_best_move(board, depth, time_limit)
             return None
     
     def _create_engine_prompt(self, board: chess.Board) -> str:
@@ -385,11 +383,10 @@ Respond with the best move in UCI format at the end."""
     def _parse_move_from_response(self, response: str, board: chess.Board) -> Optional[chess.Move]:
         """Parse a move from the model response"""
         try:
-            # Look for UCI move format in the response
             import re
             uci_pattern = r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b'
             matches = re.findall(uci_pattern, response.lower())
-            
+
             for match in matches:
                 try:
                     move = chess.Move.from_uci(match)
@@ -397,13 +394,9 @@ Respond with the best move in UCI format at the end."""
                         return move
                 except ValueError:
                     continue
-            
-            # If no legal UCI move was parsed, try fallback to Stockfish
-            if self.chess_engine:
-                return self.chess_engine.get_best_move(board, depth=self.options.depth, time_limit_ms=self.options.time_limit)
 
             return None
-            
+
         except Exception as e:
             logger.error(f"Error parsing move from response: {e}")
             return None

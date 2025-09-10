@@ -253,7 +253,7 @@ class ChessGemmaInference:
                 if mode == "tutor":
                     answer = "I'm having trouble generating a response. Please try rephrasing your question or ask about a specific chess position."
                 else:
-                    answer = "e2e4"  # Default opening move
+                    answer = ""  # Defer to engine fallback
                 print("Using fallback response due to poor model output")
             
             print(f"Final Answer Preview: {answer[:200]}{'...' if len(answer) > 200 else ''}")
@@ -262,28 +262,44 @@ class ChessGemmaInference:
             postprocessed = False
             if mode == 'engine':
                 import re, chess
+                mv = None
+                board = None
+                fen_match = re.search(r"position:\s*([^\n]+)", question, re.IGNORECASE)
+                if fen_match:
+                    try:
+                        board = chess.Board(fen_match.group(1).strip())
+                    except Exception:
+                        board = None
                 try:
-                    # Try to extract first UCI-looking token
                     pattern = r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b"
-                    m = re.findall(pattern, answer.lower())
-                    if m:
-                        # Validate against a board if question contains a FEN line
-                        fen_match = re.search(r"position:\s*([^\n]+)", question, re.IGNORECASE)
-                        mv = m[0]
-                        if fen_match:
-                            fen = fen_match.group(1).strip()
+                    matches = re.findall(pattern, answer.lower())
+                    if matches:
+                        candidate = matches[0]
+                        if board:
                             try:
-                                board = chess.Board(fen)
-                                move_obj = chess.Move.from_uci(mv)
-                                if move_obj not in board.legal_moves:
-                                    mv = None
+                                move_obj = chess.Move.from_uci(candidate)
+                                if move_obj in board.legal_moves:
+                                    mv = candidate
                             except Exception:
                                 pass
-                        if mv:
-                            answer = mv
-                            postprocessed = True
+                        else:
+                            mv = candidate
                 except Exception:
-                    pass
+                    mv = None
+
+                if not mv and board:
+                    try:
+                        from .chess_engine import ChessEngineManager
+                        with ChessEngineManager() as ce:
+                            best = ce.get_best_move(board)
+                            if best:
+                                mv = best.uci()
+                    except Exception:
+                        pass
+
+                if mv:
+                    answer = mv
+                    postprocessed = True
 
             # Simple heuristic confidence
             word_count = len(answer.split())
