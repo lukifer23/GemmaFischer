@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Create a small fine-tune JSONL dataset from `initial_chess_q_and_a.md`.
-Each line will be a JSON object with a `text` field suitable for causal LM training:
-"Question: <q>\nAnswer: <a>".
+"""Create a small instruction-tuning JSONL dataset from
+`initial_chess_q_and_a.md`.
+
+Each line follows the `{task, prompt, response, meta}` schema, where ``task`` is
+set to ``"general_qa"`` and ``prompt`` contains the question followed by the
+`"Answer:"` tag.
 """
 import re
 import json
@@ -39,7 +42,12 @@ entries = entries[:limit]
 
 with OUT_FILE.open('w', encoding='utf-8') as f:
     for q, a in entries:
-        obj = {"text": f"Question: {q}\nAnswer: {a}"}
+        obj = {
+            "task": "general_qa",
+            "prompt": f"Question: {q}\nAnswer:",
+            "response": a,
+            "meta": {},
+        }
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
 print(f"Wrote {len(entries)} examples to {OUT_FILE}")

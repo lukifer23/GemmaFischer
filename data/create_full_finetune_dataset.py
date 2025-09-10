@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Create a full fine-tune JSONL dataset from `data/processed/chess_conversations.json`.
-Handles several common schemas and writes lines of JSON with a `text` field suitable for causal LM
-training: "Question: <q>\nAnswer: <a>".
+"""Create a full instruction-tuning JSONL dataset from
+`data/processed/chess_conversations.json`.
+
+The script attempts to handle several common source schemas and writes lines in
+the `{task, prompt, response, meta}` format. The ``task`` field is set to
+``"general_qa"`` and ``prompt`` contains the question followed by ``"Answer:"``.
 
 Usage: python create_full_finetune_dataset.py [--max_examples N]
 """
@@ -181,8 +184,13 @@ if args.max_examples>0:
     examples = examples[:args.max_examples]
 
 with OUT_FILE.open('w', encoding='utf-8') as f:
-    for q,a in examples:
-        obj = {"text": f"Question: {q}\nAnswer: {a}"}
+    for q, a in examples:
+        obj = {
+            "task": "general_qa",
+            "prompt": f"Question: {q}\nAnswer:",
+            "response": a,
+            "meta": {},
+        }
         f.write(json.dumps(obj, ensure_ascii=False) + '\n')
 
 print(f"Wrote {len(examples)} examples to {OUT_FILE}")
