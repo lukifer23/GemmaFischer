@@ -165,21 +165,78 @@ Step 500: Loss = 1.6,  LR = 1.0e-4
 Step 1000: Loss = 1.2, LR = 0.6e-4
 ```
 
-## Dual-Mode Training
+## Advanced Training Strategies
+
+### Dual-Mode Training
 
 GemmaFischer supports two distinct training modes for different use cases:
 
-### Engine Mode Training
+#### Engine Mode Training
 - **Purpose**: Fast, minimal move generation for UCI compatibility
 - **Data Format**: Position → Move pairs
 - **Output**: Single UCI move (e.g., "e2e4")
 - **Use Case**: Chess software integration, rapid play
 
-### Tutor Mode Training
+#### Tutor Mode Training
 - **Purpose**: Educational move generation with explanations
 - **Data Format**: Position → Analysis → Move
 - **Output**: Step-by-step reasoning + UCI move
 - **Use Case**: Learning, analysis, teaching
+
+### Chain-of-Thought Integration
+
+#### Structured Reasoning
+```python
+def create_cot_training_data(position, move, analysis):
+    """Create chain-of-thought training examples"""
+    return {
+        "conversations": [
+            {
+                "role": "user", 
+                "content": f"Position: {position.fen()}\nMode: Tutor\nAnalyze this position step by step."
+            },
+            {
+                "role": "assistant",
+                "content": f"""Let me analyze this position step by step:
+
+1. **Material Count**: {analysis['material']}
+2. **King Safety**: {analysis['king_safety']}
+3. **Key Threats**: {analysis['threats']}
+4. **Best Move**: {move.uci()}
+
+Reasoning: {analysis['reasoning']}"""
+            }
+        ]
+    }
+```
+
+#### CoT Templates
+- **Tactical Analysis**: Identify threats, calculate variations, find best move
+- **Positional Analysis**: Evaluate structure, plan development, assess imbalances
+- **Endgame Analysis**: Count material, identify key squares, calculate technique
+
+### Multi-Task Learning
+
+#### Task Mixing Strategy
+```python
+def create_multi_task_dataset():
+    """Create dataset with multiple chess tasks"""
+    tasks = {
+        'move_prediction': 0.3,      # Pure move generation
+        'tactical_explanation': 0.25, # Puzzle solving with explanation
+        'positional_analysis': 0.2,   # Strategic evaluation
+        'opening_theory': 0.15,       # Opening identification and plans
+        'endgame_technique': 0.1      # Endgame knowledge
+    }
+    return tasks
+```
+
+#### Curriculum Learning
+1. **Phase 1**: Basic rules and legal moves
+2. **Phase 2**: Simple tactics and patterns
+3. **Phase 3**: Positional concepts and strategy
+4. **Phase 4**: Complex combinations and endgames
+5. **Phase 5**: Style conditioning and advanced analysis
 
 ### Training Data Preparation
 

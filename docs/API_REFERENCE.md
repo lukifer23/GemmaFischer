@@ -1,8 +1,8 @@
-# ChessGemma API Reference
+# GemmaFischer API Reference
 
 ## Overview
 
-This document provides comprehensive API reference for all ChessGemma components, including training, inference, evaluation, and web interface modules.
+This document provides comprehensive API reference for all GemmaFischer components, including training, inference, evaluation, web interface, UCI bridge, embedding system, and vision module. GemmaFischer is a dual-purpose chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst.
 
 ## Training API
 

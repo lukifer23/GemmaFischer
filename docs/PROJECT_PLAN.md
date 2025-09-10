@@ -133,6 +133,215 @@
 
 ---
 
+## Detailed Implementation Plan
+
+### Phase 1: Foundation (Completed) ✅
+- [x] Basic LoRA fine-tuning pipeline
+- [x] Chess engine integration with Stockfish
+- [x] Web interface with board visualization
+- [x] UCI bridge for chess software compatibility
+- [x] Dual-mode operation (engine/tutor)
+- [x] Basic evaluation framework
+- [x] MPS optimization for Apple Silicon
+
+### Phase 2: Data & Quality (In Progress) 🚧
+
+#### 2.1 Dataset Overhaul
+- [ ] **ChessInstruct v1.5 Refinement**
+  - [ ] Filter out overly long sequences (>500 chars)
+  - [ ] Ensure chess relevance (chess terms present)
+  - [ ] Standardize question-answer format
+  - [ ] Categorize by difficulty and topic
+  - [ ] Target: 50k high-quality examples
+
+- [ ] **Lichess Puzzle Dataset Integration**
+  - [ ] Process 100k puzzles from Lichess dataset
+  - [ ] Convert to Q&A format with explanations
+  - [ ] Categorize by tactical theme (fork, pin, etc.)
+  - [ ] Filter by difficulty rating (1000-2000)
+  - [ ] Target: 50k puzzle examples
+
+- [ ] **Annotated Game Commentary Collection**
+  - [ ] Process Lichess studies dataset
+  - [ ] Extract position-commentary pairs
+  - [ ] Convert to educational Q&A format
+  - [ ] Focus on instructional content
+  - [ ] Target: 25k commentary examples
+
+- [ ] **Opening Theory Database Integration**
+  - [ ] Create opening identification questions
+  - [ ] Add opening plan explanations
+  - [ ] Include common variations
+  - [ ] Cover major openings (Sicilian, Ruy Lopez, etc.)
+  - [ ] Target: 10k opening examples
+
+#### 2.2 Enhanced Evaluation Framework
+- [ ] **Move Legality and Syntax Validation**
+  - [ ] Implement 100% move legality checking
+  - [ ] Add algebraic notation validation
+  - [ ] Create automated test suite
+  - [ ] Target: 100% legality rate
+
+- [ ] **Tactical Puzzle Success Rate Testing**
+  - [ ] Create puzzle test suite (1000 puzzles)
+  - [ ] Implement first-move accuracy metric
+  - [ ] Add sequence accuracy for multi-move puzzles
+  - [ ] Categorize by difficulty level
+  - [ ] Target: 70%+ for basic puzzles
+
+- [ ] **Positional Question Answering Accuracy**
+  - [ ] Create conceptual question bank (500 questions)
+  - [ ] Test chess rule knowledge
+  - [ ] Evaluate strategic understanding
+  - [ ] Add endgame technique questions
+  - [ ] Target: 90%+ for rules, 70%+ for strategy
+
+- [ ] **Stockfish Match Percentage Analysis**
+  - [ ] Compare model moves to Stockfish top moves
+  - [ ] Test on diverse position types
+  - [ ] Measure evaluation accuracy
+  - [ ] Track improvement over training
+  - [ ] Target: 50%+ top move match
+
+#### 2.3 Training Improvements
+- [ ] **Chain-of-Thought Reasoning Integration**
+  - [ ] Create structured reasoning templates
+  - [ ] Add step-by-step analysis examples
+  - [ ] Implement tactical analysis patterns
+  - [ ] Add positional evaluation frameworks
+  - [ ] Target: 100% of tutor mode responses
+
+- [ ] **Multi-Task Learning Optimization**
+  - [ ] Implement task mixing strategy
+  - [ ] Add curriculum learning phases
+  - [ ] Balance different task types
+  - [ ] Monitor task-specific performance
+  - [ ] Target: Balanced performance across tasks
+
+- [ ] **Style Conditioning Implementation**
+  - [ ] Create Fischer style training data
+  - [ ] Add positional style examples
+  - [ ] Implement tutor style conditioning
+  - [ ] Test style switching capability
+  - [ ] Target: Distinct style outputs
+
+### Phase 3: Advanced Features (Planned) 📋
+
+#### 3.1 Embedding System
+- [ ] **Vector Database for Chess Positions**
+  - [ ] Implement position embedding generation
+  - [ ] Create FAISS-based vector database
+  - [ ] Store 1M+ position embeddings
+  - [ ] Add metadata (game info, annotations)
+  - [ ] Target: Sub-second similarity search
+
+- [ ] **FAISS-based Similarity Search**
+  - [ ] Implement nearest neighbor search
+  - [ ] Add filtering by game characteristics
+  - [ ] Create context extraction pipeline
+  - [ ] Optimize for MPS compatibility
+  - [ ] Target: <100ms search time
+
+- [ ] **Context Enhancement for Responses**
+  - [ ] Integrate similar position retrieval
+  - [ ] Add historical game context
+  - [ ] Implement opening theory lookup
+  - [ ] Create context-aware prompts
+  - [ ] Target: 50%+ context relevance
+
+#### 3.2 Vision Module
+- [ ] **Chess Piece Detection and Recognition**
+  - [ ] Train YOLO model on chess piece dataset
+  - [ ] Implement piece classification
+  - [ ] Add confidence scoring
+  - [ ] Optimize for MPS inference
+  - [ ] Target: 95%+ piece recognition accuracy
+
+- [ ] **Board Corner Detection and Correction**
+  - [ ] Implement perspective correction
+  - [ ] Add board boundary detection
+  - [ ] Create square identification
+  - [ ] Handle various board orientations
+  - [ ] Target: 90%+ board detection accuracy
+
+- [ ] **FEN Generation from Images**
+  - [ ] Convert piece positions to FEN
+  - [ ] Add position validation
+  - [ ] Implement error correction
+  - [ ] Create confidence scoring
+  - [ ] Target: 95%+ FEN accuracy
+
+#### 3.3 Enhanced Analysis
+- [ ] **Blunder Identification and Explanation**
+  - [ ] Implement move quality assessment
+  - [ ] Add blunder detection algorithms
+  - [ ] Create explanation templates
+  - [ ] Integrate with Stockfish analysis
+  - [ ] Target: 90%+ blunder detection
+
+- [ ] **Tactical Motif Recognition**
+  - [ ] Implement pattern recognition
+  - [ ] Add motif classification (fork, pin, etc.)
+  - [ ] Create explanation generation
+  - [ ] Test on puzzle datasets
+  - [ ] Target: 80%+ motif recognition
+
+- [ ] **Opening Theory and Naming**
+  - [ ] Create opening identification system
+  - [ ] Add variation tracking
+  - [ ] Implement plan suggestion
+  - [ ] Cover major opening systems
+  - [ ] Target: 85%+ opening identification
+
+- [ ] **Endgame Tablebase Integration**
+  - [ ] Integrate Syzygy tablebases
+  - [ ] Add perfect play information
+  - [ ] Create endgame explanations
+  - [ ] Handle 6-piece endgames
+  - [ ] Target: 100% accuracy for tablebase positions
+
+### Phase 4: Polish & Deployment (Future) 🔮
+
+#### 4.1 Multi-Model Support
+- [ ] **Different Model Sizes and Variants**
+  - [ ] Support Gemma-3 270M, 1.3B, 2B
+  - [ ] Implement model switching
+  - [ ] Add performance comparison
+  - [ ] Create model selection logic
+  - [ ] Target: Seamless model switching
+
+#### 4.2 Mobile Integration
+- [ ] **Core ML Deployment for iOS**
+  - [ ] Convert model to Core ML format
+  - [ ] Implement iOS app
+  - [ ] Add camera integration
+  - [ ] Create mobile-optimized UI
+  - [ ] Target: Native iOS performance
+
+#### 4.3 Performance Optimization
+- [ ] **Quantization and Speed Improvements**
+  - [ ] Implement 4-bit quantization
+  - [ ] Add model compression
+  - [ ] Optimize inference speed
+  - [ ] Create performance benchmarks
+  - [ ] Target: 2x speed improvement
+
+#### 4.4 User Experience
+- [ ] **Advanced UI/UX Features**
+  - [ ] Add interactive tutorials
+  - [ ] Implement progress tracking
+  - [ ] Create personalized learning paths
+  - [ ] Add social features
+  - [ ] Target: Engaging user experience
+
+#### 4.5 Research Integration
+- [ ] **Academic Collaboration and Publication**
+  - [ ] Prepare research paper
+  - [ ] Open-source dataset
+  - [ ] Create evaluation benchmarks
+  - [ ] Submit to conferences
+  - [ ] Target: Academic recognition
+
 ## Suggested File Structure
 
 ```plaintext

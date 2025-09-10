@@ -2,9 +2,17 @@
 
 ## System Overview
 
-GemmaFischer is a dual-purpose chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst. Built around fine-tuned language models with chain-of-thought reasoning, it provides both tactical analysis and educational explanations. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
+GemmaFischer is a comprehensive chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst. Built around fine-tuned language models with chain-of-thought reasoning, it provides both tactical analysis and educational explanations. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
 
 **Platform**: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
+
+### Key Design Principles
+- **Modular Architecture**: Clean separation of concerns for easy extension
+- **Dual-Mode Operation**: Engine mode (fast moves) and Tutor mode (explanations)
+- **Hybrid Intelligence**: Combines LLM reasoning with chess engine precision
+- **Retrieval-Augmented Generation**: Context enhancement through similar position lookup
+- **Chain-of-Thought Reasoning**: Step-by-step analysis and explanation
+- **Style Conditioning**: Historical player style emulation capabilities
 
 ## High-Level Architecture
 
@@ -149,6 +157,56 @@ Chess Engine Layer
 - Position classification (opening/middle/endgame)
 - Threat and opportunity detection
 - Move quality assessment
+
+### 4. Embedding System (Planned)
+
+**Purpose**: Similar position retrieval and context enhancement
+
+**Key Components**:
+- `PositionEmbedder`: Generate embeddings for chess positions
+- `VectorDatabase`: FAISS-based similarity search
+- `ContextRetriever`: Find similar positions and extract context
+
+**Architecture**:
+```
+Embedding System
+├── Position Encoding (FEN → Vector)
+├── Vector Database (FAISS)
+├── Similarity Search
+├── Context Extraction
+└── Prompt Enhancement
+```
+
+**Planned Features**:
+- Chess position vectorization
+- Similar position lookup
+- Historical game context retrieval
+- Opening theory integration
+
+### 5. Vision Module (Planned)
+
+**Purpose**: Board image to FEN conversion
+
+**Key Components**:
+- `BoardDetector`: Find chessboard in images
+- `PieceRecognizer`: Identify pieces and positions
+- `FENGenerator`: Convert to FEN notation
+
+**Architecture**:
+```
+Vision Pipeline
+├── Image Preprocessing
+├── Board Detection
+├── Piece Recognition
+├── Position Validation
+└── FEN Generation
+```
+
+**Planned Features**:
+- Real-world board image processing
+- Piece detection and classification
+- Perspective correction
+- FEN validation and error handling
 
 ### 4. Web Interface (`src/web/`)
 
@@ -308,22 +366,63 @@ Evaluation Pipeline
 - Error alerting
 - Performance dashboards
 
+## Data Flow Architecture
+
+### Training Pipeline
+```
+Raw Data → Preprocessing → Formatting → LoRA Training → Model Checkpoint
+    ↓
+ChessInstruct → Chat Format → Dual-Mode Data → Unsloth Training → Adapter
+```
+
+### Inference Pipeline
+```
+User Input → Mode Selection → Prompt Construction → Model Generation → Validation
+    ↓
+Question → Engine/Tutor → FEN + Question → LLM Response → Stockfish Check
+```
+
+### Retrieval-Augmented Generation (Planned)
+```
+Position → Embedding → Similar Search → Context Retrieval → Enhanced Prompt
+    ↓
+FEN → Vector → FAISS Lookup → Historical Games → Context + Question
+```
+
+## Integration Patterns
+
+### Chess Engine Integration
+- **Validation**: Every move suggestion is validated by Stockfish
+- **Analysis**: Position evaluation and tactical analysis
+- **Fallback**: Stockfish provides backup when model fails
+
+### Multi-Modal Integration (Planned)
+- **Text**: Natural language questions and explanations
+- **Position**: FEN notation and board states
+- **Images**: Real-world chess board photos
+- **Context**: Historical games and similar positions
+
+### Style Conditioning (Planned)
+- **Fischer Style**: Aggressive, tactical play
+- **Positional Style**: Strategic, patient approach
+- **Tutor Style**: Educational, explanatory tone
+- **Engine Style**: Concise, move-focused responses
+
 ## Future Architecture Considerations
 
-### Scalability Improvements
-- Microservices architecture
-- Container orchestration
-- Database integration
-- Caching layers
+### Phase 2: Data & Quality
+- **Dataset Overhaul**: High-quality chess Q&A curation
+- **Enhanced Evaluation**: Comprehensive benchmarking suite
+- **Training Improvements**: Advanced fine-tuning strategies
 
-### Feature Enhancements
-- Multi-model support
-- Advanced chess analysis
-- Real-time collaboration
-- Mobile applications
+### Phase 3: Advanced Features
+- **Embedding System**: Similar position retrieval and context enhancement
+- **Vision Module**: Board image to FEN conversion
+- **Enhanced Analysis**: Blunder detection, tactical motif recognition
+- **Style Conditioning**: Historical player style emulation
 
-### Performance Optimizations
-- Model quantization
-- Inference optimization
-- Caching strategies
-- Load balancing
+### Phase 4: Polish & Deployment
+- **Multi-Model Support**: Different model sizes and variants
+- **Mobile Integration**: Core ML deployment for iOS devices
+- **Performance Optimization**: Quantization and speed improvements
+- **Research Integration**: Academic collaboration and publication
