@@ -1,5 +1,7 @@
-# Minimal dependencies for the Gemma-3 LoRA fine-tuning pipeline
+# Dependencies for GemmaFischer - Chess LLM Engine + Tutor
 # Note: On Apple Silicon you may want to install torch with MPS support as documented in the plan.
+
+# Core ML dependencies
 transformers
 datasets
 accelerate
@@ -7,13 +9,33 @@ peft
 trl
 huggingface_hub
 unsloth
+torch
+torchvision
+torchaudio
+
+# Chess and UCI support
+python-chess
+stockfish  # Python wrapper for Stockfish engine
+
+# Web interface
+flask
+flask-cors
+
+# Data processing and embeddings
+sentence-transformers  # For embedding generation
+faiss-cpu  # For vector search (or faiss-gpu if you have CUDA)
+pandas
+numpy
+
+# PGN processing and chess data
+pgnparser  # For PGN file parsing
+
+# Evaluation and testing
 pytest
 mlflow  # For experiment tracking and monitoring
-python-chess  # For chess-specific evaluation and move validation
-flask  # For web interface
-flask-cors  # For CORS support in web interface
-# Optional and platform dependent
-# bitsandbytes
-# torch
-# torchvision
-# torchaudio
+
+# Optional dependencies
+# bitsandbytes  # For quantization (platform dependent)
+# qdrant-client  # Alternative vector database
+# opencv-python  # For vision module (if implementing board image recognition)
+# pillow  # For image processing

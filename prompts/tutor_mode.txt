@@ -1,0 +1,114 @@
+# Tutor Mode Prompt Template
+
+## Purpose
+This template is used for educational move generation with explanations.
+The model should provide step-by-step analysis and reasoning.
+
+## Template
+
+```
+Position: {fen}
+Style: {style}
+Mode: Tutor
+
+Analyze this position step by step:
+1. Evaluate the current position
+2. Identify key threats and opportunities
+3. Consider candidate moves
+4. Choose the best move with reasoning
+
+Respond with the best move in UCI format at the end.
+```
+
+## Style Variations
+
+### Fischer Style
+```
+Position: {fen}
+Style: fischer
+Mode: Tutor
+
+Analyze this position like Bobby Fischer would:
+1. Look for tactical shots and combinations
+2. Evaluate piece activity and king safety
+3. Consider aggressive attacking moves
+4. Choose the most forcing and precise move
+
+Explain your reasoning step by step, then provide the best move in UCI format.
+```
+
+### Aggressive Style
+```
+Position: {fen}
+Style: aggressive
+Mode: Tutor
+
+Analyze this position with an aggressive mindset:
+1. Look for attacking opportunities and tactical shots
+2. Evaluate threats to the opponent's king
+3. Consider sacrifices and forcing moves
+4. Choose the most aggressive and active move
+
+Explain your reasoning step by step, then provide the best move in UCI format.
+```
+
+### Defensive Style
+```
+Position: {fen}
+Style: defensive
+Mode: Tutor
+
+Analyze this position with a defensive mindset:
+1. Evaluate threats to your own position
+2. Look for solid, safe moves
+3. Consider positional factors and piece coordination
+4. Choose the most solid and reliable move
+
+Explain your reasoning step by step, then provide the best move in UCI format.
+```
+
+### Balanced Style
+```
+Position: {fen}
+Style: balanced
+Mode: Tutor
+
+Analyze this position with a balanced approach:
+1. Evaluate both tactical and positional factors
+2. Consider both attacking and defensive needs
+3. Look for moves that improve your position
+4. Choose the most principled and sound move
+
+Explain your reasoning step by step, then provide the best move in UCI format.
+```
+
+## Expected Output Format
+- Step-by-step analysis
+- Clear reasoning for the chosen move
+- Best move in UCI format at the end
+- Educational explanations suitable for learning
+
+## Example Output
+```
+Let me analyze this position step by step:
+
+1. Position Evaluation:
+   - White has a slight space advantage
+   - Black's king is exposed on the kingside
+   - Both sides have active pieces
+
+2. Key Threats and Opportunities:
+   - White can attack the exposed black king
+   - Black has some counterplay on the queenside
+   - The center is contested
+
+3. Candidate Moves:
+   - Qh5: Direct attack on the king
+   - Nf5: Centralizing the knight
+   - O-O: Castling for safety
+
+4. Best Move Reasoning:
+   Qh5 is the most forcing move, directly attacking the black king and creating immediate threats. This move puts maximum pressure on Black and forces them to respond to the attack.
+
+Best move: Qh5
+```

@@ -1,0 +1,58 @@
+# Engine Mode Prompt Template
+
+## Purpose
+This template is used for fast, minimal move generation in UCI engine mode.
+The model should respond with only the best move in UCI format.
+
+## Template
+
+```
+Position: {fen}
+Style: {style}
+Mode: Engine
+
+Generate the best move in UCI format (e.g., e2e4). Respond with only the move.
+```
+
+## Style Variations
+
+### Fischer Style
+```
+Position: {fen}
+Style: fischer
+Mode: Engine
+
+Play like Bobby Fischer - aggressive, tactical, and precise. Generate the best move in UCI format.
+```
+
+### Aggressive Style
+```
+Position: {fen}
+Style: aggressive
+Mode: Engine
+
+Play aggressively - look for tactical shots and attacking opportunities. Generate the best move in UCI format.
+```
+
+### Defensive Style
+```
+Position: {fen}
+Style: defensive
+Mode: Engine
+
+Play defensively - prioritize safety and solid positional play. Generate the best move in UCI format.
+```
+
+### Balanced Style
+```
+Position: {fen}
+Style: balanced
+Mode: Engine
+
+Play a balanced game - consider both tactics and positional factors. Generate the best move in UCI format.
+```
+
+## Expected Output Format
+- Single UCI move (e.g., "e2e4", "g1f3", "e7e5")
+- No explanations or additional text
+- Must be a legal move in the given position

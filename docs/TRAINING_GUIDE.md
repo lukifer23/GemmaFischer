@@ -1,8 +1,8 @@
-# ChessGemma Training Guide
+# GemmaFischer Training Guide
 
 ## Overview
 
-This guide covers the complete training process for ChessGemma, from data preparation to model deployment. The system uses LoRA (Low-Rank Adaptation) fine-tuning with Unsloth optimization for efficient training on Apple Silicon.
+This guide covers the complete training process for GemmaFischer, from data preparation to model deployment. The system uses LoRA (Low-Rank Adaptation) fine-tuning with Unsloth optimization for efficient training on Apple Silicon, with support for dual-mode operation (engine and tutor modes) and chain-of-thought reasoning.
 
 ## Prerequisites
 
@@ -148,6 +148,91 @@ Step 100: Loss = 2.4,  LR = 1.6e-4
 Step 200: Loss = 2.0,  LR = 1.4e-4
 Step 500: Loss = 1.6,  LR = 1.0e-4
 Step 1000: Loss = 1.2, LR = 0.6e-4
+```
+
+## Dual-Mode Training
+
+GemmaFischer supports two distinct training modes for different use cases:
+
+### Engine Mode Training
+- **Purpose**: Fast, minimal move generation for UCI compatibility
+- **Data Format**: Position → Move pairs
+- **Output**: Single UCI move (e.g., "e2e4")
+- **Use Case**: Chess software integration, rapid play
+
+### Tutor Mode Training
+- **Purpose**: Educational move generation with explanations
+- **Data Format**: Position → Analysis → Move
+- **Output**: Step-by-step reasoning + UCI move
+- **Use Case**: Learning, analysis, teaching
+
+### Training Data Preparation
+
+```python
+def prepare_dual_mode_data(chess_data):
+    """Prepare data for dual-mode training"""
+    engine_data = []
+    tutor_data = []
+    
+    for game in chess_data:
+        for position, move, analysis in game:
+            # Engine mode: simple position → move
+            engine_data.append({
+                "conversations": [
+                    {"role": "user", "content": f"Position: {position.fen()}\nMode: Engine\nGenerate best move."},
+                    {"role": "assistant", "content": move.uci()}
+                ]
+            })
+            
+            # Tutor mode: position → analysis → move
+            tutor_data.append({
+                "conversations": [
+                    {"role": "user", "content": f"Position: {position.fen()}\nMode: Tutor\nAnalyze and explain."},
+                    {"role": "assistant", "content": f"{analysis}\n\nBest move: {move.uci()}"}
+                ]
+            })
+    
+    return engine_data, tutor_data
+```
+
+### Style Conditioning
+
+Train the model to emulate different playing styles:
+
+```python
+def add_style_conditioning(data, style):
+    """Add style conditioning to training data"""
+    for item in data:
+        for conv in item["conversations"]:
+            if conv["role"] == "user":
+                conv["content"] = f"Style: {style}\n{conv['content']}"
+    return data
+
+# Example styles
+styles = ["fischer", "aggressive", "defensive", "balanced"]
+for style in styles:
+    style_data = add_style_conditioning(engine_data, style)
+    # Train with style-conditioned data
+```
+
+### Chain-of-Thought Integration
+
+Integrate step-by-step reasoning into the training:
+
+```python
+def create_cot_prompt(position, style="balanced"):
+    """Create chain-of-thought prompt"""
+    return f"""Position: {position.fen()}
+Style: {style}
+Mode: Tutor
+
+Analyze this position step by step:
+1. Evaluate the current position
+2. Identify key threats and opportunities
+3. Consider candidate moves
+4. Choose the best move with reasoning
+
+Respond with the best move in UCI format at the end."""
 ```
 
 ## Advanced Training Options

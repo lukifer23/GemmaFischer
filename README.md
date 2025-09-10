@@ -1,11 +1,14 @@
-# ChessGemma: Fine-tuning Gemma-3 for Chess Q&A
+# GemmaFischer: Chess LLM Engine + Tutor
 
-A chess AI system that fine-tunes Google's Gemma-3 270M model for chess-related question answering using LoRA (Low-Rank Adaptation) on Apple Silicon with MPS acceleration.
+A dual-purpose chess AI system that fine-tunes Google's Gemma-3 270M model to function as both a chess engine (UCI-compatible) and a chess tutor/analyst using LoRA (Low-Rank Adaptation) on Apple Silicon with MPS acceleration.
 
 ## Project Overview
 
-ChessGemma combines several components:
+GemmaFischer combines several components:
 - **Fine-tuned Language Model**: Gemma-3 270M with LoRA adapters for chess knowledge
+- **UCI Bridge Layer**: Full UCI protocol compatibility for chess software integration
+- **Dual-Mode Operation**: Engine mode (fast moves) and Tutor mode (explanations)
+- **Chain-of-Thought Reasoning**: Step-by-step analysis and explanation
 - **Chess Engine Integration**: Stockfish integration for move validation and analysis
 - **Web Interface**: Flask-based web application for interaction
 - **Evaluation Framework**: Chess-specific metrics and testing tools

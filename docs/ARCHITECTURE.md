@@ -1,8 +1,8 @@
-# ChessGemma Architecture
+# GemmaFischer Architecture
 
 ## System Overview
 
-ChessGemma is a modular chess AI system built around fine-tuned language models, chess engine integration, and web interfaces. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
+GemmaFischer is a dual-purpose chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst. Built around fine-tuned language models with chain-of-thought reasoning, it provides both tactical analysis and educational explanations. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
 
 ## High-Level Architecture
 
@@ -18,6 +18,12 @@ ChessGemma is a modular chess AI system built around fine-tuned language models,
                     ┌─────────────┴─────────────┐
                     │     Core Inference        │
                     │   (Gemma-3 + LoRA)        │
+                    │  + Chain-of-Thought       │
+                    └─────────────┬─────────────┘
+                                 │
+                    ┌─────────────┴─────────────┐
+                    │    UCI Bridge Layer       │
+                    │  (Engine + Tutor Modes)   │
                     └─────────────┬─────────────┘
                                  │
                     ┌─────────────┴─────────────┐
@@ -30,7 +36,7 @@ ChessGemma is a modular chess AI system built around fine-tuned language models,
 
 ### 1. Training Layer (`src/training/`)
 
-**Purpose**: Fine-tune Gemma-3 model with chess-specific knowledge using LoRA
+**Purpose**: Fine-tune Gemma-3 model with chess-specific knowledge using LoRA, including chain-of-thought reasoning and dual-mode training
 
 **Key Components**:
 - `train.py`: Main training orchestrator
@@ -40,14 +46,21 @@ ChessGemma is a modular chess AI system built around fine-tuned language models,
 **Architecture**:
 ```
 Training Pipeline
-├── Data Loading (ChessInstruct dataset)
-├── Data Preprocessing (Chat format conversion)
+├── Data Loading (ChessInstruct + Historical Games + Theory)
+├── Data Preprocessing (Chat format + CoT reasoning)
 ├── Model Loading (Gemma-3 base model)
 ├── LoRA Adapter Attachment
-├── Training Loop (SFTTrainer)
+├── Dual-Mode Training (Engine + Tutor modes)
+├── Chain-of-Thought Integration
 ├── Checkpoint Management
 └── Model Saving
 ```
+
+**New Training Features**:
+- **Dual-Purpose Training**: Separate modes for engine (UCI) and tutor (explanatory) outputs
+- **Chain-of-Thought**: Step-by-step reasoning integration
+- **Style Conditioning**: Historical player style emulation
+- **Enhanced Datasets**: Historical games, theory books, annotated PGNs
 
 **Key Features**:
 - Unsloth optimization for 2x speed improvement
@@ -55,9 +68,38 @@ Training Pipeline
 - Gradient checkpointing for memory efficiency
 - Resume functionality for long training runs
 
-### 2. Inference Layer (`src/inference/`)
+### 2. UCI Bridge Layer (`src/inference/`)
 
-**Purpose**: Generate chess-related responses using the fine-tuned model
+**Purpose**: Provide UCI-compatible chess engine interface and dual-mode operation
+
+**Key Components**:
+- `inference.py`: Main inference script
+- `chess_engine.py`: Stockfish integration
+- `uci_bridge.py`: UCI protocol implementation (NEW)
+- `prompt_templates/`: Mode-specific prompt templates (NEW)
+
+**Architecture**:
+```
+UCI Bridge Pipeline
+├── UCI Protocol Handler
+├── Mode Selection (Engine vs Tutor)
+├── Position Analysis (FEN → Prompt)
+├── Model Inference (Gemma-3 + LoRA)
+├── Response Processing
+├── UCI Output Formatting
+└── Fallback to Stockfish (if needed)
+```
+
+**New UCI Features**:
+- **UCI Compatibility**: Full UCI protocol support for chess software integration
+- **Dual Modes**: Engine mode (fast moves) and Tutor mode (explanations)
+- **Chain-of-Thought**: Step-by-step reasoning in tutor mode
+- **Style Conditioning**: Historical player style emulation
+- **Fallback Support**: Stockfish integration for complex positions
+
+### 3. Inference Layer (`src/inference/`)
+
+**Purpose**: Generate chess-related responses using the fine-tuned model with enhanced reasoning
 
 **Key Components**:
 - `inference.py`: Main inference engine
@@ -67,17 +109,18 @@ Training Pipeline
 ```
 Inference Pipeline
 ├── Model Loading (Base + LoRA adapter)
-├── Prompt Processing (Chat template)
-├── Text Generation (Gemma-3)
+├── Prompt Processing (Chat template + CoT)
+├── Text Generation (Gemma-3 + Reasoning)
 ├── Response Post-processing
 └── Chess Validation (Stockfish)
 ```
 
 **Key Features**:
 - Model caching for performance
-- Chess-specific prompt formatting
+- Chess-specific prompt formatting with chain-of-thought
 - Move validation and analysis
 - Error handling and fallbacks
+- Dual-mode operation (engine/tutor)
 
 ### 3. Chess Engine Integration (`src/inference/chess_engine.py`)
 
