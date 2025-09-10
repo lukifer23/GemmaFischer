@@ -435,6 +435,58 @@
   - [ ] Submit to conferences
   - [ ] Target: Academic recognition
 
+---
+
+## Codebase Unification & Consistency
+
+### Unification Checklist
+
+- [ ] Prompt format (engine):
+  - [ ] Standardize to `FEN: <fen>\nMove:` across code, web, and docs
+  - [ ] Remove duplicate `Position:` injection in engine prompts
+  - [ ] Update callers that currently embed `Position:` (web, eval scripts, docs examples)
+
+- [ ] Central UCI parsing/validation:
+  - [ ] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
+  - [ ] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
+
+- [ ] Deterministic engine decoding defaults:
+  - [ ] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
+  - [ ] Add `do_sample` parameter to `ChessGemmaInference.generate_response` and set by mode
+
+- [ ] Stockfish fallback policy:
+  - [ ] Remove hardcoded fallback like `"e2e4"`
+  - [ ] Enforce: extract UCI → legality check → on fail, fallback to Stockfish
+  - [ ] Ensure UCI bridge and web endpoints follow the same policy
+
+- [ ] Evaluation CLI unification:
+  - [ ] Import `ChessGemmaInference` directly from `src.inference.inference` in eval scripts
+  - [ ] Add `--adapter_a` (baseline none) and `--adapter_b` (trained) to A/B runners
+  - [ ] Report `uci_syntax_rate`, `uci_legal_rate`, optional `stockfish_top1`
+  - [ ] Include base snapshot and adapter path in reports
+
+- [ ] Dataset schema & mixer:
+  - [ ] Migrate builders to `{task, prompt, response, meta}` schema
+  - [ ] Extend `dataset_mixer.py` to accept both legacy `text` and new instruction schema
+  - [ ] Prefer instruction schema for future tasks
+
+- [ ] Instruction collator & label masking:
+  - [ ] Add `InstructionDataCollator` (mask prompt tokens: labels = -100)
+  - [ ] Update training scripts to use the instruction collator
+
+- [ ] Web/bridge integration:
+  - [ ] Route engine queries via `ChessGemmaInference.generate_response(..., mode='engine')`
+  - [ ] Use centralized UCI utils for extraction/legality
+  - [ ] Ensure deterministic decode + fallback is applied everywhere
+
+- [ ] Logging & debug controls:
+  - [ ] Gate verbose inference logs behind `CHESSGEMMA_DEBUG=1`
+  - [ ] Set `dataloader_pin_memory=False` on MPS, fix `datetime.utcnow()`
+
+- [ ] Redundancy cleanup:
+  - [ ] Archive/remove `src/web/stockfish_match.py` if superseded by eval tools
+  - [ ] Audit and remove stale examples using `Position:` in code paths
+
 ## Suggested File Structure
 
 ```plaintext
