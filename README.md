@@ -1,25 +1,25 @@
 # ChessGemma: Fine-tuning Gemma-3 for Chess Q&A
 
-A comprehensive chess AI system that fine-tunes Google's Gemma-3 270M model for chess-related question answering using LoRA (Low-Rank Adaptation) on Apple Silicon with MPS acceleration.
+A chess AI system that fine-tunes Google's Gemma-3 270M model for chess-related question answering using LoRA (Low-Rank Adaptation) on Apple Silicon with MPS acceleration.
 
-## 🎯 Project Overview
+## Project Overview
 
-ChessGemma is an end-to-end chess AI system that combines:
+ChessGemma combines several components:
 - **Fine-tuned Language Model**: Gemma-3 270M with LoRA adapters for chess knowledge
 - **Chess Engine Integration**: Stockfish integration for move validation and analysis
-- **Web Interface**: Interactive Flask-based web application
-- **Comprehensive Evaluation**: Chess-specific metrics and testing framework
+- **Web Interface**: Flask-based web application for interaction
+- **Evaluation Framework**: Chess-specific metrics and testing tools
 
-## ✨ Key Features
+## Key Features
 
-- **Efficient Training**: LoRA fine-tuning with Unsloth optimization (2x faster, 70% less VRAM)
-- **Apple Silicon Optimized**: Native MPS acceleration for M-series Macs
+- **Efficient Training**: LoRA fine-tuning with Unsloth optimization
+- **Apple Silicon Support**: MPS acceleration for M-series Macs
 - **Chess Engine Integration**: Stockfish for move validation and position analysis
-- **Interactive Web Interface**: Real-time chess Q&A with board visualization
-- **Comprehensive Evaluation**: Chess-specific metrics and testing framework
+- **Web Interface**: Interactive chess Q&A interface
+- **Evaluation Tools**: Chess-specific metrics and testing framework
 - **Multiple Training Configurations**: Flexible training setups for different use cases
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -32,8 +32,8 @@ ChessGemma is an end-to-end chess AI system that combines:
 
 1. **Clone and setup environment:**
 ```bash
-git clone <repository-url>
-cd ChessGemma
+git clone https://github.com/lukifer23/GemmaFischer.git
+cd GemmaFischer
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
@@ -69,10 +69,10 @@ python src/web/app.py
 python src/training/train.py --do_train --max_steps 10
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-ChessGemma/
+GemmaFischer/
 ├── README.md                 # This file
 ├── requirements.txt          # Python dependencies
 ├── docs/                     # Documentation
@@ -102,7 +102,7 @@ ChessGemma/
 └── scripts/                 # Utility scripts
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Core Components
 
@@ -125,7 +125,7 @@ ChessGemma/
 
 4. **Web Interface** (`src/web/`)
    - Flask-based web application
-   - Real-time Q&A interface
+   - Interactive Q&A interface
    - Chess board visualization
    - Model status monitoring
 
@@ -134,7 +134,7 @@ ChessGemma/
    - Model performance testing
    - Quality assessment tools
 
-## 🎓 Training Guide
+## Training Guide
 
 ### Configuration Files
 
@@ -172,7 +172,7 @@ Key parameters for fine-tuning:
 - **Batch Size**: 4-8 (depending on available memory)
 - **Max Steps**: 1000-2000 for full training
 
-## 🔧 Configuration
+## Configuration
 
 ### Model Configuration
 
@@ -204,7 +204,7 @@ training:
   save_steps: 200
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Run Tests
 
@@ -226,7 +226,7 @@ python src/evaluation/chess_evaluation.py
 python compare_chess_qa.py
 ```
 
-## 📊 Performance
+## Performance
 
 ### Training Performance
 
@@ -236,11 +236,11 @@ python compare_chess_qa.py
 
 ### Model Performance
 
-- **Chess Relevance**: 85%+ for chess-specific questions
-- **Move Accuracy**: 70%+ for basic chess moves
-- **Response Quality**: Significantly improved over base model
+- **Chess Relevance**: ~85% for chess-specific questions
+- **Move Accuracy**: ~70% for basic chess moves
+- **Response Quality**: Improved over base model
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -271,7 +271,7 @@ export PYTHONPATH=$PWD
 python -c "import logging; logging.basicConfig(level=logging.DEBUG)"
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -291,31 +291,31 @@ black src/ tests/
 flake8 src/ tests/
 ```
 
-## 📈 Roadmap
+## Roadmap
 
-### Completed ✅
+### Completed
 - [x] Basic LoRA fine-tuning pipeline
 - [x] Chess engine integration
 - [x] Web interface
 - [x] Multiple training configurations
 - [x] Evaluation framework
 
-### In Progress 🚧
+### In Progress
 - [ ] Enhanced dataset generation
 - [ ] Improved evaluation metrics
 - [ ] Better error handling
 
-### Planned 📋
+### Planned
 - [ ] Multi-model support
 - [ ] Advanced chess analysis
 - [ ] Mobile app interface
 - [ ] Cloud deployment options
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Google**: For the Gemma-3 model
 - **Unsloth**: For the efficient fine-tuning framework
@@ -323,7 +323,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Hugging Face**: For the transformers library
 - **Thytu**: For the ChessInstruct dataset
 
-## 📞 Support
+## Support
 
 - **Issues**: Report bugs and feature requests on GitHub
 - **Discussions**: Join community discussions
@@ -331,4 +331,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**ChessGemma** - Bringing AI-powered chess analysis to your fingertips! ♟️🤖
+**ChessGemma** - A chess AI system for question answering and analysis.
