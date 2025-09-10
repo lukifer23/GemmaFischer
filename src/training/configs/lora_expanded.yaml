@@ -1,0 +1,30 @@
+# Enhanced training config with expanded dataset
+model:
+  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+training:
+  output_dir: "checkpoints/lora_expanded"
+  per_device_train_batch_size: 4  # Smaller batch for stability
+  gradient_accumulation_steps: 8  # Effective batch size = 32
+  num_train_epochs: 1
+  max_steps: 50  # Very short for testing
+  learning_rate: 1e-4  # Conservative learning rate
+  logging_steps: 25  # More frequent logging
+  save_steps: 100  # Save every 100 steps
+  eval_strategy: "steps"
+  eval_steps: 100
+  save_strategy: "steps"
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+  lr_scheduler_type: "cosine"
+  warmup_steps: 50
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+lora:
+  r: 32  # Increased rank for better capacity
+  lora_alpha: 64
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
+  dropout: 0.05
+  bias: "lora_only"
+dataset:
+  path: "data/finetune/chess_finetune_expanded.jsonl"

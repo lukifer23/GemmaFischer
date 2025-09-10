@@ -1,0 +1,41 @@
+{
+  "total_examples": 110,
+  "sources": {
+    "synthetic_qa": 60,
+    "conversations": 38,
+    "tactics": 4,
+    "literature": 4,
+    "tournaments": 4
+  },
+  "categories": {
+    "opening": 30,
+    "openings": 8,
+    "tactics": 35,
+    "tactical_puzzles": 4,
+    "zugzwang": 1,
+    "middle game strategy": 1,
+    "prophylaxis": 1,
+    "center control": 1,
+    "opposition": 1,
+    "strategy": 8,
+    "initiative": 1,
+    "pawn structure": 1,
+    "opening principles": 1,
+    "endgames": 6,
+    "outposts": 1,
+    "piece development": 1,
+    "weak squares": 1,
+    "practical": 4,
+    "tempo": 1,
+    "material evaluation": 1,
+    "zwischenzug": 1,
+    "king safety": 1
+  },
+  "difficulty_distribution": {
+    "intermediate": 55,
+    "beginner": 39,
+    "advanced": 16
+  },
+  "generation_date": "2025-09-10 11:18:03.268827",
+  "description": "Multi-source comprehensive chess Q&A dataset"
+}

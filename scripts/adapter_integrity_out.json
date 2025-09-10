@@ -1,0 +1,36 @@
+{
+  "base": [
+    {
+      "prompt": "Q: What is the best opening move for White and why?\nA:",
+      "deterministic": "Q: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move for White and why?\nA:\nQ: What is the best opening move",
+      "sampled": "Q: What is the best opening move for White and why?\nA: White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White, White,"
+    },
+    {
+      "prompt": "Q: Explain the concept of zugzwang and give a short example.\nA:",
+      "deterministic": "Q: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short example.\nA:\nQ: Explain the concept of zugzwang and give a short",
+      "sampled": "Q: Explain the concept of zugzwang and give a short example.\nA: A condition that must be met in a given situation to achieve a specific outcome.\nQ: What are the benefits of using a dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated, dedicated,"
+    },
+    {
+      "prompt": "Q: Give three practical endgame tips for rook and pawn endgames.\nA:",
+      "deterministic": "Q: Give three practical endgame tips for rook and pawn endgames.\nA:\n1.  **Strategic Placement:**  The most important aspect is to strategically place your rook and pawn on the same piece, and to ensure that the piece is not easily moved.\n2.  **Piece Selection:**  Choose pieces that are suited to the position and the piece's strengths.  Consider the piece's movement, the piece's strengths, and the piece's weaknesses.\n3.  **Piece Coordination:**  Coordinate your pieces to ensure that they are all working together to achieve the goal.  This involves using the piece's strengths and weaknesses to create a balanced and effective position.\n",
+      "sampled": "Q: Give three practical endgame tips for rook and pawn endgames.\nA:\n1.  **Know the Fundamentals:** Understand the core principles of each piece, including the movement of each piece, the position of the center, and the importance of the pawn.\n2.  **Develop Your Piece's Mobility:** Focus on improving your piece's ability to move quickly and efficiently. This includes understanding how to quickly change direction, evade attacks, and maintain a stable position.\n3.  **Develop Your Pawn's Tactics:** Learn to understand the strategic advantages of pawns, such as their ability to move to the center and their ability to control the board.\n\nQ: How can I improve my"
+    }
+  ],
+  "tuned": [
+    {
+      "prompt": "Q: What is the best opening move for White and why?\nA:",
+      "deterministic": "Q: What is the best opening move for White and why?\nA: D2D4\nB: D7D5\nG1F3\nH7H5\nE2E3\nD4E5\nC7C6\nE3E4\nF8G7\nD1G3\nG8F7\nC1F1\nG7F8\ne5e4\nf1e2\ne4d5\nd1d5\nf7f8e8\ne1g1\nf8e8\nf1e1\n2d3\nd5c4\nf3e5\nc4b3\n",
+      "sampled": "Q: What is the best opening move for White and why?\nA: C2, G7, F8\nB1c1, D7D8, E8D4\nD2D4\nE7D4\nF1D3, G8H2, H2H4\nD3H4\nG1H3, A2A3, B4C5, D6C5, C5A4, D4A1\nA4A1\nG7D6, A1D1, D8E7, A8B8, B2B4, C8D7, A4D5, E7D5"
+    },
+    {
+      "prompt": "Q: Explain the concept of zugzwang and give a short example.\nA:",
+      "deterministic": "Q: Explain the concept of zugzwang and give a short example.\nA: Zugzwang ist ein Zustand, in dem ein Zustand sich in einer bestimmten Weise verhält, und er kann sich in einer bestimmten Weise verhalten, wenn er sich in einer bestimmten Weise verhält. Es ist ein Zustand, der sich in einer bestimmten Weise verhält, und er kann sich in einer bestimmten Weise verhalten, wenn er sich in einer bestimmten Weise verhält.\nQ: Guten Tag! Wie kann ich ein Problem lösen?\nA: Guten Tag! Wie kann ich ein Problem lösen?\nQ: Sehr gut! Ich habe ein Problem mit der Temperatur.\nA: Guten Tag! Wie kann ich ein Problem lösen?",
+      "sampled": "Q: Explain the concept of zugzwang and give a short example.\nA: Zugzwang is a situation where a person's actions are not in accordance with their intentions, leading to a negative outcome.\nQ: How can we improve the user interface of a mobile application?\nA: User interface (UI) can be improved by providing more visual cues, such as icons, colors, and spacing, to enhance usability and provide feedback to the user.\nQ: How can we design a more efficient algorithm for a given task?\nA: A more efficient algorithm can be designed by considering the time and space constraints of the task, and by using techniques like pruning and optimization to improve performance.\nQ"
+    },
+    {
+      "prompt": "Q: Give three practical endgame tips for rook and pawn endgames.\nA:",
+      "deterministic": "Q: Give three practical endgame tips for rook and pawn endgames.\nA: 1.  e2e4, 3.  d7d5, 5.  e7e5, 3.  f1b3, 4.  g1f3, 5.  e5e4, 3.  b8c6, 4.  d2d4, 5.  f3e5, 6.  e5d3, 4.  d5d3, 6.  e4d5, 6.  d4e5, 6.  e8g8, 1",
+      "sampled": "Q: Give three practical endgame tips for rook and pawn endgames.\nA: (C2, D7, E7)\nD2, E7\nF8, G7, H2\nG8, H7, I2\nF1, I2\nJ7, K2\nL2, R1\nK7 K6\nL1 R1\nR7 R6\nC1 R2\nE1 R4\nG1 R3\nH2 R6\nG6 G5\nE2 E4\nC8 E7\nQ1 E2\nP1 R1\nE5 E4\nR2 E4\nD7 E4\n"
+    }
+  ]
+}

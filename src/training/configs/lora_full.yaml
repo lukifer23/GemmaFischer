@@ -1,0 +1,20 @@
+# Full LoRA fine-tune config
+model:
+  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+training:
+  output_dir: "checkpoints/lora_full"
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 4
+  num_train_epochs: 1
+  max_steps: 2000
+  learning_rate: 2e-4
+  fp16: false
+  logging_steps: 50
+  save_steps: 200
+lora:
+  r: 16
+  lora_alpha: 32
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
+  dropout: 0.05
+dataset:
+  path: "data/finetune/chess_finetune_full.jsonl"

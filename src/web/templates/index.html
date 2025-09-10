@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChessGemma - AI Chess Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --chess-dark: #769656;
+            --chess-light: #eeeed2;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .chess-board {
+            width: 400px;
+            height: 400px;
+            margin: 2rem auto;
+            border: 3px solid var(--primary-color);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            background: var(--chess-light);
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+        }
+
+        .chess-square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chess-square.dark {
+            background: var(--chess-dark);
+        }
+
+        .chess-square.light {
+            background: var(--chess-light);
+        }
+
+        .chess-square:hover {
+            background: rgba(255, 255, 0, 0.3) !important;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: var(--secondary-color);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message.assistant {
+            background: white;
+            border: 1px solid #e9ecef;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .confidence-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.25rem;
+            display: inline-block;
+        }
+
+        .confidence-high { background: #d4edda; color: #155724; }
+        .confidence-medium { background: #fff3cd; color: #856404; }
+        .confidence-low { background: #f8d7da; color: #721c24; }
+
+        .input-group {
+            border-top: 1px solid #e9ecef;
+            padding: 1rem;
+            background: white;
+        }
+
+        .btn-primary {
+            background: var(--secondary-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .examples-section {
+            margin-top: 2rem;
+        }
+
+        .example-btn {
+            margin: 0.25rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .example-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+            border-color: var(--secondary-color);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .welcome-section {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .welcome-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .welcome-section p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chess-knight me-2"></i>
+                ChessGemma
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-item nav-link">
+                    <i class="fas fa-circle text-success me-1"></i>
+                    AI Chess Assistant Online
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="welcome-section">
+            <h1><i class="fas fa-chess-queen me-3"></i>ChessGemma</h1>
+            <p>Your AI-powered chess analysis and learning companion</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message assistant">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-robot me-2"></i>
+                                <strong>ChessGemma</strong>
+                            </div>
+                            <p>Hello! I'm your AI chess assistant. Ask me anything about chess strategy, openings, tactics, or endgames. I can help you improve your game!</p>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="questionInput"
+                                   placeholder="Ask a chess question..."
+                                   onkeypress="handleKeyPress(event)">
+                            <button class="btn btn-primary" onclick="askQuestion()">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Ask
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="examples-section">
+                    <h5 class="text-white mb-3">Try these example questions:</h5>
+                    <div id="examplesContainer">
+                        <!-- Examples will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chess-board me-2"></i>
+                            Chess Board
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chess-board" id="chessBoard">
+                            <!-- Chess board will be rendered here -->
+                        </div>
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                Interactive chess board visualization
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            About ChessGemma
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <strong>Model:</strong> Gemma-3 270M fine-tuned for chess
+                        </p>
+                        <p class="mb-2">
+                            <strong>Capabilities:</strong>
+                        </p>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-1"></i> Opening analysis</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Tactical explanations</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Strategic guidance</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Endgame principles</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let isLoading = false;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChessBoard();
+            loadExamples();
+            setupEventListeners();
+        });
+
+        // Initialize chess board
+        function initializeChessBoard() {
+            const board = document.getElementById('chessBoard');
+            const pieces = [
+                '♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜',  // Black back rank
+                '♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟',  // Black pawns
+                '', '', '', '', '', '', '', '',          // Empty squares
+                '', '', '', '', '', '', '', '',
+                '', '', '', '', '', '', '', '',
+                '', '', '', '', '', '', '', '',
+                '♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙',  // White pawns
+                '♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'   // White back rank
+            ];
+
+            for (let i = 0; i < 64; i++) {
+                const square = document.createElement('div');
+                square.className = `chess-square ${(i + Math.floor(i / 8)) % 2 === 0 ? 'light' : 'dark'}`;
+                square.textContent = pieces[i] || '';
+                square.onclick = () => handleSquareClick(i);
+                board.appendChild(square);
+            }
+        }
+
+        // Load example questions
+        async function loadExamples() {
+            try {
+                const response = await fetch('/api/examples');
+                const data = await response.json();
+                const container = document.getElementById('examplesContainer');
+
+                data.examples.forEach(example => {
+                    const button = document.createElement('button');
+                    button.className = 'example-btn';
+                    button.textContent = example;
+                    button.onclick = () => useExample(example);
+                    container.appendChild(button);
+                });
+            } catch (error) {
+                console.error('Failed to load examples:', error);
+            }
+        }
+
+        // Handle example question click
+        function useExample(question) {
+            document.getElementById('questionInput').value = question;
+            askQuestion();
+        }
+
+        // Handle Enter key in input
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isLoading) {
+                askQuestion();
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Add any additional event listeners here
+        }
+
+        // Ask a question
+        async function askQuestion() {
+            if (isLoading) return;
+
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+
+            if (!question) {
+                showMessage('Please enter a question.', 'error');
+                return;
+            }
+
+            // Add user message
+            addMessage(question, 'user');
+            input.value = '';
+            isLoading = true;
+
+            // Show loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-robot me-2"></i>
+                    <strong>ChessGemma</strong>
+                    <div class="loading ms-2"></div>
+                </div>
+                <p>Thinking about your question...</p>
+            `;
+            document.getElementById('chatMessages').appendChild(loadingDiv);
+            scrollToBottom();
+
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        context: '' // Add context if needed
+                    })
+                });
+
+                const data = await response.json();
+
+                // Remove loading indicator
+                loadingDiv.remove();
+
+                // Add assistant response
+                let messageClass = 'assistant';
+                let confidenceClass = 'confidence-low';
+
+                if (data.confidence > 0.7) {
+                    confidenceClass = 'confidence-high';
+                } else if (data.confidence > 0.4) {
+                    confidenceClass = 'confidence-medium';
+                }
+
+                const confidenceText = data.confidence ?
+                    `<div class="confidence-badge ${confidenceClass}">Confidence: ${(data.confidence * 100).toFixed(1)}%</div>` : '';
+
+                addMessage(`
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-robot me-2"></i>
+                        <strong>ChessGemma</strong>
+                    </div>
+                    <p>${data.response || data.error || 'No response received'}</p>
+                    ${confidenceText}
+                `, messageClass);
+
+            } catch (error) {
+                console.error('Error:', error);
+                loadingDiv.remove();
+                addMessage('Sorry, I encountered an error while processing your question. Please try again.', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // Add message to chat
+        function addMessage(content, type = 'assistant') {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Scroll to bottom of chat
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Handle chess square clicks
+        function handleSquareClick(squareIndex) {
+            const file = String.fromCharCode(97 + (squareIndex % 8)); // a-h
+            const rank = 8 - Math.floor(squareIndex / 8); // 1-8
+            const square = `${file}${rank}`;
+
+            console.log(`Clicked square: ${square}`);
+
+            // Here you could add logic to highlight moves, show piece info, etc.
+            // For now, just log the square
+        }
+
+        // Show a temporary message
+        function showMessage(message, type = 'info', duration = 3000) {
+            addMessage(message, type);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    const messages = document.querySelectorAll('.message');
+                    if (messages.length > 0) {
+                        messages[messages.length - 1].remove();
+                    }
+                }, duration);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Minimal dependencies for the Gemma-3 LoRA fine-tuning pipeline
+# Note: On Apple Silicon you may want to install torch with MPS support as documented in the plan.
+transformers
+datasets
+accelerate
+peft
+trl
+huggingface_hub
+unsloth
+pytest
+mlflow  # For experiment tracking and monitoring
+python-chess  # For chess-specific evaluation and move validation
+flask  # For web interface
+flask-cors  # For CORS support in web interface
+# Optional and platform dependent
+# bitsandbytes
+# torch
+# torchvision
+# torchaudio

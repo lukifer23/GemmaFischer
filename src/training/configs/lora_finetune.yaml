@@ -1,0 +1,20 @@
+# LoRA fine-tune config for a small POC
+model:
+  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+training:
+  output_dir: "checkpoints/lora_poc"
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  num_train_epochs: 1
+  max_steps: 100
+  learning_rate: 2e-4
+  fp16: false
+  logging_steps: 10
+  save_steps: 50
+lora:
+  r: 8
+  lora_alpha: 16
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
+  dropout: 0.05
+dataset:
+  path: "data/finetune/chess_finetune.jsonl"
