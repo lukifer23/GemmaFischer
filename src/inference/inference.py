@@ -57,6 +57,7 @@ def _resolve_latest_adapter_path(project_root: Path) -> Optional[Path]:
         str(project_root / "checkpoints" / "lora_expanded" / "checkpoint-*"),
         str(project_root / "checkpoints" / "lora_poc" / "checkpoint-*"),
         str(project_root / "checkpoints" / "lora_full_resume_smoke" / "checkpoint-*"),
+        str(project_root / "checkpoints" / "lora_curriculum" / "checkpoint-*"),
     ]
     latest = _find_latest_dir(patterns)
     return latest
@@ -131,9 +132,10 @@ class ChessGemmaInference:
                 # Use a proper system prompt instead of the documentation file
                 self._tutor_template = (
                     "You are a chess tutor and analyst playing a teaching game with a student. "
-                    "When making moves, explain your reasoning, comment on the opponent's previous move, "
+                    "You MUST be aware of the current board position, material balance, and tactical situation. "
+                    "When making moves, explain your reasoning based on the ACTUAL position, comment on the opponent's previous move, "
                     "and suggest what they should consider next. Be conversational and educational, "
-                    "like a chess teacher playing a teaching game. Always provide clear explanations."
+                    "like a chess teacher playing a teaching game. Always provide clear explanations based on the real position."
                 )
             return self._tutor_template
 
@@ -211,6 +213,7 @@ class ChessGemmaInference:
             # Debug logging for response
             print(f"Raw Response Length: {len(decoded)} chars")
             print(f"Raw Response Preview: {decoded[:300]}{'...' if len(decoded) > 300 else ''}")
+            print(f"Raw Response Full: {repr(decoded)}")
             
             # Try to strip prompt prefix if echoed
             if decoded.startswith(prompt_text):
@@ -229,13 +232,21 @@ class ChessGemmaInference:
             # Remove any remaining prompt fragments
             lines = answer.split('\n')
             content_lines = []
-            for line in lines:
+            print(f"🔍 Processing {len(lines)} lines from model response")
+            for i, line in enumerate(lines):
                 line = line.strip()
+                print(f"  Line {i}: '{line[:50]}{'...' if len(line) > 50 else ''}'")
                 if line and not line.startswith(('Chess Tutor:', 'Chess Engine:', 'Question:', 'Position:', 'Answer:', 'Move:')):
                     content_lines.append(line)
+                    print(f"    ✅ Kept line {i}")
+                else:
+                    print(f"    ❌ Filtered out line {i}")
             
             if content_lines:
                 answer = '\n'.join(content_lines).strip()
+                print(f"Final processed answer: '{answer[:100]}{'...' if len(answer) > 100 else ''}'")
+            else:
+                print("⚠️  All lines were filtered out!")
             
             # Fallback if we still don't have a good answer
             if not answer or len(answer) < 10:

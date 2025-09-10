@@ -126,10 +126,20 @@ class StockfishMatch:
         depth = None
         if hasattr(result, 'info') and 'score' in result.info:
             score = result.info['score']
-            if score.is_mate():
-                evaluation = float('inf') if score.mate() > 0 else float('-inf')
-            else:
-                evaluation = score.relative.score(mate_score=10000) / 100.0
+            try:
+                if hasattr(score, 'is_mate') and score.is_mate():
+                    evaluation = float('inf') if score.mate() > 0 else float('-inf')
+                elif hasattr(score, 'relative'):
+                    evaluation = score.relative.score(mate_score=10000) / 100.0
+                elif hasattr(score, 'white'):
+                    # Handle PovScore object
+                    if hasattr(score.white, 'mate') and score.white.mate is not None:
+                        evaluation = float('inf') if score.white.mate > 0 else float('-inf')
+                    elif hasattr(score.white, 'cp') and score.white.cp is not None:
+                        evaluation = score.white.cp / 100.0
+            except Exception as e:
+                print(f"⚠️  Evaluation error: {e}")
+                evaluation = 0.0
         
         if hasattr(result, 'info') and 'depth' in result.info:
             depth = result.info['depth']
@@ -157,16 +167,38 @@ class StockfishMatch:
         
         return move_result
     
-    def get_model_move(self, model_generator, legal_moves: List[str]) -> MoveResult:
+    def get_model_move(self, model_generator, legal_moves: List[str], rag_system=None) -> MoveResult:
         """Get model's move (no time limit)."""
         start_time = time.time()
         
         print(f"\n🤖 MODEL MOVE REQUEST")
         print(f"Position: {self.board.fen()}")
         print(f"Legal moves: {legal_moves}")
+        print(f"Turn: {'White' if self.board.turn else 'Black'}")
+        print(f"Material balance: White {self._count_material(chess.WHITE)}, Black {self._count_material(chess.BLACK)}")
+        if self.moves:
+            print(f"Last move: {self.moves[-1].san}")
+        if self.board.is_check():
+            print("⚠️  CHECK!")
         
-        # Create educational prompt for the model
+        # Get RAG knowledge for the current position
+        rag_context = ""
+        if rag_system:
+            try:
+                rag_knowledge = rag_system.get_relevant_knowledge(f"Chess position: {self.board.fen()}")
+                if rag_knowledge:
+                    rag_context = f"\n\nChess Knowledge: {rag_knowledge}"
+                    print(f"🧠 RAG Knowledge: {rag_knowledge}")
+            except Exception as e:
+                print(f"⚠️  RAG error: {e}")
+        
+        # Create educational prompt for the model with current position analysis
+        position_analysis = self._analyze_position()
+        
         question = f"""You are playing as {'white' if self.board.turn else 'black'} in this chess position: {self.board.fen()}
+
+CURRENT POSITION ANALYSIS:
+{position_analysis}
 
 The legal moves available are: {', '.join(legal_moves[:10])}
 
@@ -176,11 +208,20 @@ Please:
 3. Comment on what the opponent just played
 4. Suggest what the opponent should consider next
 
-Respond with your chosen move first, then your analysis."""
+Respond with your chosen move first, then your analysis.{rag_context}"""
         
-        # Get model response
-        result = model_generator(question, f"Current position: {self.board.fen()}")
+        # Get model response using ENGINE mode for Stockfish matches
+        print(f"\n🧠 MODEL THINKING:")
+        print(f"Question: {question[:200]}...")
+        print(f"RAG Context: {rag_context[:100] if rag_context else 'None'}...")
+        
+        # Force engine mode for Stockfish matches
+        result = model_generator(question, f"Current position: {self.board.fen()}", "engine")
         response_text = result.get('response', '')
+        
+        print(f"🤖 MODEL RESPONSE:")
+        print(f"Raw Response: {response_text[:300]}...")
+        print(f"Response Length: {len(response_text)} chars")
         
         # Extract move from response
         move_uci = self._extract_move_from_response(response_text, legal_moves)
@@ -231,6 +272,91 @@ Respond with your chosen move first, then your analysis."""
                 return move
         
         return None
+    
+    def _analyze_position(self) -> str:
+        """Analyze the current position and provide context."""
+        analysis = []
+        
+        # Check for captures
+        if self.moves:
+            last_move = self.moves[-1]
+            if 'x' in last_move.san:  # Capture move
+                analysis.append(f"Last move was a capture: {last_move.san}")
+        
+        # Check for checks
+        if self.board.is_check():
+            analysis.append("You are in CHECK!")
+        
+        # Check for material balance
+        white_material = self._count_material(chess.WHITE)
+        black_material = self._count_material(chess.BLACK)
+        material_diff = white_material - black_material
+        
+        if abs(material_diff) > 0:
+            if material_diff > 0:
+                analysis.append(f"White is up {abs(material_diff)} points of material")
+            else:
+                analysis.append(f"Black is up {abs(material_diff)} points of material")
+        
+        # Check for piece development
+        developed_pieces = self._count_developed_pieces()
+        analysis.append(f"Development: {developed_pieces['white']} white, {developed_pieces['black']} black pieces developed")
+        
+        # Check for king safety
+        white_king_safety = self._assess_king_safety(chess.WHITE)
+        black_king_safety = self._assess_king_safety(chess.BLACK)
+        analysis.append(f"King safety: White {white_king_safety}, Black {black_king_safety}")
+        
+        return "\n".join(analysis) if analysis else "Position is balanced"
+    
+    def _count_material(self, color: bool) -> int:
+        """Count material value for a color."""
+        material_values = {
+            chess.PAWN: 1,
+            chess.KNIGHT: 3,
+            chess.BISHOP: 3,
+            chess.ROOK: 5,
+            chess.QUEEN: 9,
+            chess.KING: 0
+        }
+        
+        total = 0
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece and piece.color == color:
+                total += material_values.get(piece.piece_type, 0)
+        
+        return total
+    
+    def _count_developed_pieces(self) -> dict:
+        """Count developed pieces for both sides."""
+        white_developed = 0
+        black_developed = 0
+        
+        # Count pieces not on starting squares
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece:
+                if piece.color == chess.WHITE and square >= 16:  # Not on ranks 1-2
+                    white_developed += 1
+                elif piece.color == chess.BLACK and square < 48:  # Not on ranks 7-8
+                    black_developed += 1
+        
+        return {'white': white_developed, 'black': black_developed}
+    
+    def _assess_king_safety(self, color: bool) -> str:
+        """Assess king safety for a color."""
+        king_square = self.board.king(color)
+        if king_square is None:
+            return "No king"
+        
+        # Check if king is in center
+        if king_square in [chess.E1, chess.E8]:
+            return "In center"
+        elif king_square in [chess.C1, chess.G1, chess.C8, chess.G8]:
+            return "Castled"
+        else:
+            return "On kingside" if chess.square_file(king_square) >= 4 else "On queenside"
     
     def play_game(self, model_generator, model_plays_white: bool = True, max_moves: int = 200) -> GameResult:
         """Play a complete game between Stockfish and the model."""

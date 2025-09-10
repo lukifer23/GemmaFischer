@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import sys
 import time
+import torch
 from typing import Dict, List, Any, Optional
 import traceback
 import psutil
@@ -145,8 +146,8 @@ class ChessModelInterface:
         self.is_loaded = ok
         return ok
 
-    def generate_response(self, question: str, context: Optional[str] = None, max_length: int = 200) -> Dict[str, Any]:
-        mode = 'tutor'
+    def generate_response(self, question: str, context: Optional[str] = None, mode: str = 'tutor', max_length: int = 200) -> Dict[str, Any]:
+        print(f"🎯 ChessModel.generate_response called with mode: {mode}")
         return self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
 
 
@@ -502,10 +503,10 @@ def play_match_move():
         
         if is_model_turn:
             # Model's turn - no time limit
-            def model_generator(question, context):
-                return chess_model.generate_response(question, context)
+            def model_generator(question, context, mode="engine"):
+                return chess_model.generate_response(question, context, mode)
             
-            move_result = stockfish_match.get_model_move(model_generator, legal_moves)
+            move_result = stockfish_match.get_model_move(model_generator, legal_moves, chess_rag)
             player = "Model"
         else:
             # Stockfish's turn
@@ -750,6 +751,10 @@ if __name__ == '__main__':
         print(f"   Base Model: {model_info.get('base_model', 'unknown')}")
         print(f"   Adapter: {model_info.get('adapter_path', 'none')}")
         print(f"   Loaded: {model_info.get('is_loaded', False)}")
+        print(f"   MPS Available: {torch.backends.mps.is_available()}")
+        print(f"   MPS Built: {torch.backends.mps.is_built()}")
+        if hasattr(chess_model._inference.model, 'device'):
+            print(f"   Model Device: {chess_model._inference.model.device}")
     else:
         print(f"⚠️  Model preloading failed after {model_load_time:.3f}s - will load on first request")
 

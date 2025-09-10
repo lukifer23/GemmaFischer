@@ -109,8 +109,12 @@ class ChessEngineManager:
                     self.engine.configure(valid_options)
                     logger.info(f"Configured engine with options: {list(valid_options.keys())}")
 
-                # Verify engine is working
-                result = self.engine.get_parameters()
+                # Verify engine is responsive
+                try:
+                    self.engine.ping()
+                except Exception:
+                    # Fallback: issue a very quick analyse to ensure readiness
+                    _ = self.engine.analyse(chess.Board(), chess.engine.Limit(depth=1, time=0.01))
                 logger.info("Stockfish engine initialized successfully")
 
                 # Test with a simple position
