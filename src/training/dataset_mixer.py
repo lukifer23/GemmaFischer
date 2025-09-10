@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Utilities to build mixed training datasets from multiple JSONL sources.
 
-Each source is a JSONL file with at least a `text` field (as produced by our
-refinement and ingestion scripts). This module constructs a weighted mixture
-using Hugging Face `datasets.interleave_datasets`.
+Each source can follow either the legacy schema with a single ``text`` field or
+the newer instruction tuning schema ``{task, prompt, response, meta}``. This
+module loads and normalizes each dataset so downstream code can consume a
+uniform structure before constructing a weighted mixture using
+``datasets.interleave_datasets``.
 """
 
 from __future__ import annotations
@@ -15,10 +17,45 @@ from datasets import load_dataset, Dataset, interleave_datasets
 
 
 def _load_single_jsonl(path: str) -> Dataset:
-    ds = load_dataset('json', data_files=path, split='train')
-    # Ensure expected field
-    if 'text' not in ds.column_names:
-        raise ValueError(f"Dataset {path} must contain a 'text' field.")
+    """Load a JSONL dataset and normalize its columns.
+
+    Supports two layouts:
+      1. Legacy ``{"text": ...}``
+      2. Instruction schema ``{"task", "prompt", "response", "meta"}``
+
+    The returned dataset always contains the columns ``text``, ``prompt``,
+    ``response``, ``task`` and ``meta`` (missing fields are filled with ``None``).
+    When ``text`` is absent but ``prompt``/``response`` are present, a ``text``
+    field is synthesized by concatenating them.
+    """
+
+    ds = load_dataset("json", data_files=path, split="train")
+
+    expected_cols = ["text", "prompt", "response", "task", "meta"]
+
+    def _normalize(example: Dict[str, Any]) -> Dict[str, Any]:
+        prompt = example.get("prompt")
+        response = example.get("response")
+        text = example.get("text")
+        if text is None and prompt is not None and response is not None:
+            text = f"{prompt}{response}"
+        return {
+            "text": text,
+            "prompt": prompt,
+            "response": response,
+            "task": example.get("task"),
+            "meta": example.get("meta"),
+        }
+
+    ds = ds.map(_normalize)
+    # Ensure a consistent column set across datasets
+    for col in expected_cols:
+        if col not in ds.column_names:
+            ds = ds.add_column(col, [None] * len(ds))
+    # Remove any unexpected columns to avoid interleave mismatches
+    extra_cols = [c for c in ds.column_names if c not in expected_cols]
+    if extra_cols:
+        ds = ds.remove_columns(extra_cols)
     return ds
 
 

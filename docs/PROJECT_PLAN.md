@@ -135,7 +135,7 @@
   - [ ] PGN-derived next-move pairs: walk through games and emit (FEN → next move in UCI).
   - [ ] Puzzles first-move supervision: use the first move of the puzzle solution.
   - [ ] Stockfish-labeled random positions: sample diverse FENs and label best move at depth 8–12.
-  - [ ] Standardize JSONL schema: `{task, prompt, response, meta}` where:
+  - [x] Standardize JSONL schema: `{task, prompt, response, meta}` where:
     - `task`: `engine_uci` | `engine_pv` | `tutor_explain`
     - `prompt`: for engine `FEN: <fen>\nMove:`; for tutor `FEN: <fen>\nQuestion: <q>`
     - `response`: for engine exactly one UCI move (e.g., `e2e4`)
@@ -149,8 +149,8 @@
 
 - [ ] Switch to instruction-style label masking (predict only the answer):
   - [ ] Add `InstructionDataCollator` that masks prompt tokens (labels = -100) and keeps labels for response tokens only
-  - [ ] Update `train_lora_poc.py` to consume `{prompt, response, task}` and use the instruction collator
-  - [ ] Extend `dataset_mixer.py` to accept both `text` and `{prompt/response/task}` schemas without forcing a `text` field
+  - [x] Update `train_lora_poc.py` to consume `{prompt, response, task}` (instruction collator pending)
+  - [x] Extend `dataset_mixer.py` to accept both `text` and `{prompt/response/task}` schemas without forcing a `text` field
 - [ ] Curriculum emphasizing engine formatting first, then difficulty:
   - [ ] Phase A: easy UCI (openings, mates-in-1, simple captures) — 80–90% engine
   - [ ] Phase B: general middlegame FENs (SF-labeled) — 70% engine

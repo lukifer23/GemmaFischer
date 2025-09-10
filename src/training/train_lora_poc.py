@@ -22,7 +22,6 @@ from transformers import (
     TrainerState,
     TrainerControl
 )
-from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import numpy as np
 from typing import Dict, Any
@@ -171,7 +170,8 @@ def main():
             if not Path(ds_path).exists():
                 print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py or refine_dataset.py first.")
                 return
-            ds = load_dataset('json', data_files=ds_path, split='train')
+            from src.training.dataset_mixer import _load_single_jsonl
+            ds = _load_single_jsonl(ds_path)
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     # load model with the recommended eager attention implementation for Gemma3
@@ -203,7 +203,10 @@ def main():
         print('MPS backend detected — applying memory-safe defaults: batch_size=1, max_length=256')
         tokenizer_max_length = 256
     def preprocess(example):
-        text = example['text']
+        if example.get('prompt') is not None and example.get('response') is not None:
+            text = f"{example['prompt']}{example['response']}"
+        else:
+            text = example.get('text', '')
         return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
 
     # Only map here if a single/mixed dataset was already built (no curriculum)
