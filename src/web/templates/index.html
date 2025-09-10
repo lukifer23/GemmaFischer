@@ -573,9 +573,9 @@
             // Auto-ask a question about this square with board context
             setTimeout(() => {
                 const currentFEN = getCurrentBoardFEN();
-                const question = piece ? 
-                    `Position: ${currentFEN}\nWhat can the ${pieceName} on ${square} do?` :
-                    `Position: ${currentFEN}\nWhat pieces can move to ${square}?`;
+                const question = piece ?
+                    `FEN: ${currentFEN}\nQuestion: What can the ${pieceName} on ${square} do?` :
+                    `FEN: ${currentFEN}\nQuestion: What pieces can move to ${square}?`;
                 
                 document.getElementById('questionInput').value = question;
                 askQuestion();

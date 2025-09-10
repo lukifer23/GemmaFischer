@@ -73,7 +73,7 @@ def main():
         fen = p['fen']
         sol = p['solution']
         board = chess.Board(fen)
-        prompt = f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+        prompt = f"FEN: {fen}\nMove:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
         out = inf.generate_response(prompt, mode='engine', max_new_tokens=12)
         mv = parse_first_uci(out.get('response', ''), board)
         first = (mv == sol[0]) if mv else False
