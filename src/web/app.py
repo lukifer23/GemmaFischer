@@ -19,6 +19,9 @@ import sys
 import time
 from typing import Dict, List, Any, Optional
 import traceback
+import psutil
+import threading
+from datetime import datetime
 
 # Add the project root to the Python path
 project_root = Path(__file__).resolve().parents[2]
@@ -28,6 +31,8 @@ sys.path.append(str(project_root))
 try:
     import torch
     from src.inference.inference import get_inference_instance
+    from src.web.chess_game import ChessGame, ChessRAG
+from src.web.stockfish_match import StockfishMatch
 except ImportError as e:
     print(f"Warning: Could not import required module: {e}")
     torch = None
@@ -47,6 +52,84 @@ model_cache = {
     'tokenizer': None,
     'last_used': None
 }
+
+# Performance monitoring
+performance_stats = {
+    'request_count': 0,
+    'total_response_time': 0.0,
+    'avg_response_time': 0.0,
+    'max_response_time': 0.0,
+    'min_response_time': float('inf'),
+    'memory_usage_mb': 0.0,
+    'cpu_usage_percent': 0.0,
+    'tokens_per_second': 0.0,
+    'context_length': 0,
+    'last_request_time': None
+}
+
+# Thread lock for stats
+stats_lock = threading.Lock()
+
+
+def get_system_stats():
+    """Get current system resource usage."""
+    try:
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        cpu_percent = process.cpu_percent()
+        
+        return {
+            'memory_mb': memory_info.rss / 1024 / 1024,
+            'cpu_percent': cpu_percent,
+            'timestamp': datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            'memory_mb': 0.0,
+            'cpu_percent': 0.0,
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }
+
+
+def log_performance_stats(question, response_time, response_length, context_length=0):
+    """Log performance statistics for a request."""
+    global performance_stats
+    
+    with stats_lock:
+        performance_stats['request_count'] += 1
+        performance_stats['total_response_time'] += response_time
+        performance_stats['avg_response_time'] = performance_stats['total_response_time'] / performance_stats['request_count']
+        performance_stats['max_response_time'] = max(performance_stats['max_response_time'], response_time)
+        performance_stats['min_response_time'] = min(performance_stats['min_response_time'], response_time)
+        performance_stats['context_length'] = context_length
+        performance_stats['last_request_time'] = datetime.now().isoformat()
+        
+        # Calculate tokens per second (rough estimate)
+        if response_time > 0:
+            estimated_tokens = len(response_length.split()) * 1.3  # rough token estimation
+            performance_stats['tokens_per_second'] = estimated_tokens / response_time
+        
+        # Get current system stats
+        sys_stats = get_system_stats()
+        performance_stats['memory_usage_mb'] = sys_stats['memory_mb']
+        performance_stats['cpu_usage_percent'] = sys_stats['cpu_percent']
+        
+        # Log to terminal
+        print(f"\n{'='*60}")
+        print(f"📊 PERFORMANCE METRICS - Request #{performance_stats['request_count']}")
+        print(f"{'='*60}")
+        print(f"⏱️  Response Time: {response_time:.3f}s")
+        print(f"📈 Avg Response Time: {performance_stats['avg_response_time']:.3f}s")
+        print(f"⚡ Min/Max Response Time: {performance_stats['min_response_time']:.3f}s / {performance_stats['max_response_time']:.3f}s")
+        print(f"🧠 Memory Usage: {performance_stats['memory_usage_mb']:.1f} MB")
+        print(f"💻 CPU Usage: {performance_stats['cpu_usage_percent']:.1f}%")
+        print(f"🚀 Tokens/Second: {performance_stats['tokens_per_second']:.1f}")
+        print(f"📝 Context Length: {context_length} chars")
+        print(f"📏 Response Length: {len(response_length)} chars")
+        print(f"❓ Question: {question[:100]}{'...' if len(question) > 100 else ''}")
+        print(f"⏰ Timestamp: {performance_stats['last_request_time']}")
+        print(f"{'='*60}\n")
 
 
 class ChessModelInterface:
@@ -69,6 +152,11 @@ class ChessModelInterface:
 # Initialize the model interface
 chess_model = ChessModelInterface()
 
+# Initialize chess game and RAG
+chess_game = ChessGame()
+chess_rag = ChessRAG()
+stockfish_match = None
+
 
 @app.route('/')
 def index():
@@ -79,6 +167,10 @@ def index():
 @app.route('/api/ask', methods=['POST'])
 def ask_question():
     """API endpoint for chess questions."""
+    start_time = time.time()
+    question = ""
+    context = ""
+    
     try:
         data = request.get_json()
         question = data.get('question', '').strip()
@@ -91,8 +183,36 @@ def ask_question():
                 'confidence': 0.0
             })
 
-        # Generate response
-        result = chess_model.generate_response(question, context)
+        print(f"\n🎯 NEW REQUEST RECEIVED")
+        print(f"📝 Question: {question}")
+        print(f"📋 Context: {context if context else 'None'}")
+        print(f"⏰ Start Time: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
+
+        # Get RAG knowledge for the question
+        rag_knowledge = chess_rag.get_relevant_knowledge(question)
+        rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
+        enhanced_context = f"{rag_context}{context}" if context else rag_context
+        
+        print(f"🧠 RAG Knowledge: {rag_knowledge}")
+
+        # Generate response with RAG context
+        result = chess_model.generate_response(question, enhanced_context)
+        
+        # Log detailed performance metrics
+        response_time = time.time() - start_time
+        response_text = result.get('response', '')
+        tokens_per_second = len(response_text.split()) / response_time if response_time > 0 else 0
+        context_length = len(enhanced_context) if enhanced_context else 0
+        
+        print(f"⏱️  Response Time: {response_time:.2f}s")
+        print(f"🚀 Tokens/Second: {tokens_per_second:.1f}")
+        print(f"📊 Response Length: {len(response_text)} chars")
+        print(f"📋 Context Length: {context_length} chars")
+        print(f"🎯 Confidence: {result.get('confidence', 0.0):.2f}")
+        
+        # Log performance stats
+        response_text = result.get('response', '')
+        log_performance_stats(question, response_time, response_text, len(context))
 
         # Add question to response for frontend
         result['question'] = question
@@ -100,8 +220,14 @@ def ask_question():
         return jsonify(result)
 
     except Exception as e:
-        print(f"API Error: {e}")
+        response_time = time.time() - start_time
+        print(f"\n❌ API ERROR after {response_time:.3f}s")
+        print(f"Error: {e}")
         traceback.print_exc()
+        
+        # Log error stats
+        log_performance_stats(question, response_time, f"ERROR: {str(e)}", len(context))
+        
         return jsonify({
             'error': str(e),
             'response': 'Sorry, there was an error processing your request.',
@@ -222,21 +348,428 @@ def get_model_info():
     return jsonify(info)
 
 
+@app.route('/api/stats', methods=['GET'])
+def get_performance_stats():
+    """Get current performance statistics."""
+    with stats_lock:
+        return jsonify(performance_stats)
+
+
+@app.route('/api/game/state', methods=['GET'])
+def get_game_state():
+    """Get current game state."""
+    return jsonify(chess_game.get_game_summary())
+
+
+@app.route('/api/game/move', methods=['POST'])
+def make_move():
+    """Make a move in the chess game."""
+    try:
+        data = request.get_json()
+        move_uci = data.get('move', '').strip()
+        
+        if not move_uci:
+            return jsonify({'error': 'No move provided'}), 400
+        
+        result = chess_game.make_move(move_uci)
+        
+        # Log the move
+        print(f"\n🎯 CHESS MOVE: {move_uci}")
+        print(f"Success: {result['success']}")
+        if result['success']:
+            print(f"Game State: {result['game_state']}")
+            print(f"Current Player: {result['current_player']}")
+        else:
+            print(f"Error: {result.get('error', 'Unknown error')}")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"Move error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/game/analyze', methods=['POST'])
+def analyze_position():
+    """Analyze a specific square or position."""
+    try:
+        data = request.get_json()
+        square = data.get('square', '').strip()
+        
+        if not square:
+            return jsonify({'error': 'No square provided'}), 400
+        
+        analysis = chess_game.get_position_analysis(square)
+        
+        # Get RAG knowledge for this position
+        fen = chess_game.get_fen()
+        rag_advice = chess_rag.get_position_specific_advice(fen, square)
+        analysis['rag_advice'] = rag_advice
+        
+        print(f"\n🔍 POSITION ANALYSIS: {square}")
+        print(f"Piece: {analysis['piece_name']}")
+        print(f"Legal Moves: {analysis['legal_moves']}")
+        print(f"RAG Advice: {rag_advice}")
+        
+        return jsonify(analysis)
+        
+    except Exception as e:
+        print(f"Analysis error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/match/test', methods=['GET'])
+def test_stockfish():
+    """Test if Stockfish is available and working."""
+    try:
+        print(f"\n🔍 TESTING STOCKFISH AVAILABILITY")
+        
+        # Try to find Stockfish
+        match = StockfishMatch()
+        print(f"📍 Stockfish path: {match.stockfish_path}")
+        
+        # Try to start engine
+        if match.start_engine():
+            # Test a simple move
+            test_board = chess.Board()
+            result = match.engine.play(test_board, chess.engine.Limit(time=1.0))
+            match.stop_engine()
+            
+            print(f"✅ Stockfish test successful - played: {result.move}")
+            return jsonify({
+                'success': True,
+                'message': 'Stockfish is working correctly',
+                'path': match.stockfish_path,
+                'test_move': str(result.move)
+            })
+        else:
+            return jsonify({'error': 'Failed to start Stockfish engine'}), 500
+            
+    except Exception as e:
+        print(f"Stockfish test error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/match/start', methods=['POST'])
+def start_stockfish_match():
+    """Start a Stockfish vs Model match."""
+    try:
+        global stockfish_match
+        
+        data = request.get_json() or {}
+        model_plays_white = data.get('model_plays_white', True)
+        time_control = data.get('time_control', '10+0.1')  # 10 seconds + 0.1s increment
+        
+        print(f"\n🎮 STARTING STOCKFISH MATCH")
+        print(f"📋 Model plays: {'White' if model_plays_white else 'Black'}")
+        print(f"⏰ Time control: {time_control}")
+        
+        # Initialize match
+        stockfish_match = StockfishMatch(time_control=time_control)
+        
+        if not stockfish_match.start_engine():
+            return jsonify({'error': 'Failed to start Stockfish engine'}), 500
+        
+        return jsonify({
+            'success': True,
+            'message': f'Match started - Model plays {"White" if model_plays_white else "Black"}',
+            'time_control': time_control,
+            'model_plays_white': model_plays_white,
+            'stockfish_path': stockfish_match.stockfish_path
+        })
+        
+    except Exception as e:
+        print(f"Match start error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/match/play', methods=['POST'])
+def play_match_move():
+    """Play one move in the Stockfish match."""
+    try:
+        global stockfish_match
+        
+        if not stockfish_match:
+            return jsonify({'error': 'No active match'}), 400
+        
+        data = request.get_json() or {}
+        model_plays_white = data.get('model_plays_white', True)
+        
+        legal_moves = [move.uci() for move in stockfish_match.board.legal_moves]
+        
+        if not legal_moves:
+            return jsonify({'error': 'No legal moves available'}), 400
+        
+        is_model_turn = (stockfish_match.board.turn == chess.WHITE) == model_plays_white
+        
+        if is_model_turn:
+            # Model's turn - no time limit
+            def model_generator(question, context):
+                return chess_model.generate_response(question, context)
+            
+            move_result = stockfish_match.get_model_move(model_generator, legal_moves)
+            player = "Model"
+        else:
+            # Stockfish's turn
+            move_result = stockfish_match.get_stockfish_move()
+            player = "Stockfish"
+        
+        return jsonify({
+            'success': True,
+            'move': move_result.move,
+            'san': move_result.san,
+            'fen': move_result.fen,
+            'player': player,
+            'time_taken': move_result.time_taken,
+            'evaluation': move_result.evaluation,
+            'depth': move_result.depth,
+            'is_game_over': stockfish_match.board.is_game_over(),
+            'game_result': stockfish_match._determine_result() if stockfish_match.board.is_game_over() else None
+        })
+        
+    except Exception as e:
+        print(f"Match move error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/match/status', methods=['GET'])
+def get_match_status():
+    """Get current match status."""
+    try:
+        global stockfish_match
+        
+        if not stockfish_match:
+            return jsonify({'active': False})
+        
+        return jsonify({
+            'active': True,
+            'fen': stockfish_match.board.fen(),
+            'turn': 'white' if stockfish_match.board.turn == chess.WHITE else 'black',
+            'is_game_over': stockfish_match.board.is_game_over(),
+            'move_count': len(stockfish_match.moves),
+            'legal_moves': [move.uci() for move in stockfish_match.board.legal_moves]
+        })
+        
+    except Exception as e:
+        print(f"Match status error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/match/stop', methods=['POST'])
+def stop_match():
+    """Stop the current match."""
+    try:
+        global stockfish_match
+        
+        if stockfish_match:
+            stockfish_match.stop_engine()
+            stockfish_match = None
+            print("🛑 Match stopped")
+        
+        return jsonify({'success': True, 'message': 'Match stopped'})
+        
+    except Exception as e:
+        print(f"Match stop error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/game/reset', methods=['POST'])
+def reset_game():
+    """Reset the chess game to starting position."""
+    try:
+        chess_game.reset_game()
+        print("\n🔄 GAME RESET")
+        return jsonify({'success': True, 'message': 'Game reset to starting position'})
+        
+    except Exception as e:
+        print(f"Reset error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/game/ai_move', methods=['POST'])
+def get_ai_move():
+    """Get AI's recommended move for the current position."""
+    try:
+        fen = chess_game.get_fen()
+        current_player = chess_game.current_player
+        legal_moves = chess_game.get_legal_moves()
+        
+        start_time = time.time()
+        print(f"\n🤖 AI MOVE REQUEST")
+        print(f"Position: {fen}")
+        print(f"Player: {current_player}")
+        print(f"Legal moves: {legal_moves}")
+        
+        if not legal_moves:
+            return jsonify({
+                'success': False,
+                'error': 'No legal moves available',
+                'game_state': chess_game.game_state
+            })
+        
+        # Create a more educational question for the AI
+        question = f"""You are playing as {current_player} in this chess position: {fen}
+
+The legal moves available are: {', '.join(legal_moves[:10])}
+
+Please:
+1. Choose the best move from the legal moves
+2. Explain why this move is good
+3. Comment on what the opponent just played
+4. Suggest what the opponent should consider next
+
+Respond with your chosen move first, then your analysis."""
+        
+        # Get RAG knowledge for the position
+        rag_knowledge = chess_rag.get_relevant_knowledge(question, fen)
+        rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
+        
+        # Get AI response with RAG context
+        result = chess_model.generate_response(question, context=f"{rag_context}Current position: {fen}")
+        
+        # Try to extract a move from the response
+        response_text = result.get('response', '')
+        move_uci = extract_move_from_response(response_text, legal_moves)
+        
+        print(f"AI Response: {response_text[:200]}...")
+        print(f"Extracted move: {move_uci}")
+        
+        # Log performance metrics for AI move
+        response_time = time.time() - start_time
+        tokens_per_second = len(response_text.split()) / response_time if response_time > 0 else 0
+        print(f"⏱️  AI Response Time: {response_time:.2f}s")
+        print(f"🚀 AI Tokens/Second: {tokens_per_second:.1f}")
+        print(f"📊 AI Response Length: {len(response_text)} chars")
+        
+        if move_uci and move_uci in legal_moves:
+            # Make the AI move
+            move_result = chess_game.make_move(move_uci)
+            move_result['ai_response'] = response_text
+            move_result['ai_confidence'] = result.get('confidence', 0.0)
+            
+            print(f"AI Move: {move_uci}")
+            print(f"Success: {move_result['success']}")
+            
+            return jsonify(move_result)
+        else:
+            # Fallback: choose a random legal move
+            import random
+            fallback_move = random.choice(legal_moves)
+            print(f"Using fallback move: {fallback_move}")
+            
+            move_result = chess_game.make_move(fallback_move)
+            move_result['ai_response'] = f"AI chose: {fallback_move} (fallback)"
+            move_result['ai_confidence'] = 0.5
+            
+            return jsonify(move_result)
+            
+    except Exception as e:
+        print(f"AI move error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def extract_move_from_response(response: str, legal_moves: List[str]) -> Optional[str]:
+    """Extract a legal move from AI response text."""
+    import re
+    
+    print(f"Extracting move from: {response[:200]}...")
+    print(f"Legal moves: {legal_moves}")
+    
+    # Look for UCI format moves (e.g., e2e4, g1f3)
+    uci_pattern = r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b'
+    matches = re.findall(uci_pattern, response.lower())
+    
+    print(f"Found UCI matches: {matches}")
+    
+    for match in matches:
+        if match in legal_moves:
+            print(f"✅ Found legal UCI move: {match}")
+            return match
+    
+    # Look for partial matches (e.g., if AI says "e2e4" but we have "e2e4" in legal moves)
+    for move in legal_moves:
+        if move.lower() in response.lower():
+            print(f"✅ Found partial UCI match: {move}")
+            return move
+    
+    # Look for SAN format moves and try to convert (simplified)
+    san_pattern = r'\b([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?)\b'
+    san_matches = re.findall(san_pattern, response)
+    
+    print(f"Found SAN matches: {san_matches}")
+    
+    # Try to find moves mentioned in explanations
+    explanation_pattern = r'(?:move|play|choose|select).*?([a-h][1-8][a-h][1-8])'
+    explanation_matches = re.findall(explanation_pattern, response.lower())
+    print(f"Found explanation matches: {explanation_matches}")
+    
+    # Check explanation matches
+    for move in explanation_matches:
+        if move in legal_moves:
+            print(f"✅ Found move in explanation: {move}")
+            return move
+    
+    print("❌ No valid move found in response")
+    return None
+
+
+def find_free_port(start_port=5000, max_attempts=10):
+    """Find a free port starting from start_port."""
+    import socket
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('', port))
+                return port
+        except OSError:
+            continue
+    raise RuntimeError(f"Could not find a free port in range {start_port}-{start_port + max_attempts - 1}")
+
+
 if __name__ == '__main__':
-    print("Starting ChessGemma Web Interface...")
-    print("Visit http://localhost:5000 to use the application")
+    print("🚀 Starting ChessGemma Web Interface...")
+    print("="*60)
+    
+    # Show initial system stats
+    initial_stats = get_system_stats()
+    print(f"💻 Initial System Stats:")
+    print(f"   Memory: {initial_stats['memory_mb']:.1f} MB")
+    print(f"   CPU: {initial_stats['cpu_percent']:.1f}%")
+    print(f"   Time: {initial_stats['timestamp']}")
+    print("="*60)
 
     # Try to preload the model
-    print("Preloading model...")
+    print("🔄 Preloading model...")
+    model_start_time = time.time()
     preload_success = chess_model.load_model()
+    model_load_time = time.time() - model_start_time
+    
     if preload_success:
-        print("✓ Model preloaded successfully")
+        print(f"✅ Model preloaded successfully in {model_load_time:.3f}s")
+        
+        # Show model info
+        model_info = chess_model._inference.get_model_info()
+        print(f"📊 Model Info:")
+        print(f"   Device: {model_info.get('device', 'unknown')}")
+        print(f"   Base Model: {model_info.get('base_model', 'unknown')}")
+        print(f"   Adapter: {model_info.get('adapter_path', 'none')}")
+        print(f"   Loaded: {model_info.get('is_loaded', False)}")
     else:
-        print("⚠ Model preloading failed - will load on first request")
+        print(f"⚠️  Model preloading failed after {model_load_time:.3f}s - will load on first request")
 
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        debug=False,  # Set to False for production
-        threaded=True
-    )
+    # Find an available port
+    try:
+        port = find_free_port()
+        print("="*60)
+        print(f"🌐 Web Interface Ready!")
+        print(f"📍 URL: http://localhost:{port}")
+        print(f"📊 Performance Stats: http://localhost:{port}/api/stats")
+        print(f"🔍 Health Check: http://localhost:{port}/api/health")
+        print("="*60)
+        print("🎯 Ready to accept chess questions!")
+        print("="*60)
+        
+        app.run(
+            host='0.0.0.0',
+            port=port,
+            debug=False,  # Set to False for production
+            threaded=True
+        )
+    except RuntimeError as e:
+        print(f"❌ Error: {e}")
+        print("Please free up some ports or try again later.")

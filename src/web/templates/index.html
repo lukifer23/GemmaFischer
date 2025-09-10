@@ -66,6 +66,43 @@
 
         .chess-square:hover {
             background: rgba(255, 255, 0, 0.3) !important;
+            transform: scale(1.05);
+        }
+
+        .chess-square.selected {
+            background: rgba(0, 123, 255, 0.4) !important;
+            border: 2px solid #007bff;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+        }
+
+        .chess-square {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .chess-square.legal-move {
+            background: rgba(0, 255, 0, 0.3) !important;
+            border: 2px solid #00ff00;
+            transform: scale(1.05);
+        }
+
+        .chess-square.legal-move:hover {
+            background: rgba(0, 255, 0, 0.5) !important;
+            transform: scale(1.1);
+        }
+
+        .play-mode-active {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%) !important;
+            color: white !important;
+            border: 2px solid #ff4757 !important;
+        }
+
+        .analysis-mode-active {
+            background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%) !important;
+            color: white !important;
+            border: 2px solid #5352ed !important;
         }
 
         .chat-container {
@@ -276,6 +313,24 @@
                             <small class="text-muted">
                                 Interactive chess board visualization
                             </small>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-primary me-2" onclick="toggleGameMode()">
+                <i class="fas fa-gamepad me-1"></i>
+                Toggle Play Mode
+            </button>
+            <button class="btn btn-sm btn-secondary me-2" onclick="resetGame()">
+                <i class="fas fa-refresh me-1"></i>
+                Reset Game
+            </button>
+            <button class="btn btn-sm btn-warning me-2" onclick="toggleStockfishMatch()">
+                <i class="fas fa-chess me-1"></i>
+                Stockfish Match
+            </button>
+            <button class="btn btn-sm btn-info" onclick="testStockfish()">
+                <i class="fas fa-vial me-1"></i>
+                Test Stockfish
+            </button>
+        </div>
                         </div>
                     </div>
                 </div>
@@ -310,12 +365,21 @@
     <script>
         // Global variables
         let isLoading = false;
+        let gameState = null;
+        let selectedSquare = null;
+        let gameMode = 'analysis'; // 'analysis' or 'play'
+        let stockfishMatch = null;
+        let matchActive = false;
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             initializeChessBoard();
             loadExamples();
             setupEventListeners();
+            loadGameState();
+            
+            // Show welcome message
+            showMessage('🎮 **ChessGemma Ready!**\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
         });
 
         // Initialize chess board
@@ -480,15 +544,86 @@
             const square = `${file}${rank}`;
 
             console.log(`Clicked square: ${square}`);
-
-            // Here you could add logic to highlight moves, show piece info, etc.
-            // For now, just log the square
+            
+            if (gameMode === 'play') {
+                handlePlayModeClick(square, squareIndex);
+            } else {
+                handleAnalysisModeClick(square, squareIndex);
+            }
         }
 
-        // Show a temporary message
-        function showMessage(message, type = 'info', duration = 3000) {
+        // Handle clicks in analysis mode
+        function handleAnalysisModeClick(square, squareIndex) {
+            // Visual feedback for clicked square
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => sq.classList.remove('selected'));
+            squares[squareIndex].classList.add('selected');
+            
+            // Get piece on this square
+            const piece = squares[squareIndex].textContent;
+            const pieceName = getPieceName(piece);
+            
+            // Show square info and ask if user wants to analyze this square
+            const message = piece ? 
+                `Selected square ${square} with ${pieceName}` : 
+                `Selected empty square ${square}`;
+            
+            showMessage(message, 'info', 3000);
+            
+            // Auto-ask a question about this square with board context
+            setTimeout(() => {
+                const currentFEN = getCurrentBoardFEN();
+                const question = piece ? 
+                    `Position: ${currentFEN}\nWhat can the ${pieceName} on ${square} do?` :
+                    `Position: ${currentFEN}\nWhat pieces can move to ${square}?`;
+                
+                document.getElementById('questionInput').value = question;
+                askQuestion();
+            }, 1000);
+        }
+
+        // Handle clicks in play mode
+        function handlePlayModeClick(square, squareIndex) {
+            if (selectedSquare === null) {
+                // First click - select piece
+                selectedSquare = square;
+                const squares = document.querySelectorAll('.chess-square');
+                squares.forEach(sq => sq.classList.remove('selected'));
+                squares[squareIndex].classList.add('selected');
+                
+                // Get legal moves for this piece
+                getLegalMoves(square);
+            } else {
+                // Second click - make move
+                const move = `${selectedSquare}${square}`;
+                makeMove(move);
+                selectedSquare = null;
+            }
+        }
+
+        // Get current board state as FEN
+        function getCurrentBoardFEN() {
+            // For now, return the starting position FEN
+            // In a full implementation, this would track moves and update the FEN
+            return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        }
+
+        // Get piece name from Unicode symbol
+        function getPieceName(piece) {
+            const pieceNames = {
+                '♜': 'Black Rook', '♞': 'Black Knight', '♝': 'Black Bishop', 
+                '♛': 'Black Queen', '♚': 'Black King', '♟': 'Black Pawn',
+                '♖': 'White Rook', '♘': 'White Knight', '♗': 'White Bishop', 
+                '♕': 'White Queen', '♔': 'White King', '♙': 'White Pawn'
+            };
+            return pieceNames[piece] || 'Unknown Piece';
+        }
+
+        // Show a message (persistent by default)
+        function showMessage(message, type = 'info', duration = 0) {
             addMessage(message, type);
 
+            // Only auto-remove if duration is specified and > 0
             if (duration > 0) {
                 setTimeout(() => {
                     const messages = document.querySelectorAll('.message');
@@ -496,6 +631,399 @@
                         messages[messages.length - 1].remove();
                     }
                 }, duration);
+            }
+        }
+
+        // Load game state from server
+        async function loadGameState() {
+            try {
+                const response = await fetch('/api/game/state');
+                gameState = await response.json();
+                console.log('Game state loaded:', gameState);
+            } catch (error) {
+                console.error('Failed to load game state:', error);
+            }
+        }
+
+        // Make a move
+        async function makeMove(moveUCI) {
+            try {
+                console.log(`Making move: ${moveUCI}`);
+                console.log(`Current game state:`, gameState);
+                
+                const response = await fetch('/api/game/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ move: moveUCI })
+                });
+                
+                const result = await response.json();
+                console.log('Move result:', result);
+                
+                if (result.success) {
+                    const moveText = result.san || result.move;
+                    const playerText = result.current_player === 'white' ? 'White' : 'Black';
+                    showMessage(`✅ ${playerText} played: ${moveText}`, 'success');
+                    updateBoardFromFEN(result.fen);
+                    gameState = result;
+                    
+                    // Clear selection
+                    selectedSquare = null;
+                    const squares = document.querySelectorAll('.chess-square');
+                    squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
+                    
+                    // If it's now the AI's turn, ask for AI move
+                    if (result.current_player === 'black' && gameMode === 'play') {
+                        showMessage('🤖 AI is thinking...', 'info', 3000);
+                        setTimeout(() => getAIMove(), 2000); // Increased delay for smoother experience
+                    }
+                } else {
+                    showMessage(`❌ Invalid move: ${result.error}`, 'danger');
+                    console.error('Move failed:', result.error);
+                }
+            } catch (error) {
+                console.error('Move error:', error);
+                showMessage('❌ Error making move', 'danger');
+            }
+        }
+
+        // Get AI move
+        async function getAIMove() {
+            try {
+                showMessage('AI is thinking...', 'info', 2000);
+                
+                const response = await fetch('/api/game/ai_move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const moveText = result.san || result.move;
+                    let aiMessage = `🤖 **AI played: ${moveText}**`;
+                    
+                    // Add AI reasoning if available
+                    if (result.ai_response) {
+                        // Show full AI response, but format it nicely
+                        const reasoning = result.ai_response;
+                        aiMessage += `\n\n💭 **AI Reasoning:**\n${reasoning}`;
+                    }
+                    
+                    showMessage(aiMessage, 'info');
+                    updateBoardFromFEN(result.fen);
+                    gameState = result;
+                } else {
+                    showMessage(`❌ AI error: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('AI move error:', error);
+                showMessage('❌ Error getting AI move', 'danger');
+            }
+        }
+
+        // Get legal moves for a piece
+        async function getLegalMoves(square) {
+            try {
+                const response = await fetch('/api/game/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ square: square })
+                });
+                
+                const analysis = await response.json();
+                console.log('Legal moves for', square, ':', analysis.legal_moves);
+                
+                // Highlight legal moves on the board
+                highlightLegalMoves(analysis.legal_moves);
+                
+                // Show analysis in chat
+                let message = `🔍 **${analysis.piece_name} on ${square}**\n`;
+                message += `**Legal moves:** ${analysis.legal_moves.join(', ')}`;
+                
+                // Add RAG advice if available
+                if (analysis.rag_advice && analysis.rag_advice.length > 0) {
+                    message += `\n\n📚 **Chess Knowledge:**\n${analysis.rag_advice.join('\n')}`;
+                }
+                
+                showMessage(message, 'info');
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+            }
+        }
+
+        // Highlight legal moves on the board
+        function highlightLegalMoves(legalMoves) {
+            // Remove existing highlights
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => sq.classList.remove('legal-move'));
+            
+            // Add highlights for legal moves
+            legalMoves.forEach(move => {
+                const toSquare = move.slice(2, 4); // Extract destination square
+                const file = toSquare.charCodeAt(0) - 97; // a=0, b=1, etc.
+                const rank = 8 - parseInt(toSquare[1]); // 1=7, 2=6, etc.
+                const squareIndex = rank * 8 + file;
+                
+                if (squareIndex >= 0 && squareIndex < 64) {
+                    squares[squareIndex].classList.add('legal-move');
+                }
+            });
+        }
+
+        // Update board from FEN
+        function updateBoardFromFEN(fen) {
+            console.log('Board updated to FEN:', fen);
+            
+            // Parse FEN and update the visual board
+            const fenParts = fen.split(' ');
+            const boardState = fenParts[0];
+            const currentPlayer = fenParts[1];
+            
+            // Clear the board
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => {
+                sq.textContent = '';
+                sq.classList.remove('selected', 'legal-move');
+            });
+            
+            // Parse board state and place pieces
+            let rank = 0;
+            let file = 0;
+            
+            for (let i = 0; i < boardState.length; i++) {
+                const char = boardState[i];
+                
+                if (char === '/') {
+                    rank++;
+                    file = 0;
+                } else if (char >= '1' && char <= '8') {
+                    // Empty squares
+                    file += parseInt(char);
+                } else {
+                    // Piece
+                    const squareIndex = rank * 8 + file;
+                    if (squareIndex < 64) {
+                        squares[squareIndex].textContent = getPieceSymbol(char);
+                    }
+                    file++;
+                }
+            }
+            
+            // Update game state display
+            updateGameStateDisplay(currentPlayer);
+        }
+
+        // Get piece symbol from FEN character
+        function getPieceSymbol(fenChar) {
+            const pieceMap = {
+                'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+                'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+            };
+            return pieceMap[fenChar] || '';
+        }
+
+        // Update game state display
+        function updateGameStateDisplay(currentPlayer) {
+            const playerText = currentPlayer === 'w' ? 'White' : 'Black';
+            showMessage(`${playerText} to move`, 'info', 2000);
+        }
+
+        // Toggle game mode
+        function toggleGameMode() {
+            gameMode = gameMode === 'analysis' ? 'play' : 'analysis';
+            const modeText = gameMode === 'play' ? 'Play Mode' : 'Analysis Mode';
+            const modeIcon = gameMode === 'play' ? '🎮' : '🔍';
+            
+            showMessage(`${modeIcon} Switched to ${modeText}`, 'info', 3000);
+            
+            // Update button appearance
+            const toggleButton = document.querySelector('button[onclick="toggleGameMode()"]');
+            if (toggleButton) {
+                toggleButton.classList.remove('play-mode-active', 'analysis-mode-active');
+                if (gameMode === 'play') {
+                    toggleButton.classList.add('play-mode-active');
+                    toggleButton.innerHTML = '<i class="fas fa-gamepad me-1"></i>Exit Play Mode';
+                } else {
+                    toggleButton.classList.add('analysis-mode-active');
+                    toggleButton.innerHTML = '<i class="fas fa-search me-1"></i>Enter Play Mode';
+                }
+            }
+            
+            // Clear selection when switching modes
+            selectedSquare = null;
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => {
+                sq.classList.remove('selected', 'legal-move');
+            });
+        }
+
+        // Reset game
+        async function resetGame() {
+            try {
+                const response = await fetch('/api/game/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('🔄 Game reset to starting position', 'success');
+                    
+                    // Clear selection
+                    selectedSquare = null;
+                    const squares = document.querySelectorAll('.chess-square');
+                    squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
+                    
+                    // Reload game state and update board
+                    await loadGameState();
+                    if (gameState && gameState.fen) {
+                        updateBoardFromFEN(gameState.fen);
+                    } else {
+                        // Fallback to starting position
+                        initializeChessBoard();
+                    }
+                }
+            } catch (error) {
+                console.error('Reset error:', error);
+                showMessage('Error resetting game', 'error', 3000);
+            }
+        }
+
+        // Stockfish Match Functions
+        async function testStockfish() {
+            try {
+                showMessage('🔍 Testing Stockfish availability...', 'info');
+                
+                const response = await fetch('/api/match/test');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(`✅ ${result.message}\n📍 Path: ${result.path}\n🎯 Test move: ${result.test_move}`, 'success');
+                } else {
+                    showMessage(`❌ Stockfish test failed: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Stockfish test error:', error);
+                showMessage('❌ Error testing Stockfish', 'danger');
+            }
+        }
+
+        async function toggleStockfishMatch() {
+            if (matchActive) {
+                await stopStockfishMatch();
+            } else {
+                await startStockfishMatch();
+            }
+        }
+
+        async function startStockfishMatch() {
+            try {
+                showMessage('🎮 Starting Stockfish vs Model match...', 'info');
+                
+                const response = await fetch('/api/match/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_plays_white: true,
+                        time_control: '10+0.1'  // 10 seconds + 0.1s increment
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    matchActive = true;
+                    stockfishMatch = result;
+                    showMessage(`🏆 ${result.message}`, 'success');
+                    
+                    // Update button
+                    const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
+                    button.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Match';
+                    button.className = 'btn btn-sm btn-danger';
+                    
+                    // Start playing moves
+                    playMatchMoves();
+                } else {
+                    showMessage(`❌ Failed to start match: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Match start error:', error);
+                showMessage('❌ Error starting match', 'danger');
+            }
+        }
+
+        async function stopStockfishMatch() {
+            try {
+                const response = await fetch('/api/match/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    matchActive = false;
+                    stockfishMatch = null;
+                    showMessage('🛑 Match stopped', 'info');
+                    
+                    // Update button
+                    const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
+                    button.innerHTML = '<i class="fas fa-chess me-1"></i>Stockfish Match';
+                    button.className = 'btn btn-sm btn-warning';
+                }
+            } catch (error) {
+                console.error('Match stop error:', error);
+            }
+        }
+
+        async function playMatchMoves() {
+            if (!matchActive) return;
+            
+            try {
+                const response = await fetch('/api/match/play', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_plays_white: true
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const player = result.player;
+                    const move = result.san;
+                    const time = result.time_taken.toFixed(2);
+                    
+                    showMessage(`🏆 ${player} played: ${move} (${time}s)`, 'info');
+                    
+                    // Update board
+                    updateBoardFromFEN(result.fen);
+                    
+                    if (result.is_game_over) {
+                        const gameResult = result.game_result;
+                        showMessage(`🏁 Game Over! Winner: ${gameResult[0].toUpperCase()}, Reason: ${gameResult[1]}`, 'success');
+                        matchActive = false;
+                        
+                        // Update button
+                        const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
+                        button.innerHTML = '<i class="fas fa-chess me-1"></i>Stockfish Match';
+                        button.className = 'btn btn-sm btn-warning';
+                    } else {
+                        // Continue playing after a short delay
+                        setTimeout(() => playMatchMoves(), 1000);
+                    }
+                } else {
+                    showMessage(`❌ Match error: ${result.error}`, 'danger');
+                    matchActive = false;
+                }
+            } catch (error) {
+                console.error('Match play error:', error);
+                showMessage('❌ Error playing match', 'danger');
+                matchActive = false;
             }
         }
     </script>

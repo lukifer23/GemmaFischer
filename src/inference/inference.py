@@ -120,28 +120,44 @@ class ChessGemmaInference:
         """Load prompt template from prompts directory, fallback to defaults."""
         if mode == "engine":
             if self._engine_template is None:
-                path = self.project_root / "prompts" / "engine_mode.txt"
-                self._engine_template = path.read_text(encoding="utf-8") if path.exists() else (
-                    "You are a chess engine. Output only the best move in UCI format (e2e4)."
+                # Use a proper system prompt instead of the documentation file
+                self._engine_template = (
+                    "You are a chess engine. Analyze the given position and respond with only the best move in UCI format (e.g., e2e4). "
+                    "Do not provide explanations, just the move."
                 )
             return self._engine_template
         else:
             if self._tutor_template is None:
-                path = self.project_root / "prompts" / "tutor_mode.txt"
-                self._tutor_template = path.read_text(encoding="utf-8") if path.exists() else (
-                    "You are a chess tutor. Analyze step-by-step and conclude with the best move in UCI."
+                # Use a proper system prompt instead of the documentation file
+                self._tutor_template = (
+                    "You are a chess tutor and analyst playing a teaching game with a student. "
+                    "When making moves, explain your reasoning, comment on the opponent's previous move, "
+                    "and suggest what they should consider next. Be conversational and educational, "
+                    "like a chess teacher playing a teaching game. Always provide clear explanations."
                 )
             return self._tutor_template
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
         system_prompt = self._load_prompt_template(mode)
-        msgs = [
-            {"role": "system", "content": system_prompt},
-        ]
-        if context:
-            msgs.append({"role": "user", "content": f"Context: {context}"})
-        msgs.append({"role": "user", "content": question})
-        return msgs
+        
+        # Build a simpler prompt format that works better with the model
+        if mode == "tutor":
+            if context:
+                full_question = f"{context}\n\n{question}"
+            else:
+                full_question = question
+            
+            # Use a simple instruction format instead of chat template
+            prompt = f"Chess Tutor: {system_prompt}\n\nQuestion: {full_question}\n\nAnswer:"
+        else:
+            if context:
+                full_question = f"{context}\n\n{question}"
+            else:
+                full_question = question
+            
+            prompt = f"Chess Engine: {system_prompt}\n\nPosition: {full_question}\n\nMove:"
+        
+        return [{"role": "user", "content": prompt}]
 
     def generate_response(
         self,
@@ -165,11 +181,15 @@ class ChessGemmaInference:
             messages = self._build_messages(question, context, mode)
             prompt_text: str
 
-            if hasattr(self.tokenizer, "apply_chat_template"):
-                prompt_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-            else:
-                # Basic fallback: concatenate
-                prompt_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+            # Use the simple prompt format we built
+            prompt_text = messages[0]['content']
+
+            # Debug logging
+            print(f"\n🔍 INFERENCE DEBUG:")
+            print(f"Mode: {mode}")
+            print(f"Question: {question[:100]}{'...' if len(question) > 100 else ''}")
+            print(f"System Prompt: {messages[0]['content'][:100]}{'...' if len(messages[0]['content']) > 100 else ''}")
+            print(f"Prompt Length: {len(prompt_text)} chars")
 
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
 
@@ -182,11 +202,50 @@ class ChessGemmaInference:
                     temperature=temperature,
                     pad_token_id=self.tokenizer.eos_token_id,
                     repetition_penalty=1.1,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    use_cache=True,
                 )
 
             decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # Debug logging for response
+            print(f"Raw Response Length: {len(decoded)} chars")
+            print(f"Raw Response Preview: {decoded[:300]}{'...' if len(decoded) > 300 else ''}")
+            
             # Try to strip prompt prefix if echoed
-            answer = decoded[len(prompt_text):].strip() if decoded.startswith(prompt_text) else decoded.strip()
+            if decoded.startswith(prompt_text):
+                answer = decoded[len(prompt_text):].strip()
+                print(f"Stripped prompt prefix, answer length: {len(answer)}")
+            else:
+                answer = decoded.strip()
+                print(f"No prompt prefix found, using full response")
+            
+            # Clean up common artifacts
+            if answer.startswith("Answer:"):
+                answer = answer[7:].strip()
+            elif answer.startswith("Move:"):
+                answer = answer[5:].strip()
+            
+            # Remove any remaining prompt fragments
+            lines = answer.split('\n')
+            content_lines = []
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith(('Chess Tutor:', 'Chess Engine:', 'Question:', 'Position:', 'Answer:', 'Move:')):
+                    content_lines.append(line)
+            
+            if content_lines:
+                answer = '\n'.join(content_lines).strip()
+            
+            # Fallback if we still don't have a good answer
+            if not answer or len(answer) < 10:
+                if mode == "tutor":
+                    answer = "I'm having trouble generating a response. Please try rephrasing your question or ask about a specific chess position."
+                else:
+                    answer = "e2e4"  # Default opening move
+                print("Using fallback response due to poor model output")
+            
+            print(f"Final Answer Preview: {answer[:200]}{'...' if len(answer) > 200 else ''}")
 
             # Post-process for engine mode: enforce a single legal UCI move if possible
             postprocessed = False

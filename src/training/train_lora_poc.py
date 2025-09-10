@@ -7,6 +7,7 @@ import argparse
 import time
 import json
 import os
+import sys
 from pathlib import Path
 from datetime import datetime
 
@@ -28,6 +29,11 @@ from typing import Dict, Any
 
 # resource monitoring
 import psutil
+
+# Ensure project root is on sys.path for absolute imports like 'src.*'
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def log_system_stats(prefix=""):
@@ -67,7 +73,8 @@ class CustomCallback(TrainerCallback):
             loss_str = f"{loss_val:.4f}" if isinstance(loss_val, (int, float)) else str(loss_val)
             cpu_val = system_stats['cpu_percent']
             cpu_str = f"{cpu_val:.1f}" if isinstance(cpu_val, (int, float)) else str(cpu_val)
-            print(f"Step {state.global_step}/{state.max_steps} ({progress:.1f}%) | Loss: {loss_str} | CPU: {cpu_str}%")
+            mem_used_gb = (system_stats['mem_total'] - system_stats['mem_available']) / (1024**3)
+            print(f"Step {state.global_step}/{state.max_steps} ({progress:.1f}%) | Loss: {loss_str} | CPU: {cpu_str}% | RAM: {mem_used_gb:.1f}GB")
 
             # Save enhanced logs
             log_file = Path(args.output_dir) / 'enhanced_train_log.jsonl'
@@ -132,32 +139,39 @@ def main():
     out_dir = Path(cfg['training']['output_dir'])
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # load dataset(s)
+    # Detect curriculum early. If present, we'll build per-phase datasets below
+    use_curriculum = bool(isinstance(cfg, dict) and cfg.get('curriculum'))
+
+    # load dataset(s) only if NOT using curriculum
     ds = None
-    if 'datasets' in cfg and isinstance(cfg['datasets'], list) and cfg['datasets']:
-        # Weighted mixture using dataset_mixer
-        try:
-            from src.training.dataset_mixer import build_mixture
-            specs = []
-            for item in cfg['datasets']:
-                p = item.get('path')
-                w = float(item.get('weight', 1.0))
-                if p and Path(p).exists():
-                    specs.append({'path': p, 'weight': w})
-            if not specs:
-                print('No valid dataset specs found in config.datasets.')
+    if not use_curriculum:
+        if 'datasets' in cfg and isinstance(cfg['datasets'], list) and cfg['datasets']:
+            # Weighted mixture using dataset_mixer
+            try:
+                from src.training.dataset_mixer import build_mixture
+                specs = []
+                for item in cfg['datasets']:
+                    p = item.get('path')
+                    w = float(item.get('weight', 1.0))
+                    if p and Path(p).exists():
+                        specs.append({'path': p, 'weight': w})
+                if not specs:
+                    print('No valid dataset specs found in config.datasets.')
+                    return
+                ds = build_mixture(specs)
+                print(f"Loaded mixed dataset from {len(specs)} sources")
+            except Exception as e:
+                print(f"Failed to build mixed dataset: {e}")
                 return
-            ds = build_mixture(specs)
-            print(f"Loaded mixed dataset from {len(specs)} sources")
-        except Exception as e:
-            print(f"Failed to build mixed dataset: {e}")
-            return
-    else:
-        ds_path = cfg['dataset']['path']
-        if not Path(ds_path).exists():
-            print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py first.")
-            return
-        ds = load_dataset('json', data_files=ds_path, split='train')
+        else:
+            ds_path = cfg.get('dataset', {}).get('path') if isinstance(cfg.get('dataset'), dict) else None
+            if not ds_path:
+                print('Config must include either curriculum, datasets list, or dataset.path')
+                return
+            if not Path(ds_path).exists():
+                print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py or refine_dataset.py first.")
+                return
+            ds = load_dataset('json', data_files=ds_path, split='train')
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     # load model with the recommended eager attention implementation for Gemma3
@@ -192,7 +206,9 @@ def main():
         text = example['text']
         return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
 
-    ds = ds.map(preprocess, batched=False)
+    # Only map here if a single/mixed dataset was already built (no curriculum)
+    if 'curriculum' not in cfg or not cfg.get('curriculum'):
+        ds = ds.map(preprocess, batched=False)
 
     data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
@@ -268,6 +284,11 @@ def main():
                 print('  Skipping phase; no valid datasets')
                 continue
             mixed = build_mixture(specs)
+            if len(mixed) == 0:
+                print('  Skipping phase; built dataset is empty')
+                continue
+            # Tokenize per-phase dataset
+            mixed = mixed.map(preprocess, batched=False)
             train_dataset, eval_dataset = split_train_eval(mixed)
 
             # Override steps for this phase if provided
