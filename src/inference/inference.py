@@ -169,6 +169,7 @@ class ChessGemmaInference:
         max_new_tokens: int = 200,
         temperature: float = 0.7,
         top_p: float = 0.9,
+        do_sample: bool = True,
     ) -> Dict[str, Any]:
         """Generate a response dict (text + simple confidence)."""
         if not self.is_loaded:
@@ -195,11 +196,27 @@ class ChessGemmaInference:
 
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
 
+            if mode == "engine":
+                do_sample = False
+                temperature = 0.0
+                top_p = 1.0
+                max_new_tokens = 4
+                try:
+                    import re, chess
+                    match = re.search(r"position:\s*([^\n]+)", question, re.IGNORECASE)
+                    if match:
+                        fen = match.group(1).strip()
+                        board = chess.Board(fen)
+                        if any(m.promotion for m in board.legal_moves):
+                            max_new_tokens = 5
+                except Exception:
+                    pass
+
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
                     max_new_tokens=max_new_tokens,
-                    do_sample=True,
+                    do_sample=do_sample,
                     top_p=top_p,
                     temperature=temperature,
                     pad_token_id=self.tokenizer.eos_token_id,
@@ -365,6 +382,7 @@ class ChessModelInterface:
     def __init__(self, model_path: Optional[str] = None, adapter_path: Optional[str] = None):
         self._inference = ChessGemmaInference(model_path, adapter_path)
 
-    def generate_response(self, prompt: str) -> str:
-        return self._inference.generate_text(prompt)
+    def generate_response(self, prompt: str, mode: str = "engine") -> str:
+        result = self._inference.generate_response(prompt, mode=mode)
+        return result.get("response", "")
 

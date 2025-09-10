@@ -162,7 +162,7 @@
 
 - [ ] Normalize engine prompt to match training: `FEN: <fen>\nMove:`
 - [ ] Remove duplicate `Position:` injection when a FEN is already supplied
-- [ ] Deterministic decoding for engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
+- [x] Deterministic decoding for engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
 - [ ] Strengthen UCI post-processing:
   - [ ] Regex clamp first token `^[a-h][1-8][a-h][1-8][qrbn]?$`
   - [ ] Validate legality against provided FEN; if illegal/missing, fallback to Stockfish
@@ -450,9 +450,9 @@
   - [ ] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
   - [ ] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
 
-- [ ] Deterministic engine decoding defaults:
-  - [ ] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
-  - [ ] Add `do_sample` parameter to `ChessGemmaInference.generate_response` and set by mode
+- [x] Deterministic engine decoding defaults:
+  - [x] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
+  - [x] Add `do_sample` parameter to `ChessGemmaInference.generate_response` and set by mode
 
 - [ ] Stockfish fallback policy:
   - [ ] Remove hardcoded fallback like `"e2e4"`
@@ -475,7 +475,7 @@
   - [ ] Update training scripts to use the instruction collator
 
 - [ ] Web/bridge integration:
-  - [ ] Route engine queries via `ChessGemmaInference.generate_response(..., mode='engine')`
+  - [x] Route engine queries via `ChessGemmaInference.generate_response(..., mode='engine')`
   - [ ] Use centralized UCI utils for extraction/legality
   - [ ] Ensure deterministic decode + fallback is applied everywhere
 

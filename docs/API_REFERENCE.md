@@ -152,20 +152,24 @@ class ChessGemmaInference:
         question: str,
         context: Optional[str] = None,
         mode: str = "tutor",
-        max_length: int = 200,
+        max_new_tokens: int = 200,
         temperature: float = 0.7,
-        top_p: float = 0.9
+        top_p: float = 0.9,
+        do_sample: bool = True
     ) -> Dict[str, Any]:
         """Generate a response to a chess question.
-        
+
         Args:
             question: The chess question to answer
-            max_length: Maximum response length
+            max_new_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_p: Top-p sampling parameter
+            do_sample: Enable sampling (ignored in engine mode)
             
         Returns:
             Dictionary with response, confidence, and metadata. In `mode="engine"`, the response is post-processed to a single legal UCI move when possible (adds `postprocessed: true`).
+            Engine mode also forces deterministic decoding (`do_sample=False`, `temperature=0`, `top_p=1`) and limits output to
+            four tokens (five if a promotion move exists).
         """
     
     def get_model_info(self) -> Dict[str, Any]:

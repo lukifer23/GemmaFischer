@@ -314,7 +314,7 @@ class UCIBridge:
             if self.model_interface and not self.options.use_stockfish_fallback:
                 # Use the model for move generation
                 prompt = self._create_engine_prompt(board)
-                response = self.model_interface.generate_response(prompt)
+                response = self.model_interface.generate_response(prompt, mode="engine")
                 move = self._parse_move_from_response(response, board)
                 if move:
                     return move
@@ -335,7 +335,7 @@ class UCIBridge:
             if self.model_interface:
                 # Use the model for move generation with explanations
                 prompt = self._create_tutor_prompt(board)
-                response = self.model_interface.generate_response(prompt)
+                response = self.model_interface.generate_response(prompt, mode="tutor")
                 move = self._parse_move_from_response(response, board)
                 if move:
                     return move
