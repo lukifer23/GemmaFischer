@@ -1,0 +1,8 @@
+{
+  "source_file": "data/datasets/gemmafischer_combined_dataset.jsonl",
+  "formatted_file": "data/formatted/formatted_gemmafischer_combined_dataset.jsonl",
+  "total_examples": 14238,
+  "skipped_examples": 0,
+  "format_date": "2025-09-10T15:46:49.731510",
+  "format_version": "1.0"
+}

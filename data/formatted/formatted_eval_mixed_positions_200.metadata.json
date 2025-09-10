@@ -1,0 +1,8 @@
+{
+  "source_file": "data/datasets/eval_mixed_positions_200.jsonl",
+  "formatted_file": "data/formatted/formatted_eval_mixed_positions_200.jsonl",
+  "total_examples": 0,
+  "skipped_examples": 11,
+  "format_date": "2025-09-10T15:46:49.615786",
+  "format_version": "1.0"
+}

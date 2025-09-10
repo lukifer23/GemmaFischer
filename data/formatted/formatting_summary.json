@@ -1,0 +1,87 @@
+{
+  "format_date": "2025-09-10T15:46:49.885574",
+  "total_datasets": 10,
+  "total_examples": 21196,
+  "formatted_datasets": {
+    "chess_finetune_expanded.jsonl": {
+      "source_file": "data/datasets/chess_finetune_expanded.jsonl",
+      "formatted_file": "data/formatted/formatted_chess_finetune_expanded.jsonl",
+      "total_examples": 500,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.547798",
+      "format_version": "1.0"
+    },
+    "chess_finetune_focused.jsonl": {
+      "source_file": "data/datasets/chess_finetune_focused.jsonl",
+      "formatted_file": "data/formatted/formatted_chess_finetune_focused.jsonl",
+      "total_examples": 1000,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.553753",
+      "format_version": "1.0"
+    },
+    "cot_reasoning_examples_small.jsonl": {
+      "source_file": "data/datasets/cot_reasoning_examples_small.jsonl",
+      "formatted_file": "data/formatted/formatted_cot_reasoning_examples_small.jsonl",
+      "total_examples": 10,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.554598",
+      "format_version": "1.0"
+    },
+    "chess_finetune.jsonl": {
+      "source_file": "data/datasets/chess_finetune.jsonl",
+      "formatted_file": "data/formatted/formatted_chess_finetune.jsonl",
+      "total_examples": 5,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.554947",
+      "format_version": "1.0"
+    },
+    "chess_multi_source_2000.jsonl": {
+      "source_file": "data/datasets/chess_multi_source_2000.jsonl",
+      "formatted_file": "data/formatted/formatted_chess_multi_source_2000.jsonl",
+      "total_examples": 110,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.555880",
+      "format_version": "1.0"
+    },
+    "chess_finetune_full.jsonl": {
+      "source_file": "data/datasets/chess_finetune_full.jsonl",
+      "formatted_file": "data/formatted/formatted_chess_finetune_full.jsonl",
+      "total_examples": 100,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.558090",
+      "format_version": "1.0"
+    },
+    "cot_reasoning_examples.jsonl": {
+      "source_file": "data/datasets/cot_reasoning_examples.jsonl",
+      "formatted_file": "data/formatted/formatted_cot_reasoning_examples.jsonl",
+      "total_examples": 5133,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.614621",
+      "format_version": "1.0"
+    },
+    "eval_mixed_positions_200.jsonl": {
+      "source_file": "data/datasets/eval_mixed_positions_200.jsonl",
+      "formatted_file": "data/formatted/formatted_eval_mixed_positions_200.jsonl",
+      "total_examples": 0,
+      "skipped_examples": 11,
+      "format_date": "2025-09-10T15:46:49.615786",
+      "format_version": "1.0"
+    },
+    "gemmafischer_combined_dataset.jsonl": {
+      "source_file": "data/datasets/gemmafischer_combined_dataset.jsonl",
+      "formatted_file": "data/formatted/formatted_gemmafischer_combined_dataset.jsonl",
+      "total_examples": 14238,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.731510",
+      "format_version": "1.0"
+    },
+    "chess_finetune_refined.jsonl": {
+      "source_file": "data/datasets/chess_finetune_refined.jsonl",
+      "formatted_file": "data/formatted/formatted_chess_finetune_refined.jsonl",
+      "total_examples": 100,
+      "skipped_examples": 0,
+      "format_date": "2025-09-10T15:46:49.735909",
+      "format_version": "1.0"
+    }
+  }
+}

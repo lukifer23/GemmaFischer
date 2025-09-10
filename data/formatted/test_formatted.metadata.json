@@ -1,0 +1,8 @@
+{
+  "source_file": "data/datasets/cot_reasoning_examples.jsonl",
+  "formatted_file": "data/formatted/test_formatted.jsonl",
+  "total_examples": 5133,
+  "skipped_examples": 0,
+  "format_date": "2025-09-10T15:46:44.821850",
+  "format_version": "1.0"
+}

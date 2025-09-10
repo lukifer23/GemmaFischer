@@ -1,0 +1,8 @@
+{
+  "source_file": "data/datasets/chess_multi_source_2000.jsonl",
+  "formatted_file": "data/formatted/formatted_chess_multi_source_2000.jsonl",
+  "total_examples": 110,
+  "skipped_examples": 0,
+  "format_date": "2025-09-10T15:46:49.555880",
+  "format_version": "1.0"
+}

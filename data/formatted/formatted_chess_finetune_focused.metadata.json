@@ -1,0 +1,8 @@
+{
+  "source_file": "data/datasets/chess_finetune_focused.jsonl",
+  "formatted_file": "data/formatted/formatted_chess_finetune_focused.jsonl",
+  "total_examples": 1000,
+  "skipped_examples": 0,
+  "format_date": "2025-09-10T15:46:49.553753",
+  "format_version": "1.0"
+}

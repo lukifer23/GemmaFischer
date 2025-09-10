@@ -1,0 +1,25 @@
+{
+  "total_examples": 21196,
+  "source_counts": {
+    "generated_cot": 10306,
+    "unknown": 10230,
+    "synthetic_qa": 360,
+    "conversations": 228,
+    "tactics": 24,
+    "literature": 24,
+    "tournaments": 24
+  },
+  "creation_date": "2025-09-10T15:46:49.880699",
+  "source_files": [
+    "data/formatted/formatted_eval_mixed_positions_200.jsonl",
+    "data/formatted/formatted_gemmafischer_combined_dataset.jsonl",
+    "data/formatted/formatted_cot_reasoning_examples.jsonl",
+    "data/formatted/formatted_chess_finetune_refined.jsonl",
+    "data/formatted/formatted_chess_finetune_full.jsonl",
+    "data/formatted/formatted_chess_multi_source_2000.jsonl",
+    "data/formatted/formatted_chess_finetune_focused.jsonl",
+    "data/formatted/formatted_chess_finetune.jsonl",
+    "data/formatted/formatted_chess_finetune_expanded.jsonl",
+    "data/formatted/formatted_cot_reasoning_examples_small.jsonl"
+  ]
+}
