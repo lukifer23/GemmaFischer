@@ -7,6 +7,8 @@
 - A **chess engine**, capable of interfacing with UCI backends, evaluating positions, and suggesting moves
 - A **chess tutor/analyst**, able to explain concepts, annotate games, and provide historical insight through chain-of-thought (CoT) reasoning
 
+**Platform**: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
+
 ---
 
 ## Project Checklist
@@ -93,17 +95,18 @@
 
 ---
 
-## Techniques & Tools Needed
+## Techniques & Tools Needed (Mac M3 Pro)
 
 | Task                     | Tools / Techniques                                  |
 |--------------------------|-----------------------------------------------------|
-| LLM Fine-tuning          | QLoRA / LoRA (270M or 2B) in HuggingFace or GGUF    |
-| Dataset Creation         | PGN parsers, `python-chess`, SF/Lc0 for evals       |
+| LLM Fine-tuning          | QLoRA / LoRA (270M or 2B) with Unsloth + MPS        |
+| Dataset Creation         | PGN parsers, `python-chess`, Stockfish for evals    |
 | CoT Prompting            | Instruction tuning / FLAN-style prompts             |
 | UCI Interfacing          | `python-chess`, custom subprocess or socket bridge  |
-| Embeddings               | SentenceTransformers, or LLM internal pooler        |
-| Vision Module            | CNN → encoder → decoder (ViT or CLIP-style)         |
-| Evaluation               | Elo tests, SF comparisons, tutor accuracy scoring   |
+| Embeddings               | SentenceTransformers with MPS acceleration          |
+| Vision Module            | CNN → encoder → decoder (ViT or CLIP-style) + MPS   |
+| Evaluation               | Elo tests, Stockfish comparisons, tutor accuracy    |
+| Platform                 | Mac-only (M3 Pro), MPS acceleration, no CUDA/CPU    |
 
 ---
 

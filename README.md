@@ -15,21 +15,25 @@ GemmaFischer combines several components:
 
 ## Key Features
 
-- **Efficient Training**: LoRA fine-tuning with Unsloth optimization
-- **Apple Silicon Support**: MPS acceleration for M-series Macs
+- **MPS-Optimized Training**: LoRA fine-tuning with Unsloth optimization for M3 Pro
+- **Mac-Only Design**: Optimized exclusively for Apple Silicon with MPS acceleration
+- **UCI Compatibility**: Full UCI protocol support for chess software integration
+- **Dual-Mode Operation**: Engine mode (fast moves) and Tutor mode (explanations)
+- **Chain-of-Thought Reasoning**: Step-by-step analysis and explanation
+- **Style Conditioning**: Historical player style emulation (Fischer, aggressive, etc.)
 - **Chess Engine Integration**: Stockfish for move validation and position analysis
 - **Web Interface**: Interactive chess Q&A interface
 - **Evaluation Tools**: Chess-specific metrics and testing framework
-- **Multiple Training Configurations**: Flexible training setups for different use cases
 
 ## Quick Start
 
 ### Prerequisites
 
+- **Mac with M3 Pro chip** (required for optimal MPS performance)
 - Python 3.10+
-- Apple Silicon Mac (M1/M2/M3) or compatible system
-- 8GB+ RAM (16GB recommended)
+- 16GB+ RAM (recommended for training)
 - Stockfish chess engine (optional, for advanced features)
+- macOS 12.0+ (for MPS support)
 
 ### Installation
 
@@ -232,11 +236,13 @@ python compare_chess_qa.py
 
 ## Performance
 
-### Training Performance
+### Training Performance (M3 Pro)
 
-- **Memory Usage**: ~4-6GB VRAM (with MPS)
-- **Training Speed**: ~2-3 steps/second on M3 MacBook Pro
+- **Memory Usage**: ~4-6GB (MPS-optimized)
+- **Training Speed**: ~2-3 steps/second on M3 Pro
 - **Convergence**: Loss typically drops from 3.0 to 1.2 in 100 steps
+- **MPS Acceleration**: All operations use Metal Performance Shaders
+- **No CUDA/CPU Fallbacks**: Optimized exclusively for Apple Silicon
 
 ### Model Performance
 
@@ -246,18 +252,18 @@ python compare_chess_qa.py
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues (M3 Pro)
 
 1. **MPS not available:**
    ```bash
-   # Check MPS availability
+   # Check MPS availability (should be True on M3 Pro)
    python -c "import torch; print(torch.backends.mps.is_available())"
    ```
 
 2. **Out of memory:**
    - Reduce batch size in config
    - Enable gradient checkpointing
-   - Use CPU fallback
+   - Reduce LoRA rank if needed
 
 3. **Stockfish not found:**
    ```bash
@@ -265,6 +271,11 @@ python compare_chess_qa.py
    brew install stockfish
    # Or set custom path in chess_engine.py
    ```
+
+4. **MPS performance issues:**
+   - Ensure you're using M3 Pro (not M1/M2)
+   - Check macOS version (12.0+ required)
+   - Verify PyTorch MPS installation
 
 ### Debug Mode
 

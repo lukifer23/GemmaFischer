@@ -2,18 +2,33 @@
 
 ## Overview
 
-This guide covers the complete training process for GemmaFischer, from data preparation to model deployment. The system uses LoRA (Low-Rank Adaptation) fine-tuning with Unsloth optimization for efficient training on Apple Silicon, with support for dual-mode operation (engine and tutor modes) and chain-of-thought reasoning.
+This guide covers the complete training process for GemmaFischer, from data preparation to model deployment. The system uses LoRA (Low-Rank Adaptation) fine-tuning with Unsloth optimization for efficient training on M3 Pro Macs with MPS acceleration, with support for dual-mode operation (engine and tutor modes) and chain-of-thought reasoning.
+
+**Platform**: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
 
 ## Prerequisites
 
 ### System Requirements
-- **Hardware**: Apple Silicon Mac (M1/M2/M3) with 8GB+ RAM (16GB recommended)
+- **Hardware**: Mac with M3 Pro chip (required for optimal performance)
+- **RAM**: 16GB+ (recommended for training)
 - **Software**: Python 3.10+, PyTorch with MPS support
 - **Storage**: 10GB+ free space for models and checkpoints
+- **macOS**: 12.0+ (required for MPS support)
 
 ### Dependencies
 ```bash
 pip install -r requirements.txt
+```
+
+### MPS Optimization (M3 Pro)
+```python
+# Verify MPS availability
+import torch
+print(f"MPS available: {torch.backends.mps.is_available()}")
+print(f"MPS built: {torch.backends.mps.is_built()}")
+
+# Set device to MPS
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 ```
 
 ## Training Pipeline

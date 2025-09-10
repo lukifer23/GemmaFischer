@@ -3,6 +3,8 @@ UCI Bridge Module for GemmaFischer
 
 This module provides UCI (Universal Chess Interface) compatibility for the GemmaFischer
 chess engine, allowing it to interface with standard chess software.
+
+Platform: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
 """
 
 import sys

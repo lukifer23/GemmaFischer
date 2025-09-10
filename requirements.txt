@@ -1,17 +1,17 @@
 # Dependencies for GemmaFischer - Chess LLM Engine + Tutor
-# Note: On Apple Silicon you may want to install torch with MPS support as documented in the plan.
+# Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks
 
-# Core ML dependencies
+# Core ML dependencies (MPS-optimized)
 transformers
 datasets
 accelerate
 peft
 trl
 huggingface_hub
-unsloth
-torch
-torchvision
-torchaudio
+unsloth  # Optimized for Apple Silicon MPS
+torch  # With MPS support for M3 Pro
+torchvision  # With MPS support
+torchaudio  # With MPS support
 
 # Chess and UCI support
 python-chess
@@ -21,9 +21,9 @@ stockfish  # Python wrapper for Stockfish engine
 flask
 flask-cors
 
-# Data processing and embeddings
+# Data processing and embeddings (MPS-compatible)
 sentence-transformers  # For embedding generation
-faiss-cpu  # For vector search (or faiss-gpu if you have CUDA)
+faiss-cpu  # CPU-only vector search (MPS doesn't support FAISS GPU)
 pandas
 numpy
 
@@ -34,8 +34,6 @@ pgnparser  # For PGN file parsing
 pytest
 mlflow  # For experiment tracking and monitoring
 
-# Optional dependencies
-# bitsandbytes  # For quantization (platform dependent)
-# qdrant-client  # Alternative vector database
-# opencv-python  # For vision module (if implementing board image recognition)
-# pillow  # For image processing
+# Mac-specific optimizations
+# Note: All ML operations use MPS acceleration on M3 Pro
+# No CUDA dependencies or CPU fallbacks needed

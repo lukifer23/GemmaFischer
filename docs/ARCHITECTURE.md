@@ -4,6 +4,8 @@
 
 GemmaFischer is a dual-purpose chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst. Built around fine-tuned language models with chain-of-thought reasoning, it provides both tactical analysis and educational explanations. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
 
+**Platform**: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
+
 ## High-Level Architecture
 
 ```
@@ -63,10 +65,11 @@ Training Pipeline
 - **Enhanced Datasets**: Historical games, theory books, annotated PGNs
 
 **Key Features**:
-- Unsloth optimization for 2x speed improvement
-- MPS acceleration for Apple Silicon
+- Unsloth optimization for 2x speed improvement on M3 Pro
+- MPS acceleration exclusively (no CUDA/CPU fallbacks)
 - Gradient checkpointing for memory efficiency
 - Resume functionality for long training runs
+- Mac-only design optimized for Apple Silicon
 
 ### 2. UCI Bridge Layer (`src/inference/`)
 
