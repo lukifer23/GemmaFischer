@@ -16,6 +16,12 @@ def main(do_train: bool, max_steps: int):
 
     print("Starting smoke training (this will download model weights)...")
     MODEL_NAME = "unsloth/gemma-3-270m-it"
+    # Cap CPU threads to 2 by default if not already constrained
+    import os as _os
+    _os.environ.setdefault('OMP_NUM_THREADS', '2')
+    _os.environ.setdefault('MKL_NUM_THREADS', '2')
+    _os.environ.setdefault('NUMEXPR_NUM_THREADS', '2')
+
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=MODEL_NAME,
         max_seq_length=2048,

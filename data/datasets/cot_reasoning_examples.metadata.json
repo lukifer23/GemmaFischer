@@ -1,0 +1,13 @@
+{
+  "total_examples": 10,
+  "categories": {
+    "tactical_cot": 10
+  },
+  "difficulty_distribution": {
+    "beginner": 5,
+    "advanced": 4,
+    "intermediate": 1
+  },
+  "creation_date": "2025-09-10T14:57:50.296606",
+  "description": "Chain-of-thought reasoning examples for chess analysis"
+}

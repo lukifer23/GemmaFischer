@@ -16,5 +16,9 @@ lora:
   lora_alpha: 16
   target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
   dropout: 0.05
-dataset:
-  path: "data/finetune/chess_finetune.jsonl"
+# You can either set a single dataset.path or a weighted list under datasets.
+datasets:
+  - path: "data/finetune/chess_finetune_refined.jsonl"
+    weight: 0.3
+  - path: "data/datasets/lichess_puzzles_1000_2000.jsonl"
+    weight: 0.7

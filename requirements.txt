@@ -34,6 +34,10 @@ pgnparser  # For PGN file parsing
 pytest
 mlflow  # For experiment tracking and monitoring
 
+# Utilities
+pyyaml
+psutil
+
 # Mac-specific optimizations
 # Note: All ML operations use MPS acceleration on M3 Pro
 # No CUDA dependencies or CPU fallbacks needed

@@ -1,4 +1,21 @@
 # Changelog
+## [2.1.0] - 2025-09-10
+
+### Added
+- Unified inference API enhancements: engine-mode strict UCI postprocessing; improved error handling.
+- UCI bridge fallback to Stockfish when parsing/legality fails.
+- Dataset mixer (`src/training/dataset_mixer.py`) and curriculum phase support in `train_lora_poc.py`.
+- Web debug endpoint `/api/debug/compare` to compare engine/tutor/Stockfish on a FEN.
+- Stockfish match evaluator `src/evaluation/stockfish_match_eval.py`.
+
+### Changed
+- Training configs updated to optionally support `datasets:` mixture and `curriculum:` phases.
+- Documentation updated across API, Architecture, Training, and Evaluation guides.
+
+### Fixed
+- Tests stabilized; inference tests pass (13/13).
+- Import path for data prep tests by adding `data/__init__.py`.
+
 
 All notable changes to ChessGemma will be documented in this file.
 

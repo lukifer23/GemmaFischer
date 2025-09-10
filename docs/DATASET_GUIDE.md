@@ -41,6 +41,18 @@ def refine_chess_instruct(dataset):
     return refined_data
 ```
 
+#### Implemented Refinement Pipeline
+We provide a concrete refinement script that applies:
+- Length filter (≤ 500 chars)
+- Chess-term presence filter
+- Standardized 3-message `conversations` format
+- Topic and difficulty tagging
+
+```bash
+python scripts/refine_dataset.py
+# Output: data/finetune/chess_finetune_refined.jsonl
+```
+
 #### Lichess Studies Dataset
 - **Source**: Icannos/chess_studies on Hugging Face
 - **Content**: Human-written study notes and commentary
@@ -161,6 +173,15 @@ def process_lichess_puzzles(puzzle_dataset, max_puzzles=100000):
     return training_examples
 ```
 
+#### Implemented Puzzle Ingestion
+We include an ingestion script for Lichess puzzles (CSV), filtered by rating [1000, 2000], with motifs extraction and final UCI move line for tutor mode:
+
+```bash
+python scripts/ingest_lichess_puzzles.py
+# Input: data/raw/lichess_puzzles.csv (columns: FEN, Moves, Rating, Themes)
+# Output: data/datasets/lichess_puzzles_1000_2000.jsonl
+```
+
 ### 4. Annotated Game Datasets
 
 #### Master Game Collections
@@ -262,6 +283,26 @@ def collect_all_datasets():
     
     return datasets
 ```
+
+### 2. Normalization to Conversations
+All datasets are normalized to the following `conversations` schema for instruction tuning:
+
+```json
+{
+  "conversations": [
+    {"role": "system", "content": "You are a chess tutor and engine."},
+    {"role": "user", "content": "Position: <FEN>\nMode: Tutor\nAnalyze step-by-step."},
+    {"role": "assistant", "content": "<analysis>\nBest move: e2e4"}
+  ],
+  "topic": "tactics|strategy|endgames|openings",
+  "difficulty": "beginner|intermediate|advanced"
+}
+```
+
+### 3. Quality Controls
+- Enforce final UCI move line in tutor-mode answers (for extraction)
+- Validate UCI syntax during ingestion where applicable
+- Attach topic and difficulty labels for curriculum phases
 
 ### 2. Data Cleaning
 

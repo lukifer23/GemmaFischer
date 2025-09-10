@@ -178,8 +178,10 @@ class ChessEvaluator:
             'detailed_results': results
         }
 
-        print("
-📊 Evaluation Summary:"        print(".3f"        print(".3f"        print(f"   Total moves mentioned: {summary['total_moves_mentioned']}")
+        print("\n📊 Evaluation Summary:")
+        print(f"   Move syntax accuracy: {summary['average_move_syntax_accuracy']:.3f}")
+        print(f"   Chess relevance: {summary['average_chess_relevance']:.3f}")
+        print(f"   Total moves mentioned: {summary['total_moves_mentioned']}")
         print(f"   Valid moves: {summary['total_valid_moves']}")
 
         if output_file:
@@ -201,7 +203,7 @@ class ChessEvaluator:
 def main():
     """Run chess evaluation on test questions."""
     # Load test questions from initial Q&A
-    qa_file = Path(__file__).parent.parent / 'initial_chess_q_and_a.md'
+    qa_file = Path(__file__).parents[2] / 'archive' / 'initial_chess_q_and_a.md'
     if not qa_file.exists():
         print(f"Test file not found: {qa_file}")
         return

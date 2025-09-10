@@ -1,0 +1,16 @@
+{
+  "description": "Visual training data for chess board recognition",
+  "categories": {
+    "board_positions": "Rendered chess positions from FEN",
+    "piece_recognition": "Individual piece images for recognition",
+    "board_detection": "Various board orientations and styles",
+    "synthetic_boards": "Computer-generated board positions"
+  },
+  "requirements": {
+    "image_format": "PNG",
+    "resolution": "512x512 minimum",
+    "board_style": "Standard Staunton pieces",
+    "background": "Various (wood, marble, digital)"
+  },
+  "generation_script": "create_visual_data.py"
+}

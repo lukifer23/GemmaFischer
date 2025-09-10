@@ -152,28 +152,10 @@ def evaluate_opening_knowledge(model, opening_dataset):
 - **Evaluation Accuracy**: How close model's evaluation is to engine's
 - **Target**: 50%+ top move, 75%+ top 3
 
-**Implementation**:
-```python
-def evaluate_against_stockfish(model, test_positions):
-    """Compare model moves to Stockfish analysis"""
-    top_move_matches = 0
-    top_3_matches = 0
-    total_positions = len(test_positions)
-    
-    for position in test_positions:
-        model_move = model.get_best_move(position)
-        stockfish_analysis = stockfish.analyze(position, depth=15)
-        
-        if model_move == stockfish_analysis['best_move']:
-            top_move_matches += 1
-        
-        if model_move in stockfish_analysis['top_3_moves']:
-            top_3_matches += 1
-    
-    return {
-        'top_move_match': top_move_matches / total_positions,
-        'top_3_match': top_3_matches / total_positions
-    }
+**Tooling**:
+```bash
+# Compare model top-1 move to Stockfish on a FEN set (JSONL with {"fen": ...})
+python src/evaluation/stockfish_match_eval.py --file data/datasets/lichess_puzzles_1000_2000.jsonl --limit 100 --depth 8 --out stockfish_match.json
 ```
 
 ## Explanation Quality Evaluation

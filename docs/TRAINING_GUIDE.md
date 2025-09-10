@@ -116,6 +116,30 @@ lora:
   dropout: 0.05
 dataset:
   path: "data/datasets/chess_finetune_full.jsonl"
+
+#### Optional: Dataset Mixer
+```yaml
+datasets:
+  - path: "data/finetune/chess_finetune_refined.jsonl"
+    weight: 0.3
+  - path: "data/datasets/lichess_puzzles_1000_2000.jsonl"
+    weight: 0.7
+```
+
+#### Optional: Curriculum Phases
+```yaml
+curriculum:
+  - steps: 100
+    datasets:
+      - path: "data/finetune/chess_finetune_refined.jsonl"
+        weight: 1.0
+  - steps: 200
+    datasets:
+      - path: "data/finetune/chess_finetune_refined.jsonl"
+        weight: 0.3
+      - path: "data/datasets/lichess_puzzles_1000_2000.jsonl"
+        weight: 0.7
+```
 ```
 
 ### 3. Training Execution
@@ -124,6 +148,11 @@ dataset:
 ```bash
 # Quick 10-step test
 python src/training/train.py --do_train --max_steps 10
+```
+
+#### Mixer & Curriculum via POC Trainer
+```bash
+python src/training/train_lora_poc.py --config src/training/configs/lora_finetune.yaml
 ```
 
 #### Full Training

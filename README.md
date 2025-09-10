@@ -106,9 +106,9 @@ brew install stockfish
 
 ### Basic Usage
 
-1. **Run inference with pre-trained model:**
+1. **Run inference (programmatic):**
 ```bash
-python src/inference/inference.py --download
+python -c "from src.inference.inference import load_model,run_inference;print('load:',load_model());print(run_inference('Explain castling in chess')['response'])"
 ```
 
 2. **Start web interface:**
@@ -120,6 +120,11 @@ python src/web/app.py
 3. **Run training (smoke test):**
 ```bash
 python src/training/train.py --do_train --max_steps 10
+```
+
+4. **Stockfish match evaluator (optional):**
+```bash
+python src/evaluation/stockfish_match_eval.py --file data/datasets/lichess_puzzles_1000_2000.jsonl --limit 50 --depth 8 --out stockfish_match_smoke.json
 ```
 
 ## Project Structure

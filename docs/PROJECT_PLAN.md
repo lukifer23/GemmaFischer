@@ -15,17 +15,17 @@
 
 ### Core LLM Development
 
-- [ ] Start from *ChessGemma* (fine-tuned on PGNs) → evolve as `GemmaFischer`
+- [x] Start from *ChessGemma* (fine-tuned on PGNs) → evolve as `GemmaFischer`
 - [ ] Add **Chain-of-Thought (CoT)** reasoning capability
   - Format: `[Position] → Think step-by-step → Evaluate threats → Suggest best move`
-- [ ] Train dual-purpose outputs:
+- [x] Train dual-purpose outputs:
   - `Tutor:` Mode with rich explanations
   - `Engine:` Mode with minimal fast UCI-style outputs
 - [ ] Expand training data:
   - Annotated PGNs (Lichess Elite, King's Database)
   - Historical games: Fischer, Kasparov, AlphaZero
   - Theory books (openings, endgames, tactics)
-- [ ] Format prompts to support style, reasoning, and role conditioning
+- [x] Format prompts to support style, reasoning, and role conditioning
 
 ---
 
@@ -44,12 +44,12 @@
 
 ### UCI Backend Interfacing
 
-- [ ] Implement adapter for UCI protocol compatibility
+- [x] Implement adapter for UCI protocol compatibility
   - Input: UCI-style moves → Output: bestmove
-- [ ] Format board state for prompt injection
+- [x] Format board state for prompt injection
   - SAN/UCI → FEN → parsed prompt
-- [ ] Optional: fallback mode with Stockfish API or `python-chess`
-- [ ] Build bridge module:
+- [x] Optional: fallback mode with Stockfish API or `python-chess`
+- [x] Build bridge module:
   - `LLM_UCI.py` → handles I/O to command line UCI loop
 
 ---
@@ -147,18 +147,18 @@
 ### Phase 2: Data & Quality (In Progress) 🚧
 
 #### 2.1 Dataset Overhaul
-- [ ] **ChessInstruct v1.5 Refinement**
-  - [ ] Filter out overly long sequences (>500 chars)
-  - [ ] Ensure chess relevance (chess terms present)
-  - [ ] Standardize question-answer format
-  - [ ] Categorize by difficulty and topic
+- [x] **ChessInstruct v1.5 Refinement**
+  - [x] Filter out overly long sequences (>500 chars)
+  - [x] Ensure chess relevance (chess terms present)
+  - [x] Standardize question-answer format
+  - [x] Categorize by difficulty and topic
   - [ ] Target: 50k high-quality examples
 
 - [ ] **Lichess Puzzle Dataset Integration**
   - [ ] Process 100k puzzles from Lichess dataset
-  - [ ] Convert to Q&A format with explanations
-  - [ ] Categorize by tactical theme (fork, pin, etc.)
-  - [ ] Filter by difficulty rating (1000-2000)
+  - [x] Convert to Q&A format with explanations
+  - [x] Categorize by tactical theme (fork, pin, etc.)
+  - [x] Filter by difficulty rating (1000-2000)
   - [ ] Target: 50k puzzle examples
 
 - [ ] **Annotated Game Commentary Collection**
@@ -176,10 +176,10 @@
   - [ ] Target: 10k opening examples
 
 #### 2.2 Enhanced Evaluation Framework
-- [ ] **Move Legality and Syntax Validation**
-  - [ ] Implement 100% move legality checking
-  - [ ] Add algebraic notation validation
-  - [ ] Create automated test suite
+- [x] **Move Legality and Syntax Validation**
+  - [x] Implement 100% move legality checking
+  - [x] Add algebraic notation validation
+  - [x] Create automated test suite
   - [ ] Target: 100% legality rate
 
 - [ ] **Tactical Puzzle Success Rate Testing**
@@ -205,14 +205,14 @@
 
 #### 2.3 Training Improvements
 - [ ] **Chain-of-Thought Reasoning Integration**
-  - [ ] Create structured reasoning templates
+  - [x] Create structured reasoning templates
   - [ ] Add step-by-step analysis examples
   - [ ] Implement tactical analysis patterns
   - [ ] Add positional evaluation frameworks
   - [ ] Target: 100% of tutor mode responses
 
 - [ ] **Multi-Task Learning Optimization**
-  - [ ] Implement task mixing strategy
+  - [x] Implement task mixing strategy
   - [ ] Add curriculum learning phases
   - [ ] Balance different task types
   - [ ] Monitor task-specific performance

@@ -21,20 +21,20 @@ from typing import Dict, List, Any, Optional
 import traceback
 
 # Add the project root to the Python path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).resolve().parents[2]
 sys.path.append(str(project_root))
 
 # Import required modules
 try:
     import torch
-    from scripts.inference import run_inference
+    from src.inference.inference import get_inference_instance
 except ImportError as e:
     print(f"Warning: Could not import required module: {e}")
     torch = None
 
 app = Flask(__name__,
-            template_folder=str(project_root / 'web_app' / 'templates'),
-            static_folder=str(project_root / 'web_app' / 'static'))
+            template_folder=str(Path(__file__).parent / 'templates'),
+            static_folder=str(Path(__file__).parent / 'static'))
 CORS(app)
 
 # Configure Flask
@@ -50,113 +50,20 @@ model_cache = {
 
 
 class ChessModelInterface:
-    """Interface to the ChessGemma model with caching and error handling."""
+    """Web adapter that reuses the unified inference singleton."""
 
     def __init__(self):
-        self.model = None
-        self.tokenizer = None
+        self._inference = get_inference_instance()
         self.is_loaded = False
 
     def load_model(self):
-        """Load the model on demand with caching."""
-        if self.is_loaded and self.model is not None:
-            return True
-
-        try:
-            # Import here to avoid loading at startup
-            from transformers import AutoTokenizer, AutoModelForCausalLM
-            from peft import PeftModel
-
-            print("Loading ChessGemma model...")
-
-            # Model paths
-            model_path = project_root / 'models' / 'unsloth-gemma-3-270m-it' / 'models--unsloth--gemma-3-270m-it' / 'snapshots' / '23cf460f6bb16954176b3ddcc8d4f250501458a9'
-            adapter_path = project_root / 'checkpoints' / 'lora_expanded' / 'checkpoint-50'
-
-            # Load base model
-            self.tokenizer = AutoTokenizer.from_pretrained(str(model_path), local_files_only=True)
-            base_model = AutoModelForCausalLM.from_pretrained(
-                str(model_path),
-                local_files_only=True,
-                device_map='auto',
-                attn_implementation='eager'
-            )
-
-            # Load adapter if available
-            if adapter_path.exists():
-                print(f"Loading adapter from {adapter_path}")
-                self.model = PeftModel.from_pretrained(base_model, str(adapter_path), is_trainable=False)
-            else:
-                print("Warning: No adapter found, using base model")
-                self.model = base_model
-
-            self.is_loaded = True
-            print("Model loaded successfully!")
-            return True
-
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            traceback.print_exc()
-            return False
+        ok = self._inference.load_model()
+        self.is_loaded = ok
+        return ok
 
     def generate_response(self, question: str, context: Optional[str] = None, max_length: int = 200) -> Dict[str, Any]:
-        """Generate a response to a chess question."""
-        if not self.load_model():
-            return {
-                'error': 'Model failed to load',
-                'response': 'Sorry, the chess model is currently unavailable.',
-                'confidence': 0.0
-            }
-
-        try:
-            # Prepare the prompt
-            if context:
-                prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
-            else:
-                prompt = f"Question: {question}\nAnswer:"
-
-            # Tokenize
-            inputs = self.tokenizer(prompt, return_tensors='pt').to(self.model.device)
-
-            # Generate response
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_length,
-                    do_sample=True,
-                    top_p=0.9,
-                    temperature=0.7,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    repetition_penalty=1.1
-                )
-
-            # Decode response
-            full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-            # Extract the answer part
-            if 'Answer:' in full_response:
-                answer = full_response.split('Answer:', 1)[1].strip()
-            else:
-                answer = full_response.replace(prompt, '').strip()
-
-            # Basic confidence estimation (can be improved)
-            confidence = min(0.9, len(answer.split()) / 50)  # Rough heuristic
-
-            return {
-                'response': answer,
-                'confidence': confidence,
-                'model_loaded': True,
-                'generation_time': time.time()
-            }
-
-        except Exception as e:
-            print(f"Error generating response: {e}")
-            traceback.print_exc()
-            return {
-                'error': str(e),
-                'response': 'Sorry, I encountered an error while processing your question.',
-                'confidence': 0.0
-            }
+        mode = 'tutor'
+        return self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
 
 
 # Initialize the model interface
@@ -229,6 +136,67 @@ def get_examples():
     ]
 
     return jsonify({'examples': examples})
+
+
+@app.route('/api/debug/compare', methods=['POST'])
+def debug_compare():
+    """Compare engine/tutor/Stockfish suggestions for a FEN."""
+    try:
+        data = request.get_json()
+        fen = data.get('fen', '').strip()
+        depth = int(data.get('depth', 8))
+        if not fen:
+            return jsonify({'error': 'Missing fen'}), 400
+
+        from src.inference.inference import get_inference_instance
+        from src.inference.chess_engine import ChessEngineManager
+        import chess
+        import re
+
+        inf = get_inference_instance()
+        if not inf.load_model():
+            return jsonify({'error': 'Model not loaded'}), 500
+
+        board = chess.Board(fen)
+
+        def parse_uci(text: str):
+            m = re.findall(r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b', text.lower())
+            for u in m:
+                try:
+                    mv = chess.Move.from_uci(u)
+                    if mv in board.legal_moves:
+                        return u
+                except Exception:
+                    continue
+            return None
+
+        # Engine mode
+        eng = inf.generate_response(
+            f"Position: {fen}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move.",
+            mode='engine', max_new_tokens=12
+        )
+        eng_move = parse_uci(eng.get('response', ''))
+
+        # Tutor mode
+        tut = inf.generate_response(
+            f"Position: {fen}\nMode: Tutor\nAnalyze step-by-step and end with a single UCI move line.",
+            mode='tutor', max_new_tokens=160
+        )
+        tut_move = parse_uci(tut.get('response', ''))
+
+        # Stockfish
+        with ChessEngineManager() as ce:
+            sf_mv = ce.get_best_move(board, depth=depth, time_limit_ms=0)
+        sf_move = sf_mv.uci() if sf_mv else None
+
+        return jsonify({
+            'fen': fen,
+            'engine_mode': {'text': eng.get('response'), 'move': eng_move},
+            'tutor_mode': {'text': tut.get('response'), 'move': tut_move},
+            'stockfish': sf_move
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/model_info', methods=['GET'])

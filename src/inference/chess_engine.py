@@ -86,7 +86,14 @@ class ChessEngineManager:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                self.engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
+                # Try provided path first; if it fails, try discovery
+                try:
+                    self.engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
+                except Exception:
+                    discovered = self._find_stockfish()
+                    if not discovered:
+                        raise
+                    self.engine = chess.engine.SimpleEngine.popen_uci(discovered)
 
                 # Configure engine with supported options only
                 supported_options = self.engine.options
@@ -118,6 +125,20 @@ class ChessEngineManager:
                 if attempt == max_retries - 1:
                     raise RuntimeError(f"Failed to initialize Stockfish engine after {max_retries} attempts")
                 time.sleep(1)
+
+    def _find_stockfish(self) -> Optional[str]:
+        """Find Stockfish binary in common locations."""
+        import os
+        common_paths = [
+            "/opt/homebrew/bin/stockfish",
+            "/usr/local/bin/stockfish",
+            "/usr/bin/stockfish",
+            "stockfish",
+        ]
+        for path in common_paths:
+            if os.path.exists(path) or (os.system(f"which {path} > /dev/null 2>&1") == 0):
+                return path
+        return None
 
     def __enter__(self):
         return self
@@ -364,6 +385,19 @@ class ChessEngineManager:
                 opportunities.append(f"Move {move.uci()} puts opponent in check")
 
         return opportunities
+
+    def get_best_move(self, board: chess.Board, depth: int = 12, time_limit_ms: int = 5000) -> Optional[chess.Move]:
+        """Return the engine's best move for the given board.
+
+        Uses Stockfish with the provided depth and time limit (milliseconds).
+        """
+        try:
+            limit = chess.engine.Limit(depth=depth, time=max(0.0, float(time_limit_ms) / 1000.0))
+            result = self.engine.play(board, limit)
+            return result.move if result and result.move else None
+        except Exception as e:
+            logger.error(f"Error getting best move from engine: {e}")
+            return None
 
     def validate_dataset_entry(self, question: str, answer: str) -> Dict[str, Any]:
         """Validate a dataset entry using chess engine analysis."""

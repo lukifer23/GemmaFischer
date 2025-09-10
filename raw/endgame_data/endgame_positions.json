@@ -1,0 +1,83 @@
+{
+  "pawn_endgames": {
+    "king_and_pawn_vs_king": {
+      "description": "Basic king and pawn endgame",
+      "key_concepts": [
+        "Opposition",
+        "Square of the pawn",
+        "Key squares"
+      ],
+      "positions": [
+        {
+          "fen": "8/8/8/8/8/8/4P3/4K3 w - - 0 1",
+          "description": "White to move, can promote the pawn",
+          "solution": "e2e4, e1d2, d2d3, d3d4, d4d5, d5d6, d6d7, d7d8=Q"
+        }
+      ]
+    },
+    "opposition": {
+      "description": "King opposition in pawn endgames",
+      "key_concepts": [
+        "Direct opposition",
+        "Distant opposition",
+        "Triangulation"
+      ],
+      "positions": [
+        {
+          "fen": "8/8/8/8/8/8/4K3/4k3 w - - 0 1",
+          "description": "White has the opposition",
+          "solution": "White can maintain opposition and win"
+        }
+      ]
+    }
+  },
+  "rook_endgames": {
+    "lucena_position": {
+      "description": "Winning technique with rook and pawn vs rook",
+      "key_concepts": [
+        "Building a bridge",
+        "Cutting off the king",
+        "Promotion"
+      ],
+      "positions": [
+        {
+          "fen": "8/8/8/8/8/8/4P3/4K2R w - - 0 1",
+          "description": "Lucena position - White wins",
+          "solution": "Build a bridge with the rook to support pawn promotion"
+        }
+      ]
+    },
+    "philidor_position": {
+      "description": "Defensive technique in rook and pawn vs rook",
+      "key_concepts": [
+        "Cutting off the king",
+        "Defending from the side",
+        "Stalemate"
+      ],
+      "positions": [
+        {
+          "fen": "8/8/8/8/8/8/4P3/4K2r w - - 0 1",
+          "description": "Philidor position - Black draws",
+          "solution": "Defend from the side, cut off the king"
+        }
+      ]
+    }
+  },
+  "queen_endgames": {
+    "queen_vs_pawn": {
+      "description": "Queen vs pawn endgame",
+      "key_concepts": [
+        "King approach",
+        "Pawn promotion",
+        "Stalemate"
+      ],
+      "positions": [
+        {
+          "fen": "8/8/8/8/8/8/4P3/4K3 w - - 0 1",
+          "description": "Queen vs pawn on 7th rank",
+          "solution": "Bring king close, then use queen to stop pawn"
+        }
+      ]
+    }
+  }
+}

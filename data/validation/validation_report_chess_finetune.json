@@ -1,0 +1,17 @@
+{
+  "input_file": "data/datasets/chess_finetune.jsonl",
+  "validation_date": "2025-09-10T14:57:59.444037",
+  "total_examples": 5,
+  "valid_examples": 0,
+  "invalid_examples": 5,
+  "quality_scores": [],
+  "errors": [
+    "Line 1: Missing required field: conversations",
+    "Line 2: Missing required field: conversations",
+    "Line 3: Missing required field: conversations",
+    "Line 4: Missing required field: conversations",
+    "Line 5: Missing required field: conversations"
+  ],
+  "warnings": [],
+  "statistics": {}
+}

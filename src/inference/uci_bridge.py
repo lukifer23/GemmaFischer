@@ -82,12 +82,12 @@ class UCIBridge:
         self.author = "ChessGemma Team"
         self.version = "1.0.0"
         
-        # Initialize model interface
+        # Initialize model interface (lazy load inside)
         try:
             self.model_interface = ChessModelInterface(model_path, adapter_path)
-            logger.info("Model interface initialized successfully")
+            logger.info("Model interface ready")
         except Exception as e:
-            logger.error(f"Failed to initialize model interface: {e}")
+            logger.error(f"Failed to create model interface: {e}")
             self.model_interface = None
         
         # Initialize chess engine for fallback
@@ -397,6 +397,10 @@ Respond with the best move in UCI format at the end."""
                 except ValueError:
                     continue
             
+            # If no legal UCI move was parsed, try fallback to Stockfish
+            if self.chess_engine:
+                return self.chess_engine.get_best_move(board, depth=self.options.depth, time_limit_ms=self.options.time_limit)
+
             return None
             
         except Exception as e:

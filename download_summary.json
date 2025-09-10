@@ -1,0 +1,12 @@
+{
+  "download_date": "2025-09-10T15:07:57.774378",
+  "datasets": {
+    "lichess_puzzles": "raw/lichess/puzzles/lichess_puzzles.csv.zst",
+    "opening_theory": "raw/opening_theory",
+    "endgame_data": "raw/endgame_data",
+    "historical_games": "raw/historical_games",
+    "visual_data": "raw/visual"
+  },
+  "total_size_mb": 252.67913627624512,
+  "download_time_seconds": 13.061786890029907
+}

@@ -123,16 +123,41 @@ def main():
     with open(args.config, 'r', encoding='utf-8') as f:
         cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
 
+    # Cap CPU threads to 2 by default if not set
+    os.environ.setdefault('OMP_NUM_THREADS', '2')
+    os.environ.setdefault('MKL_NUM_THREADS', '2')
+    os.environ.setdefault('NUMEXPR_NUM_THREADS', '2')
+
     model_path = cfg['model']['pretrained_model_path']
     out_dir = Path(cfg['training']['output_dir'])
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # load dataset
-    ds_path = cfg['dataset']['path']
-    if not Path(ds_path).exists():
-        print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py first.")
-        return
-    ds = load_dataset('json', data_files=ds_path, split='train')
+    # load dataset(s)
+    ds = None
+    if 'datasets' in cfg and isinstance(cfg['datasets'], list) and cfg['datasets']:
+        # Weighted mixture using dataset_mixer
+        try:
+            from src.training.dataset_mixer import build_mixture
+            specs = []
+            for item in cfg['datasets']:
+                p = item.get('path')
+                w = float(item.get('weight', 1.0))
+                if p and Path(p).exists():
+                    specs.append({'path': p, 'weight': w})
+            if not specs:
+                print('No valid dataset specs found in config.datasets.')
+                return
+            ds = build_mixture(specs)
+            print(f"Loaded mixed dataset from {len(specs)} sources")
+        except Exception as e:
+            print(f"Failed to build mixed dataset: {e}")
+            return
+    else:
+        ds_path = cfg['dataset']['path']
+        if not Path(ds_path).exists():
+            print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py first.")
+            return
+        ds = load_dataset('json', data_files=ds_path, split='train')
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     # load model with the recommended eager attention implementation for Gemma3
@@ -214,43 +239,66 @@ def main():
         logging_nan_inf_filter=False,
     )
 
-    # Create evaluation dataset (10% of training data for validation)
-    train_size = int(0.9 * len(ds))
-    eval_size = len(ds) - train_size
-    train_dataset = ds.select(range(train_size))
-    eval_dataset = ds.select(range(train_size, len(ds)))
+    # Create evaluation dataset (10% split)
+    def split_train_eval(dataset):
+        if hasattr(dataset, 'train_test_split'):
+            s = dataset.train_test_split(test_size=0.1, seed=3407)
+            return s['train'], s['test']
+        size = len(dataset)
+        trn = int(0.9 * size)
+        return dataset.select(range(trn)), dataset.select(range(trn, size))
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        data_collator=data_collator,
-        callbacks=[
-            # Custom callback for enhanced logging
-            CustomCallback()
-        ]
-    )
+    # Curriculum support: if cfg['curriculum'] present, iterate phases
+    curriculum = cfg.get('curriculum') if isinstance(cfg, dict) else None
+    if curriculum and isinstance(curriculum, list) and len(curriculum) > 0:
+        print('Using curriculum with', len(curriculum), 'phases')
+        from src.training.dataset_mixer import build_mixture
+        total_phases = len(curriculum)
+        for idx, phase in enumerate(curriculum, 1):
+            phase_steps = int(phase.get('steps', 0))
+            phase_specs = phase.get('datasets', [])
+            print(f"Phase {idx}/{total_phases}: steps={phase_steps}")
+            specs = []
+            for item in phase_specs:
+                p = item.get('path')
+                w = float(item.get('weight', 1.0))
+                if p and Path(p).exists():
+                    specs.append({'path': p, 'weight': w})
+            if not specs:
+                print('  Skipping phase; no valid datasets')
+                continue
+            mixed = build_mixture(specs)
+            train_dataset, eval_dataset = split_train_eval(mixed)
 
-    # Set start time for tracking
-    trainer.state.start_time = time.time()
+            # Override steps for this phase if provided
+            phase_args = TrainingArguments(
+                **{**training_args.to_dict(), 'max_steps': phase_steps or max_steps}
+            )
 
-    # training loop
-    resume_chk = None
-    if isinstance(cfg, dict) and cfg.get('resume'):
-        resume_chk = cfg['resume'].get('from_checkpoint')
-        if resume_chk:
-            print(f'Resuming training from checkpoint: {resume_chk}')
-
-    print(f"🚀 Starting training with enhanced monitoring...")
-    print(f"   Max steps: {max_steps}")
-    print(f"   Learning rate: {learning_rate}")
-    print(f"   Save steps: {save_steps}")
-    print(f"   Evaluation steps: {save_steps}")
-    print(f"   Early stopping patience: 5")
-    print("=" * 60)
-
-    trainer.train(resume_from_checkpoint=resume_chk)
+            trainer = Trainer(
+                model=model,
+                args=phase_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                data_collator=data_collator,
+                callbacks=[CustomCallback()]
+            )
+            trainer.state.start_time = time.time()
+            trainer.train()
+            print(f"Completed curriculum phase {idx}")
+    else:
+        # Single-phase training
+        train_dataset, eval_dataset = split_train_eval(ds)
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            data_collator=data_collator,
+            callbacks=[CustomCallback()]
+        )
+        trainer.state.start_time = time.time()
+        trainer.train()
 
     print('=' * 60)
     print('Training complete. Enhanced logs and checkpoints in', out_dir)

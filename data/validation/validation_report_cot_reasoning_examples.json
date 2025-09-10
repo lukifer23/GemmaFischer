@@ -1,0 +1,93 @@
+{
+  "input_file": "data/datasets/cot_reasoning_examples.jsonl",
+  "validation_date": "2025-09-10T15:00:03.389246",
+  "total_examples": 10,
+  "valid_examples": 10,
+  "invalid_examples": 0,
+  "quality_scores": [
+    3.0977011494252875,
+    4.2407407407407405,
+    3.25,
+    3.2142857142857144,
+    3.0977011494252875,
+    3.0977011494252875,
+    3.2142857142857144,
+    3.25,
+    3.2142857142857144,
+    4.131578947368421
+  ],
+  "errors": [],
+  "warnings": [
+    "Line 1: Moderate chess relevance: 0.15",
+    "Line 2: Moderate chess relevance: 0.19",
+    "Line 3: Moderate chess relevance: 0.19",
+    "Line 4: Moderate chess relevance: 0.18",
+    "Line 5: Moderate chess relevance: 0.15",
+    "Line 6: Moderate chess relevance: 0.15",
+    "Line 7: Moderate chess relevance: 0.18",
+    "Line 8: Moderate chess relevance: 0.19",
+    "Line 9: Moderate chess relevance: 0.18",
+    "Line 10: Moderate chess relevance: 0.16"
+  ],
+  "statistics": {
+    "total_examples": 10,
+    "categories": {
+      "tactical_cot": 10
+    },
+    "difficulties": {
+      "beginner": 5,
+      "advanced": 4,
+      "intermediate": 1
+    },
+    "sources": {
+      "generated_cot": 10
+    },
+    "length_distribution": {
+      "questions": [
+        133,
+        133,
+        133,
+        133,
+        133,
+        133,
+        133,
+        133,
+        133,
+        133
+      ],
+      "answers": [
+        362,
+        339,
+        352,
+        370,
+        362,
+        362,
+        370,
+        352,
+        370,
+        333
+      ],
+      "total_text": [
+        514,
+        491,
+        504,
+        522,
+        514,
+        514,
+        522,
+        504,
+        522,
+        485
+      ],
+      "questions_avg": 133,
+      "questions_min": 133,
+      "questions_max": 133,
+      "answers_avg": 357.2,
+      "answers_min": 333,
+      "answers_max": 370,
+      "total_text_avg": 509.2,
+      "total_text_min": 485,
+      "total_text_max": 522
+    }
+  }
+}

@@ -94,11 +94,39 @@ dataset:
   path: "data/datasets/chess_finetune_full.jsonl"
 ```
 
+#### Dataset Mixer (optional)
+Provide a weighted mixture instead of a single dataset path:
+
+```yaml
+datasets:
+  - path: "data/finetune/chess_finetune_refined.jsonl"
+    weight: 0.3
+  - path: "data/datasets/lichess_puzzles_1000_2000.jsonl"
+    weight: 0.7
+```
+
+#### Curriculum Phases (optional)
+Sequential phases with per-phase steps and mixes:
+
+```yaml
+curriculum:
+  - steps: 100
+    datasets:
+      - path: "data/finetune/chess_finetune_refined.jsonl"
+        weight: 1.0
+  - steps: 200
+    datasets:
+      - path: "data/finetune/chess_finetune_refined.jsonl"
+        weight: 0.3
+      - path: "data/datasets/lichess_puzzles_1000_2000.jsonl"
+        weight: 0.7
+```
+
 ## Inference API
 
 ### `src/inference/inference.py`
 
-Main inference engine for chess Q&A.
+Main inference engine for chess Q&A with dual-mode prompting (engine/tutor).
 
 #### `ChessGemmaInference` Class
 
@@ -122,6 +150,8 @@ class ChessGemmaInference:
     def generate_response(
         self,
         question: str,
+        context: Optional[str] = None,
+        mode: str = "tutor",
         max_length: int = 200,
         temperature: float = 0.7,
         top_p: float = 0.9
@@ -135,7 +165,7 @@ class ChessGemmaInference:
             top_p: Top-p sampling parameter
             
         Returns:
-            Dictionary with response, confidence, and metadata
+            Dictionary with response, confidence, and metadata. In `mode="engine"`, the response is post-processed to a single legal UCI move when possible (adds `postprocessed: true`).
         """
     
     def get_model_info(self) -> Dict[str, Any]:
@@ -446,6 +476,16 @@ Get information about the loaded model.
     ]
 }
 ```
+
+##### `POST /api/debug/compare`
+Compare engine-mode, tutor-mode, and Stockfish best move for a FEN.
+
+Request body:
+```json
+{ "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "depth": 8 }
+```
+
+Response includes moves for quick triage.
 
 #### Usage Examples
 

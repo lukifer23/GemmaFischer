@@ -52,6 +52,7 @@ GemmaFischer is a comprehensive chess AI system that functions as both a chess e
 - `train.py`: Main training orchestrator
 - `train_lora_poc.py`: Proof-of-concept training script
 - `configs/`: Training configuration files
+- `dataset_mixer.py`: Weighted dataset interleaving (multi-task)
 
 **Architecture**:
 ```
@@ -71,6 +72,7 @@ Training Pipeline
 - **Chain-of-Thought**: Step-by-step reasoning integration
 - **Style Conditioning**: Historical player style emulation
 - **Enhanced Datasets**: Historical games, theory books, annotated PGNs
+ - **Curriculum Phases**: Optional phased schedule with per-phase dataset mixes
 
 **Key Features**:
 - Unsloth optimization for 2x speed improvement on M3 Pro
@@ -106,7 +108,8 @@ UCI Bridge Pipeline
 - **Dual Modes**: Engine mode (fast moves) and Tutor mode (explanations)
 - **Chain-of-Thought**: Step-by-step reasoning in tutor mode
 - **Style Conditioning**: Historical player style emulation
-- **Fallback Support**: Stockfish integration for complex positions
+- **Strict UCI Output**: Engine-mode postprocessing ensures a single legal UCI move where possible
+- **Fallback Support**: Stockfish integration when parsing/legality fails
 
 ### 3. Inference Layer (`src/inference/`)
 

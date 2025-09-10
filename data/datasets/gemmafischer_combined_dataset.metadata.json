@@ -1,0 +1,16 @@
+{
+  "total_examples": 7280,
+  "source_datasets": {
+    "chess_finetune_expanded.jsonl": 500,
+    "chess_finetune_focused.jsonl": 1000,
+    "chess_finetune.jsonl": 5,
+    "chess_multi_source_2000.jsonl": 110,
+    "chess_finetune_full.jsonl": 100,
+    "cot_reasoning_examples.jsonl": 10,
+    "gemmafischer_combined_dataset.jsonl": 5455,
+    "chess_finetune_refined.jsonl": 100
+  },
+  "creation_date": "2025-09-10T15:07:58.476831",
+  "description": "Combined GemmaFischer training dataset",
+  "pipeline_version": "1.0"
+}
