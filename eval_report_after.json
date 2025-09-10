@@ -1,0 +1,13 @@
+{
+  "legality_proxy": {
+    "chess_relevance": 1.0
+  },
+  "stockfish_match": {
+    "top1_match": 0.0,
+    "count": 10
+  },
+  "puzzle_accuracy": {
+    "first_move_accuracy": 0.0,
+    "count": 200
+  }
+}

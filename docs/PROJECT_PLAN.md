@@ -123,6 +123,77 @@
 
 ---
 
+## Problems & Immediate Steps (Engine UCI Reliability)
+
+### Problem Summary
+
+- Current engine-mode outputs are frequently non-UCI or empty under greedy decoding. This indicates the model was not explicitly trained to produce strict UCI tokens for a FEN-only prompt and is copying/echoing prompts due to generic LM training on a single `text` field.
+
+### Immediate Steps (Data)
+
+- [ ] Create dedicated UCI supervision datasets with explicit instruction schema:
+  - [ ] PGN-derived next-move pairs: walk through games and emit (FEN → next move in UCI).
+  - [ ] Puzzles first-move supervision: use the first move of the puzzle solution.
+  - [ ] Stockfish-labeled random positions: sample diverse FENs and label best move at depth 8–12.
+  - [ ] Standardize JSONL schema: `{task, prompt, response, meta}` where:
+    - `task`: `engine_uci` | `engine_pv` | `tutor_explain`
+    - `prompt`: for engine `FEN: <fen>\nMove:`; for tutor `FEN: <fen>\nQuestion: <q>`
+    - `response`: for engine exactly one UCI move (e.g., `e2e4`)
+    - `meta`: `{fen, side, source, rating, label_source}`
+- [ ] Implement/upgrade data scripts:
+  - [ ] `scripts/extract_pgn_uci_pairs.py` (PGN → FEN/UCI pairs)
+  - [ ] `scripts/build_engine_uci_supervision.py` (SF-labeled random FENs)
+  - [ ] Extend `scripts/ingest_lichess_puzzles.py` to optionally emit the instruction schema above
+
+### Immediate Steps (Training)
+
+- [ ] Switch to instruction-style label masking (predict only the answer):
+  - [ ] Add `InstructionDataCollator` that masks prompt tokens (labels = -100) and keeps labels for response tokens only
+  - [ ] Update `train_lora_poc.py` to consume `{prompt, response, task}` and use the instruction collator
+  - [ ] Extend `dataset_mixer.py` to accept both `text` and `{prompt/response/task}` schemas without forcing a `text` field
+- [ ] Curriculum emphasizing engine formatting first, then difficulty:
+  - [ ] Phase A: easy UCI (openings, mates-in-1, simple captures) — 80–90% engine
+  - [ ] Phase B: general middlegame FENs (SF-labeled) — 70% engine
+  - [ ] Phase C: tactics (puzzles 1200–2000) — 60% engine
+  - [ ] Phase D: tutor explanations — 20–40% tutor
+  - [ ] Add `configs/engine_tutor_curriculum.yaml` reflecting above ratios
+
+### Immediate Steps (Inference/UCI)
+
+- [ ] Normalize engine prompt to match training: `FEN: <fen>\nMove:`
+- [ ] Remove duplicate `Position:` injection when a FEN is already supplied
+- [ ] Deterministic decoding for engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
+- [ ] Strengthen UCI post-processing:
+  - [ ] Regex clamp first token `^[a-h][1-8][a-h][1-8][qrbn]?$`
+  - [ ] Validate legality against provided FEN; if illegal/missing, fallback to Stockfish
+
+### Immediate Steps (Evaluation)
+
+- [ ] Add syntax and legality metrics to all engine evals:
+  - [ ] `uci_syntax_rate`: fraction of responses matching UCI regex
+  - [ ] `uci_legal_rate`: fraction of UCI tokens legal in the given FEN
+- [ ] A/B adapter evaluation:
+  - [ ] Allow `--adapter_a` (baseline none) and `--adapter_b` (trained) in `aggregate_eval.py`
+  - [ ] Report A/B for `uci_syntax_rate`, `uci_legal_rate`, and (optionally) `stockfish_top1`
+- [ ] Log model info in eval outputs: base snapshot path, adapter path
+
+### Optional (If UCI rate stagnates < 90%)
+
+- [ ] Add special tokens for squares/promotions:
+  - [ ] 64 square tokens `<sq_a1>.. <sq_h8>` and 4 promotion tokens `<promo_q|r|b|n>`
+  - [ ] Emit 2–3 tokens per move (`from`, `to`, optional `promo`), post-process to canonical UCI
+  - [ ] Resize embeddings safely with LoRA
+
+### Milestones / KPIs
+
+- [ ] Engine-mode (greedy) on 200 mixed FENs:
+  - [ ] `uci_syntax_rate` ≥ 0.98
+  - [ ] `uci_legal_rate` ≥ 0.95
+- [ ] Stockfish top-1 match (depth 8) ≥ 0.25–0.35 on the same FEN set
+- [ ] Tutor-mode remains coherent; no UCI artifacts in prose
+
+---
+
 ## Future Ideas
 
 - Multi-turn memory for full-game analysis
