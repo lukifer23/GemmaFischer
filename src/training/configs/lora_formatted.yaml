@@ -22,6 +22,7 @@ training:
   max_grad_norm: 1.0
   fp16: false  # Use FP32 for stability
   bf16: false
+  use_instruction_collator: true
 lora:
   r: 32  # Higher rank for better capacity
   lora_alpha: 64

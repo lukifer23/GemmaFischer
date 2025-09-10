@@ -470,9 +470,9 @@
   - [ ] Extend `dataset_mixer.py` to accept both legacy `text` and new instruction schema
   - [ ] Prefer instruction schema for future tasks
 
-- [ ] Instruction collator & label masking:
-  - [ ] Add `InstructionDataCollator` (mask prompt tokens: labels = -100)
-  - [ ] Update training scripts to use the instruction collator
+- [x] Instruction collator & label masking:
+  - [x] Add `InstructionDataCollator` (mask prompt tokens: labels = -100)
+  - [x] Update training scripts to use the instruction collator
 
 - [ ] Web/bridge integration:
   - [ ] Route engine queries via `ChessGemmaInference.generate_response(..., mode='engine')`

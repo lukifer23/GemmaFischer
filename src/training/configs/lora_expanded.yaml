@@ -20,6 +20,7 @@ training:
   warmup_steps: 50
   weight_decay: 0.01
   max_grad_norm: 1.0
+  use_instruction_collator: false
 lora:
   r: 32  # Increased rank for better capacity
   lora_alpha: 64

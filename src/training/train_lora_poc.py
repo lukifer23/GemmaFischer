@@ -27,6 +27,9 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import numpy as np
 from typing import Dict, Any
 
+# our collator for instruction-style data
+from src.training.instruction_data_collator import InstructionDataCollator
+
 # resource monitoring
 import psutil
 
@@ -173,6 +176,15 @@ def main():
                 return
             ds = load_dataset('json', data_files=ds_path, split='train')
 
+    # Decide which data collator to use. If config does not specify, auto-detect
+    # based on dataset columns.
+    use_instruction_collator = cfg.get('training', {}).get('use_instruction_collator')
+    if use_instruction_collator is None and ds is not None:
+        use_instruction_collator = {
+            'prompt',
+            'response'
+        }.issubset(ds.column_names)
+
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     # load model with the recommended eager attention implementation for Gemma3
     model = AutoModelForCausalLM.from_pretrained(
@@ -202,15 +214,21 @@ def main():
     if torch.backends.mps.is_available():
         print('MPS backend detected — applying memory-safe defaults: batch_size=1, max_length=256')
         tokenizer_max_length = 256
-    def preprocess(example):
-        text = example['text']
-        return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
 
-    # Only map here if a single/mixed dataset was already built (no curriculum)
-    if 'curriculum' not in cfg or not cfg.get('curriculum'):
-        ds = ds.map(preprocess, batched=False)
+    if use_instruction_collator:
+        # Use instruction-style collator that handles tokenization internally
+        data_collator = InstructionDataCollator(tokenizer, max_length=tokenizer_max_length)
+    else:
+        # Legacy text field preprocessing
+        def preprocess(example):
+            text = example['text']
+            return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+        # Only map here if a single/mixed dataset was already built (no curriculum)
+        if 'curriculum' not in cfg or not cfg.get('curriculum'):
+            ds = ds.map(preprocess, batched=False)
+
+        data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
     # Coerce numeric config values to expected types
     tcfg = cfg['training']
@@ -287,8 +305,9 @@ def main():
             if len(mixed) == 0:
                 print('  Skipping phase; built dataset is empty')
                 continue
-            # Tokenize per-phase dataset
-            mixed = mixed.map(preprocess, batched=False)
+            # Tokenize per-phase dataset if using legacy text format
+            if not use_instruction_collator:
+                mixed = mixed.map(preprocess, batched=False)
             train_dataset, eval_dataset = split_train_eval(mixed)
 
             # Override steps for this phase if provided

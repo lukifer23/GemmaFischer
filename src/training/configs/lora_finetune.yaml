@@ -11,6 +11,7 @@ training:
   fp16: false
   logging_steps: 10
   save_steps: 50
+  use_instruction_collator: false
 lora:
   r: 8
   lora_alpha: 16

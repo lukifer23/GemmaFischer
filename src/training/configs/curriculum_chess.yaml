@@ -20,6 +20,7 @@ training:
   warmup_steps: 100
   weight_decay: 0.01
   max_grad_norm: 1.0
+  use_instruction_collator: false
 lora:
   r: 16
   lora_alpha: 32
