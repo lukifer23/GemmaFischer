@@ -78,7 +78,8 @@ GemmaFischer/
 ├── docs/                     # Documentation
 │   ├── ARCHITECTURE.md      # System architecture
 │   ├── TRAINING_GUIDE.md    # Training instructions
-│   └── API_REFERENCE.md     # API documentation
+│   ├── API_REFERENCE.md     # API documentation
+│   └── PROJECT_PLAN.md      # Future development roadmap
 ├── src/                      # Source code
 │   ├── training/            # Training scripts
 │   │   ├── train.py         # Main training script
@@ -310,6 +311,9 @@ flake8 src/ tests/
 - [ ] Advanced chess analysis
 - [ ] Mobile app interface
 - [ ] Cloud deployment options
+
+### Future Development
+For detailed information about the evolution to GemmaFischer (chess engine + tutor), see [PROJECT_PLAN.md](docs/PROJECT_PLAN.md).
 
 ## License
 
