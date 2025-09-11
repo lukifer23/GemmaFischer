@@ -363,6 +363,44 @@
                         </ul>
                     </div>
                 </div>
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            Training
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <label class="form-label">Expert</label>
+                            <select id="train-expert" class="form-select form-select-sm">
+                                <option value="uci">UCI (Engine)</option>
+                                <option value="tutor">Tutor</option>
+                                <option value="director">Director</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Steps</label>
+                            <input id="train-steps" type="number" class="form-control form-control-sm" value="1000" min="50" />
+                        </div>
+                        <div class="form-check mb-2">
+                            <input id="train-use-instr" class="form-check-input" type="checkbox">
+                            <label class="form-check-label" for="train-use-instr">Use Instruction Collator</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input id="train-disable-eval" class="form-check-input" type="checkbox" checked>
+                            <label class="form-check-label" for="train-disable-eval">Disable Evaluation</label>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button id="btn-train-start" class="btn btn-sm btn-primary">Start</button>
+                            <button id="btn-train-stop" class="btn btn-sm btn-outline-danger">Stop</button>
+                            <button id="btn-train-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                        </div>
+                        <div class="mt-3">
+                            <pre id="train-status" style="max-height: 200px; overflow:auto; background:#f7f7f7; padding:10px;"></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -436,6 +474,12 @@
         // Setup event listeners
         function setupEventListeners() {
             // Add any additional event listeners here
+            const startBtn = document.getElementById('btn-train-start');
+            const stopBtn = document.getElementById('btn-train-stop');
+            const refreshBtn = document.getElementById('btn-train-refresh');
+            if (startBtn) startBtn.onclick = startTraining;
+            if (stopBtn) stopBtn.onclick = stopTraining;
+            if (refreshBtn) refreshBtn.onclick = refreshTrainingStatus;
         }
 
         // Ask a question
@@ -525,6 +569,48 @@
             messageDiv.innerHTML = content;
             messagesDiv.appendChild(messageDiv);
             scrollToBottom();
+        }
+
+        // -----------------
+        // Training Controls
+        // -----------------
+        async function startTraining() {
+            const expert = document.getElementById('train-expert').value;
+            const steps = parseInt(document.getElementById('train-steps').value || '1000', 10);
+            const useInstr = document.getElementById('train-use-instr').checked;
+            const disableEval = document.getElementById('train-disable-eval').checked;
+            try {
+                const res = await fetch('/api/train/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ expert, steps, use_instruction: useInstr, disable_eval: disableEval })
+                });
+                const data = await res.json();
+                document.getElementById('train-status').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('train-status').textContent = 'Error: ' + e;
+            }
+        }
+
+        async function stopTraining() {
+            try {
+                const res = await fetch('/api/train/stop', { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('train-status').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('train-status').textContent = 'Error: ' + e;
+            }
+        }
+
+        async function refreshTrainingStatus() {
+            try {
+                const res = await fetch('/api/train/status');
+                const data = await res.json();
+                const log = data.logs_tail || '';
+                document.getElementById('train-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+            } catch (e) {
+                document.getElementById('train-status').textContent = 'Error: ' + e;
+            }
         }
 
         // Scroll to bottom of chat

@@ -23,6 +23,9 @@ import traceback
 import psutil
 import threading
 from datetime import datetime
+import subprocess
+import threading as _threading
+import queue as _queue
 
 # Add the project root to the Python path
 project_root = Path(__file__).resolve().parents[2]
@@ -179,6 +182,98 @@ chess_model = ChessModelInterface()
 chess_game = ChessGame()
 chess_rag = ChessRAG()
 stockfish_match = None
+
+
+# ---------------------------
+# Training Job Manager
+# ---------------------------
+
+class TrainingJob:
+    def __init__(self):
+        self.proc: Optional[subprocess.Popen] = None
+        self.running: bool = False
+        self.start_time: Optional[float] = None
+        self.end_time: Optional[float] = None
+        self.args: Dict[str, Any] = {}
+        self._log_q: _queue.Queue[str] = _queue.Queue(maxsize=10000)
+        self._log_tail: list[str] = []
+        self._lock = _threading.Lock()
+
+    def _reader(self, stream):
+        try:
+            for line in iter(stream.readline, ''):
+                with self._lock:
+                    self._log_tail.append(line.rstrip())
+                    if len(self._log_tail) > 500:
+                        self._log_tail = self._log_tail[-500:]
+        except Exception:
+            pass
+
+    def start(self, expert: str, steps: int, use_instruction: bool, disable_eval: bool, dataset_path: Optional[str] = None) -> bool:
+        if self.running:
+            return False
+        cmd = [
+            sys.executable,
+            str(project_root / 'src' / 'training' / 'train_lora_poc.py'),
+            '--expert', expert,
+            '--config', 'auto',
+            '--max_steps_override', str(int(steps)),
+        ]
+        if use_instruction:
+            cmd.append('--use_instruction_collator')
+        if disable_eval:
+            cmd.append('--disable_eval')
+        env = os.environ.copy()
+        cwd = str(project_root)
+        try:
+            self.proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        except Exception:
+            return False
+        self.running = True
+        self.start_time = time.time()
+        self.end_time = None
+        self.args = {
+            'expert': expert,
+            'steps': steps,
+            'use_instruction': use_instruction,
+            'disable_eval': disable_eval,
+        }
+        # reader thread
+        t = _threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True)
+        t.start()
+        # watcher thread
+        def _watch():
+            try:
+                rc = self.proc.wait()
+            finally:
+                self.running = False
+                self.end_time = time.time()
+        _threading.Thread(target=_watch, daemon=True).start()
+        return True
+
+    def stop(self) -> bool:
+        if not self.running or not self.proc:
+            return False
+        try:
+            self.proc.terminate()
+        except Exception:
+            return False
+        return True
+
+    def status(self) -> Dict[str, Any]:
+        with self._lock:
+            logs = '\n'.join(self._log_tail[-200:])
+        return {
+            'running': self.running,
+            'args': self.args,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'elapsed_sec': (time.time() - self.start_time) if (self.start_time and self.running) else None,
+            'logs_tail': logs,
+        }
+
+
+TRAINING_JOB = TrainingJob()
 
 
 @app.route('/')
@@ -629,6 +724,41 @@ def get_match_status():
         
     except Exception as e:
         print(f"Match status error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/train/start', methods=['POST'])
+def api_train_start():
+    try:
+        data = request.get_json() or {}
+        expert = (data.get('expert') or 'uci').strip().lower()
+        steps = int(data.get('steps') or 1000)
+        use_instruction = bool(data.get('use_instruction') or (expert in ('tutor', 'director')))
+        disable_eval = bool(data.get('disable_eval') or True)
+        if expert not in ('uci', 'tutor', 'director'):
+            return jsonify({'error': 'Invalid expert'}), 400
+        ok = TRAINING_JOB.start(expert, steps, use_instruction, disable_eval)
+        if not ok:
+            return jsonify({'error': 'Training already running or failed to start'}), 409
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/train/status', methods=['GET'])
+def api_train_status():
+    try:
+        return jsonify(TRAINING_JOB.status())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/train/stop', methods=['POST'])
+def api_train_stop():
+    try:
+        ok = TRAINING_JOB.stop()
+        return jsonify({'success': bool(ok)})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/match/stop', methods=['POST'])

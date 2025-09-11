@@ -150,6 +150,54 @@ python src/evaluation/puzzle_eval.py --file data/datasets/lichess_puzzles_1000_2
 
 Tip: set `CHESSGEMMA_ENGINE_RERANK=0` to disable N-best re-ranking for lower latency engine mode.
 
+## Longer Training (Moderate)
+
+Recommended order:
+1) Optional data cleaning (improves legality and labels)
+2) Run longer expert training runs sequentially
+
+Data cleaning (creates cleaned JSONL; `ln -sf` makes a symlink so configs keep working without edits):
+
+```bash
+# UCI: validate and repair labels with Stockfish, then point the formatted path at the cleaned file
+python data/scripts/validate_and_augment.py --in data/formatted/uci_expert.jsonl --out data/processed/uci_clean.jsonl --mode uci --relabel_with_stockfish
+ln -sf data/processed/uci_clean.jsonl data/formatted/uci_expert.jsonl
+
+# Tutor: enforce trailing "Best move: <uci>" line; repair with Stockfish when possible
+python data/scripts/validate_and_augment.py --in data/formatted/tutor_expert.jsonl --out data/processed/tutor_clean.jsonl --mode tutor --relabel_with_stockfish
+ln -sf data/processed/tutor_clean.jsonl data/formatted/tutor_expert.jsonl
+```
+
+Notes:
+- `ln -sf` creates a symlink (`-s`) and overwrites existing files (`-f`). It makes `data/formatted/...` point to the cleaned file without changing configs.
+- If you prefer not to use symlinks, edit the training configs to reference the cleaned files directly.
+
+Longer (moderate) training runs (sequential):
+
+```bash
+# UCI adapter (~1000 steps)
+python src/training/train_lora_poc.py --expert uci --config auto --max_steps_override 1000 --disable_eval
+
+# Tutor adapter (~1500 steps)
+python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_override 1500 --use_instruction_collator --disable_eval
+
+# Director adapter (~1000 steps)
+python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 1000 --use_instruction_collator --disable_eval
+```
+
+## Web UI Training (Planned)
+
+We will add a Training tab to start/stop runs from the browser with:
+- Expert selection (uci/tutor/director), steps, eval toggle, dataset path
+- Live logs, progress and basic status
+
+Endpoints (to be added):
+- `POST /api/train/start` – starts a background training job
+- `GET /api/train/status` – returns run status and recent logs
+- `POST /api/train/stop` – stops the current job
+
+Once implemented, launch the web app with `python src/web/app.py` and use the Training tab.
+
 ## Project Structure
 
 ```

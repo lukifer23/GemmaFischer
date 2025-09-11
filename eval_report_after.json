@@ -1,13 +1,1208 @@
 {
-  "legality_proxy": {
-    "chess_relevance": 1.0
-  },
-  "stockfish_match": {
-    "top1_match": 0.0,
-    "count": 10
-  },
-  "puzzle_accuracy": {
-    "first_move_accuracy": 0.0,
-    "count": 200
-  }
+  "first_move_accuracy": 0.02,
+  "sequence_accuracy": 0.02,
+  "legal_rate": 1.0,
+  "avg_latency_sec": 0.977666631937027,
+  "results": [
+    {
+      "fen": "r6k/pp2r2p/4Rp1Q/3p4/8/1N1P2R1/PqP2bPP/7K b - - 0 24",
+      "pred": "b2b1",
+      "solution_first": "f2g3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/1p3ppp/pq3b2/8/8/1P1Q1N2/P4PPP/3R2K1 w - - 2 27",
+      "pred": "d3e4",
+      "solution_first": "d3d6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/4R3/1p2P3/p4r2/P6p/1P3Pk1/4K3/8 w - - 1 64",
+      "pred": "e7g7",
+      "solution_first": "e7f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2qr1k1/b1p2ppp/pp4n1/P1P1p3/4P1n1/B2P2Pb/3NBP1P/RN1QR1K1 b - - 1 16",
+      "pred": "g4f2",
+      "solution_first": "b6c5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6k1/5p1p/4p3/4q3/3nN3/2Q3P1/PP3P1P/6K1 w - - 2 37",
+      "pred": "c3e3",
+      "solution_first": "e4d2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/4k1p1/2KpP2p/5PP1/8/8/8 w - - 0 53",
+      "pred": "f4f5",
+      "solution_first": "g4h5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4r3/1k6/pp3r2/1b2P2p/3R1p2/P1R2P2/1P4PP/6K1 w - - 0 35",
+      "pred": "a3a4",
+      "solution_first": "e5f6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4rk1/pp3ppp/2n1b3/q1pp2B1/8/P1Q2NP1/1PP1PP1P/2KR3R w - - 0 15",
+      "pred": "c3a5",
+      "solution_first": "g5e7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/p5p1/3bpr1p/1Pp4q/3pR3/1P1Q1N2/P4PPP/4R1K1 w - - 4 22",
+      "pred": "d3c4",
+      "solution_first": "e4e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bqk2r/pp1nbNp1/2p1p2p/8/2BP4/1PN3P1/P3QP1P/3R1RK1 b kq - 0 19",
+      "pred": "d8a5",
+      "solution_first": "e8f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r3r/pQNk1ppp/1qnb1n2/1B6/8/8/PPP3PP/3R1R1K w - - 5 19",
+      "pred": "b5c6",
+      "solution_first": "d1d6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5r1k/5rp1/p7/1b2B2p/1P1P1Pq1/2R1Q3/P3p1P1/2R3K1 w - - 0 41",
+      "pred": "c3c5",
+      "solution_first": "e3g3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3R4/8/K7/pB2b3/1p6/1P2k3/3p4/8 w - - 4 58",
+      "pred": "d8d3",
+      "solution_first": "a6a5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2q1rk1/5ppp/1np5/p1b5/2p1B3/P7/1P3PPP/R1BQ1RK1 b - - 1 17",
+      "pred": "c5f2",
+      "solution_first": "d8f6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2qk2r/pp2ppbp/1n1p2p1/3Pn3/2P5/2NBBP1P/PP3P2/R2QK2R b KQkq - 0 12",
+      "pred": "a8c8",
+      "solution_first": "e5c4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2R2r1k/pQ4pp/5rp1/3B4/q2n4/7P/P4PP1/5RK1 w - - 3 30",
+      "pred": "f1e1",
+      "solution_first": "c8c7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4r1k1/5ppp/r1p5/p1n1RP2/8/2P2N1P/2P3P1/3R2K1 b - - 0 21",
+      "pred": "e8b8",
+      "solution_first": "e8e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1qr2rk1/pb2bppp/8/8/2p1N3/P1Bn2P1/2Q2PBP/1R3RK1 b - - 3 23",
+      "pred": "c8c7",
+      "solution_first": "b8c7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6k1/5p2/4p3/P1B5/2P4P/4Pnp1/Rb1rN3/5K2 b - - 1 33",
+      "pred": "b2d4",
+      "solution_first": "d2e2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/3B2pp/p5k1/2p3P1/1p1p1K2/8/1P6/8 b - - 0 38",
+      "pred": "g6f7",
+      "solution_first": "c5c4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r3k1/2r4p/4p1p1/1p1q1pP1/p1bP1P1Q/P6R/5B2/2R3K1 b - - 5 34",
+      "pred": "d5e4",
+      "solution_first": "c4e2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "7r/6k1/2b1pp2/8/P1N3p1/5nP1/4RP2/Q4K2 w - - 2 38",
+      "pred": "e2a2",
+      "solution_first": "e2e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5r1k/pp4pp/5p2/1BbQp1r1/6K1/7P/1PP3P1/3R3R w - - 2 26",
+      "pred": "g4f3",
+      "solution_first": "g4h4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6k1/1p3pp1/1p5p/2r1p3/2n5/r3PN2/2RnNPPP/2R3K1 b - - 1 32",
+      "pred": "d2b3",
+      "solution_first": "f7f6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1rb2rk1/q5P1/4p2p/3p3p/3P1P2/2P5/2QK3P/3R2R1 b - - 0 29",
+      "pred": "f8f5",
+      "solution_first": "f8f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26",
+      "pred": "g2g4",
+      "solution_first": "b7b5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3k2r/pb1p1ppp/1b4q1/1Q2P3/8/2NP1Pn1/PP4PP/R1B2R1K w kq - 1 17",
+      "pred": "h2g3",
+      "solution_first": "h2g3",
+      "first_move_ok": true
+    },
+    {
+      "fen": "k1r1b3/p1r1nppp/1p1qpn2/2Np4/1P1P4/PQRBPN2/5PPP/2R3K1 w - - 0 19",
+      "pred": "c5a6",
+      "solution_first": "d3a6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/4R1k1/p5pp/3B4/5q2/8/5P1P/6K1 b - - 5 40",
+      "pred": "g7f8",
+      "solution_first": "g7f6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1pp5/p2p4/P2Pk2p/1PP1p2P/2n1K2P/3N4/8 b - - 0 45",
+      "pred": "b7b5",
+      "solution_first": "b7b6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/8/3N2p1/5b2/3p3P/5kP1/3K4 w - - 16 56",
+      "pred": "h3h4",
+      "solution_first": "d5f4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3brk1/5pp1/p1nqpn1p/P2pN3/2pP4/2P1PN2/5PPP/RB1QK2R b KQ - 4 16",
+      "pred": "d6c7",
+      "solution_first": "c6e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3kb1r/ppq2ppp/4pn2/2Ppn3/1P4bP/2P2N2/P3BPP1/RNBQ1RK1 b kq - 2 10",
+      "pred": "g4f3",
+      "solution_first": "f8e7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3kbnr/ppp1qppp/2n5/3pP3/5B2/4PQ2/PPP2PPP/RN2KB1R w KQkq - 1 7",
+      "pred": "b1c3",
+      "solution_first": "f1b5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4rk1/pp3ppp/3p1q2/P1P1p3/2B5/2B2n2/2P2P1P/R2Q1RK1 w - - 0 16",
+      "pred": "g1g2",
+      "solution_first": "g1h1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/1p6/k7/P1R5/1K5r/8/8 w - - 26 64",
+      "pred": "b3b2",
+      "solution_first": "c4c3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/6p1/2B1bn2/6k1/3B4/6K1/4P3/8 b - - 4 44",
+      "pred": "g5g6",
+      "solution_first": "e6d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4r1k1/1p2R1p1/p2p2Pp/P1pP4/5q2/1R3p2/1P1Q3P/5B1K b - - 0 34",
+      "pred": "f4a4",
+      "solution_first": "f4d2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/7p/2b1k3/p2p1pPB/1n1P3P/N1p1P3/4K3/8 b - - 1 42",
+      "pred": "c6a4",
+      "solution_first": "c6b5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r6k/q1pb1p1p/1b3Pr1/p1ppP2Q/3P2p1/4B3/PP2NRPP/3R2K1 b - - 1 25",
+      "pred": "c5d4",
+      "solution_first": "d7e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2r2k1/1p2qppp/2n1p3/5n2/p2P4/P2Q1N2/BP3PPP/2R1R1K1 w - - 4 20",
+      "pred": "d4d5",
+      "solution_first": "d3f5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r5r/p3kp2/4p2p/4P3/3R1Pp1/6P1/P1P4P/4K2R w K - 1 25",
+      "pred": "e1d2",
+      "solution_first": "d4a4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/3pk3/R7/1R2Pp1p/2PPnKr1/8/8/8 w - - 4 43",
+      "pred": "f4e3",
+      "solution_first": "f4f5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4k1r/pNqnppb1/6pn/2p3Np/7P/2P2Q2/PP3PP1/R1B1K2R b KQ - 2 15",
+      "pred": "f8g8",
+      "solution_first": "a8b8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r5/pR5p/5p1k/4p3/4r3/B4nPP/PP3P2/1K2R3 w - - 0 27",
+      "pred": "e1d1",
+      "solution_first": "e1e4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/6pk/7p/2p5/2qp4/5PP1/P3QK1P/8 b - - 1 40",
+      "pred": "c4a4",
+      "solution_first": "c4d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4rk1/1pp2ppp/p2p4/2bPp3/2P1Pn1q/P1N2B2/1P3P2/R1BQK1R1 w Q - 1 15",
+      "pred": "g1f1",
+      "solution_first": "c1f4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/5k1p/6p1/1R4PP/1p2KP2/8/1r6 w - - 0 43",
+      "pred": "h4g5",
+      "solution_first": "h4h5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r1kbnr/pp4pp/4p3/3pP1N1/3q4/1P2B3/P3Q1PP/nN3RK1 b k - 1 16",
+      "pred": "d4e3",
+      "solution_first": "d4e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/r1b1q2k/2p3p1/2Pp4/1P2p1n1/2B1P3/NQ6/2K4R b - - 1 36",
+      "pred": "g4h6",
+      "solution_first": "h7g8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/3q1kpp/1P2p3/4Q3/5P2/4B2P/2r3PK/8 b - - 0 43",
+      "pred": "d7d5",
+      "solution_first": "d7b7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rn3rk1/p5pp/3N4/4np1q/5Q2/1P3K2/PB1P2P1/2R4R w - - 0 25",
+      "pred": "f3e3",
+      "solution_first": "f3f2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1R6/1p2k2p/p2n2p1/4K3/8/6P1/P6P/8 w - - 10 37",
+      "pred": "e5d5",
+      "solution_first": "b8h8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4k1r/1pp2p2/p2p3p/3N4/3P2q1/8/PPP5/1K2Q1NR b - - 1 23",
+      "pred": "g4d4",
+      "solution_first": "a8e8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6rk/pp6/2n5/3ppn1p/3p4/2P2P1q/PP3QNB/R4R1K w - - 2 29",
+      "pred": "a1e1",
+      "solution_first": "f1g1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bqk2r/pp1nbppp/3p4/1B1p4/3P1B2/8/PPP2PPP/R2QK1NR w KQkq - 2 9",
+      "pred": "g1e2",
+      "solution_first": "g1f3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2qr1k1/ppp2ppp/4b3/3P4/1nP2Q2/2N2N1P/PP3KP1/R4R2 w - - 1 15",
+      "pred": "a1d1",
+      "solution_first": "d5e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r2rk1/6pp/3Q1q2/8/3N1B2/6P1/PP1K3P/R4b2 w - - 0 24",
+      "pred": "d6f6",
+      "solution_first": "a1f1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1N3k2/6p1/8/2P3P1/pr6/R5K1/8 w - - 1 56",
+      "pred": "b7d6",
+      "solution_first": "g2f1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4r3/p5k1/2p2R1p/2Pp4/1P1pr1P1/P6P/8/3R3K w - - 1 35",
+      "pred": "f6f2",
+      "solution_first": "f6c6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4qk2/1b3rR1/p7/1p2Q3/4P2P/P2P3K/2r5/3R4 w - - 5 41",
+      "pred": "g7g8",
+      "solution_first": "g7f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/4R1kp/p7/5rPK/8/7P/8 b - - 2 42",
+      "pred": "f4f6",
+      "solution_first": "g6f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bk2r1/ppq2pQp/3bpn2/1BpnN3/5P2/1P6/PBPP2PP/RN2K2R w KQ - 3 13",
+      "pred": "g7h6",
+      "solution_first": "e5f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/R7/2p5/p1P2p2/1p4k1/nP6/P2KNP2/8 w - - 3 41",
+      "pred": "d2c1",
+      "solution_first": "d2e3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/7R/5p2/p7/7P/2p5/3k2r1/1K2N3 w - - 3 48",
+      "pred": "e1f3",
+      "solution_first": "e1g2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/p1p4p/4Pk2/2PP1p1P/1r3r2/5B2/P3RK2/8 b - - 3 38",
+      "pred": "b4e4",
+      "solution_first": "f6e7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/5ppp/1p6/1qp2P1Q/3p3P/6R1/6PK/8 b - - 0 30",
+      "pred": "f7f6",
+      "solution_first": "c5c4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bqk2r/p3Bppp/3p4/1ppn4/4P3/4Q3/PPP2PPP/2KR1B1R b kq - 0 11",
+      "pred": "d5e3",
+      "solution_first": "d5e7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r4k1/p4ppp/2Q5/3pq3/8/P6P/2PR1PP1/Rr4K1 w - - 1 26",
+      "pred": "d2d1",
+      "solution_first": "a1b1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/4kr2/R2p4/1p1Pp1p1/5p2/3K1P2/PPP5/8 b - - 0 39",
+      "pred": "g5g4",
+      "solution_first": "g5g4",
+      "first_move_ok": true
+    },
+    {
+      "fen": "4rr1k/pQpn2pp/3p1q2/8/8/2P5/PP3PPP/RN3RK1 w - - 1 16",
+      "pred": "b1d2",
+      "solution_first": "b7c7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5Q2/8/1b1kp1p1/5p2/3p4/5qPK/7P/8 b - - 1 51",
+      "pred": "d6c7",
+      "solution_first": "d6c6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6k1/ppq3pp/2p1rp2/4r3/4p1Q1/P5RP/1P3PP1/3R2K1 b - - 3 34",
+      "pred": "e6e7",
+      "solution_first": "e6e8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2q3k1/4br1p/6RQ/1p1n2p1/7P/1P4P1/1B2PP2/6K1 b - - 0 27",
+      "pred": "h7g6",
+      "solution_first": "h7g6",
+      "first_move_ok": true
+    },
+    {
+      "fen": "5rk1/1p2p1rp/p2p4/2pPb2R/2P1P3/1P1BKP1R/8/8 b - - 4 30",
+      "pred": "g7g2",
+      "solution_first": "g7g3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1b2rk1/ppq2ppp/8/4b2Q/4R3/3B4/PP3PPP/R1B3K1 b - - 1 15",
+      "pred": "c7d6",
+      "solution_first": "g7g6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4rk2/p1q5/1p3Q1b/8/1p5N/2P1p3/P3P3/2K5 b - - 0 43",
+      "pred": "f8g8",
+      "solution_first": "c7f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2rr4/2N2pk1/p1Q1b1pp/1p4q1/3pP3/1B1P4/PPP3PP/6RK w - - 7 25",
+      "pred": "b3e6",
+      "solution_first": "c7e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "7r/pp1k4/4p1b1/3pP1Np/3P1P1K/8/P7/2R5 b - - 7 42",
+      "pred": "h8b8",
+      "solution_first": "h8f8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r5k1/2p1pp2/pp4p1/1q1r4/5P2/2QP2R1/PP6/1K4R1 b - - 0 32",
+      "pred": "d5f5",
+      "solution_first": "d5h5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1b1qrk1/pp1n1pbp/2pp1np1/4p3/2PP1B2/2NBPN1P/PP3PP1/R2Q1RK1 w - - 0 10",
+      "pred": "f4h2",
+      "solution_first": "d4e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3rk2r/2qn1pp1/p1Q1R3/3n3p/8/8/PP4PP/5R1K b k - 0 23",
+      "pred": "e8f8",
+      "solution_first": "f7e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3kb1r/ppqn1ppp/4pn2/1Q2Nb2/3P4/8/PP2PPPP/RNB1KB1R w KQkq - 4 9",
+      "pred": "b1c3",
+      "solution_first": "e5d7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r6/pp2kpp1/2n1p1n1/3p2PQ/5P2/2PqP3/PP1N4/2KR3R w - - 3 27",
+      "pred": "h5f3",
+      "solution_first": "h5h7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/3k4/1K1P4/2P3r1/R7/5b2/8/8 b - - 0 68",
+      "pred": "g5g1",
+      "solution_first": "g5g8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1q3k1/4bppp/pp2pn2/4B3/8/2N2Q2/PPPR1PPP/6K1 b - - 0 18",
+      "pred": "b6b5",
+      "solution_first": "f6d7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "7r/pppk4/2pb1r2/8/2NP2p1/2P5/PP2RPP1/4R1K1 w - - 2 26",
+      "pred": "e2e4",
+      "solution_first": "c4d6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/R4pp1/1p5p/3Q4/1PPp2q1/3P2P1/5P2/4nK2 w - - 0 34",
+      "pred": "a7a8",
+      "solution_first": "f1e1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2kr1br1/ppBb1ppp/8/3P2Q1/3n2n1/5N2/PP3qPP/RN2R2K b - - 0 16",
+      "pred": "f8c5",
+      "solution_first": "d4f3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r6/5k2/2p1pNp1/p5Pp/1pQ1P2P/2P4R/KP3P2/3q4 w - - 4 31",
+      "pred": "c4b3",
+      "solution_first": "c4c6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1k1r3r/2q5/pp1n2p1/8/1Q6/3R2P1/PPP2P1P/3R2K1 b - - 4 29",
+      "pred": "d6b7",
+      "solution_first": "c7c5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1rk1/1p4p1/p1p3Qp/2q5/8/3n1N1P/PP1R2P1/5R1K b - - 7 28",
+      "pred": "c5e3",
+      "solution_first": "g8h8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1b4r/pp1k2pp/2nb2q1/1B1p2B1/3p3Q/8/PPP2PPP/3RR1K1 b - - 5 17",
+      "pred": "d7c7",
+      "solution_first": "h7h6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4rk1/3nqpp1/2p1bn1p/3pN3/1p1P4/2NQP2P/1PB2PP1/R4RK1 w - - 0 18",
+      "pred": "e5d7",
+      "solution_first": "e5c6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r3k2/5p1p/2p1pp2/P2n4/2r1N3/P4PK1/2R2P1P/2R5 b - - 9 29",
+      "pred": "c4c2",
+      "solution_first": "c4a4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4r2/2q1NN2/4bQpk/2n4p/pp5P/8/1PP2PP1/2KR3R b - - 0 28",
+      "pred": "e6f7",
+      "solution_first": "e6f7",
+      "first_move_ok": true
+    },
+    {
+      "fen": "2r5/4ppkp/5bp1/1p6/1P6/P3B3/2r2PPP/1R1R2K1 b - - 2 22",
+      "pred": "c2b2",
+      "solution_first": "f6b2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3N1r2/6R1/kp6/p2pPp1Q/2pP2P1/2q5/2P5/2K5 w - - 0 38",
+      "pred": "d8e6",
+      "solution_first": "g7a7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rn3bk1/2rqp2p/2p3p1/3p1p2/3P1P1B/pP1BP3/P1Q2PRP/1KR5 b - - 0 26",
+      "pred": "e7e6",
+      "solution_first": "b8a6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r2k1/1b3pbR/p2P2P1/3p2N1/2p5/2P2N2/PP6/2K5 b - - 0 28",
+      "pred": "d8d6",
+      "solution_first": "f7g6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3kb1r/3nnpp1/4p1bp/1NppP3/3P4/6N1/P2BBPPP/R3K2R b KQkq - 0 17",
+      "pred": "e8d8",
+      "solution_first": "a8b8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "6k1/p4p2/1p5p/4r3/P3B3/1P3P2/2PK2PP/8 w - - 0 29",
+      "pred": "g2g4",
+      "solution_first": "d2e3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rn3rk1/4pp1p/3p2pB/2q4P/3bP1b1/Pp2Q3/1P2B3/1K1R2NR w - - 0 20",
+      "pred": "e3d2",
+      "solution_first": "e3d4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bq3Q/1np2kp1/p5B1/1p1Pp3/1Pn2BP1/2b2P2/P3K3/R4N2 b - - 5 35",
+      "pred": "f7e7",
+      "solution_first": "f7g6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3k1nr/1pp2ppp/1pnp2q1/4p1B1/2B1P3/3P1Q1P/PPP2PP1/R4RK1 b kq - 0 11",
+      "pred": "c6d4",
+      "solution_first": "g6g5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "7Q/2p5/1p2prp1/p4k1p/P4p1P/8/6RK/3q4 b - - 2 37",
+      "pred": "d1d4",
+      "solution_first": "d1a4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bqk2r/pp3ppp/4p2n/3pP3/1b1P1P2/2N5/PP4PP/R1BQKB1R b KQkq - 2 9",
+      "pred": "c8d7",
+      "solution_first": "h6f5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r5k1/1p1rqpp1/p3pnp1/2PN4/8/1Q5P/PP3PP1/3RR1K1 b - - 0 24",
+      "pred": "f6d5",
+      "solution_first": "e7c5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/7k/pR5p/3p4/5r2/2P1p2P/P5P1/6K1 w - - 0 40",
+      "pred": "b6e6",
+      "solution_first": "b6a6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/pp1r2kp/q2P1ppb/4p3/2N1P3/1Q5P/PPR2PP1/6K1 w - - 3 32",
+      "pred": "a2a4",
+      "solution_first": "c4e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r2k1/6p1/4Q3/4B3/1p3P2/4PKP1/3q4/8 b - - 17 51",
+      "pred": "g8f8",
+      "solution_first": "g8h8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1b1k1nr/ppp2pbp/3ppqp1/8/2BnP3/N2P2QP/PPP2PP1/R1B1K2R b KQkq - 4 9",
+      "pred": "h7h6",
+      "solution_first": "e6e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2qr1k1/p5bp/1pp1b1p1/8/2QN1p2/2P1n2P/PP3PP1/R1B1RNK1 w - - 1 18",
+      "pred": "c4e6",
+      "solution_first": "d4e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3rk3/5p1r/p2Np1p1/3bP3/P2n4/8/1P3RPP/5RK1 b - - 4 25",
+      "pred": "e8d7",
+      "solution_first": "e8e7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2b2k1/1p3q1p/p2p4/3P2p1/2P1PRQr/8/P2B3P/2R4K w - - 1 29",
+      "pred": "f4f7",
+      "solution_first": "g4g3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r3rk1/1pq2pbp/p1p1pnp1/2N1N3/3P4/1QP5/PP3PPP/3RR1K1 w - - 2 19",
+      "pred": "d1d3",
+      "solution_first": "e5d7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rn1qk2r/pp3ppp/3bp1b1/3p4/3Pn2N/3BB3/PPP2PPP/RN1Q1RK1 w kq - 4 10",
+      "pred": "g2g3",
+      "solution_first": "h4g6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4k1r/pp3pp1/4p3/3pP1np/6bq/1PP2P2/P3B1PP/RN1Q1RK1 w - - 1 14",
+      "pred": "d1d4",
+      "solution_first": "f3g4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "4r2k/3q2r1/1p4pQ/p1pP4/2P4P/1N4p1/PP3RK1/8 b - - 1 37",
+      "pred": "h8g8",
+      "solution_first": "g7h7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1p4p1/pb2ppkp/3n4/3P4/P3BN1P/1P2KPP1/8 b - - 0 26",
+      "pred": "g6f7",
+      "solution_first": "g6f5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "k3r3/p3q3/1pp5/3pnB2/1P1Q4/1KPP4/P4R2/8 w - - 0 41",
+      "pred": "d4f4",
+      "solution_first": "f2e2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5Q2/pbp3np/1p1pB1pk/1P6/P3q2P/6K1/8/8 b - - 1 32",
+      "pred": "e4g2",
+      "solution_first": "e4e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3br2r/5k1p/4p1pQ/P5P1/1B5P/P6q/5R2/6K1 b - - 1 35",
+      "pred": "h3f5",
+      "solution_first": "f7g8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/p1p2ppp/4k3/6Q1/5P2/4P3/Prqn2PP/3R1RK1 w - - 3 22",
+      "pred": "f4f5",
+      "solution_first": "g5d8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3r1k1/1p3p1p/p1p3p1/8/6bP/Q3b3/PP2B1P1/R3K2R w KQ - 2 20",
+      "pred": "a3a4",
+      "solution_first": "g2g3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1p6/p1p2p2/P3b3/1PK3P1/2PBk3/8/8 b - - 3 60",
+      "pred": "e5c7",
+      "solution_first": "e3d2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/7Q/3p1kp1/1p6/2b5/2P4P/5PPK/4q3 b - - 8 36",
+      "pred": "e1f2",
+      "solution_first": "e1c3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r6k/3NR1p1/4n2p/5b2/p6P/6R1/8/6K1 w - - 2 43",
+      "pred": "d7b6",
+      "solution_first": "h4h5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "br1qkb1r/p1pp1ppp/4Pn2/6B1/3Qn3/5NP1/P3PPBP/RN1R2K1 b k - 0 15",
+      "pred": "f7e6",
+      "solution_first": "d7e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1R6/1P6/4pkp1/5p2/3P3p/3KP3/8/1r6 b - - 0 43",
+      "pred": "f6g7",
+      "solution_first": "h4h3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1rk1/1p2q1pp/5p2/8/1P1n4/6Q1/PPbB1PPP/R2B1RK1 w - - 9 20",
+      "pred": "d2c3",
+      "solution_first": "d1c2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1bpp2k1/1p5r/1P2P3/3P1P2/2P1n1K1/2Q3P1/8 w - - 0 30",
+      "pred": "c2a4",
+      "solution_first": "c2a2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/4kp1p/1PQ1p1p1/p3b3/1p2P2P/1P6/6PK/8 w - - 1 36",
+      "pred": "g2g3",
+      "solution_first": "h2h3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/2B2p1p/P4Pp1/3p1kP1/1b1Pb2P/8/4K3 b - - 0 50",
+      "pred": "b3c4",
+      "solution_first": "f4g3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1b2rk1/2q2p1p/1p2pbp1/pP6/2P1Q3/P2B1N2/5PPP/3R1RK1 w - - 0 20",
+      "pred": "c4c5",
+      "solution_first": "e4a8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1k4nr/pp1r1ppp/4p3/1Nb2q2/2Pp4/6P1/PP3P1P/R1BQR1K1 b - - 2 14",
+      "pred": "g7g5",
+      "solution_first": "g8h6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r3k1/p2q1pbp/1p2pnp1/nB1p4/3P4/1Pr1P2P/P1QB1PP1/2R2RK1 w - - 0 19",
+      "pred": "c2c3",
+      "solution_first": "b5d7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1R6/p1pk4/6bp/1QP5/P7/KP6/3r2q1 b - - 2 44",
+      "pred": "d6e6",
+      "solution_first": "g1c5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2k1r3/pppn1pp1/3b2b1/3p2Pp/2B2P2/3P3P/PPPR4/2K3NR w - - 0 18",
+      "pred": "d2e2",
+      "solution_first": "c4d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2q1r2/1n4pk/p6p/1pp2pb1/3n1B2/P1NPN2P/1PPQ1PP1/R3R1K1 w - - 0 21",
+      "pred": "e3d5",
+      "solution_first": "c3d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/4bkp1/R6P/4p3/Pp2P3/1P1rB3/6P1/6K1 b - - 0 33",
+      "pred": "g7h6",
+      "solution_first": "d3e3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2K5/3P4/5b2/p1B5/P7/3k4/6p1/8 w - - 7 77",
+      "pred": "c8c7",
+      "solution_first": "d7d8q",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1rb2r1k/4q2p/p2p4/3B1p2/1pPb4/1P2NQ2/P5PP/2R2RK1 w - - 1 24",
+      "pred": "c1e1",
+      "solution_first": "g1h1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3b4/3P4/pp2Pk2/5r2/P6p/3Q4/8/7K w - - 1 43",
+      "pred": "d3d6",
+      "solution_first": "d3f5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2q1rk1/1Q2bppp/p1N1p3/1p6/2pP1n2/2P5/PP3PPP/R4RK1 b - - 1 18",
+      "pred": "d8d6",
+      "solution_first": "d8d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4rk1/pp2bppp/2ppnn2/8/N1P1P3/q1P4P/P2N2PB/R2Q1R1K b - - 0 16",
+      "pred": "b7b5",
+      "solution_first": "a8d8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r4rk1/1b1p1p1p/p2NpQpq/1p6/3R4/P7/1P3PPP/3R2K1 b - - 9 23",
+      "pred": "b7c6",
+      "solution_first": "b7d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r3k1/4R1pp/p1p2p2/2p5/2P5/1PbN3P/P4PP1/6K1 w - - 0 25",
+      "pred": "g1f1",
+      "solution_first": "d3c5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1rb1qrk1/6bp/2np4/2pNpp2/2P5/3P1B2/1B3PPP/1R1QR1K1 b - - 0 22",
+      "pred": "e8f7",
+      "solution_first": "c8e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/3k4/3P1K2/p2R4/5r2/5P2/8/8 w - - 1 57",
+      "pred": "f6e5",
+      "solution_first": "d5f5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r2k1/1q3ppp/p2rp3/Qp1B4/7P/P4P2/1PP3P1/1K1R3R b - - 0 21",
+      "pred": "b7c8",
+      "solution_first": "d6d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/6kp/4b1q1/1p6/1PpPp2Q/2P1P3/r2N2P1/5RK1 w - - 7 34",
+      "pred": "f1f2",
+      "solution_first": "d2e4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r1bqkb1r/pp1pnppp/2n1p3/1N6/5B2/8/PPP1PPPP/R2QKBNR b KQkq - 4 6",
+      "pred": "d8a5",
+      "solution_first": "e6e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r2kr2/pp3p1p/2b1pn2/4N3/2P5/1N1B4/P3KP1P/6R1 b - - 4 21",
+      "pred": "f8g8",
+      "solution_first": "f6e4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r6r/pp2kb2/3p1p1Q/1N1Pp3/3bP3/P2B2P1/1P4PP/7K w - - 6 28",
+      "pred": "b5d4",
+      "solution_first": "h6d2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rnbqk2r/pp3ppp/5n2/3pN3/2B5/2P5/P1PPQPPP/R1B1K2R b KQkq - 1 8",
+      "pred": "e8g8",
+      "solution_first": "d5c4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rnb2rk1/pp3p1p/3p2Pb/4p1q1/3pQ3/8/PPP1PPP1/RN2KBNR w KQ - 1 12",
+      "pred": "e2e3",
+      "solution_first": "g1f3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/5p1k/5Ppb/2p3P1/1p6/8/KB5Q/3q4 b - - 4 58",
+      "pred": "d1d5",
+      "solution_first": "d1a4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/2pR2kp/pb4p1/8/5p1P/B6K/P1r5/6r1 b - - 3 39",
+      "pred": "g7f6",
+      "solution_first": "g7h6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "7R/8/8/6p1/2p1p1k1/2PbK2p/P7/8 w - - 4 71",
+      "pred": "a2a4",
+      "solution_first": "e3f2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/1p4p1/2pBkbBp/p1P5/3rp3/P7/1PK2P2/4R3 b - - 1 31",
+      "pred": "d8d6",
+      "solution_first": "e6d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2k2nr/pp2qBb1/3p3p/Q5p1/3n1B2/2N2R2/PPP3P1/R5K1 b - - 1 18",
+      "pred": "e7c7",
+      "solution_first": "b7b6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/3p4/4kp2/1pP3pP/1RbK2P1/8/8 w - - 2 42",
+      "pred": "b3b1",
+      "solution_first": "b3c3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5r1k/6b1/3p3p/1P1q2pQ/r5P1/3p1N1P/3R2P1/4R2K w - - 2 34",
+      "pred": "h5g6",
+      "solution_first": "e1d1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2r1q1k1/8/b2b1r1p/Pp1pNpp1/3Pn3/1RPQ3P/P1B1NPP1/4R1K1 w - - 3 28",
+      "pred": "b3b1",
+      "solution_first": "a2a4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "1r5r/5pk1/4p3/2Np2PP/p1nP4/n1P5/P3B3/K1R4R w - - 2 34",
+      "pred": "h5h6",
+      "solution_first": "c5a4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/bpp3pp/p1npb3/4p3/1P2Nr1q/P1PP3P/1B1QBPR1/2K3R1 b - - 2 21",
+      "pred": "g7g6",
+      "solution_first": "h4h3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5k1r/pp1b1p2/4p2p/2KpP2B/5P2/P5R1/7P/8 b - - 4 34",
+      "pred": "f8e7",
+      "solution_first": "h8g8",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rn2kbnr/pp6/2p2p2/4P3/4P1pq/2N3N1/PPPB2B1/R2Q1RK1 w kq - 1 17",
+      "pred": "g3f5",
+      "solution_first": "g1f2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/p5pk/1p3b1p/3r3P/6P1/3nBN2/P4PK1/4R3 w - - 3 30",
+      "pred": "e1e2",
+      "solution_first": "e1d1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2rr2k1/p5p1/1p5p/2pP1p1P/2q5/P4QR1/5PP1/4R1K1 b - - 3 31",
+      "pred": "d8e8",
+      "solution_first": "c4d5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1k2/2p1R3/p2p2n1/1p6/1P1P2Q1/7P/5qPK/3R4 w - - 2 42",
+      "pred": "e7c7",
+      "solution_first": "d1e1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "b4b1r/3k1ppp/p2p4/1p2p3/3nq3/N1P1B3/PP3PPP/R2Q1RK1 w - - 1 16",
+      "pred": "f2f3",
+      "solution_first": "c3d4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5k2/6pp/p1b3P1/2N2P1r/p7/8/1KP5/5R2 b - - 0 36",
+      "pred": "h7g6",
+      "solution_first": "h7h6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/4bppp/4b3/1p1pPpPP/2pP4/2P5/rqNQKP2/2RRN3 b - - 5 23",
+      "pred": "b5b4",
+      "solution_first": "e7a3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1bnr/2p2ppp/2b5/R1k5/5P2/2N5/4N1PP/1R4K1 b - - 3 21",
+      "pred": "c5c4",
+      "solution_first": "c5d6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5rk1/p4p1p/4p1p1/5nq1/8/5QPP/5PK1/2RR4 w - - 6 35",
+      "pred": "f3b7",
+      "solution_first": "c1b1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/8/8/6R1/2pk2P1/1r3K1P/8/8 w - - 0 48",
+      "pred": "f3e2",
+      "solution_first": "f3g2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rnbq1rk1/p4ppp/1p2p3/2p5/2QPn3/2P1PN2/P3BPPP/R1B2RK1 w - - 0 11",
+      "pred": "c4d3",
+      "solution_first": "c1a3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3k2q1/pb1p3p/1p1P4/2p5/2P2Q1K/8/P7/5R2 b - - 2 36",
+      "pred": "b7f3",
+      "solution_first": "b7g2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3r1k1/p2Q1p1p/1p2p1p1/8/1P1P4/P3P3/1B2Nb1q/2KR1R2 w - - 0 19",
+      "pred": "c1b1",
+      "solution_first": "f1h1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/p5k1/1p1qprnp/1Q1pN1p1/3P1pP1/1PP5/P5PP/4RRK1 b - - 3 29",
+      "pred": "d8c8",
+      "solution_first": "g6e5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r2q1rk1/ppp2ppp/2nbb3/8/6n1/2NPBN2/PPP1BPPP/R2QK2R w KQ - 5 9",
+      "pred": "d3d4",
+      "solution_first": "f3g5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "N2k3r/1b1n1Bpp/p7/1pb1P3/6P1/4p3/PPP4P/1K1R3R w - - 1 20",
+      "pred": "f7d5",
+      "solution_first": "e5e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r3k2r/p1bN2pp/2p1pp2/3p3b/3P1q2/2N4P/PPPQ1PP1/R3R1K1 w kq - 0 16",
+      "pred": "d2f4",
+      "solution_first": "e1e6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/6k1/1p1pr1p1/p1p2p2/PnP1p1P1/1P6/3R1PBP/4R1K1 b - - 0 29",
+      "pred": "b4c6",
+      "solution_first": "b4d3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5qk1/pQ3pp1/7p/b2N1b2/P3r3/5K2/7P/R4B2 b - - 1 24",
+      "pred": "e4e6",
+      "solution_first": "g7g5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "rnb1k2r/ppp4p/3b1qp1/3P1pBQ/4p2N/2N5/PPP2PPP/R3R1K1 b kq - 1 13",
+      "pred": "f6g7",
+      "solution_first": "f6f7",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1rk1/5ppp/p5q1/1p1P4/2PpP3/P6Q/B4PPP/2R3K1 b - - 0 29",
+      "pred": "f8e8",
+      "solution_first": "g6e4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "2rqrbk1/pp3ppp/4n3/3p1N2/3NnBQ1/2P4P/PP3PP1/R4RK1 b - - 14 22",
+      "pred": "g7g6",
+      "solution_first": "e6f4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5Rbk/6pp/8/p3P3/Pp1pq3/8/1P4PP/3Q2K1 w - - 1 35",
+      "pred": "f8d8",
+      "solution_first": "d1b3",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r6r/1q2bpk1/7p/p1p1pPpn/Pp2P1nP/1P1B1N2/2P3P1/2BRR1QK w - - 7 30",
+      "pred": "g2g3",
+      "solution_first": "c1b2",
+      "first_move_ok": false
+    },
+    {
+      "fen": "8/1P6/8/7p/3P4/3k1p1P/4p3/3K4 w - - 0 49",
+      "pred": "d1c1",
+      "solution_first": "d1e1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "7R/1K3p2/6k1/PP4p1/8/6rp/8/8 b - - 2 47",
+      "pred": "g6g7",
+      "solution_first": "g5g4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "Q4n1k/p2b2pp/3b4/2p5/4pq2/2Pn3P/PP1NBPP1/R1B2RK1 w - - 1 23",
+      "pred": "g2g3",
+      "solution_first": "d2e4",
+      "first_move_ok": false
+    },
+    {
+      "fen": "5k2/1R6/3pp1P1/2p5/1pr1PK2/5P2/8/8 b - - 0 60",
+      "pred": "c4c3",
+      "solution_first": "c4c1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1rk1/p4pp1/b1p4p/8/BPPq4/P2P3P/2Q3P1/RNB4K b - - 2 27",
+      "pred": "f8e8",
+      "solution_first": "d4a1",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r4/5k2/p4Pp1/2pK2Pp/2R5/P7/8/8 w - - 7 51",
+      "pred": "d5e5",
+      "solution_first": "d5c5",
+      "first_move_ok": false
+    },
+    {
+      "fen": "r5k1/5pp1/1p1rb2p/3pR2q/p1pP4/P1P3Q1/5PPN/4R1K1 b - - 1 30",
+      "pred": "g7g5",
+      "solution_first": "h5g6",
+      "first_move_ok": false
+    },
+    {
+      "fen": "3r1rk1/pp2n1pp/8/8/Nq6/1PB5/P3QPPP/4R1K1 b - - 1 25",
+      "pred": "b4f4",
+      "solution_first": "b4d6",
+      "first_move_ok": false
+    }
+  ]
 }
