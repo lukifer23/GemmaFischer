@@ -1,0 +1,49 @@
+{
+  "model": {
+    "base_model": "models/unsloth-gemma-3-270m-it",
+    "max_seq_length": 2048,
+    "torch_dtype": "float16"
+  },
+  "training": {
+    "gradient_accumulation_steps": 8,
+    "warmup_steps": 100,
+    "weight_decay": 0.01,
+    "max_grad_norm": 1.0,
+    "save_steps": 500,
+    "logging_steps": 50,
+    "evaluation_strategy": "steps",
+    "dataloader_num_workers": 2,
+    "remove_unused_columns": false
+  },
+  "lora": {
+    "r": 32,
+    "lora_alpha": 64,
+    "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj"],
+    "dropout": 0.05,
+    "task_type": "CAUSAL_LM",
+    "bias": "none"
+  },
+  "curriculum": {
+    "enable_progression": true,
+    "min_stage_completion": 0.85,
+    "max_stage_attempts": 3,
+    "early_stopping_patience": 5,
+    "checkpoint_best_only": true,
+    "resume_from_checkpoint": true
+  },
+  "data": {
+    "max_examples_per_stage": 10000,
+    "validation_split": 0.1,
+    "shuffle_seed": 42
+  },
+  "evaluation": {
+    "metrics": [
+      "accuracy",
+      "f1_score",
+      "perplexity",
+      "chess_specific_accuracy"
+    ],
+    "save_best_model": true,
+    "early_stopping": true
+  }
+}

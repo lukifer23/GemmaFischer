@@ -17,6 +17,7 @@ from typing import Optional, Dict, Any, List
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
+from transformers.generation.logits_process import LogitsProcessor
 
 
 # Environment hygiene and resource constraints
@@ -96,6 +97,11 @@ class ChessGemmaInference:
         self._engine_cache: "OrderedDict[str, str]" = OrderedDict()
         # Feature flags
         self._engine_rerank_enabled = (os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0', 'false', 'False'))
+        self._engine_policy = os.environ.get('CHESSGEMMA_ENGINE_POLICY', 'sample').strip().lower()  # sample | logprob
+        self._engine_constrain_enabled = (os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN', '0') not in ('0','false','False'))
+        self._engine_constrain_mode = os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN_MODE', 'simple').strip().lower()
+        self._allowed_token_ids_cache: Optional[set] = None
+        self._uci_token_info: Optional[Dict[int, str]] = None
 
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
@@ -322,14 +328,20 @@ class ChessGemmaInference:
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
 
             with torch.no_grad():
-                if mode == "engine":
-                    # Engine mode: try cached + N-best sampling with legality + Stockfish re-ranking
+            if mode == "engine":
+                    # Engine mode: try cached + policy/rerank constrained decoding
                     answer = self._generate_engine_move(question, messages[0]['content'], max_new_tokens)
                     if answer:
                         decoded = messages[0]['content'] + answer
                         outputs = None  # bypass default path
                     else:
-                        # Fallback to deterministic single-shot decoding
+                        # Fallback to deterministic single-shot decoding (optionally constrained)
+                        logits_processors = None
+                        if self._engine_constrain_enabled and self._engine_policy == 'sample':
+                        if self._engine_constrain_mode == 'strict':
+                            logits_processors = [self._build_stateful_uci_processor(prompt_len=inputs['input_ids'].shape[1])]
+                        else:
+                            logits_processors = [self._build_uci_logits_processor(prompt_len=inputs['input_ids'].shape[1])]
                         outputs = self.model.generate(
                             **inputs,
                             max_new_tokens=max_new_tokens,
@@ -339,6 +351,7 @@ class ChessGemmaInference:
                             pad_token_id=self.tokenizer.eos_token_id,
                             eos_token_id=self.tokenizer.eos_token_id,
                             use_cache=True,
+                            logits_processor=logits_processors,
                         )
                 else:
                     outputs = self.model.generate(
@@ -497,8 +510,6 @@ class ChessGemmaInference:
         Returns a move string (uci) when successful, or None to signal fallback.
         """
         try:
-            if not self._engine_rerank_enabled:
-                return None
             from .uci_utils import extract_fen, extract_first_legal_move_uci
             import chess
 
@@ -510,7 +521,24 @@ class ChessGemmaInference:
 
             board = chess.Board(fen) if fen else None
 
+            # Policy: direct scoring of legal moves by log-prob (no sampling)
+            if self._engine_policy == 'logprob' and board is not None:
+                best = self._engine_policy_logprob(prompt_text, board)
+                if best:
+                    if fen:
+                        self._engine_cache_store(fen, best)
+                    return best
+
+            if not self._engine_rerank_enabled:
+                return None
+
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
+            logits_processors = None
+            if self._engine_constrain_enabled and self._engine_policy == 'sample':
+                if self._engine_constrain_mode == 'strict':
+                    logits_processors = [self._build_stateful_uci_processor(prompt_len=inputs['input_ids'].shape[1])]
+                else:
+                    logits_processors = [self._build_uci_logits_processor(prompt_len=inputs['input_ids'].shape[1])]
             # Multi-sample candidates
             n_best = 5
             gen = self.model.generate(
@@ -523,6 +551,7 @@ class ChessGemmaInference:
                 pad_token_id=self.tokenizer.eos_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
                 use_cache=True,
+                logits_processor=logits_processors,
             )
 
             # Decode candidates and parse potential moves
@@ -568,6 +597,182 @@ class ChessGemmaInference:
             return None
         except Exception:
             return None
+
+    # ----------------------
+    # UCI constrained logits
+    # ----------------------
+    class _UCILogitsProcessor(LogitsProcessor):
+        def __init__(self, tokenizer, allowed_token_ids: set, prompt_len: int):
+            self.tokenizer = tokenizer
+            self.allowed = allowed_token_ids
+            self.prompt_len = prompt_len
+
+        def __call__(self, input_ids, scores):
+            try:
+                # Mask all tokens not in the whitelist of UCI-friendly pieces
+                import torch
+                mask = torch.full_like(scores, fill_value=float('-inf'))
+                # Set scores for allowed token ids to original values, others to -inf
+                # scores shape: [batch, vocab]
+                batch, vocab = scores.shape
+                idxs = list(self.allowed)
+                if idxs:
+                    # gather original values
+                    keep = scores[:, idxs]
+                    mask[:, idxs] = keep
+                return mask
+            except Exception:
+                return scores
+
+    def _build_uci_logits_processor(self, prompt_len: int) -> 'LogitsProcessor':
+        # Build a whitelist of tokens whose decoded text is composed only of [a-h1-8qrbn] and length <= 2
+        if self._allowed_token_ids_cache is None:
+            allowed_chars = set(list('abcdefgh12345678qrbn'))
+            ids = set()
+            try:
+                for tok, tok_id in self.tokenizer.get_vocab().items():
+                    # decode single token id
+                    try:
+                        s = self.tokenizer.convert_tokens_to_string([tok]) if hasattr(self.tokenizer, 'convert_tokens_to_string') else tok
+                    except Exception:
+                        s = tok
+                    s = s.strip()
+                    if not s:
+                        continue
+                    if len(s) <= 2 and all((c in allowed_chars) for c in s.lower()):
+                        ids.add(int(tok_id))
+            except Exception:
+                ids = set()
+            self._allowed_token_ids_cache = ids
+        return self._UCILogitsProcessor(self.tokenizer, self._allowed_token_ids_cache or set(), prompt_len)
+
+    class _UCIStatefulLogitsProcessor(LogitsProcessor):
+        def __init__(self, tokenizer, token_info: Dict[int, str], prompt_len: int, eos_id: Optional[int]):
+            self.tok = tokenizer
+            self.info = token_info
+            self.prompt_len = prompt_len
+            self.eos_id = eos_id
+            self.allowed_chars = set('abcdefgh12345678qrbn')
+
+        def __call__(self, input_ids, scores):
+            try:
+                import torch
+                # Assume batch size 1; if larger, operate element-wise defaulting to pass-through
+                if input_ids.shape[0] != 1:
+                    return scores
+                gen_ids = input_ids[0, self.prompt_len:]
+                text = self.tok.decode(gen_ids, skip_special_tokens=True).lower()
+                # Extract only allowed chars from generated tail
+                tail = ''.join([c for c in text if c in self.allowed_chars])
+                L = len(tail)
+                mask = torch.full_like(scores, float('-inf'))
+                # Allow EOS when length in [4,5]
+                if self.eos_id is not None and 4 <= L <= 5:
+                    mask[:, self.eos_id] = scores[:, self.eos_id]
+                # Allow tokens whose clean text keeps length <=5 and only allowed chars
+                for tid, s in self.info.items():
+                    if not s:
+                        continue
+                    nL = L + len(s)
+                    if nL <= 5:
+                        mask[:, tid] = scores[:, tid]
+                return mask
+            except Exception:
+                return scores
+
+    def _build_stateful_uci_processor(self, prompt_len: int) -> 'LogitsProcessor':
+        # Build token_info mapping id -> cleaned char sequence for UCI characters
+        if self._uci_token_info is None:
+            info: Dict[int, str] = {}
+            allowed_chars = set('abcdefgh12345678qrbn')
+            try:
+                vocab = self.tokenizer.get_vocab()
+                for tok, tok_id in vocab.items():
+                    try:
+                        s = self.tokenizer.convert_tokens_to_string([tok]) if hasattr(self.tokenizer, 'convert_tokens_to_string') else tok
+                    except Exception:
+                        s = tok
+                    s = ''.join([c for c in s.lower() if c in allowed_chars])
+                    # Keep only 1-2 length fragments to avoid large jumps
+                    if 0 < len(s) <= 2:
+                        info[int(tok_id)] = s
+            except Exception:
+                info = {}
+            self._uci_token_info = info
+        eos_id = self.tokenizer.eos_token_id
+        return self._UCIStatefulLogitsProcessor(self.tokenizer, self._uci_token_info or {}, prompt_len, eos_id)
+
+    # Public helper for activating adapter from an explicit checkpoint path
+    def activate_adapter_from_path(self, logical_name: str, adapter_path: str) -> bool:
+        try:
+            p = Path(adapter_path)
+            if not p.exists() or not p.is_dir():
+                return False
+            self._ensure_adapter_loaded(logical_name, p)
+            self.set_active_adapter(logical_name)
+            return True
+        except Exception:
+            return False
+
+    def _engine_policy_logprob(self, prompt_text: str, board: 'chess.Board') -> Optional[str]:
+        """Score each legal UCI move by conditional log-prob under the model and return argmax.
+
+        Batched implementation for efficiency. Computes average NLL over target tokens.
+        """
+        import torch
+        import torch.nn.functional as F
+        import chess
+        legal_moves = [m.uci() for m in board.legal_moves]
+        if not legal_moves:
+            return None
+        device = self.model.device
+        # Tokenize prompt once
+        prompt_ids = self.tokenizer(prompt_text, return_tensors='pt').to(device)
+
+        # Tokenize all targets and batch
+        tgt_tok = [self.tokenizer(mv, add_special_tokens=False, return_tensors='pt') for mv in legal_moves]
+        tgt_lens = [t['input_ids'].shape[1] for t in tgt_tok]
+        max_len = max(tgt_lens)
+
+        # Build batched inputs by left-padding targets to align the ends
+        def left_pad(t: 'dict'):
+            pad_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id or 0
+            cur = t['input_ids']
+            pad = max_len - cur.shape[1]
+            if pad > 0:
+                pad_tensor = torch.full((1, pad), pad_id, dtype=cur.dtype)
+                t_ids = torch.cat([pad_tensor, cur], dim=1)
+                attn = torch.cat([torch.zeros((1, pad), dtype=torch.long), torch.ones_like(cur)], dim=1)
+            else:
+                t_ids = cur
+                attn = torch.ones_like(cur)
+            return {'input_ids': t_ids.to(device), 'attention_mask': attn.to(device)}
+
+        tgt_batch = [left_pad(t) for t in tgt_tok]
+        batch_input_ids = torch.cat([torch.cat([prompt_ids['input_ids'], tb['input_ids']], dim=1) for tb in tgt_batch], dim=0)
+        batch_attn = torch.cat([torch.cat([prompt_ids['attention_mask'], tb['attention_mask']], dim=1) for tb in tgt_batch], dim=0)
+
+        with torch.no_grad():
+            outputs = self.model(input_ids=batch_input_ids, attention_mask=batch_attn)
+            logits = outputs.logits  # [B, T, V]
+            # Extract logits aligned to last max_len positions
+            last_logits = logits[:, -max_len:, :]
+            # Build target ids batch aligned to end
+            tgt_ids_batch = torch.stack([tb['input_ids'].squeeze(0) for tb in tgt_batch], dim=0)
+            # Compute token-wise negative log-prob only for valid (non-pad) positions
+            log_probs = F.log_softmax(last_logits, dim=-1)
+            # Gather log-probs at target tokens
+            gathered = torch.gather(log_probs, dim=-1, index=tgt_ids_batch.unsqueeze(-1)).squeeze(-1)
+            # Mask out padded positions
+            masks = torch.stack([tb['attention_mask'].squeeze(0) for tb in tgt_batch], dim=0).to(gathered.dtype)
+            masks = masks[:, -max_len:]
+            # Sum log-probs over valid tokens and normalize by length
+            sum_lp = (gathered * masks).sum(dim=1)
+            lengths = masks.sum(dim=1).clamp(min=1)
+            avg_lp = sum_lp / lengths
+            # Select argmax
+            best_idx = int(torch.argmax(avg_lp).item())
+            return legal_moves[best_idx] if 0 <= best_idx < len(legal_moves) else None
 
     def generate_text(
         self,

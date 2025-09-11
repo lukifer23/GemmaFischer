@@ -1,8 +1,52 @@
-# GemmaFischer Evaluation Guide
+# ChessGemma Evaluation Guide
 
 ## Overview
 
-This guide covers comprehensive evaluation strategies for GemmaFischer, including automated metrics, benchmarking against prior art, and user experience testing. The evaluation framework ensures we can measure both chess skill and explanatory quality.
+This guide covers the comprehensive evaluation framework for ChessGemma, including automated metrics, web-based evaluation tools, and performance benchmarking. The system supports real-time evaluation through the web interface and automated testing against Stockfish.
+
+**Current Status**: Web-based evaluation tools active, Stockfish match testing available, baseline tactical accuracy ~2% (room for improvement).
+
+## Current Evaluation Status
+
+### Web-Based Evaluation Tools
+The system provides comprehensive evaluation through the web interface:
+
+```bash
+# Start web interface for evaluation
+python src/web/app.py
+# Visit http://localhost:5001/evaluation
+```
+
+#### Available Evaluation Methods:
+- **Stockfish Match Testing**: Compare model vs Stockfish on tactical positions
+- **Puzzle Accuracy Evaluation**: Test on Lichess puzzle database (1000+ puzzles)
+- **Real-time Results**: Live evaluation progress and performance metrics
+- **Expert-Specific Testing**: Evaluate individual experts (UCI/Tutor/Director)
+
+### Current Performance Metrics
+Based on recent evaluation runs:
+
+```bash
+# Tactical Puzzle Evaluation Results
+First Move Accuracy: 2% (baseline, room for improvement)
+Legal Move Rate: 100% (Stockfish validation working)
+Average Response Time: ~1 second per puzzle
+Total Puzzles Tested: 100 (from Lichess 1000-2000 rating range)
+
+# Stockfish Match Evaluation (Planned)
+Win Rate: TBD (vs Stockfish depth 12)
+Draw Rate: TBD
+Loss Rate: TBD
+```
+
+### Evaluation Tools Status
+```bash
+Web Interface: ✓ Active (http://localhost:5001)
+Stockfish Integration: ✓ Working (depth 12 evaluation)
+Puzzle Database: ✓ Available (Lichess puzzles 1000-2000)
+Expert Switching: ✓ Working (live adapter switching)
+Real-time Monitoring: ✓ Active (live progress tracking)
+```
 
 ## Automated Evaluation Metrics
 
@@ -144,18 +188,47 @@ def evaluate_opening_knowledge(model, opening_dataset):
 
 ### 5. Stockfish Match Analysis
 
-**Purpose**: Compare model moves to engine analysis
+**Purpose**: Compare model moves to engine analysis with comprehensive match evaluation
 
 **Metrics**:
 - **Top Move Match**: Percentage matching Stockfish's #1 move
 - **Top 3 Match**: Percentage in Stockfish's top 3 moves
 - **Evaluation Accuracy**: How close model's evaluation is to engine's
-- **Target**: 50%+ top move, 75%+ top 3
+- **Target**: 50%+ top move, 75%+ top 3 (current: baseline performance)
 
-**Tooling**:
+**Web Interface Tooling**:
 ```bash
-# Compare model top-1 move to Stockfish on a FEN set (JSONL with {"fen": ...})
-python src/evaluation/stockfish_match_eval.py --file data/datasets/lichess_puzzles_1000_2000.jsonl --limit 100 --depth 8 --out stockfish_match.json
+# Start web interface for Stockfish evaluation
+python src/web/app.py
+# Visit http://localhost:5001/evaluation and run Stockfish match
+```
+
+**Command Line Tooling**:
+```bash
+# Automated Stockfish match evaluation
+python src/evaluation/stockfish_match_eval.py \
+  --file data/datasets/lichess_puzzles_1000_2000.jsonl \
+  --limit 100 \
+  --depth 12 \
+  --out stockfish_match_after.json
+
+# Current results format (from recent evaluation)
+{
+  "first_move_accuracy": 0.02,
+  "legal_rate": 1.0,
+  "avg_latency_sec": 0.978,
+  "results": [...]
+}
+```
+
+**Expert-Specific Evaluation**:
+```bash
+# Evaluate UCI Expert specifically
+python src/evaluation/stockfish_match_eval.py \
+  --expert uci \
+  --file data/datasets/lichess_puzzles_1000_2000.jsonl \
+  --limit 50 \
+  --depth 12
 ```
 
 ## Explanation Quality Evaluation

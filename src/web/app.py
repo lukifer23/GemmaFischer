@@ -35,7 +35,7 @@ sys.path.append(str(project_root))
 try:
     import torch
     import chess
-    from src.inference.inference import get_inference_instance
+from src.inference.inference import get_inference_instance
     from src.inference.chess_engine import ChessEngineManager
     from src.inference.uci_utils import extract_first_legal_move, extract_first_legal_move_uci
     from src.web.chess_game import ChessGame, ChessRAG
@@ -198,6 +198,8 @@ class TrainingJob:
         self._log_q: _queue.Queue[str] = _queue.Queue(maxsize=10000)
         self._log_tail: list[str] = []
         self._lock = _threading.Lock()
+        self.ckpt_dir: Optional[str] = None
+        self.log_file: Optional[str] = None
 
     def _reader(self, stream):
         try:
@@ -208,6 +210,25 @@ class TrainingJob:
                         self._log_tail = self._log_tail[-500:]
         except Exception:
             pass
+
+    def _infer_output_dir(self, expert: str) -> str:
+        # Mirror training configs output_dir locations
+        mapping = {
+            'uci': str(project_root / 'checkpoints' / 'lora_uci'),
+            'tutor': str(project_root / 'checkpoints' / 'lora_tutor'),
+            'director': str(project_root / 'checkpoints' / 'lora_director'),
+        }
+        return mapping.get(expert, str(project_root / 'checkpoints' / f'lora_{expert}'))
+
+    def _tail_file(self, path: str, max_lines: int = 200) -> str:
+        try:
+            if not path or not os.path.exists(path):
+                return ''
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()[-max_lines:]
+            return ''.join(lines)
+        except Exception:
+            return ''
 
     def start(self, expert: str, steps: int, use_instruction: bool, disable_eval: bool, dataset_path: Optional[str] = None) -> bool:
         if self.running:
@@ -238,6 +259,9 @@ class TrainingJob:
             'use_instruction': use_instruction,
             'disable_eval': disable_eval,
         }
+        # compute known output + log
+        self.ckpt_dir = self._infer_output_dir(expert)
+        self.log_file = str(Path(self.ckpt_dir) / 'enhanced_train_log.jsonl')
         # reader thread
         t = _threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True)
         t.start()
@@ -263,6 +287,89 @@ class TrainingJob:
     def status(self) -> Dict[str, Any]:
         with self._lock:
             logs = '\n'.join(self._log_tail[-200:])
+        # If we have no captured stdout yet, fall back to log file tail
+        if not logs and self.log_file:
+            logs = self._tail_file(self.log_file)
+        return {
+            'running': self.running,
+            'args': self.args,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'elapsed_sec': (time.time() - self.start_time) if (self.start_time and self.running) else None,
+            'logs_tail': logs,
+            'checkpoint_dir': self.ckpt_dir,
+            'log_file': self.log_file,
+        }
+
+
+TRAINING_JOB = TrainingJob()
+
+# Best-effort detection of an already running training process when the server starts
+def _detect_external_training():
+    try:
+        import psutil  # already a dependency in this repo
+        for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+            cmd = ' '.join(p.info.get('cmdline') or [])
+            if 'train_lora_poc.py' in cmd:
+                # We cannot attach to its stdout, but we can mark as running so UI disables starting another
+                TRAINING_JOB.running = True
+                TRAINING_JOB.start_time = None
+                TRAINING_JOB.args = {'note': 'External training detected (psutil)'}
+                break
+    except Exception:
+        pass
+
+_detect_external_training()
+
+
+# ---------------------------
+# Evaluation + Data Jobs
+# ---------------------------
+
+class SimpleJob:
+    def __init__(self):
+        self.proc: Optional[subprocess.Popen] = None
+        self.running: bool = False
+        self.start_time: Optional[float] = None
+        self.end_time: Optional[float] = None
+        self.args: Dict[str, Any] = {}
+        self._log_tail: list[str] = []
+        self._lock = _threading.Lock()
+
+    def _reader(self, stream):
+        try:
+            for line in iter(stream.readline, ''):
+                with self._lock:
+                    self._log_tail.append(line.rstrip())
+                    if len(self._log_tail) > 500:
+                        self._log_tail = self._log_tail[-500:]
+        except Exception:
+            pass
+
+    def start(self, cmd: list[str], args: Dict[str, Any]) -> bool:
+        if self.running:
+            return False
+        try:
+            self.proc = subprocess.Popen(cmd, cwd=str(project_root), env=os.environ.copy(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        except Exception:
+            return False
+        self.running = True
+        self.start_time = time.time()
+        self.end_time = None
+        self.args = args
+        _threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True).start()
+        def _watch():
+            try:
+                self.proc.wait()
+            finally:
+                self.running = False
+                self.end_time = time.time()
+        _threading.Thread(target=_watch, daemon=True).start()
+        return True
+
+    def status(self) -> Dict[str, Any]:
+        with self._lock:
+            logs = '\n'.join(self._log_tail[-200:])
         return {
             'running': self.running,
             'args': self.args,
@@ -273,7 +380,257 @@ class TrainingJob:
         }
 
 
-TRAINING_JOB = TrainingJob()
+EVAL_JOB = SimpleJob()
+DATA_JOB = SimpleJob()
+
+
+@app.route('/api/eval/stockfish', methods=['POST'])
+def api_eval_stockfish():
+    try:
+        data = request.get_json() or {}
+        file_path = data.get('file') or 'data/datasets/eval_mixed_positions_200.jsonl'
+        limit = str(int(data.get('limit') or 100))
+        depth = str(int(data.get('depth') or 12))
+        out = data.get('out') or 'validation/stockfish_match.json'
+        cmd = [
+            sys.executable,
+            str(project_root / 'src' / 'evaluation' / 'stockfish_match_eval.py'),
+            '--file', file_path,
+            '--limit', limit,
+            '--depth', depth,
+            '--out', out,
+        ]
+        ok = EVAL_JOB.start(cmd, {'type': 'stockfish', 'file': file_path, 'limit': limit, 'depth': depth, 'out': out})
+        if not ok:
+            return jsonify({'error': 'Evaluation already running or failed to start'}), 409
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eval/puzzles', methods=['POST'])
+def api_eval_puzzles():
+    try:
+        data = request.get_json() or {}
+        file_path = data.get('file') or 'data/datasets/lichess_puzzles_1000_2000.jsonl'
+        limit = str(int(data.get('limit') or 200))
+        out = data.get('out') or 'validation/puzzle_eval.json'
+        cmd = [
+            sys.executable,
+            str(project_root / 'src' / 'evaluation' / 'puzzle_eval.py'),
+            '--file', file_path,
+            '--limit', limit,
+            '--out', out,
+        ]
+        ok = EVAL_JOB.start(cmd, {'type': 'puzzles', 'file': file_path, 'limit': limit, 'out': out})
+        if not ok:
+            return jsonify({'error': 'Evaluation already running or failed to start'}), 409
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eval/status', methods=['GET'])
+def api_eval_status():
+    try:
+        return jsonify(EVAL_JOB.status())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eval/history', methods=['GET'])
+def api_eval_history():
+    try:
+        hist = []
+        vdir = project_root / 'validation'
+        if vdir.exists():
+            for p in sorted(vdir.glob('*.json')):
+                try:
+                    with p.open('r', encoding='utf-8') as f:
+                        obj = json.load(f)
+                    item = {'file': str(p), 'mtime': p.stat().st_mtime}
+                    for k in ('rate','legal_rate','avg_latency_sec','first_move_accuracy','sequence_accuracy'):
+                        if k in obj:
+                            item[k] = obj[k]
+                    hist.append(item)
+                except Exception:
+                    continue
+        # Sort by mtime desc
+        hist.sort(key=lambda x: x.get('mtime', 0), reverse=True)
+        return jsonify({'history': hist[:50]})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/data/clean', methods=['POST'])
+def api_data_clean():
+    try:
+        data = request.get_json() or {}
+        mode = (data.get('mode') or 'uci').strip().lower()
+        in_path = data.get('in') or (f'data/formatted/{mode}_expert.jsonl' if mode in ('uci','tutor','director') else '')
+        out_path = data.get('out') or (f'data/processed/{mode}_clean.jsonl' if mode in ('uci','tutor') else '')
+        relabel = bool(data.get('relabel_with_stockfish') or (mode in ('uci','tutor')))
+        if not in_path or not out_path:
+            return jsonify({'error': 'Invalid in/out paths'}), 400
+        cmd = [
+            sys.executable,
+            str(project_root / 'data' / 'scripts' / 'validate_and_augment.py'),
+            '--in', in_path,
+            '--out', out_path,
+            '--mode', mode,
+        ]
+        if relabel:
+            cmd.append('--relabel_with_stockfish')
+        ok = DATA_JOB.start(cmd, {'mode': mode, 'in': in_path, 'out': out_path, 'relabel': relabel})
+        if not ok:
+            return jsonify({'error': 'Data job already running or failed to start'}), 409
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/data/status', methods=['GET'])
+def api_data_status():
+    try:
+        return jsonify(DATA_JOB.status())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------
+# Adapter Manager & Settings
+# ---------------------------
+
+@app.route('/api/adapters/list', methods=['GET'])
+def api_adapters_list():
+    try:
+        inf = get_inference_instance()
+        if not inf.load_model():
+            return jsonify({'error': 'Model not loaded'}), 500
+        info = inf.get_model_info()
+        return jsonify({
+            'active': info.get('active_adapter'),
+            'available': info.get('available_adapters', {}),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/adapters/activate', methods=['POST'])
+def api_adapters_activate():
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip().lower()
+        if name not in ('uci','tutor','director'):
+            return jsonify({'error': 'Invalid adapter name'}), 400
+        inf = get_inference_instance()
+        if not inf.load_model():
+            return jsonify({'error': 'Model not loaded'}), 500
+        inf.set_active_adapter(name)
+        return jsonify({'success': True, 'active': name})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/adapters/refresh', methods=['POST'])
+def api_adapters_refresh():
+    try:
+        inf = get_inference_instance()
+        if not inf.load_model():
+            return jsonify({'error': 'Model not loaded'}), 500
+        inf.refresh_adapters()
+        return jsonify({'success': True, 'adapters': inf.get_model_info().get('available_adapters', {})})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/adapters/checkpoints', methods=['GET'])
+def api_adapters_checkpoints():
+    try:
+        expert = (request.args.get('expert') or '').strip().lower()
+        checkpoints_root = project_root / 'checkpoints'
+        mapping = {
+            'uci': checkpoints_root / 'lora_uci',
+            'tutor': checkpoints_root / 'lora_tutor',
+            'director': checkpoints_root / 'lora_director',
+        }
+        out = {}
+        targets = [expert] if expert in mapping else list(mapping.keys())
+        for name in targets:
+            base = mapping[name]
+            items = []
+            if base.exists():
+                for p in sorted(base.glob('checkpoint-*'), key=lambda x: x.stat().st_mtime, reverse=True):
+                    items.append(str(p))
+            out[name] = items
+        return jsonify({'checkpoints': out})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/adapters/activate_checkpoint', methods=['POST'])
+def api_adapters_activate_checkpoint():
+    try:
+        data = request.get_json() or {}
+        expert = (data.get('expert') or '').strip().lower()
+        path = data.get('path')
+        if expert not in ('uci','tutor','director') or not path:
+            return jsonify({'error': 'Invalid expert or path'}), 400
+        inf = get_inference_instance()
+        if not inf.load_model():
+            return jsonify({'error': 'Model not loaded'}), 500
+        ok = inf.activate_adapter_from_path(expert, path)
+        if not ok:
+            return jsonify({'error': 'Failed to activate adapter from path'}), 500
+        return jsonify({'success': True, 'active': expert, 'path': path})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/get', methods=['GET'])
+def api_settings_get():
+    try:
+        inf = get_inference_instance()
+        _ = inf.load_model()
+        rerank = bool(os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0','false','False'))
+        policy = os.environ.get('CHESSGEMMA_ENGINE_POLICY', 'sample')
+        constrain = bool(os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN', '0') not in ('0','false','False'))
+        return jsonify({'engine_rerank': rerank, 'engine_policy': policy, 'engine_constrain': constrain})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/set', methods=['POST'])
+def api_settings_set():
+    try:
+        data = request.get_json() or {}
+        rerank = data.get('engine_rerank')
+        policy = data.get('engine_policy')
+        constrain = data.get('engine_constrain')
+        inf = get_inference_instance()
+        _ = inf.load_model()
+        if rerank is not None:
+            os.environ['CHESSGEMMA_ENGINE_RERANK'] = '1' if bool(rerank) else '0'
+            # update live flag if present
+            try:
+                inf._engine_rerank_enabled = bool(rerank)
+            except Exception:
+                pass
+        if constrain is not None:
+            os.environ['CHESSGEMMA_ENGINE_CONSTRAIN'] = '1' if bool(constrain) else '0'
+            try:
+                inf._engine_constrain_enabled = bool(constrain)
+            except Exception:
+                pass
+        if policy:
+            os.environ['CHESSGEMMA_ENGINE_POLICY'] = str(policy)
+            try:
+                inf._engine_policy = str(policy)
+            except Exception:
+                pass
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/')

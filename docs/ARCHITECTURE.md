@@ -17,124 +17,138 @@ GemmaFischer is a comprehensive chess AI system that functions as both a chess e
 ## High-Level Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Interface │    │  Training Layer │    │ Evaluation Layer│
-│   (Flask App)   │    │   (LoRA Fine-   │    │  (Chess Metrics)│
-│                 │    │    tuning)      │    │                 │
-└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
-          │                      │                      │
-          └──────────────────────┼──────────────────────┘
-                                 │
-                    ┌─────────────┴─────────────┐
-                    │     Core Inference        │
-                    │   (Gemma-3 + LoRA)        │
-                    │  + Chain-of-Thought       │
-                    └─────────────┬─────────────┘
-                                 │
-                    ┌─────────────┴─────────────┐
-                    │    UCI Bridge Layer       │
-                    │  (Engine + Tutor Modes)   │
-                    └─────────────┬─────────────┘
-                                 │
-                    ┌─────────────┴─────────────┐
-                    │    Chess Engine Layer     │
-                    │     (Stockfish)           │
-                    └───────────────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web Interface │    │ Training System │    │ Expert Adapters │    │ Evaluation Suite│
+│   (Flask + API) │    │  (Multi-Expert) │    │  (LoRA Models)  │    │  (Chess Metrics)│
+│   http://localhost│    │                 │    │                 │    │                 │
+│       :5001      │    │                 │    │                 │    │                 │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │                      │
+          └──────────────────────┼──────────────────────┼──────────────────────┘
+                                 │                      │
+                    ┌─────────────┴─────────────┐       │
+                    │   Dynamic Inference       │       │
+                    │ (Adapter Switching + CoT) │       │
+                    └─────────────┬─────────────┘       │
+                                 │                      │
+                    ┌─────────────┴─────────────┐       │
+                    │    Expert Training        │       │
+                    │   (UCI/Tutor/Director)    │       │
+                    └─────────────┬─────────────┘       │
+                                 │                      │
+                    ┌─────────────┴─────────────┐       │
+                    │    UCI Bridge Layer       │       │
+                    │  (Engine + Tutor Modes)   │       │
+                    └─────────────┬─────────────┘       │
+                                 │                      │
+                    ┌─────────────┴─────────────┐       │
+                    │    Chess Engine Layer     │       │
+                    │     (Stockfish)           │       │
+                    └───────────────────────────┘       │
+                                                       │
+                                              ┌────────┴────────┐
+                                              │ Dataset Pipeline │
+                                              │ (100k+ samples)  │
+                                              └─────────────────┘
 ```
 
 ## Component Details
 
-### 1. Training Layer (`src/training/`)
+### 1. Expert Training System (`src/training/`)
 
-**Purpose**: Fine-tune Gemma-3 model with chess-specific knowledge using LoRA, including chain-of-thought reasoning and dual-mode training
+**Purpose**: Multi-expert LoRA fine-tuning system supporting UCI, Tutor, and Director modes with specialized training for each chess domain
 
 **Key Components**:
-- `train.py`: Main training orchestrator
-- `train_lora_poc.py`: Proof-of-concept training script
-- `configs/`: Training configuration files
-- `dataset_mixer.py`: Weighted dataset interleaving (multi-task)
+- `train_lora_poc.py`: Main expert-aware training orchestrator
+- `configs/`: Expert-specific configuration files (lora_uci.yaml, lora_tutor.yaml, lora_director_expert.yaml)
+- `dataset_mixer.py`: Weighted dataset interleaving and curriculum phases
+- `train.py`: Legacy single-expert training (maintained for compatibility)
 
 **Architecture**:
 ```
-Training Pipeline
-├── Data Loading (ChessInstruct + Historical Games + Theory)
-├── Data Preprocessing (Chat format + CoT reasoning)
+Expert Training Pipeline
+├── Expert Selection (UCI/Tutor/Director)
+├── Dataset Loading (50k+ samples per expert)
+├── Configuration Auto-Loading
 ├── Model Loading (Gemma-3 base model)
-├── LoRA Adapter Attachment
-├── Dual-Mode Training (Engine + Tutor modes)
-├── Chain-of-Thought Integration
-├── Checkpoint Management
-└── Model Saving
+├── LoRA Adapter Attachment (Expert-specific)
+├── MPS-Optimized Training (Apple Silicon)
+├── Real-time Progress Monitoring
+├── Checkpoint Management (per expert)
+└── Adapter Saving (checkpoints/lora_{expert}/)
 ```
 
-**New Training Features**:
-- **Dual-Purpose Training**: Separate modes for engine (UCI) and tutor (explanatory) outputs
-- **Chain-of-Thought**: Step-by-step reasoning integration
-- **Style Conditioning**: Historical player style emulation
-- **Enhanced Datasets**: Historical games, theory books, annotated PGNs
- - **Curriculum Phases**: Optional phased schedule with per-phase dataset mixes
+**Expert-Specific Features**:
+- **UCI Expert**: Chess move generation with 50k UCI-format training samples
+- **Tutor Expert**: Chess explanations with 50k tutor-format training samples
+- **Director Expert**: Q&A reasoning with curated reasoning examples
+- **Live Adapter Switching**: Dynamic model loading in web interface
+- **Curriculum Training**: Optional phased learning schedules
 
-**Key Features**:
-- Unsloth optimization for 2x speed improvement on M3 Pro
-- MPS acceleration exclusively (no CUDA/CPU fallbacks)
-- Gradient checkpointing for memory efficiency
-- Resume functionality for long training runs
-- Mac-only design optimized for Apple Silicon
+**Performance Features**:
+- **MPS Acceleration**: Native Apple Silicon optimization (2-3 steps/sec on M3 Pro)
+- **Memory Efficient**: 4-6GB peak usage with gradient checkpointing
+- **Resume Capability**: Training continuation from checkpoints
+- **Multi-Expert Parallel**: Train different experts simultaneously
+- **Real-time Monitoring**: System stats and progress tracking
 
-### 2. UCI Bridge Layer (`src/inference/`)
+### 2. Dynamic Inference Layer (`src/inference/`)
 
-**Purpose**: Provide UCI-compatible chess engine interface and dual-mode operation
+**Purpose**: Intelligent adapter switching and inference with expert model selection based on query type
 
 **Key Components**:
-- `inference.py`: Main inference script
-- `chess_engine.py`: Stockfish integration
-- `uci_bridge.py`: UCI protocol implementation (NEW)
-- `prompt_templates/`: Mode-specific prompt templates (NEW)
+- `inference.py`: Main inference engine with adapter management
+- `chess_engine.py`: Stockfish integration and validation
+- `uci_utils.py`: UCI move extraction and validation utilities
+- `prompt_templates/`: Expert-specific prompt formatting
+
+**Architecture**:
+```
+Dynamic Inference Pipeline
+├── Query Analysis (UCI/Tutor/Director classification)
+├── Expert Adapter Selection (Automatic routing)
+├── Model Loading (Base + Expert LoRA adapter)
+├── Prompt Construction (Expert-specific formatting)
+├── Text Generation (Gemma-3 + Chain-of-Thought)
+├── Response Post-processing (Expert-specific)
+├── Chess Validation (Stockfish integration)
+└── Fallback Handling (Multi-level safety nets)
+```
+
+**Expert-Specific Inference**:
+- **UCI Expert**: Fast move generation with legal move validation
+- **Tutor Expert**: Explanatory responses with step-by-step reasoning
+- **Director Expert**: Q&A responses with tactical analysis
+- **Adapter Switching**: Sub-second switching between experts
+- **Memory Management**: Efficient model caching and unloading
+
+### 3. UCI Bridge Layer (`src/inference/`)
+
+**Purpose**: Full UCI protocol compatibility with chess software integration
+
+**Key Components**:
+- `uci_bridge.py`: UCI protocol implementation
+- `inference.py`: Engine mode inference
+- `chess_engine.py`: Stockfish fallback integration
 
 **Architecture**:
 ```
 UCI Bridge Pipeline
-├── UCI Protocol Handler
-├── Mode Selection (Engine vs Tutor)
-├── Position Analysis (FEN → Prompt)
-├── Model Inference (Gemma-3 + LoRA)
-├── Response Processing
-├── UCI Output Formatting
-└── Fallback to Stockfish (if needed)
+├── UCI Protocol Handler (position, go commands)
+├── Expert Selection (UCI expert adapter)
+├── Position Analysis (FEN processing)
+├── Move Generation (Fast inference mode)
+├── Legal Move Validation (Stockfish check)
+├── UCI Output Formatting (bestmove command)
+└── Error Recovery (Fallback strategies)
 ```
 
-**New UCI Features**:
-- **UCI Compatibility**: Full UCI protocol support for chess software integration
-- **Dual Modes**: Engine mode (fast moves) and Tutor mode (explanations)
-- **Chain-of-Thought**: Step-by-step reasoning in tutor mode
-- **Style Conditioning**: Historical player style emulation
-- **Strict UCI Output**: Engine-mode postprocessing ensures a single legal UCI move where possible
-- **Fallback Support**: Stockfish integration when parsing/legality fails
-
-### 3. Inference Layer (`src/inference/`)
-
-**Purpose**: Generate chess-related responses using the fine-tuned model with enhanced reasoning
-
-**Key Components**:
-- `inference.py`: Main inference engine
-- `chess_engine.py`: Stockfish integration
-
-**Architecture**:
-```
-Inference Pipeline
-├── Model Loading (Base + LoRA adapter)
-├── Prompt Processing (Chat template + CoT)
-├── Text Generation (Gemma-3 + Reasoning)
-├── Response Post-processing
-└── Chess Validation (Stockfish)
-```
-
-**Key Features**:
-- Model caching for performance
-- Chess-specific prompt formatting with chain-of-thought
-- Move validation and analysis
-- Error handling and fallbacks
-- Dual-mode operation (engine/tutor)
+**UCI Features**:
+- **Full Protocol Support**: Complete UCI v2 compliance
+- **Fast Inference**: Optimized for tournament play
+- **Move Validation**: Every move checked for legality
+- **Stockfish Fallback**: Backup when model fails
+- **Engine Integration**: Compatible with chess GUIs and tournaments
 
 ### 3. Chess Engine Integration (`src/inference/chess_engine.py`)
 
@@ -222,52 +236,147 @@ Vision Pipeline
 - Perspective correction
 - FEN validation and error handling
 
-### 4. Web Interface (`src/web/`)
+### 4. Web Interface & API (`src/web/`)
 
-**Purpose**: Provide interactive web interface for chess Q&A
+**Purpose**: Comprehensive web application providing full training, evaluation, and chess analysis capabilities
 
 **Key Components**:
-- `app.py`: Flask application
-- `templates/`: HTML templates
+- `app.py`: Main Flask application with REST API
+- `templates/`: HTML templates for web interface
+- `chess_game.py`: Interactive chess board and game management
+- `stockfish_match.py`: Evaluation match coordination
 
 **Architecture**:
 ```
-Web Interface
-├── Flask Application
-├── API Endpoints (/api/ask, /api/health)
-├── Model Integration
-├── Response Caching
-└── Error Handling
+Web Interface Architecture
+├── Flask Application (http://localhost:5001)
+├── Training Dashboard (/training)
+│   ├── Expert Selection (UCI/Tutor/Director)
+│   ├── Real-time Progress Monitoring
+│   ├── System Resource Tracking
+│   └── Training Control (Start/Stop/Resume)
+├── Chess Analysis Interface (/analysis)
+│   ├── Interactive Chess Board
+│   ├── Real-time Q&A System
+│   ├── Move Validation & Suggestions
+│   └── Expert Model Switching
+├── Evaluation Suite (/evaluation)
+│   ├── Stockfish Match Testing
+│   ├── Puzzle Accuracy Evaluation
+│   ├── Live Results Display
+│   └── Performance Metrics
+├── Dataset Management (/datasets)
+│   ├── Data Cleaning Tools
+│   ├── Stockfish Validation
+│   ├── Processing Status
+│   └── Quality Assurance
+└── REST API Layer
+    ├── Training Endpoints (/api/train/*)
+    ├── Chess Endpoints (/api/game/*)
+    ├── Evaluation Endpoints (/api/eval/*)
+    └── Dataset Endpoints (/api/data/*)
 ```
 
-**Key Features**:
-- Real-time Q&A interface
-- Model status monitoring
-- Example question suggestions
-- Response confidence scoring
+**Core Features**:
+- **Training Interface**: Complete GUI for training all expert models
+- **Interactive Chess Board**: Click-to-move interface with legal move validation
+- **Real-time Q&A**: Ask questions about any chess position with expert responses
+- **Model Switching**: Dynamic switching between trained expert adapters
+- **Evaluation Tools**: Built-in testing against Stockfish and puzzle databases
+- **Dataset Processing**: Web-based data cleaning and validation tools
+- **System Monitoring**: Real-time resource usage and performance tracking
+
+**API Endpoints**:
+- **Training**: `/api/train/start`, `/api/train/status`, `/api/train/stop`
+- **Chess Game**: `/api/game/move`, `/api/game/analyze`, `/api/game/ai_move`
+- **Evaluation**: `/api/eval/stockfish`, `/api/eval/puzzles`, `/api/eval/status`
+- **Dataset**: `/api/data/clean`, `/api/data/status`
+- **System**: `/api/health`, `/api/stats`, `/api/examples`
 
 ### 5. Evaluation Layer (`src/evaluation/`)
 
-**Purpose**: Assess model performance with chess-specific metrics
+**Purpose**: Comprehensive evaluation suite for chess model performance assessment
 
 **Key Components**:
-- `chess_evaluation.py`: Evaluation framework
+- `stockfish_match_eval.py`: Stockfish vs model match evaluation
+- `puzzle_eval.py`: Tactical puzzle accuracy testing
+- `chess_evaluation.py`: General evaluation framework
 
 **Architecture**:
 ```
 Evaluation Pipeline
-├── Test Question Loading
-├── Model Response Generation
-├── Chess Relevance Scoring
-├── Move Syntax Validation
-└── Performance Metrics
+├── Stockfish Match Testing
+│   ├── Position Generation (Mixed FENs)
+│   ├── Model vs Stockfish Games
+│   ├── Win/Loss/Draw Tracking
+│   └── Performance Metrics
+├── Puzzle Accuracy Testing
+│   ├── Lichess Puzzle Database
+│   ├── First-Move Accuracy
+│   ├── Sequence Accuracy
+│   └── Difficulty Analysis
+├── Real-time Web Evaluation
+│   ├── Live Results Display
+│   ├── Progress Monitoring
+│   └── Comparative Analysis
+└── Performance Reporting
+    ├── Accuracy Metrics
+    ├── Response Time Analysis
+    ├── Error Classification
+    └── Benchmark Comparisons
 ```
 
 **Key Features**:
-- Chess-specific evaluation metrics
-- Move syntax validation
-- Relevance scoring
-- Comparative analysis
+- **Stockfish Match Evaluation**: Automated games against Stockfish at various depths
+- **Puzzle Database Testing**: Accuracy testing on 1000+ rated chess puzzles
+- **Real-time Evaluation**: Live evaluation progress in web interface
+- **Comprehensive Metrics**: Win rates, accuracy scores, response times
+- **Error Analysis**: Classification of model mistakes and failure modes
+
+### 6. Dataset Pipeline (`data/`)
+
+**Purpose**: Large-scale dataset processing and quality assurance for training
+
+**Key Components**:
+- `data/scripts/validate_and_augment.py`: Dataset validation and cleaning
+- `data/processed/`: Cleaned training datasets (100k+ samples)
+- `data/formatted/`: Expert-specific dataset symlinks
+
+**Architecture**:
+```
+Dataset Processing Pipeline
+├── Raw Data Collection
+│   ├── ChessInstruct Dataset
+│   ├── Lichess Puzzles
+│   ├── Historical Games
+│   └── Opening Theory
+├── Data Validation & Cleaning
+│   ├── Stockfish Move Validation
+│   ├── Legal Move Verification
+│   ├── Format Standardization
+│   └── Quality Assurance
+├── Expert-Specific Formatting
+│   ├── UCI Expert Dataset (50k samples)
+│   ├── Tutor Expert Dataset (50k samples)
+│   ├── Director Expert Dataset (3.2MB)
+│   └── Format Conversion
+├── Quality Control
+│   ├── Duplicate Removal
+│   ├── Error Detection
+│   ├── Balance Verification
+│   └── Final Validation
+└── Training-Ready Datasets
+    ├── Symlink Management
+    ├── Version Control
+    └── Distribution
+```
+
+**Dataset Features**:
+- **100k+ Training Samples**: Comprehensive chess knowledge base
+- **Stockfish Validation**: All moves verified for legality
+- **Expert Specialization**: Tailored datasets for each expert type
+- **Quality Assurance**: Automated cleaning and validation pipeline
+- **Symlink Management**: Clean dataset routing to training configs
 
 ## Data Flow
 

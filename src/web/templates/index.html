@@ -35,12 +35,14 @@
         }
 
         .chess-board {
-            width: 400px;
-            height: 400px;
-            margin: 2rem auto;
+            width: 100%;
+            max-width: 520px; /* cap on large screens */
+            aspect-ratio: 1 / 1; /* keep square */
+            height: auto; /* computed by aspect-ratio */
+            margin: 0 auto; /* center within card */
             border: 3px solid var(--primary-color);
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.2);
             background: var(--chess-light);
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -222,6 +224,17 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
+        /* Keep board fully inside the card and centered */
+        .card .card-body:has(#chessBoard) {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @media (max-width: 991.98px) {
+            .chess-board { max-width: 90vw; }
+        }
+
         .welcome-section {
             text-align: center;
             color: white;
@@ -397,8 +410,74 @@
                             <button id="btn-train-refresh" class="btn btn-sm btn-outline-secondary">Refresh</button>
                         </div>
                         <div class="mt-3">
+                            <div class="small text-muted" id="train-meta"></div>
                             <pre id="train-status" style="max-height: 200px; overflow:auto; background:#f7f7f7; padding:10px;"></pre>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Evaluations
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <label class="form-label">Stockfish Match</label>
+                            <div class="d-flex gap-2">
+                                <input id="eval-file" class="form-control form-control-sm" value="data/datasets/eval_mixed_positions_200.jsonl" />
+                                <input id="eval-limit" type="number" class="form-control form-control-sm" value="100" style="max-width:100px" />
+                                <input id="eval-depth" type="number" class="form-control form-control-sm" value="12" style="max-width:80px" />
+                                <button class="btn btn-sm btn-primary" onclick="startEvalStockfish()">Run</button>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Puzzle Eval</label>
+                            <div class="d-flex gap-2">
+                                <input id="puzz-file" class="form-control form-control-sm" value="data/datasets/lichess_puzzles_1000_2000.jsonl" />
+                                <input id="puzz-limit" type="number" class="form-control form-control-sm" value="200" style="max-width:100px" />
+                                <button class="btn btn-sm btn-primary" onclick="startEvalPuzzles()">Run</button>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshEvalStatus()">Refresh</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadEvalHistory()">Load History</button>
+                        </div>
+                        <pre id="eval-status" style="max-height: 200px; overflow:auto; background:#f7f7f7; padding:10px;"></pre>
+                        <pre id="eval-history" style="max-height: 160px; overflow:auto; background:#f7f7f7; padding:10px;" class="mt-2"></pre>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-database me-2"></i>
+                            Dataset Tools
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <label class="form-label">Clean UCI</label>
+                            <div class="d-flex gap-2">
+                                <input id="data-uci-in" class="form-control form-control-sm" value="data/formatted/uci_expert.jsonl" />
+                                <input id="data-uci-out" class="form-control form-control-sm" value="data/processed/uci_clean.jsonl" />
+                                <button class="btn btn-sm btn-primary" onclick="cleanDataset('uci')">Run</button>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Clean Tutor</label>
+                            <div class="d-flex gap-2">
+                                <input id="data-tutor-in" class="form-control form-control-sm" value="data/formatted/tutor_expert.jsonl" />
+                                <input id="data-tutor-out" class="form-control form-control-sm" value="data/processed/tutor_clean.jsonl" />
+                                <button class="btn btn-sm btn-primary" onclick="cleanDataset('tutor')">Run</button>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshDataStatus()">Refresh</button>
+                        </div>
+                        <pre id="data-status" style="max-height: 200px; overflow:auto; background:#f7f7f7; padding:10px;"></pre>
                     </div>
                 </div>
             </div>
@@ -480,6 +559,16 @@
             if (startBtn) startBtn.onclick = startTraining;
             if (stopBtn) stopBtn.onclick = stopTraining;
             if (refreshBtn) refreshBtn.onclick = refreshTrainingStatus;
+            // Auto-refresh training status every 5 seconds when page is visible
+            setInterval(() => {
+                if (!document.hidden) {
+                    const el = document.getElementById('train-status');
+                    if (el) { refreshTrainingStatus(); }
+                }
+            }, 5000);
+            // Prime adapters/settings UI
+            refreshAdapters();
+            loadSettings();
         }
 
         // Ask a question
@@ -521,7 +610,8 @@
                     },
                     body: JSON.stringify({
                         question: question,
-                        context: '' // Add context if needed
+                        context: '', // Add context if needed
+                        expert: (document.getElementById('expertSelect')?.value || 'auto')
                     })
                 });
 
@@ -587,6 +677,9 @@
                 });
                 const data = await res.json();
                 document.getElementById('train-status').textContent = JSON.stringify(data, null, 2);
+                if (res.ok) {
+                    document.getElementById('btn-train-start').disabled = true;
+                }
             } catch (e) {
                 document.getElementById('train-status').textContent = 'Error: ' + e;
             }
@@ -597,6 +690,7 @@
                 const res = await fetch('/api/train/stop', { method: 'POST' });
                 const data = await res.json();
                 document.getElementById('train-status').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('btn-train-start').disabled = false;
             } catch (e) {
                 document.getElementById('train-status').textContent = 'Error: ' + e;
             }
@@ -608,9 +702,130 @@
                 const data = await res.json();
                 const log = data.logs_tail || '';
                 document.getElementById('train-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+                const running = !!data.running;
+                const meta = [];
+                if (data.checkpoint_dir) meta.push('Checkpoint: ' + data.checkpoint_dir);
+                if (data.log_file) meta.push('Log: ' + data.log_file);
+                if (data.elapsed_sec) meta.push('Elapsed: ' + Math.round(data.elapsed_sec) + 's');
+                document.getElementById('train-meta').textContent = meta.join('  |  ');
+                document.getElementById('btn-train-start').disabled = running;
             } catch (e) {
                 document.getElementById('train-status').textContent = 'Error: ' + e;
             }
+        }
+
+        // Evaluations
+        async function startEvalStockfish() {
+            const file = document.getElementById('eval-file').value;
+            const limit = parseInt(document.getElementById('eval-limit').value || '100', 10);
+            const depth = parseInt(document.getElementById('eval-depth').value || '12', 10);
+            const res = await fetch('/api/eval/stockfish', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, limit, depth }) });
+            document.getElementById('eval-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function startEvalPuzzles() {
+            const file = document.getElementById('puzz-file').value;
+            const limit = parseInt(document.getElementById('puzz-limit').value || '200', 10);
+            const res = await fetch('/api/eval/puzzles', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, limit }) });
+            document.getElementById('eval-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function refreshEvalStatus() {
+            const res = await fetch('/api/eval/status');
+            const data = await res.json();
+            const log = data.logs_tail || '';
+            document.getElementById('eval-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+        }
+        async function loadEvalHistory() {
+            const res = await fetch('/api/eval/history');
+            const data = await res.json();
+            document.getElementById('eval-history').textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Dataset tools
+        async function cleanDataset(mode) {
+            const inEl = document.getElementById(`data-${mode}-in`).value;
+            const outEl = document.getElementById(`data-${mode}-out`).value;
+            const res = await fetch('/api/data/clean', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode, in: inEl, out: outEl, relabel_with_stockfish: (mode !== 'director') }) });
+            document.getElementById('data-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function refreshDataStatus() {
+            const res = await fetch('/api/data/status');
+            const data = await res.json();
+            const log = data.logs_tail || '';
+            document.getElementById('data-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+        }
+
+        // Adapters & Settings
+        async function refreshAdapters() {
+            try {
+                const res = await fetch('/api/adapters/list');
+                const data = await res.json();
+                document.getElementById('adapters-status').textContent = JSON.stringify(data, null, 2);
+                if (data.active) {
+                    document.getElementById('adapter-select').value = data.active;
+                }
+                const meta = [];
+                if (data.available) meta.push('Available: ' + Object.keys(data.available).join(', '));
+                document.getElementById('adapters-meta').textContent = meta.join('  |  ');
+                // Update dropdown options with available keys
+                try {
+                    if (data.available) {
+                        const keys = Object.keys(data.available);
+                        const sel = document.getElementById('adapter-select');
+                        sel.innerHTML = '';
+                        keys.forEach(k => {
+                            const opt = document.createElement('option');
+                            opt.value = k; opt.textContent = k;
+                            sel.appendChild(opt);
+                        });
+                        if (data.active && keys.includes(data.active)) sel.value = data.active;
+                    }
+                } catch (e) {}
+            } catch (e) {
+                document.getElementById('adapters-status').textContent = 'Error: ' + e;
+            }
+        }
+        async function activateAdapter() {
+            const name = document.getElementById('adapter-select').value;
+            const res = await fetch('/api/adapters/activate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+            document.getElementById('adapters-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function loadCheckpoints() {
+            const expert = document.getElementById('adapter-select').value;
+            const res = await fetch('/api/adapters/checkpoints?expert=' + encodeURIComponent(expert));
+            const data = await res.json();
+            const sel = document.getElementById('checkpoint-select');
+            sel.innerHTML = '';
+            const items = (data.checkpoints && data.checkpoints[expert]) ? data.checkpoints[expert] : [];
+            items.forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+        }
+        async function activateCheckpoint() {
+            const expert = document.getElementById('adapter-select').value;
+            const path = document.getElementById('checkpoint-select').value;
+            const res = await fetch('/api/adapters/activate_checkpoint', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ expert, path }) });
+            document.getElementById('adapters-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function loadSettings() {
+            const res = await fetch('/api/settings/get');
+            const data = await res.json();
+            if (data.engine_policy) {
+                document.getElementById('engine-policy').value = data.engine_policy;
+            }
+            if (typeof data.engine_rerank !== 'undefined') {
+                document.getElementById('engine-rerank').checked = !!data.engine_rerank;
+            }
+            if (typeof data.engine_constrain !== 'undefined') {
+                const el = document.getElementById('engine-constrain');
+                if (el) el.checked = !!data.engine_constrain;
+            }
+        }
+        async function saveSettings() {
+            const engine_policy = document.getElementById('engine-policy').value;
+            const engine_rerank = document.getElementById('engine-rerank').checked;
+            const constrainEl = document.getElementById('engine-constrain');
+            const engine_constrain = constrainEl ? constrainEl.checked : (engine_policy === 'logprob');
+            const res = await fetch('/api/settings/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ engine_policy, engine_rerank, engine_constrain }) });
+            const data = await res.json();
+            document.getElementById('adapters-status').textContent = JSON.stringify(data, null, 2);
         }
 
         // Scroll to bottom of chat
@@ -1127,3 +1342,47 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>
+                            Adapters & Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2 d-flex gap-2 align-items-end">
+                            <div>
+                                <label class="form-label">Active Adapter</label>
+                                <select id="adapter-select" class="form-select form-select-sm">
+                                    <option value="uci">uci</option>
+                                    <option value="tutor">tutor</option>
+                                    <option value="director">director</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="activateAdapter()">Activate</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAdapters()">Refresh</button>
+                        </div>
+                        <div class="mb-2 d-flex gap-2 align-items-end">
+                            <div>
+                                <label class="form-label">Checkpoints</label>
+                                <select id="checkpoint-select" class="form-select form-select-sm" style="min-width: 220px;"></select>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadCheckpoints()">Load CKPTs</button>
+                            <button class="btn btn-sm btn-primary" onclick="activateCheckpoint()">Activate CKPT</button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Engine Policy</label>
+                            <select id="engine-policy" class="form-select form-select-sm" style="max-width: 220px;">
+                                <option value="sample">Sample (default)</option>
+                                <option value="logprob">Log-Prob (score legal moves)</option>
+                            </select>
+                            <div class="form-check mt-2">
+                                <input id="engine-rerank" class="form-check-input" type="checkbox" checked>
+                                <label class="form-check-label" for="engine-rerank">Re-rank N-best engine candidates</label>
+                            </div>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="saveSettings()">Save Settings</button>
+                            <div class="small text-muted" id="adapters-meta"></div>
+                        </div>
+                        <pre id="adapters-status" style="max-height: 180px; overflow:auto; background:#f7f7f7; padding:10px;"></pre>
+                    </div>
+                </div>

@@ -45,24 +45,30 @@ GemmaFischer combines several advanced components to create a comprehensive ches
 ### Completed Milestones
 - **Basic LoRA Pipeline**: Gemma-3 270M model fine-tuning with Unsloth optimization
 - **Chess Engine Integration**: Stockfish UCI engine integration for move validation
-- **Web Interface**: Flask-based web application with chess board visualization
+- **Web Interface**: Flask-based web application with chess board visualization and real-time Q&A
 - **UCI Bridge**: Full UCI protocol compatibility for chess software integration
 - **Dual-Mode Operation**: Engine mode (fast moves) and Tutor mode (explanations)
 - **Evaluation Framework**: Chess-specific metrics and testing tools
 - **MPS Optimization**: Native Apple Silicon acceleration with Metal Performance Shaders
+- **Expert Training**: Multiple specialized LoRA adapters for UCI, Tutor, and Director modes
+- **Dataset Processing**: 100,000+ training samples (50k UCI + 50k Tutor) with Stockfish validation
+- **Web Training Interface**: UI-based training controls and monitoring
 
 ### Current Performance
-- **Training Loss**: Improved from ~3.0 to ~1.2 in early epochs
-- **Chess Relevance**: ~85% for chess-specific questions
-- **Move Accuracy**: ~70% for basic chess moves
-- **Training Speed**: ~2-3 steps/second on M3 Pro
-- **Memory Usage**: ~4-6GB (MPS-optimized)
+- **Training Data**: 100,000+ processed samples (50k UCI, 50k Tutor datasets)
+- **Model Checkpoints**: Multiple LoRA adapters trained across different configurations
+- **Training Runs**: Extensive experimentation with various hyperparameters and architectures
+- **Web Interface**: Fully functional at http://localhost:5001 with real-time chess analysis
+- **Tactical Puzzle Evaluation**: Current accuracy ~2% (baseline, room for improvement)
+- **Training Speed**: ~2-3 steps/second on M3 Pro with MPS acceleration
+- **Memory Usage**: ~4-6GB peak during training, optimized for Apple Silicon
 
 ### Known Issues & Limitations
-- **Dataset Quality**: Initial training data included overly long sequences with generic answers
-- **Output Accuracy**: Model sometimes suggests illegal moves or incorrect explanations
-- **Training Stability**: Issues with resume functionality and progress tracking
-- **Evaluation Metrics**: Current evaluation is rudimentary and needs enhancement
+- **Model Accuracy**: Current tactical puzzle accuracy is ~2% (baseline performance)
+- **Dataset Quality**: Training data may benefit from additional curation and filtering
+- **Output Consistency**: Model responses may sometimes be inconsistent or verbose
+- **Training Resume**: Some checkpoint resumption issues in longer training runs
+- **Evaluation Scope**: Current evaluation focuses on basic metrics, could be expanded
 
 ### Next Priority Tasks
 1. **Dataset Overhaul**: Curate high-quality, focused chess Q&A data
@@ -113,8 +119,10 @@ python -c "from src.inference.inference import load_model,run_inference;print('l
 
 2. **Start web interface:**
 ```bash
+# Activate virtual environment first
+source .venv/bin/activate
 python src/web/app.py
-# Visit http://localhost:5000
+# Visit http://localhost:5001 (includes training controls and real-time monitoring)
 ```
 
 3. **Run training (smoke test):**
@@ -122,22 +130,22 @@ python src/web/app.py
 python src/training/train.py --do_train --max_steps 10
 ```
 
-### Smoke Training (per expert)
+### Expert Training (Current Setup)
 
-Use the expert-aware trainer with a small max steps override and no eval for quick verification:
+The system supports multiple specialized expert models. Current available datasets:
 
 ```bash
-# UCI expert (engine adapter)
-python src/training/train_lora_poc.py --expert uci --config auto --max_steps_override 50 --disable_eval
+# UCI Expert (50,000 samples) - Chess move generation
+python src/training/train_lora_poc.py --expert uci --config auto --max_steps_override 1000 --disable_eval
 
-# Tutor expert (analysis adapter)
-python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_override 50 --use_instruction_collator --disable_eval
+# Tutor Expert (50,000 samples) - Chess explanations and analysis
+python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_override 1000 --disable_eval
 
-# Director expert (Q&A adapter)
-python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 50 --use_instruction_collator --disable_eval
+# Director Expert (3.2MB) - Chess Q&A and reasoning
+python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 1000 --disable_eval
 ```
 
-These will write checkpoints into `checkpoints/lora_uci`, `checkpoints/lora_tutor`, and `checkpoints/lora_director` respectively, enabling live adapter switching in the app.
+All experts write checkpoints to `checkpoints/lora_{expert_name}` and support live adapter switching in the web interface.
 
 4. **Stockfish match evaluator (optional):**
 ```bash
@@ -185,18 +193,47 @@ python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_o
 python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 1000 --use_instruction_collator --disable_eval
 ```
 
-## Web UI Training (Planned)
+## Web Interface (Active)
 
-We will add a Training tab to start/stop runs from the browser with:
-- Expert selection (uci/tutor/director), steps, eval toggle, dataset path
-- Live logs, progress and basic status
+The web interface is fully functional with comprehensive training and evaluation capabilities:
 
-Endpoints (to be added):
-- `POST /api/train/start` – starts a background training job
-- `GET /api/train/status` – returns run status and recent logs
-- `POST /api/train/stop` – stops the current job
+Launch: `python src/web/app.py` (runs on http://localhost:5001)
 
-Once implemented, launch the web app with `python src/web/app.py` and use the Training tab.
+### Training Controls
+- **Expert Selection**: UCI, Tutor, Director modes with automatic config loading
+- **Training Parameters**: Steps, batch size, learning rate controls
+- **Real-time Monitoring**: Live loss curves, system stats, progress tracking
+- **Checkpoint Management**: Automatic saving and resume functionality
+- **API Endpoints**:
+  - `POST /api/train/start` - Start training session
+  - `GET /api/train/status` - Get training progress and stats
+  - `POST /api/train/stop` - Stop current training session
+
+### Evaluation Tools
+- **Stockfish Match Evaluation**: Compare model vs Stockfish on tactical positions
+- **Puzzle Accuracy Testing**: Evaluate first-move accuracy on chess puzzles
+- **Live Results**: Real-time evaluation progress and results display
+- **API Endpoints**:
+  - `POST /api/eval/stockfish` - Run Stockfish evaluation
+  - `POST /api/eval/puzzles` - Run puzzle evaluation
+  - `GET /api/eval/status` - Get evaluation progress
+
+### Chess Analysis Features
+- **Interactive Board**: Click-to-move interface with legal move validation
+- **Real-time Q&A**: Ask questions about any chess position
+- **Move Analysis**: Get tactical suggestions and position evaluation
+- **Model Switching**: Switch between different trained expert adapters
+- **Game State Management**: Full game history and position tracking
+
+### Dataset Tools
+- **Data Validation**: Clean and validate UCI/Tutor datasets
+- **Stockfish Relabeling**: Improve move accuracy with Stockfish validation
+- **Processing Status**: Monitor dataset cleaning progress
+- **API Endpoints**:
+  - `POST /api/data/clean` - Start dataset cleaning
+  - `GET /api/data/status` - Get cleaning progress
+
+Tip: Use the web interface for all training, evaluation, and analysis tasks - it provides a complete GUI alternative to command-line operations.
 
 ## Project Structure
 

@@ -2,7 +2,47 @@
 
 ## Overview
 
-This guide covers comprehensive dataset preparation, curation, and management for GemmaFischer. High-quality training data is crucial for achieving both chess skill and educational value in the model.
+This guide covers the comprehensive dataset preparation, curation, and management system for ChessGemma. The system currently has 100k+ processed training samples across three expert domains, all validated with Stockfish for move legality and quality.
+
+**Current Status**: 100k+ training samples processed and validated, with automated dataset pipeline and expert-specific data preparation.
+
+## Current Dataset Status
+
+### Processed Datasets (Available Now)
+
+```bash
+# UCI Expert Dataset - Chess Move Generation
+Location: data/processed/uci_clean.jsonl
+Size: 50,000 samples
+Format: Position → UCI move pairs
+Validation: Stockfish legality checking
+Purpose: Fast, accurate move generation for UCI engine mode
+
+# Tutor Expert Dataset - Chess Explanations
+Location: data/processed/tutor_clean.jsonl
+Size: 50,000 samples
+Format: Position → Step-by-step analysis → UCI move
+Validation: Stockfish move validation
+Purpose: Educational explanations with reasoning
+
+# Director Expert Dataset - Q&A Reasoning
+Location: data/formatted/director_expert.jsonl
+Size: 3.2MB (reasoning examples)
+Format: Chess questions → Tactical analysis
+Validation: Quality filtering and deduplication
+Purpose: Strategic reasoning and chess knowledge
+```
+
+### Dataset Processing Pipeline
+
+```bash
+# Current processing status
+Raw Data Sources: ✓ Collected (5M+ Lichess puzzles, master games, theory)
+Data Validation: ✓ Completed (Stockfish integration)
+Expert Formatting: ✓ Completed (UCI/Tutor/Director specific formats)
+Quality Assurance: ✓ Completed (Deduplication, legality checks)
+Training Ready: ✓ Available (100k+ processed samples)
+```
 
 ## Dataset Categories
 
@@ -41,16 +81,23 @@ def refine_chess_instruct(dataset):
     return refined_data
 ```
 
-#### Implemented Refinement Pipeline
-We provide a concrete refinement script that applies:
-- Length filter (≤ 500 chars)
-- Chess-term presence filter
-- Standardized 3-message `conversations` format
-- Topic and difficulty tagging
+#### Current Processing Pipeline
+The automated dataset processing pipeline includes:
+- Stockfish validation for all moves
+- Expert-specific formatting (UCI/Tutor/Director)
+- Deduplication and quality filtering
+- Symlink management for training
 
 ```bash
-python scripts/refine_dataset.py
-# Output: data/finetune/chess_finetune_refined.jsonl
+# Current automated processing (already completed)
+python data/scripts/validate_and_augment.py \
+  --in data/formatted/uci_expert.jsonl \
+  --out data/processed/uci_clean.jsonl \
+  --mode uci --relabel_with_stockfish
+
+# Create training symlinks
+ln -sf data/processed/uci_clean.jsonl data/formatted/uci_expert.jsonl
+ln -sf data/processed/tutor_clean.jsonl data/formatted/tutor_expert.jsonl
 ```
 
 #### Lichess Studies Dataset

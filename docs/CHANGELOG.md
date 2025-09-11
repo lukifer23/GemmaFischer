@@ -1,4 +1,52 @@
 # Changelog
+## [2.2.0] - 2025-09-11
+
+### Major Features Added
+- **Expert Training System**: Complete multi-expert LoRA adapter system (UCI, Tutor, Director)
+- **Web Interface Overhaul**: Full-featured web application with training controls and real-time monitoring
+- **Dataset Processing Pipeline**: 100,000+ training samples processed with Stockfish validation
+- **Live Model Switching**: Dynamic adapter loading and switching between trained experts
+- **Comprehensive Evaluation**: Tactical puzzle evaluation and Stockfish match testing
+
+### Training & Models
+- **UCI Expert**: 50,000 samples trained for chess move generation (multiple checkpoints: 600, 800, 1000 steps)
+- **Tutor Expert**: 50,000 samples trained for chess explanations (200, 400 steps)
+- **Director Expert**: Q&A reasoning model with 3.2MB dataset (500, 1000 steps)
+- **Curriculum Training**: Advanced training with mixed datasets and phase-based learning
+- **MPS Optimization**: Native Apple Silicon acceleration throughout training pipeline
+
+### Web Interface Enhancements
+- **Training Dashboard**: Real-time training monitoring with loss curves and system stats
+- **Evaluation Tools**: Built-in Stockfish match and puzzle evaluation from web UI
+- **Chess Analysis**: Interactive board with move validation and real-time Q&A
+- **Dataset Management**: Web-based dataset cleaning and validation tools
+- **API Endpoints**: Complete REST API for training, evaluation, and chess analysis
+- **Live Adapter Switching**: Switch between different trained expert models in real-time
+
+### Dataset & Data Processing
+- **Processed Datasets**: 100,000+ clean samples (50k UCI + 50k Tutor)
+- **Stockfish Validation**: Automatic move legality checking and repair
+- **Expert-Specific Formatting**: Tailored data preparation for each expert type
+- **Quality Assurance**: Comprehensive data validation and cleaning pipeline
+
+### Performance & Evaluation
+- **Current Metrics**: Baseline tactical accuracy ~2% (room for improvement)
+- **Training Efficiency**: 2-3 steps/second on M3 Pro with MPS acceleration
+- **Memory Optimization**: 4-6GB peak usage, optimized for Apple Silicon
+- **Model Switching**: Sub-second adapter switching in web interface
+
+### Technical Improvements
+- **Checkpoint Management**: Extensive checkpoint history across all experts
+- **Resume Functionality**: Training resume capabilities for interrupted sessions
+- **System Monitoring**: Real-time resource usage tracking during training
+- **Error Recovery**: Improved error handling and recovery mechanisms
+
+### Documentation Updates
+- **README.md**: Updated with current status, performance metrics, and web interface features
+- **Training Commands**: Updated expert training commands with current configurations
+- **Web Interface Guide**: Comprehensive documentation for all web features
+- **Dataset Information**: Current dataset sizes and processing status
+
 ## [2.1.0] - 2025-01-28
 
 ### Added

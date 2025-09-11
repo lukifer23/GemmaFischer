@@ -16,7 +16,7 @@
 ### Core LLM Development
 
 - [x] Start from *ChessGemma* (fine-tuned on PGNs) → evolve as `GemmaFischer`
-- [ ] Add **Chain-of-Thought (CoT)** reasoning capability
+- [x] Add **Chain-of-Thought (CoT)** reasoning capability
   - Format: `[Position] → Think step-by-step → Evaluate threats → Suggest best move`
 - [x] Train dual-purpose outputs:
   - `Tutor:` Mode with rich explanations
@@ -26,6 +26,9 @@
   - [x] Historical games: Fischer, Kasparov, AlphaZero - master games included
   - [x] Theory books (openings, endgames, tactics) - comprehensive theory database
 - [x] Format prompts to support style, reasoning, and role conditioning
+- [x] **Expert Training System**: Multi-expert LoRA adapters (UCI, Tutor, Director)
+- [x] **Dataset Processing Pipeline**: 100k+ training samples with Stockfish validation
+- [x] **Web Interface Overhaul**: Full-featured GUI with training controls and monitoring
 
 ---
 
@@ -58,20 +61,20 @@
 
 ### Overview
 
-- Split responsibilities into specialized experts routed at request level over a single Gemma-3 270M base on MPS.
-- Three LoRA adapters: `uci` (move-only), `tutor` (explain + move), `director` (rules/theory/strategy Q&A).
-- Deterministic heuristic router initially; optional small classifier later.
+- [x] Split responsibilities into specialized experts routed at request level over a single Gemma-3 270M base on MPS.
+- [x] Three LoRA adapters: `uci` (move-only), `tutor` (explain + move), `director` (rules/theory/strategy Q&A).
+- [x] Deterministic heuristic router with live adapter switching in web interface.
 
 ### Components & File Plan
 
-- [x] `src/inference/router.py`: request analysis, expert selection, optional sub-calls.
-- [x] `src/inference/experts/uci_expert.py`: strict UCI output, legality enforcement, Stockfish fallback.
-- [x] `src/inference/experts/tutor_expert.py`: CoT scaffold, explanation + final UCI move, legality check.
-- [x] `src/inference/experts/director_expert.py`: knowledge-first answers; may call tutor/uci as needed.
-- [x] Extend `src/inference/inference.py`: multi-adapter load and `set_adapter(name)` switching.
-- [x] Update `src/inference/uci_bridge.py`: route via router; `Mode=engine` → UCI expert, `Mode=tutor` → Tutor expert.
-- [x] Update `src/web/app.py`: expose expert selector (Auto/UCI/Tutor/Director).
-- [ ] `docs/MOE_GUIDE.md`: architecture, routing rules, datasets, evaluation.
+- [x] **Dynamic Inference Layer**: Multi-adapter loading and expert switching (`src/inference/inference.py`)
+- [x] **UCI Expert Training**: 50k samples processed, multiple checkpoints available (600, 800, 1000 steps)
+- [x] **Tutor Expert Training**: 50k samples processed, CoT reasoning with move validation (200, 400 steps)
+- [x] **Director Expert Training**: Q&A reasoning with curated dataset (500, 1000 steps)
+- [x] **Web Interface Integration**: Live expert switching and selection in GUI
+- [x] **Dataset Pipeline**: 100k+ processed samples with Stockfish validation
+- [x] **Training System**: Expert-aware training with `train_lora_poc.py --expert [type]`
+- [x] **Performance Monitoring**: Real-time metrics and expert switching tracking
 
 ### Routing Policy (deterministic v1)
 
@@ -428,7 +431,16 @@
   - [ ] Test style switching capability
   - [ ] Target: Distinct style outputs
 
-### Phase 3: Advanced Features (Planned)
+### Phase 3: Advanced Features (Partial Implementation)
+
+#### Completed Advanced Features:
+- [x] **Web Interface Overhaul**: Complete GUI with training controls, evaluation tools, and interactive chess analysis
+- [x] **Real-time Training Monitoring**: Live loss curves, system stats, and progress tracking
+- [x] **Evaluation Tools**: Stockfish match testing and puzzle accuracy evaluation from web UI
+- [x] **Dataset Management**: Web-based data cleaning and validation tools
+- [x] **Expert Switching**: Dynamic model loading and switching between trained adapters
+- [x] **Interactive Chess Board**: Click-to-move interface with legal move validation
+- [x] **API Integration**: Complete REST API for training, evaluation, and chess analysis
 
 #### 3.1 Embedding System
 - [ ] **Vector Database for Chess Positions**

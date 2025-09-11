@@ -1,40 +1,47 @@
-# GemmaFischer API Reference
+# ChessGemma API Reference
 
 ## Overview
 
-This document provides comprehensive API reference for all GemmaFischer components, including training, inference, evaluation, web interface, UCI bridge, embedding system, and vision module. GemmaFischer is a dual-purpose chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst.
+This document provides comprehensive API reference for ChessGemma, a multi-expert chess AI system with web interface, training controls, and evaluation capabilities. The system supports UCI-compatible engine play, educational analysis, and real-time Q&A through specialized expert models.
+
+**Current Status**: Full web interface at http://localhost:5001 with REST API, multi-expert training support, and comprehensive evaluation tools.
 
 ## Training API
 
-### `src/training/train.py`
+### Expert Training System (`src/training/train_lora_poc.py`)
 
-Main training script for LoRA fine-tuning.
+Main expert-aware training system supporting UCI, Tutor, and Director modes.
 
 #### Command Line Interface
 
 ```bash
-python src/training/train.py [OPTIONS]
+python src/training/train_lora_poc.py --expert [EXPERT] [OPTIONS]
 ```
 
-**Options:**
-- `--do_train`: Enable training mode (default: False)
-- `--max_steps`: Maximum training steps (default: 10)
-- `--config`: Path to configuration file
-- `--resume_from_checkpoint`: Resume from specific checkpoint
-- `--output_dir`: Output directory for checkpoints
-- `--learning_rate`: Learning rate for training
-- `--batch_size`: Training batch size
+**Expert Options:**
+- `--expert uci`: Train UCI Engine Expert (chess move generation)
+- `--expert tutor`: Train Chess Tutor Expert (educational analysis)
+- `--expert director`: Train Q&A Director Expert (reasoning and tactics)
+
+**Training Options:**
+- `--config auto`: Auto-select configuration based on expert
+- `--max_steps_override N`: Override default max steps (default: 1000)
+- `--disable_eval`: Skip evaluation during training
+- `--resume_from_checkpoint PATH`: Resume from specific checkpoint
 
 **Examples:**
 ```bash
-# Smoke test
-python src/training/train.py --do_train --max_steps 10
+# Train UCI Expert (recommended)
+python src/training/train_lora_poc.py --expert uci --config auto --max_steps_override 1000 --disable_eval
 
-# Full training with config
-python src/training/train.py --config src/training/configs/lora_full.yaml
+# Train Tutor Expert
+python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_override 1000 --disable_eval
 
-# Resume training
-python src/training/train.py --resume_from_checkpoint checkpoints/lora_full/checkpoint-1000
+# Train Director Expert
+python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 1000 --disable_eval
+
+# Resume training from checkpoint
+python src/training/train_lora_poc.py --expert uci --config auto --resume_from_checkpoint checkpoints/lora_uci/checkpoint-600 --max_steps_override 1000 --disable_eval
 ```
 
 #### Python API
@@ -401,91 +408,279 @@ evaluator.cleanup()
 
 ### `src/web/app.py`
 
-Flask web application for chess Q&A.
+Comprehensive Flask web application with training controls, evaluation tools, and interactive chess analysis.
 
-#### Routes
+**Base URL**: http://localhost:5001
 
-##### `GET /`
-Main page with chess Q&A interface.
+### Core Chess Analysis Endpoints
 
-**Response**: HTML page with chess interface
+#### `GET /`
+Main chess analysis interface with interactive board.
 
-##### `POST /api/ask`
-API endpoint for chess questions.
+**Response**: HTML page with full chess analysis interface
+
+#### `POST /api/game/analyze`
+Analyze a chess position for move suggestions.
 
 **Request Body**:
 ```json
 {
-    "question": "What is the best opening move for White?",
-    "context": "Optional context for the question"
+    "square": "c2",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 }
 ```
 
 **Response**:
 ```json
 {
-    "response": "The best opening move for White is e4...",
-    "confidence": 0.85,
-    "model_loaded": true,
-    "question": "What is the best opening move for White?"
+    "piece": "White Pawn",
+    "legal_moves": ["c2c3", "c2c4"],
+    "advice": ["The White pawn on c2 can move forward", "This pawn can move one or two squares forward"],
+    "success": true
 }
 ```
 
-##### `GET /api/health`
-Health check endpoint.
+#### `POST /api/game/move`
+Execute a chess move on the board.
+
+**Request Body**:
+```json
+{
+    "move": "c2c4",
+    "current_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "new_fen": "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 1",
+    "current_player": "black"
+}
+```
+
+#### `POST /api/game/ai_move`
+Get AI move suggestion for current position.
+
+**Request Body**:
+```json
+{
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "expert": "uci"
+}
+```
+
+**Response**:
+```json
+{
+    "move": "e2e4",
+    "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+    "success": true
+}
+```
+
+#### `GET /api/game/state`
+Get current game state.
+
+**Response**:
+```json
+{
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "current_player": "white",
+    "legal_moves": ["g1h3", "g1f3", "b1c3", "b1a3", "h2h3", "g2g3", "f2f3", "e2e3", "d2d3", "c2c3", "b2b3", "a2a3", "h2h4", "g2g4", "f2f4", "e2e4", "d2d4", "c2c4", "b2b4", "a2a4"],
+    "game_status": "active"
+}
+```
+
+### Training API Endpoints
+
+#### `POST /api/train/start`
+Start expert training session.
+
+**Request Body**:
+```json
+{
+    "expert": "uci",
+    "max_steps": 1000,
+    "instruction_collator": false,
+    "disable_eval": true
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Training started for UCI expert",
+    "checkpoint_dir": "checkpoints/lora_uci"
+}
+```
+
+#### `GET /api/train/status`
+Get training progress and status.
+
+**Response**:
+```json
+{
+    "running": true,
+    "current_step": 450,
+    "max_steps": 1000,
+    "elapsed_time": "15m 32s",
+    "checkpoint_dir": "checkpoints/lora_uci",
+    "loss": 1.85,
+    "learning_rate": 8.5e-5,
+    "cpu_percent": 25.0,
+    "memory_usage": "4.2GB"
+}
+```
+
+#### `POST /api/train/stop`
+Stop current training session.
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Training stopped successfully"
+}
+```
+
+### Evaluation API Endpoints
+
+#### `POST /api/eval/stockfish`
+Run Stockfish match evaluation.
+
+**Request Body**:
+```json
+{
+    "depth": 12,
+    "games": 100
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Stockfish evaluation started",
+    "output_file": "stockfish_match_after.json"
+}
+```
+
+#### `POST /api/eval/puzzles`
+Run puzzle accuracy evaluation.
+
+**Request Body**:
+```json
+{
+    "limit": 200,
+    "expert": "uci"
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Puzzle evaluation started",
+    "output_file": "eval_report_after.json"
+}
+```
+
+#### `GET /api/eval/status`
+Get evaluation progress.
+
+**Response**:
+```json
+{
+    "running": true,
+    "progress": 65,
+    "current_game": 65,
+    "total_games": 100,
+    "accuracy": 0.02
+}
+```
+
+### Dataset Management Endpoints
+
+#### `POST /api/data/clean`
+Start dataset cleaning and validation.
+
+**Request Body**:
+```json
+{
+    "mode": "uci",
+    "relabel_with_stockfish": true
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "message": "Dataset cleaning started",
+    "output_file": "data/processed/uci_clean.jsonl"
+}
+```
+
+#### `GET /api/data/status`
+Get dataset processing status.
+
+**Response**:
+```json
+{
+    "running": false,
+    "progress": 100,
+    "processed": 50000,
+    "valid": 49850,
+    "invalid": 150
+}
+```
+
+### System Status Endpoints
+
+#### `GET /api/health`
+System health check.
 
 **Response**:
 ```json
 {
     "status": "healthy",
-    "model_status": "loaded",
-    "timestamp": 1640995200.0
+    "model_loaded": true,
+    "experts_available": ["uci", "tutor", "director"],
+    "timestamp": "2025-09-11T00:45:23.456789Z"
 }
 ```
 
-##### `GET /api/examples`
-Get example chess questions.
+#### `GET /api/stats`
+Get system performance statistics.
+
+**Response**:
+```json
+{
+    "cpu_percent": 15.2,
+    "memory_used": "4.1GB",
+    "memory_total": "16GB",
+    "disk_used": "45GB",
+    "uptime": "2h 15m",
+    "active_processes": 8
+}
+```
+
+#### `GET /api/examples`
+Get example chess questions and positions.
 
 **Response**:
 ```json
 {
     "examples": [
-        "What is the best opening move for White and why?",
-        "Explain the concept of castling in chess.",
-        "How should I evaluate material versus initiative in the middlegame?"
+        "What is the best opening move for White?",
+        "Explain castling in chess",
+        "Analyze this position: r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
     ]
 }
 ```
-
-##### `GET /api/model_info`
-Get information about the loaded model.
-
-**Response**:
-```json
-{
-    "model_type": "ChessGemma (Gemma-3 270M fine-tuned)",
-    "fine_tuned_for": "Chess Q&A and analysis",
-    "capabilities": [
-        "Opening analysis",
-        "Tactical explanations",
-        "Strategic concepts"
-    ],
-    "limitations": [
-        "No real-time engine analysis",
-        "Limited to text-based responses"
-    ]
-}
-```
-
-##### `POST /api/debug/compare`
-Compare engine-mode, tutor-mode, and Stockfish best move for a FEN.
-
-Request body:
-```json
-{ "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "depth": 8 }
-```
-
-Response includes moves for quick triage.
 
 #### Runtime Metrics
 Training logs include CPU and RAM usage per step for quick monitoring on macOS MPS.
