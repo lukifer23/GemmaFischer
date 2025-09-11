@@ -30,6 +30,11 @@ class Router:
         time_limit_ms: int = 5000,
     ) -> Optional[chess.Move]:
         mode_lc = (mode or "").strip().lower()
+        # Switch adapter by mode for MoE
+        if mode_lc == "tutor":
+            self.inference.set_active_adapter("tutor")
+        else:
+            self.inference.set_active_adapter("uci")
         if mode_lc == "tutor":
             _, move = self._tutor.analyze_and_suggest(board, style=style, depth=depth, time_limit_ms=time_limit_ms)
             return move
@@ -46,6 +51,7 @@ class Router:
         return self._tutor.analyze_and_suggest(board, style=style, depth=depth, time_limit_ms=time_limit_ms)
 
     def answer(self, question: str) -> str:
+        self.inference.set_active_adapter("director")
         return self._director.answer(question)
 
 

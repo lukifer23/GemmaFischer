@@ -37,13 +37,23 @@ if str(PROJECT_ROOT) not in sys.path:
 
 def log_system_stats(prefix=""):
     vm = psutil.virtual_memory()
+    sm = psutil.swap_memory()
     cpu = psutil.cpu_percent(interval=None)
+    proc = psutil.Process()
+    rss = getattr(proc.memory_info(), 'rss', 0)
     return {
         'timestamp': datetime.utcnow().isoformat() + 'Z',
         'prefix': prefix,
         'cpu_percent': cpu,
+        # system memory
         'mem_total': vm.total,
         'mem_available': vm.available,
+        'mem_used_calc': max(0, vm.total - vm.available),
+        # swap
+        'swap_total': getattr(sm, 'total', 0),
+        'swap_used': getattr(sm, 'used', 0),
+        # process rss
+        'proc_rss': rss,
     }
 
 
@@ -72,8 +82,13 @@ class CustomCallback(TrainerCallback):
             loss_str = f"{loss_val:.4f}" if isinstance(loss_val, (int, float)) else str(loss_val)
             cpu_val = system_stats['cpu_percent']
             cpu_str = f"{cpu_val:.1f}" if isinstance(cpu_val, (int, float)) else str(cpu_val)
-            mem_used_gb = (system_stats['mem_total'] - system_stats['mem_available']) / (1024**3)
-            print(f"Step {state.global_step}/{state.max_steps} ({progress:.1f}%) | Loss: {loss_str} | CPU: {cpu_str}% | RAM: {mem_used_gb:.1f}GB")
+            mem_used_gb = system_stats['mem_used_calc'] / (1024**3)
+            proc_rss_gb = system_stats['proc_rss'] / (1024**3)
+            swap_used_gb = system_stats['swap_used'] / (1024**3)
+            print(
+                f"Step {state.global_step}/{state.max_steps} ({progress:.1f}%) | Loss: {loss_str} | "
+                f"CPU: {cpu_str}% | SystemUsed: {mem_used_gb:.1f}GB | ProcRSS: {proc_rss_gb:.2f}GB | SwapUsed: {swap_used_gb:.1f}GB"
+            )
 
             # Save enhanced logs
             log_file = Path(args.output_dir) / 'enhanced_train_log.jsonl'
@@ -190,6 +205,8 @@ def main():
     parser.add_argument('--config', type=str, default='configs/lora_finetune.yaml')
     parser.add_argument('--expert', type=str, default='all', choices=['all', 'uci', 'tutor', 'director'], help='Filter dataset by task for MoE expert training')
     parser.add_argument('--use_instruction_collator', action='store_true', help='Use instruction-style collator (prompt masked, supervise response only)')
+    parser.add_argument('--disable_eval', action='store_true', help='Disable periodic evaluation to speed up smoke runs')
+    parser.add_argument('--eval_steps', type=int, default=None, help='Override evaluation frequency in steps (when eval enabled)')
     args = parser.parse_args()
 
     with open(args.config, 'r', encoding='utf-8') as f:
@@ -312,6 +329,10 @@ def main():
     if torch.backends.mps.is_available():
         per_device_train_batch_size = min(per_device_train_batch_size, 1)
 
+    # Evaluation configuration
+    eval_strategy_value = 'no' if args.disable_eval else 'steps'
+    eval_steps_value = int(args.eval_steps) if (args.eval_steps is not None) else save_steps
+
     training_args = TrainingArguments(
         output_dir=str(out_dir),
         per_device_train_batch_size=per_device_train_batch_size,
@@ -322,10 +343,10 @@ def main():
         logging_steps=logging_steps,
         save_steps=save_steps,
         save_total_limit=3,  # Keep only last 3 checkpoints to save disk space
-        eval_strategy="steps",
-        eval_steps=save_steps,  # Evaluate at same frequency as saving
+        eval_strategy=eval_strategy_value,
+        eval_steps=eval_steps_value,
         save_strategy="steps",
-        load_best_model_at_end=True,
+        load_best_model_at_end=(not args.disable_eval),
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         fp16=tcfg.get('fp16', False),
@@ -378,7 +399,6 @@ def main():
             if not use_instruction:
                 mixed = mixed.map(preprocess, batched=False)
             train_dataset, eval_dataset = split_train_eval(mixed)
-
             # Override steps for this phase if provided
             phase_args = TrainingArguments(
                 **{**training_args.to_dict(), 'max_steps': phase_steps or max_steps}
@@ -388,7 +408,7 @@ def main():
                 model=model,
                 args=phase_args,
                 train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
+                eval_dataset=None if args.disable_eval else eval_dataset,
                 data_collator=data_collator,
                 callbacks=[CustomCallback()]
             )
@@ -402,7 +422,7 @@ def main():
             model=model,
             args=training_args,
             train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
+            eval_dataset=None if args.disable_eval else eval_dataset,
             data_collator=data_collator,
             callbacks=[CustomCallback()]
         )

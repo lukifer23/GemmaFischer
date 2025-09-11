@@ -150,6 +150,15 @@ class ChessModelInterface:
 
     def generate_response(self, question: str, context: Optional[str] = None, mode: str = 'tutor', max_length: int = 200) -> Dict[str, Any]:
         print(f"🎯 ChessModel.generate_response called with mode: {mode}")
+        # Minimal MoE adapter switching for web paths
+        try:
+            if mode == 'engine':
+                self._inference.set_active_adapter('uci')
+            elif mode == 'tutor':
+                # Keep current unless ask endpoint sets director explicitly
+                pass
+        except Exception:
+            pass
         return self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
 
 
@@ -208,6 +217,13 @@ def ask_question():
             mode = 'tutor'
         elif expert == 'director':
             mode = 'tutor'  # director uses chat-style; keep tutor decoding defaults
+
+        # Switch adapter explicitly by expert
+        try:
+            if expert in ('uci', 'tutor', 'director'):
+                chess_model._inference.set_active_adapter(expert)
+        except Exception:
+            pass
 
         # Generate response with RAG context
         result = chess_model.generate_response(question, enhanced_context, mode=mode)

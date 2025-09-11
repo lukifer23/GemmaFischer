@@ -68,9 +68,9 @@
 - [x] `src/inference/experts/uci_expert.py`: strict UCI output, legality enforcement, Stockfish fallback.
 - [x] `src/inference/experts/tutor_expert.py`: CoT scaffold, explanation + final UCI move, legality check.
 - [x] `src/inference/experts/director_expert.py`: knowledge-first answers; may call tutor/uci as needed.
-- [ ] Extend `src/inference/inference.py`: multi-adapter load and `set_adapter(name)` switching.
+- [x] Extend `src/inference/inference.py`: multi-adapter load and `set_adapter(name)` switching.
 - [x] Update `src/inference/uci_bridge.py`: route via router; `Mode=engine` → UCI expert, `Mode=tutor` → Tutor expert.
-- [ ] Update `src/web/app.py`: expose expert selector (Auto/UCI/Tutor/Director).
+- [x] Update `src/web/app.py`: expose expert selector (Auto/UCI/Tutor/Director).
 - [ ] `docs/MOE_GUIDE.md`: architecture, routing rules, datasets, evaluation.
 
 ### Routing Policy (deterministic v1)
@@ -119,7 +119,7 @@
 
 ### Inference & UCI Bridge
 
-- [ ] Multi-adapter lifecycle: load once, `set_adapter(name)` per request.
+- [x] Multi-adapter lifecycle: load once, `set_adapter(name)` per request.
 - [ ] Expert-specific decoding defaults:
   - [ ] UCI: do_sample=false, temperature=0, top_p=1, max_new_tokens=4–5.
   - [ ] Tutor: temperature 0.6–0.8, top_p 0.85–0.9.
@@ -560,7 +560,7 @@
   - [x] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
   - [x] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
 
-- [ ] Deterministic engine decoding defaults:
+- [x] Deterministic engine decoding defaults:
   - [x] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
   - [x] Add `do_sample` parameter to `ChessGemmaInference.generate_text` and expose decoding kwargs
 
@@ -592,6 +592,7 @@
 - [ ] Logging & debug controls:
   - [ ] Gate verbose inference logs behind `CHESSGEMMA_DEBUG=1`
   - [ ] Set `dataloader_pin_memory=False` on MPS, fix `datetime.utcnow()`
+  - [x] Training evaluation toggles: `--disable_eval`, `--eval_steps` override in `train_lora_poc.py`
 
 - [ ] Redundancy cleanup:
   - [ ] Archive/remove `src/web/stockfish_match.py` if superseded by eval tools

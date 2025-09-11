@@ -2,7 +2,7 @@
 model:
   pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
 training:
-  output_dir: "checkpoints/lora_formatted"
+  output_dir: "checkpoints/lora_director"
   per_device_train_batch_size: 2  # Conservative for memory
   gradient_accumulation_steps: 8  # Effective batch size = 16
   num_train_epochs: 1
@@ -30,4 +30,4 @@ lora:
   bias: "lora_only"
 # Use the formatted combined dataset
 dataset:
-  path: "data/formatted/uci_expert.jsonl"
+  path: "data/formatted/director_expert.jsonl"

@@ -80,6 +80,16 @@ class ChessGemmaInference:
         self._engine_template: Optional[str] = None
         self._tutor_template: Optional[str] = None
 
+        # Adapter management
+        self._adapter_paths: Dict[str, Path] = {}
+        # Map physical adapter names -> loaded flag
+        self._loaded_adapters: Dict[str, bool] = {}
+        # Map logical expert name (uci/tutor/director) -> physical adapter name (e.g., uci@checkpoint-600)
+        self._logical_to_physical: Dict[str, str] = {}
+        # Track which path a logical expert was loaded from
+        self._adapter_loaded_from: Dict[str, Path] = {}
+        self._active_adapter: Optional[str] = None
+
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
         if self.is_loaded and self.model is not None and self.tokenizer is not None:
@@ -104,18 +114,94 @@ class ChessGemmaInference:
                 if self.adapter_path and Path(self.adapter_path).exists():
                     self.model = PeftModel.from_pretrained(base_model, str(self.adapter_path), is_trainable=False)
                     applied_adapter = True
+                    self._active_adapter = "default"
+                    self._loaded_adapters["default"] = True
             except Exception:
                 self.model = base_model
             if not applied_adapter:
                 self.model = self.model or base_model
 
             self.model.eval()
+            # Discover known expert adapters on disk for quick switching
+            self.refresh_adapters()
             self.is_loaded = True
             return True
         except Exception as e:
             print(f"Error loading model: {e}")
             self.is_loaded = False
             return False
+
+    def _discover_adapter_paths(self) -> None:
+        """Populate mapping of expert names to latest adapter checkpoint paths."""
+        checkpoints_root = self.project_root / "checkpoints"
+        candidates = {
+            "uci": [checkpoints_root / "lora_uci", checkpoints_root / "lora_formatted"],
+            "tutor": [checkpoints_root / "lora_tutor"],
+            "director": [checkpoints_root / "lora_director"],
+        }
+        for expert, dirs in candidates.items():
+            latest = _find_latest_dir([str(d / "checkpoint-*") for d in dirs if d.exists()])
+            if latest:
+                self._adapter_paths[expert] = latest
+
+    def _ensure_adapter_loaded(self, logical_name: str, path: Path) -> None:
+        """Load adapter weights if not already loaded from this path.
+
+        Uses physical adapter names of the form '<logical>@<checkpoint-dir-name>' to allow
+        reloading newer checkpoints while the process is running.
+        """
+        if not hasattr(self.model, "load_adapter"):
+            return
+        # If already loaded from this exact path, nothing to do
+        loaded_from = self._adapter_loaded_from.get(logical_name)
+        if loaded_from and loaded_from == path:
+            return
+        # Create a physical name tied to checkpoint directory
+        physical_name = f"{logical_name}@{path.name}"
+        if self._loaded_adapters.get(physical_name):
+            # Already loaded this exact physical adapter; just (re)map logical -> physical
+            self._logical_to_physical[logical_name] = physical_name
+            self._adapter_loaded_from[logical_name] = path
+            return
+        try:
+            self.model.load_adapter(str(path), adapter_name=physical_name)
+            self._loaded_adapters[physical_name] = True
+            self._logical_to_physical[logical_name] = physical_name
+            self._adapter_loaded_from[logical_name] = path
+        except Exception:
+            pass
+
+    def refresh_adapters(self) -> None:
+        """Re-discover latest checkpoints and ensure corresponding adapters are loaded.
+
+        Safe to call frequently (e.g., before switching adapters) to pick up freshly saved checkpoints
+        without restarting the server process.
+        """
+        self._discover_adapter_paths()
+        for logical_name, path in self._adapter_paths.items():
+            self._ensure_adapter_loaded(logical_name, path)
+
+    def set_active_adapter(self, name: Optional[str]) -> None:
+        """Switch the active LoRA adapter by logical name (uci/tutor/director).
+
+        This method re-discovers latest checkpoints and loads them on demand.
+        """
+        if not name:
+            return
+        # Refresh to capture newly saved checkpoints
+        self.refresh_adapters()
+        # Ensure requested logical adapter is loaded (loads latest if newer exists)
+        path = self._adapter_paths.get(name)
+        if path is not None:
+            self._ensure_adapter_loaded(name, path)
+        # Resolve to physical adapter name
+        physical = self._logical_to_physical.get(name)
+        if hasattr(self.model, "set_adapter") and physical and self._loaded_adapters.get(physical):
+            try:
+                self.model.set_adapter(physical)
+                self._active_adapter = name
+            except Exception:
+                pass
 
     def _load_prompt_template(self, mode: str) -> str:
         """Load prompt template from prompts directory, fallback to defaults."""
@@ -343,6 +429,10 @@ class ChessGemmaInference:
             "adapter_path": str(self.adapter_path) if self.adapter_path else None,
             "is_loaded": self.is_loaded,
             "device": device,
+            "active_adapter": self._active_adapter,
+            "available_adapters": {
+                k: str(v) for k, v in self._adapter_paths.items()
+            },
         }
 
 
