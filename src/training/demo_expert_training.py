@@ -158,7 +158,7 @@ class ExpertTrainingDemo:
             print("   📊 Data Preparation:")
             print(f"     • Samples: {len(samples)}")
             print("     • Filtering: ✓ Applied")
-            print("     • Formatting: ✓ Expert-specific"
+            print("     • Formatting: ✓ Expert-specific")
             # Simulate training metrics
             print("   🎯 Simulated Training Results:")
             print("     • Epochs: 1")
@@ -252,9 +252,14 @@ class ExpertTrainingDemo:
         # Summary
         print("\n🎉 Expert Training Demo Complete!")
         print("=" * 60)
-        print("📊 Summary:"        print(f"   • Data samples processed: {sum(len(samples) for samples in expert_samples.values())}")
-        print("   • Expert types configured: 3"        print("   • Training pipeline: ✓ Ready"        print("   • Performance projections: ✓ Calculated"        print("   • Integration ready: ✓ Yes"
-        print("\n🚀 Next Steps:"        print("   1. Run full training: python src/training/expert_trainer.py --expert all")
+        print("📊 Summary:")
+        print(f"   • Data samples processed: {sum(len(samples) for samples in expert_samples.values())}")
+        print("   • Expert types configured: 3")
+        print("   • Training pipeline: ✓ Ready")
+        print("   • Performance projections: ✓ Calculated")
+        print("   • Integration ready: ✓ Yes")
+        print("\n🚀 Next Steps:")
+        print("   1. Run full training: python src/training/expert_trainer.py --expert all")
         print("   2. Integrate experts: Update inference.py with expert switching")
         print("   3. Deploy system: Use enhanced inference for production")
         print("   4. Monitor performance: Run comprehensive evaluation regularly")
