@@ -42,7 +42,7 @@ GemmaFischer combines several advanced components to create a comprehensive ches
 
 ## Current Status
 
-### Completed Milestones ✅
+### Completed Milestones
 - **Basic LoRA Pipeline**: Gemma-3 270M model fine-tuning with Unsloth optimization
 - **Chess Engine Integration**: Stockfish UCI engine integration for move validation
 - **Web Interface**: Flask-based web application with chess board visualization
@@ -51,20 +51,20 @@ GemmaFischer combines several advanced components to create a comprehensive ches
 - **Evaluation Framework**: Chess-specific metrics and testing tools
 - **MPS Optimization**: Native Apple Silicon acceleration with Metal Performance Shaders
 
-### Current Performance 📊
+### Current Performance
 - **Training Loss**: Improved from ~3.0 to ~1.2 in early epochs
 - **Chess Relevance**: ~85% for chess-specific questions
 - **Move Accuracy**: ~70% for basic chess moves
 - **Training Speed**: ~2-3 steps/second on M3 Pro
 - **Memory Usage**: ~4-6GB (MPS-optimized)
 
-### Known Issues & Limitations ⚠️
+### Known Issues & Limitations
 - **Dataset Quality**: Initial training data included overly long sequences with generic answers
 - **Output Accuracy**: Model sometimes suggests illegal moves or incorrect explanations
 - **Training Stability**: Issues with resume functionality and progress tracking
 - **Evaluation Metrics**: Current evaluation is rudimentary and needs enhancement
 
-### Next Priority Tasks 🎯
+### Next Priority Tasks
 1. **Dataset Overhaul**: Curate high-quality, focused chess Q&A data
 2. **Enhanced Evaluation**: Implement comprehensive benchmarking suite
 3. **Embedding System**: Add similar position retrieval capabilities
@@ -359,7 +359,7 @@ flake8 src/ tests/
 
 ## Comprehensive Roadmap
 
-### Phase 1: Foundation (Completed) ✅
+### Phase 1: Foundation (Completed)
 - [x] Basic LoRA fine-tuning pipeline
 - [x] Chess engine integration with Stockfish
 - [x] Web interface with board visualization
@@ -368,7 +368,7 @@ flake8 src/ tests/
 - [x] Basic evaluation framework
 - [x] MPS optimization for Apple Silicon
 
-### Phase 2: Data & Quality (In Progress) 🚧
+### Phase 2: Data & Quality (In Progress)
 - [ ] **Dataset Overhaul**: Curate high-quality chess Q&A data
   - [ ] ChessInstruct v1.5 refinement
   - [ ] Lichess puzzle dataset integration
@@ -384,7 +384,7 @@ flake8 src/ tests/
   - [ ] Multi-task learning optimization
   - [ ] Style conditioning implementation
 
-### Phase 3: Advanced Features (Planned) 📋
+### Phase 3: Advanced Features (Planned)
 - [ ] **Embedding System**: Similar position retrieval
   - [ ] Vector database for chess positions
   - [ ] FAISS-based similarity search
@@ -399,7 +399,7 @@ flake8 src/ tests/
   - [ ] Opening theory and naming
   - [ ] Endgame tablebase integration
 
-### Phase 4: Polish & Deployment (Future) 🔮
+### Phase 4: Polish & Deployment (Future)
 - [ ] **Multi-Model Support**: Different model sizes and variants
 - [ ] **Mobile Integration**: Core ML deployment for iOS
 - [ ] **Performance Optimization**: Quantization and speed improvements

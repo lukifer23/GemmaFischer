@@ -1,5 +1,5 @@
 # Changelog
-## [2.1.0] - 2025-09-10
+## [2.1.0] - 2025-01-28
 
 ### Added
 - Unified inference API enhancements: engine-mode strict UCI postprocessing; improved error handling.
