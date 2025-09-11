@@ -150,13 +150,23 @@ class ChessModelInterface:
 
     def generate_response(self, question: str, context: Optional[str] = None, mode: str = 'tutor', max_length: int = 200) -> Dict[str, Any]:
         print(f"🎯 ChessModel.generate_response called with mode: {mode}")
+        # Ensure model is loaded on first request
+        if not self.is_loaded:
+            print("🔄 Loading model on-demand for web request...")
+            if not self.load_model():
+                return {
+                    'error': 'Model not loaded',
+                    'response': '',
+                    'confidence': 0.0
+                }
         # Minimal MoE adapter switching for web paths
         try:
             if mode == 'engine':
                 self._inference.set_active_adapter('uci')
             elif mode == 'tutor':
-                # Keep current unless ask endpoint sets director explicitly
-                pass
+                self._inference.set_active_adapter('tutor')
+            elif mode == 'director':
+                self._inference.set_active_adapter('director')
         except Exception:
             pass
         return self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
@@ -216,7 +226,7 @@ def ask_question():
         elif expert == 'tutor':
             mode = 'tutor'
         elif expert == 'director':
-            mode = 'tutor'  # director uses chat-style; keep tutor decoding defaults
+            mode = 'director'
 
         # Switch adapter explicitly by expert
         try:
@@ -225,8 +235,25 @@ def ask_question():
         except Exception:
             pass
 
+        # If question contains a FEN, include it explicitly in context so tutor has state
+        try:
+            import re
+            m = re.search(r"FEN:\s*([^\n]+)", question, flags=re.IGNORECASE)
+            fen_from_q = m.group(1).strip() if m else None
+            if fen_from_q:
+                enhanced_context = f"Current position: {fen_from_q}\n\n{enhanced_context}" if enhanced_context else f"Current position: {fen_from_q}"
+        except Exception:
+            pass
+
         # Generate response with RAG context
         result = chess_model.generate_response(question, enhanced_context, mode=mode)
+        # Detailed routing + context diagnostics
+        try:
+            info = chess_model._inference.get_model_info()
+            print(f"🔧 Active adapter: {info.get('active_adapter')} | Available: {list(info.get('available_adapters', {}).keys())}")
+            print(f"🧵 Prompt chars: {result.get('prompt_len_chars')} | Answer chars: {result.get('answer_len_chars')}")
+        except Exception:
+            pass
         
         # Log detailed performance metrics
         response_time = time.time() - start_time
@@ -269,7 +296,12 @@ def ask_question():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
-    model_status = "loaded" if chess_model.is_loaded else "not_loaded"
+    # Also query underlying inference status to avoid stale flag
+    try:
+        inf_loaded = getattr(chess_model._inference, 'is_loaded', False)
+    except Exception:
+        inf_loaded = False
+    model_status = "loaded" if (chess_model.is_loaded or inf_loaded) else "not_loaded"
 
     return jsonify({
         'status': 'healthy',
@@ -352,6 +384,13 @@ def debug_compare():
 @app.route('/api/model_info', methods=['GET'])
 def get_model_info():
     """Get information about the loaded model."""
+    try:
+        inf = chess_model._inference
+        loaded = inf.is_loaded
+        model_info = inf.get_model_info() if loaded else {}
+    except Exception:
+        loaded = False
+        model_info = {}
     info = {
         'model_type': 'ChessGemma (Gemma-3 270M fine-tuned)',
         'fine_tuned_for': 'Chess Q&A and analysis',
@@ -366,7 +405,11 @@ def get_model_info():
             'No real-time engine analysis',
             'Limited to text-based responses',
             'May not detect complex tactical combinations'
-        ]
+        ],
+        'loaded': loaded,
+        'device': model_info.get('device') if loaded else None,
+        'active_adapter': model_info.get('active_adapter') if loaded else None,
+        'available_adapters': model_info.get('available_adapters') if loaded else {},
     }
 
     return jsonify(info)
@@ -526,6 +569,16 @@ def play_match_move():
         if is_model_turn:
             # Model's turn - no time limit
             def model_generator(question, context, mode="engine"):
+                # Ensure UCI adapter for engine mode; tutor/director otherwise
+                try:
+                    if mode == 'engine':
+                        chess_model._inference.set_active_adapter('uci')
+                    elif mode == 'tutor':
+                        chess_model._inference.set_active_adapter('tutor')
+                    elif mode == 'director':
+                        chess_model._inference.set_active_adapter('director')
+                except Exception:
+                    pass
                 return chess_model.generate_response(question, context, mode)
             
             move_result = stockfish_match.get_model_move(model_generator, legal_moves, chess_rag)
@@ -535,7 +588,7 @@ def play_match_move():
             move_result = stockfish_match.get_stockfish_move()
             player = "Stockfish"
         
-        return jsonify({
+        payload = {
             'success': True,
             'move': move_result.move,
             'san': move_result.san,
@@ -546,7 +599,11 @@ def play_match_move():
             'depth': move_result.depth,
             'is_game_over': stockfish_match.board.is_game_over(),
             'game_result': stockfish_match._determine_result() if stockfish_match.board.is_game_over() else None
-        })
+        }
+        if payload['is_game_over']:
+            print("\n🏁 GAME OVER DETECTED")
+            print(f"Winner/Reason: {payload['game_result']}")
+        return jsonify(payload)
         
     except Exception as e:
         print(f"Match move error: {e}")
@@ -612,6 +669,8 @@ def get_ai_move():
         fen = chess_game.get_fen()
         current_player = chess_game.current_player
         legal_moves = chess_game.get_legal_moves()
+        data = request.get_json() or {}
+        expert = (data.get('expert') or 'tutor').strip().lower()
         
         start_time = time.time()
         print(f"\n🤖 AI MOVE REQUEST")
@@ -626,28 +685,26 @@ def get_ai_move():
                 'game_state': chess_game.game_state
             })
         
-        # Create a more educational question for the AI
-        question = f"""You are playing as {current_player} in this chess position: {fen}
-
-The legal moves available are: {', '.join(legal_moves[:10])}
-
-Please:
-1. Choose the best move from the legal moves
-2. Explain why this move is good
-3. Comment on what the opponent just played
-4. Suggest what the opponent should consider next
-
-Respond with your chosen move first, then your analysis."""
-        
-        # Get RAG knowledge for the position
-        rag_knowledge = chess_rag.get_relevant_knowledge(question, fen)
+        # Guided Play pipeline
+        # 1) Use UCI expert to pick a precise move
+        # 2) If Tutor selected, generate a concise explanation after making the move
+        engine_question = (
+            f"FEN: {fen}\n"
+            "Move:\n"
+            "Mode: Engine\n"
+            "Generate the best move in UCI format (e.g., e2e4). Respond with only the move."
+        )
+        rag_knowledge = chess_rag.get_relevant_knowledge(engine_question, fen)
         rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
+        result_engine = chess_model.generate_response(
+            engine_question,
+            context=f"Current position: {fen}",
+            mode='engine',
+            max_length=16
+        )
         
-        # Get AI response with RAG context
-        result = chess_model.generate_response(question, context=f"{rag_context}Current position: {fen}")
-        
-        # Try to extract a move from the response
-        response_text = result.get('response', '')
+        # Try to extract a move from the engine response
+        response_text = result_engine.get('response', '')
         try:
             b = chess.Board(fen)
             strict_mv = extract_first_legal_move_uci(response_text, b)
@@ -655,21 +712,47 @@ Respond with your chosen move first, then your analysis."""
             strict_mv = None
         move_uci = strict_mv or extract_move_from_response(response_text, legal_moves)
         
-        print(f"AI Response: {response_text[:200]}...")
+        print(f"Engine text: {response_text[:200]}...")
         print(f"Extracted move: {move_uci}")
         
         # Log performance metrics for AI move
         response_time = time.time() - start_time
-        tokens_per_second = len(response_text.split()) / response_time if response_time > 0 else 0
+        tokens_per_second = len((response_text or '').split()) / response_time if response_time > 0 else 0
         print(f"⏱️  AI Response Time: {response_time:.2f}s")
         print(f"🚀 AI Tokens/Second: {tokens_per_second:.1f}")
-        print(f"📊 AI Response Length: {len(response_text)} chars")
+        print(f"📊 AI Response Length: {len(response_text or '')} chars")
         
         if move_uci and move_uci in legal_moves:
             # Make the AI move
             move_result = chess_game.make_move(move_uci)
-            move_result['ai_response'] = response_text
-            move_result['ai_confidence'] = result.get('confidence', 0.0)
+            if expert == 'uci':
+                # Engine-only path, return raw engine text
+                move_result['ai_response'] = response_text
+                move_result['ai_confidence'] = result_engine.get('confidence', 0.0)
+            else:
+                # Tutor explanation (concise)
+                pre_fen = fen
+                post_fen = move_result.get('fen', chess_game.get_fen())
+                move_san = move_result.get('san', move_uci)
+                tutor_question = (
+                    f"FEN before: {pre_fen}\n"
+                    f"FEN after: {post_fen}\n"
+                    f"We played {move_san} ({move_uci}).\n\n"
+                    "In 3 short bullets, explain: \n"
+                    "- Why this move is good now (threats/ideas)\n"
+                    "- Opponent's best reply and our follow-up\n"
+                    "- One practical tip for the user in this position\n\n"
+                    "Keep it under 120 words."
+                )
+                result_tutor = chess_model.generate_response(
+                    tutor_question,
+                    context=f"Current position: {post_fen}",
+                    mode='tutor',
+                    max_length=180
+                )
+                tutor_text = result_tutor.get('response', '')
+                move_result['ai_response'] = tutor_text
+                move_result['ai_confidence'] = result_tutor.get('confidence', 0.0)
 
             print(f"AI Move: {move_uci}")
             print(f"Success: {move_result['success']}")

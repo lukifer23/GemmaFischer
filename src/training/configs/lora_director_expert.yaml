@@ -1,0 +1,30 @@
+model:
+  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+training:
+  output_dir: "checkpoints/lora_director"
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 8
+  num_train_epochs: 1
+  max_steps: 1500
+  learning_rate: 1e-4
+  fp16: false
+  logging_steps: 50
+  save_steps: 200
+  eval_strategy: "steps"
+  eval_steps: 200
+  save_strategy: "steps"
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+  lr_scheduler_type: "cosine"
+  warmup_steps: 100
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+lora:
+  r: 16
+  lora_alpha: 32
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
+  dropout: 0.05
+dataset:
+  path: "data/formatted/director_expert.jsonl"
+

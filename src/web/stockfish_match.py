@@ -121,22 +121,20 @@ class StockfishMatch:
         move_uci = result.move.uci()
         san = self.board.san(result.move)
         
-        # Get evaluation info
+        # Get evaluation info (robust handling across python-chess versions)
         evaluation = None
         depth = None
         if hasattr(result, 'info') and 'score' in result.info:
-            score = result.info['score']
             try:
-                if hasattr(score, 'is_mate') and score.is_mate():
-                    evaluation = float('inf') if score.mate() > 0 else float('-inf')
-                elif hasattr(score, 'relative'):
-                    evaluation = score.relative.score(mate_score=10000) / 100.0
-                elif hasattr(score, 'white'):
-                    # Handle PovScore object
-                    if hasattr(score.white, 'mate') and score.white.mate is not None:
-                        evaluation = float('inf') if score.white.mate > 0 else float('-inf')
-                    elif hasattr(score.white, 'cp') and score.white.cp is not None:
-                        evaluation = score.white.cp / 100.0
+                pov_score = result.info['score']  # chess.engine.PovScore or similar
+                # Normalize to Score (relative to the side to move)
+                score_obj = getattr(pov_score, 'relative', pov_score)
+                # If mate is reported, use +/-inf; else use centipawns
+                if hasattr(score_obj, 'is_mate') and score_obj.is_mate():
+                    mate_val = score_obj.mate() if hasattr(score_obj, 'mate') else None
+                    evaluation = float('inf') if (mate_val is not None and mate_val > 0) else float('-inf')
+                elif hasattr(score_obj, 'score'):
+                    evaluation = score_obj.score(mate_score=10000) / 100.0
             except Exception as e:
                 print(f"⚠️  Evaluation error: {e}")
                 evaluation = 0.0

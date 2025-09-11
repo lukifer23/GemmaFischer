@@ -90,6 +90,13 @@ class ChessGemmaInference:
         self._adapter_loaded_from: Dict[str, Path] = {}
         self._active_adapter: Optional[str] = None
 
+        # Simple memoization for deterministic engine prompts (FEN -> move)
+        from collections import OrderedDict  # local import to avoid top-level pollution
+        self._engine_cache_max = 512
+        self._engine_cache: "OrderedDict[str, str]" = OrderedDict()
+        # Feature flags
+        self._engine_rerank_enabled = (os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0', 'false', 'False'))
+
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
         if self.is_loaded and self.model is not None and self.tokenizer is not None:
@@ -132,16 +139,35 @@ class ChessGemmaInference:
             return False
 
     def _discover_adapter_paths(self) -> None:
-        """Populate mapping of expert names to latest adapter checkpoint paths."""
+        """Populate mapping of expert names to latest adapter checkpoint paths.
+
+        Primary targets are expert-specific directories. If none found for an expert,
+        fall back to generic LoRA runs so the system still functions, with visibility
+        into which checkpoint is actually used.
+        """
         checkpoints_root = self.project_root / "checkpoints"
-        candidates = {
-            "uci": [checkpoints_root / "lora_uci", checkpoints_root / "lora_formatted"],
+
+        # Primary expert-specific locations
+        primary = {
+            "uci": [checkpoints_root / "lora_uci"],
             "tutor": [checkpoints_root / "lora_tutor"],
             "director": [checkpoints_root / "lora_director"],
         }
-        for expert, dirs in candidates.items():
-            latest = _find_latest_dir([str(d / "checkpoint-*") for d in dirs if d.exists()])
-            if latest:
+        # Fallback generic runs if an expert-specific adapter is missing
+        fallback_common = [
+            checkpoints_root / "lora_full",
+            checkpoints_root / "lora_poc",
+            checkpoints_root / "lora_curriculum",
+            checkpoints_root / "lora_formatted",  # may contain director-oriented runs
+        ]
+
+        self._adapter_paths.clear()
+        for expert, primary_dirs in primary.items():
+            latest = _find_latest_dir([str(d / "checkpoint-*") for d in primary_dirs if d.exists()])
+            if latest is None:
+                # try fallbacks
+                latest = _find_latest_dir([str(d / "checkpoint-*") for d in fallback_common if d.exists()])
+            if latest is not None:
                 self._adapter_paths[expert] = latest
 
     def _ensure_adapter_loaded(self, logical_name: str, path: Path) -> None:
@@ -202,6 +228,13 @@ class ChessGemmaInference:
                 self._active_adapter = name
             except Exception:
                 pass
+        else:
+            # Provide visibility if requested adapter is unavailable
+            try:
+                avail = ", ".join(sorted(self._adapter_paths.keys())) or "none"
+                print(f"[Router] Requested adapter '{name}' not available. Available: {avail}")
+            except Exception:
+                pass
 
     def _load_prompt_template(self, mode: str) -> str:
         """Load prompt template from prompts directory, fallback to defaults."""
@@ -213,7 +246,7 @@ class ChessGemmaInference:
                     "Do not provide explanations, just the move."
                 )
             return self._engine_template
-        else:
+        elif mode == "tutor":
             if self._tutor_template is None:
                 # Use a proper system prompt instead of the documentation file
                 self._tutor_template = (
@@ -221,9 +254,15 @@ class ChessGemmaInference:
                     "You MUST be aware of the current board position, material balance, and tactical situation. "
                     "When making moves, explain your reasoning based on the ACTUAL position, comment on the opponent's previous move, "
                     "and suggest what they should consider next. Be conversational and educational, "
-                    "like a chess teacher playing a teaching game. Always provide clear explanations based on the real position."
+                    "like a chess teacher playing a teaching game. Always provide clear explanations based on the real position. "
+                    "CRITICAL: End your reply with a single line of the form: Best move: <uci> (e.g., Best move: e2e4)."
                 )
             return self._tutor_template
+        else:
+            # Director default
+            return (
+                "You are a concise, accurate chess teacher. Answer clearly, avoid fabrications, cite rules or standard principles when relevant."
+            )
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
         system_prompt = self._load_prompt_template(mode)
@@ -231,6 +270,15 @@ class ChessGemmaInference:
         if mode == "tutor":
             full_question = f"{context}\n\n{question}" if context else question
             prompt = f"Chess Tutor: {system_prompt}\n\nQuestion: {full_question}\n\nAnswer:"
+            return [{"role": "user", "content": prompt}]
+        if mode == "director":
+            full_question = f"{context}\n\n{question}" if context else question
+            sys_prompt = self._load_prompt_template("director")
+            prompt = (
+                f"Chess Director: {sys_prompt}\n\n"
+                f"Question: {full_question}\n\n"
+                "Answer:"
+            )
             return [{"role": "user", "content": prompt}]
 
         # Engine mode expects strict minimal prompt: FEN then "Move:"
@@ -275,16 +323,23 @@ class ChessGemmaInference:
 
             with torch.no_grad():
                 if mode == "engine":
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_new_tokens=max_new_tokens,
-                        do_sample=False,
-                        temperature=0.0,
-                        top_p=1.0,
-                        pad_token_id=self.tokenizer.eos_token_id,
-                        eos_token_id=self.tokenizer.eos_token_id,
-                        use_cache=True,
-                    )
+                    # Engine mode: try cached + N-best sampling with legality + Stockfish re-ranking
+                    answer = self._generate_engine_move(question, messages[0]['content'], max_new_tokens)
+                    if answer:
+                        decoded = messages[0]['content'] + answer
+                        outputs = None  # bypass default path
+                    else:
+                        # Fallback to deterministic single-shot decoding
+                        outputs = self.model.generate(
+                            **inputs,
+                            max_new_tokens=max_new_tokens,
+                            do_sample=False,
+                            temperature=0.0,
+                            top_p=1.0,
+                            pad_token_id=self.tokenizer.eos_token_id,
+                            eos_token_id=self.tokenizer.eos_token_id,
+                            use_cache=True,
+                        )
                 else:
                     outputs = self.model.generate(
                         **inputs,
@@ -298,12 +353,15 @@ class ChessGemmaInference:
                         use_cache=True,
                     )
 
-            decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            if mode == "engine" and outputs is None:
+                decoded = decoded  # already built above (prompt + answer)
+            else:
+                decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
             # Debug logging for response
             print(f"Raw Response Length: {len(decoded)} chars")
             print(f"Raw Response Preview: {decoded[:300]}{'...' if len(decoded) > 300 else ''}")
-            print(f"Raw Response Full: {repr(decoded)}")
+            print(f"Raw Response Full: {decoded}")
             
             # Try to strip prompt prefix if echoed
             if decoded.startswith(prompt_text):
@@ -368,12 +426,21 @@ class ChessGemmaInference:
                         except Exception:
                             mv = None
                 if mv:
+                    # Cache the result for this FEN
+                    try:
+                        if fen:
+                            self._engine_cache_store(fen, mv)
+                    except Exception:
+                        pass
                     answer = mv
                     postprocessed = True
 
             # Simple heuristic confidence
-            word_count = len(answer.split())
-            confidence = max(0.1, min(0.95, word_count / 60.0))
+            if mode == "engine" and answer and len(answer) in (4, 5):
+                confidence = 0.9  # high confidence for a valid UCI token
+            else:
+                word_count = len(answer.split())
+                confidence = max(0.1, min(0.95, word_count / 60.0))
 
             return {
                 "response": answer,
@@ -381,6 +448,8 @@ class ChessGemmaInference:
                 "model_loaded": True,
                 "mode": mode,
                 "postprocessed": postprocessed,
+                "prompt_len_chars": len(prompt_text),
+                "answer_len_chars": len(answer),
             }
         except Exception as e:
             return {
@@ -390,6 +459,115 @@ class ChessGemmaInference:
                 "model_loaded": True,
                 "mode": mode,
             }
+
+    # ----------------------
+    # Engine helpers
+    # ----------------------
+    def _engine_cache_store(self, fen: Optional[str], move: str) -> None:
+        try:
+            if not fen:
+                return
+            # simple LRU behavior with OrderedDict
+            if fen in self._engine_cache:
+                self._engine_cache.pop(fen, None)
+            self._engine_cache[fen] = move
+            # evict oldest
+            while len(self._engine_cache) > self._engine_cache_max:
+                self._engine_cache.popitem(last=False)
+        except Exception:
+            pass
+
+    def _engine_cache_lookup(self, fen: Optional[str]) -> Optional[str]:
+        try:
+            if not fen:
+                return None
+            mv = self._engine_cache.get(fen)
+            if mv is None:
+                return None
+            # refresh LRU order
+            self._engine_cache.pop(fen, None)
+            self._engine_cache[fen] = mv
+            return mv
+        except Exception:
+            return None
+
+    def _generate_engine_move(self, question: str, prompt_text: str, max_new_tokens: int) -> Optional[str]:
+        """Generate an engine-style UCI move using N-best sampling and legality + optional SF re-ranking.
+
+        Returns a move string (uci) when successful, or None to signal fallback.
+        """
+        try:
+            if not self._engine_rerank_enabled:
+                return None
+            from .uci_utils import extract_fen, extract_first_legal_move_uci
+            import chess
+
+            fen = extract_fen(question) or extract_fen(prompt_text)
+            if fen:
+                cached = self._engine_cache_lookup(fen)
+                if cached:
+                    return cached
+
+            board = chess.Board(fen) if fen else None
+
+            inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
+            # Multi-sample candidates
+            n_best = 5
+            gen = self.model.generate(
+                **inputs,
+                max_new_tokens=min(max_new_tokens, 8),
+                do_sample=True,
+                temperature=0.3,
+                top_p=0.95,
+                num_return_sequences=n_best,
+                pad_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                use_cache=True,
+            )
+
+            # Decode candidates and parse potential moves
+            cands: List[str] = []
+            if gen is not None and getattr(gen, "shape", None) is not None and gen.shape[0] >= 1:
+                for i in range(gen.shape[0]):
+                    cand = self.tokenizer.decode(gen[i], skip_special_tokens=True)
+                    if cand.startswith(prompt_text):
+                        cand = cand[len(prompt_text):].strip()
+                    cands.append(cand)
+
+            legal: List[str] = []
+            if board is not None:
+                for s in cands:
+                    mv = extract_first_legal_move_uci(s, board)
+                    if mv:
+                        legal.append(mv)
+
+            # If we have at least one legal candidate, optionally score with engine
+            if legal:
+                best = legal[0]
+                try:
+                    from .chess_engine import ChessEngineManager
+                    side = 1 if board.turn == chess.WHITE else -1
+                    scores: List[float] = []
+                    with ChessEngineManager() as ce:
+                        for mv in legal:
+                            # validate_move analyses resulting position
+                            res = ce.validate_move(board.fen(), mv)
+                            sc = res.centipawn_score if res.centipawn_score is not None else 0
+                            scores.append(side * float(sc))
+                    # pick argmax
+                    if scores:
+                        best = legal[int(max(range(len(scores)), key=lambda i: scores[i]))]
+                except Exception:
+                    # Stockfish unavailable; keep first legal
+                    pass
+
+                if fen:
+                    self._engine_cache_store(fen, best)
+                return best
+
+            return None
+        except Exception:
+            return None
 
     def generate_text(
         self,
@@ -469,4 +647,3 @@ class ChessModelInterface:
 
     def generate_response(self, prompt: str) -> str:
         return self._inference.generate_text(prompt)
-

@@ -177,6 +177,13 @@ function handlePlayModeClick(square, squareIndex) {
     squares[squareIndex].classList.add('selected');
     getLegalMoves(square);
   } else {
+    if (square === selectedSquare) {
+      // Deselect if clicked again
+      squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
+      selectedSquare = null;
+      selectedSquareIndex = null;
+      return;
+    }
     let move = `${selectedSquare}${square}`;
     // Promotion handling
     const fromPiece = squares[selectedSquareIndex]?.textContent;
@@ -186,6 +193,9 @@ function handlePlayModeClick(square, squareIndex) {
       if (!['q','r','b','n'].includes(promo)) promo = 'q';
       move = `${move}${promo}`;
     }
+    // Clear highlights before sending
+    const lm = document.querySelectorAll('.legal-move');
+    lm.forEach(el => el.classList.remove('legal-move'));
     makeMove(move);
     selectedSquare = null;
     selectedSquareIndex = null;
@@ -223,6 +233,24 @@ async function loadGameState() {
   try {
     const response = await fetch('/api/game/state');
     gameState = await response.json();
+    // Update model loaded badge
+    try {
+      const infoResp = await fetch('/api/model_info');
+      const info = await infoResp.json();
+      const header = document.querySelector('#chatPanel .message');
+      const banner = document.querySelector('#modelStatusBanner');
+      const loadedText = info.loaded ? '✅ Model loaded' : '⚠️ Model not loaded';
+      if (banner) {
+        banner.textContent = loadedText;
+      } else {
+        const msg = document.createElement('div');
+        msg.className = 'message info';
+        msg.id = 'modelStatusBanner';
+        msg.innerText = loadedText;
+        const chat = document.getElementById('chatMessages');
+        if (chat) chat.prepend(msg);
+      }
+    } catch (e) { /* ignore */ }
     if (gameState && gameState.fen) {
       initializeChessBoard();
       updateBoardFromFEN(gameState.fen);
@@ -266,9 +294,12 @@ async function makeMove(moveUCI) {
 async function getAIMove() {
   try {
     showMessage('AI is thinking...', 'info', 2000);
+    const expertEl = document.getElementById('expertSelect');
+    const expert = expertEl ? expertEl.value : 'tutor';
     const response = await fetch('/api/game/ai_move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
+    , body: JSON.stringify({ expert })
     });
     const result = await response.json();
     if (result.success) {
@@ -332,6 +363,9 @@ function updateBoardFromFEN(fen) {
     sq.textContent = '';
     sq.classList.remove('selected', 'legal-move');
   });
+  // Validate FEN piece placement has 8 ranks
+  const ranks = boardState.split('/');
+  if (ranks.length !== 8) return;
   let rank = 0;
   let file = 0;
   for (let i = 0; i < boardState.length; i++) {

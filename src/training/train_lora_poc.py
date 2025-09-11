@@ -202,14 +202,34 @@ class InstructionDataCollator:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='configs/lora_finetune.yaml')
+    parser.add_argument('--config', type=str, default='auto', help='Path to YAML config or "auto" to choose per --expert')
     parser.add_argument('--expert', type=str, default='all', choices=['all', 'uci', 'tutor', 'director'], help='Filter dataset by task for MoE expert training')
     parser.add_argument('--use_instruction_collator', action='store_true', help='Use instruction-style collator (prompt masked, supervise response only)')
     parser.add_argument('--disable_eval', action='store_true', help='Disable periodic evaluation to speed up smoke runs')
     parser.add_argument('--eval_steps', type=int, default=None, help='Override evaluation frequency in steps (when eval enabled)')
+    parser.add_argument('--max_steps_override', type=int, default=0, help='Override max_steps from config for quick smoke runs')
     args = parser.parse_args()
 
-    with open(args.config, 'r', encoding='utf-8') as f:
+    # Resolve config path (support "auto" and robust relative paths)
+    cfg_path = args.config
+    cfg_dir = Path(__file__).parent / 'configs'
+    if cfg_path == 'auto':
+        auto_map = {
+            'uci': cfg_dir / 'lora_uci.yaml',
+            'tutor': cfg_dir / 'lora_tutor.yaml',
+            'director': cfg_dir / 'lora_director_expert.yaml',
+            'all': cfg_dir / 'lora_finetune.yaml',
+        }
+        cfg_path = str(auto_map.get(args.expert, auto_map['all']))
+    else:
+        # If not an absolute path and not found relative to CWD, try relative to this script
+        p = Path(cfg_path)
+        if not p.exists():
+            alt = cfg_dir / p.name
+            if alt.exists():
+                cfg_path = str(alt)
+
+    with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
 
     # Cap CPU threads to 2 by default if not set
@@ -298,7 +318,10 @@ def main():
         print('MPS backend detected — applying memory-safe defaults: batch_size=1, max_length=256')
         tokenizer_max_length = 256
 
+    # Default collator preference: enable for tutor/director when not explicitly requested
     use_instruction = bool(args.use_instruction_collator)
+    if not use_instruction and args.expert in ('tutor', 'director'):
+        use_instruction = True
 
     if not use_instruction:
         def preprocess(example):
@@ -321,6 +344,8 @@ def main():
     gradient_accumulation_steps = int(tcfg.get('gradient_accumulation_steps', 1))
     num_train_epochs = int(tcfg.get('num_train_epochs', 1))
     max_steps = int(tcfg.get('max_steps', 0))
+    if int(args.max_steps_override or 0) > 0:
+        max_steps = int(args.max_steps_override)
     learning_rate = float(tcfg.get('learning_rate', 1e-4))
     logging_steps = int(tcfg.get('logging_steps', 10))
     save_steps = int(tcfg.get('save_steps', 50))
@@ -401,7 +426,7 @@ def main():
             train_dataset, eval_dataset = split_train_eval(mixed)
             # Override steps for this phase if provided
             phase_args = TrainingArguments(
-                **{**training_args.to_dict(), 'max_steps': phase_steps or max_steps}
+                **{**training_args.to_dict(), 'max_steps': (int(args.max_steps_override) or phase_steps or max_steps)}
             )
 
             trainer = Trainer(

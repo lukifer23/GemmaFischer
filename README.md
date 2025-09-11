@@ -122,10 +122,33 @@ python src/web/app.py
 python src/training/train.py --do_train --max_steps 10
 ```
 
+### Smoke Training (per expert)
+
+Use the expert-aware trainer with a small max steps override and no eval for quick verification:
+
+```bash
+# UCI expert (engine adapter)
+python src/training/train_lora_poc.py --expert uci --config auto --max_steps_override 50 --disable_eval
+
+# Tutor expert (analysis adapter)
+python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_override 50 --use_instruction_collator --disable_eval
+
+# Director expert (Q&A adapter)
+python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 50 --use_instruction_collator --disable_eval
+```
+
+These will write checkpoints into `checkpoints/lora_uci`, `checkpoints/lora_tutor`, and `checkpoints/lora_director` respectively, enabling live adapter switching in the app.
+
 4. **Stockfish match evaluator (optional):**
 ```bash
-python src/evaluation/stockfish_match_eval.py --file data/datasets/lichess_puzzles_1000_2000.jsonl --limit 50 --depth 8 --out stockfish_match_smoke.json
+# Evaluate model vs Stockfish on mixed FENs
+python src/evaluation/stockfish_match_eval.py --file data/datasets/eval_mixed_positions_200.jsonl --limit 100 --depth 12 --out stockfish_match_after.json
+
+# Evaluate tactical puzzle first-move accuracy
+python src/evaluation/puzzle_eval.py --file data/datasets/lichess_puzzles_1000_2000.jsonl --limit 200 --out eval_report_after.json
 ```
+
+Tip: set `CHESSGEMMA_ENGINE_RERANK=0` to disable N-best re-ranking for lower latency engine mode.
 
 ## Project Structure
 
