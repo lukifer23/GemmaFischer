@@ -30,4 +30,4 @@ lora:
   bias: "lora_only"
 # Use the formatted combined dataset
 dataset:
-  path: "data/formatted/formatted_combined_dataset.jsonl"
+  path: "data/formatted/uci_expert.jsonl"

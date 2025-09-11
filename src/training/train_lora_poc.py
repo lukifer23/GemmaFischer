@@ -24,7 +24,7 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 # resource monitoring
 import psutil
@@ -121,9 +121,75 @@ class CustomCallback(TrainerCallback):
             json.dump(final_stats, f, indent=2)
 
 
+class InstructionDataCollator:
+    """Data collator for instruction-style datasets with prompt/response columns.
+
+    Masks prompt tokens (label = -100) and supervises only response tokens.
+    Tokenizes on the fly to avoid pre-tokenization complexity.
+    """
+
+    def __init__(self, tokenizer: AutoTokenizer, max_length: int = 512):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+
+    def __call__(self, examples: List[Dict[str, Any]]) -> Dict[str, Any]:
+        prompts: List[str] = []
+        responses: List[str] = []
+        for ex in examples:
+            p = ex.get('prompt') or ''
+            r = ex.get('response') or ''
+            prompts.append(p)
+            responses.append(r)
+
+        # Tokenize separately to compute prompt lengths
+        tok_prompts = self.tokenizer(prompts, add_special_tokens=False, truncation=True, max_length=self.max_length)
+        tok_responses = self.tokenizer(responses, add_special_tokens=False, truncation=True, max_length=self.max_length)
+
+        input_ids_batch: List[List[int]] = []
+        attention_masks: List[List[int]] = []
+        labels_batch: List[List[int]] = []
+
+        eos_id = self.tokenizer.eos_token_id
+
+        for p_ids, r_ids in zip(tok_prompts['input_ids'], tok_responses['input_ids']):
+            # Compose input: [prompt] + [response] + [eos]
+            input_ids = p_ids + r_ids + ([eos_id] if eos_id is not None else [])
+            input_ids = input_ids[: self.max_length]
+
+            # Attention mask
+            attn = [1] * len(input_ids)
+
+            # Labels: mask prompt, supervise response + eos
+            labels = ([-100] * min(len(p_ids), len(input_ids)))
+            resp_len = len(input_ids) - len(labels)
+            labels += (r_ids + ([eos_id] if eos_id is not None else []))[:resp_len]
+            labels = labels[: len(input_ids)]
+
+            input_ids_batch.append(input_ids)
+            attention_masks.append(attn)
+            labels_batch.append(labels)
+
+        # Pad to max in batch
+        max_len = max(len(x) for x in input_ids_batch)
+        def pad(seq, pad_id):
+            return seq + [pad_id] * (max_len - len(seq))
+
+        input_ids_batch = [pad(x, self.tokenizer.pad_token_id or eos_id or 0) for x in input_ids_batch]
+        attention_masks = [pad(x, 0) for x in attention_masks]
+        labels_batch = [pad(x, -100) for x in labels_batch]
+
+        return {
+            'input_ids': torch.tensor(input_ids_batch, dtype=torch.long),
+            'attention_mask': torch.tensor(attention_masks, dtype=torch.long),
+            'labels': torch.tensor(labels_batch, dtype=torch.long),
+        }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/lora_finetune.yaml')
+    parser.add_argument('--expert', type=str, default='all', choices=['all', 'uci', 'tutor', 'director'], help='Filter dataset by task for MoE expert training')
+    parser.add_argument('--use_instruction_collator', action='store_true', help='Use instruction-style collator (prompt masked, supervise response only)')
     args = parser.parse_args()
 
     with open(args.config, 'r', encoding='utf-8') as f:
@@ -173,6 +239,20 @@ def main():
             from src.training.dataset_mixer import _load_single_jsonl
             ds = _load_single_jsonl(ds_path)
 
+    # Optional expert filtering by task field
+    if ds is not None and args.expert != 'all':
+        task_map = {'uci': 'engine_uci', 'tutor': 'tutor_explain', 'director': 'director_qa'}
+        target_task = task_map.get(args.expert)
+        if target_task:
+            try:
+                ds = ds.filter(lambda ex: (ex.get('task') or '') == target_task)
+                print(f"Filtered dataset for task={target_task}, size={len(ds)}")
+                if len(ds) == 0:
+                    print("No samples matched the requested expert task. Please use --expert all or provide a dataset with task tags.")
+                    return
+            except Exception as e:
+                print(f"Warning: task filter failed ({e}); proceeding without filtering")
+
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
     # load model with the recommended eager attention implementation for Gemma3
     model = AutoModelForCausalLM.from_pretrained(
@@ -194,26 +274,29 @@ def main():
     )
     model = get_peft_model(model, peft_config)
 
-    # tokenization
+    # tokenization / collator
     # allow shorter sequences on memory-constrained devices
     tokenizer_max_length = 512
-
-    # If running on MPS, clamp batch sizes and shorten sequences to avoid OOM
     if torch.backends.mps.is_available():
         print('MPS backend detected — applying memory-safe defaults: batch_size=1, max_length=256')
         tokenizer_max_length = 256
-    def preprocess(example):
-        if example.get('prompt') is not None and example.get('response') is not None:
-            text = f"{example['prompt']}{example['response']}"
-        else:
-            text = example.get('text', '')
-        return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
 
-    # Only map here if a single/mixed dataset was already built (no curriculum)
-    if 'curriculum' not in cfg or not cfg.get('curriculum'):
-        ds = ds.map(preprocess, batched=False)
+    use_instruction = bool(args.use_instruction_collator)
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    if not use_instruction:
+        def preprocess(example):
+            if example.get('prompt') is not None and example.get('response') is not None:
+                text = f"{example['prompt']}{example['response']}"
+            else:
+                text = example.get('text', '')
+            return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
+
+        # Only map here if a single/mixed dataset was already built (no curriculum)
+        if 'curriculum' not in cfg or not cfg.get('curriculum'):
+            ds = ds.map(preprocess, batched=False)
+        data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+    else:
+        data_collator = InstructionDataCollator(tokenizer, max_length=tokenizer_max_length)
 
     # Coerce numeric config values to expected types
     tcfg = cfg['training']
@@ -256,6 +339,7 @@ def main():
         report_to=[],  # We'll add MLflow later
         logging_first_step=True,
         logging_nan_inf_filter=False,
+        remove_unused_columns=not use_instruction,
     )
 
     # Create evaluation dataset (10% split)
@@ -290,8 +374,9 @@ def main():
             if len(mixed) == 0:
                 print('  Skipping phase; built dataset is empty')
                 continue
-            # Tokenize per-phase dataset
-            mixed = mixed.map(preprocess, batched=False)
+            # Tokenize per-phase dataset only if not using instruction collator
+            if not use_instruction:
+                mixed = mixed.map(preprocess, batched=False)
             train_dataset, eval_dataset = split_train_eval(mixed)
 
             # Override steps for this phase if provided

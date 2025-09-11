@@ -179,6 +179,7 @@ def ask_question():
         data = request.get_json()
         question = data.get('question', '').strip()
         context = data.get('context', '').strip()
+        expert = data.get('expert', 'auto').strip().lower()
 
         if not question:
             return jsonify({
@@ -199,8 +200,17 @@ def ask_question():
         
         print(f"🧠 RAG Knowledge: {rag_knowledge}")
 
+        # Decide mode based on expert selector
+        mode = 'tutor'
+        if expert == 'uci':
+            mode = 'engine'
+        elif expert == 'tutor':
+            mode = 'tutor'
+        elif expert == 'director':
+            mode = 'tutor'  # director uses chat-style; keep tutor decoding defaults
+
         # Generate response with RAG context
-        result = chess_model.generate_response(question, enhanced_context)
+        result = chess_model.generate_response(question, enhanced_context, mode=mode)
         
         # Log detailed performance metrics
         response_time = time.time() - start_time
@@ -220,6 +230,7 @@ def ask_question():
 
         # Add question to response for frontend
         result['question'] = question
+        result['expert'] = expert
 
         return jsonify(result)
 

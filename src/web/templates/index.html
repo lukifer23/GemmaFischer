@@ -278,6 +278,12 @@
 
                     <div class="input-group">
                         <div class="input-group">
+                            <select id="expertSelect" class="form-select form-select-sm" style="max-width: 180px; margin-right: 8px;">
+                                <option value="auto" selected>Auto</option>
+                                <option value="uci">UCI (move only)</option>
+                                <option value="tutor">Tutor (explain + move)</option>
+                                <option value="director">Director (knowledge)</option>
+                            </select>
                             <input type="text" class="form-control" id="questionInput"
                                    placeholder="Ask a chess question..."
                                    onkeypress="handleKeyPress(event)">

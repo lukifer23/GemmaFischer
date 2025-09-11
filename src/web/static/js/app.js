@@ -95,10 +95,12 @@ async function askQuestion() {
   scrollToBottom();
 
   try {
+    const expertEl = document.getElementById('expertSelect');
+    const expert = expertEl ? expertEl.value : 'auto';
     const response = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, context: '' })
+      body: JSON.stringify({ question, context: '', expert })
     });
     const data = await response.json();
     loadingDiv.remove();
