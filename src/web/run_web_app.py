@@ -10,6 +10,7 @@ The web application will be available at http://localhost:5000
 
 import sys
 import os
+import socket
 from pathlib import Path
 
 def main():
@@ -25,7 +26,20 @@ def main():
         print("=" * 60)
         print("🚀 Starting ChessGemma Web Application")
         print("=" * 60)
-        print("📍 URL: http://localhost:5000")
+        # Determine port with fallback if busy
+        preferred_port = int(os.environ.get("CHESSGEMMA_PORT", "5000"))
+        port = preferred_port
+        for _ in range(50):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.bind(("0.0.0.0", port))
+                s.close()
+                break
+            except OSError:
+                s.close()
+                port += 1
+
+        print(f"📍 URL: http://localhost:{port}")
         print("🎯 Features:")
         print("   • AI-powered chess Q&A")
         print("   • Interactive chess board")
@@ -36,7 +50,7 @@ def main():
         # Start the Flask development server
         app.run(
             host='0.0.0.0',
-            port=5000,
+            port=port,
             debug=False,  # Set to False for production
             threaded=True,
             use_reloader=False  # Disable reloader to avoid issues with model loading
