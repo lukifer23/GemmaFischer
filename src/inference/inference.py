@@ -1,10 +1,11 @@
 """
-Unified inference interface for ChessGemma.
+Enhanced Unified inference interface for ChessGemma.
 
-Provides a single entry-point used by tests, UCI bridge, and the web app:
-- ChessGemmaInference: lazy local-only model loading (MPS), adapter application, and generation
-- ChessModelInterface: thin wrapper returning raw text (for UCI bridge)
-- Convenience module functions: get_inference_instance, run_inference, load_model, get_model_info
+Provides optimized inference with:
+- Enhanced Chess Inference: Advanced caching, expert switching, performance monitoring
+- Legacy ChessGemmaInference: Original interface for backward compatibility
+- ChessModelInterface: Thin wrapper for UCI bridge compatibility
+- Convenience module functions: All original functions plus enhanced versions
 """
 
 from __future__ import annotations
@@ -18,6 +19,15 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 from transformers.generation.logits_process import LogitsProcessor
+
+__all__ = [
+    'ChessGemmaInference',
+    'ChessModelInterface',
+    'get_inference_instance',
+    'run_inference',
+    'load_model',
+    'get_model_info'
+]
 
 
 # Environment hygiene and resource constraints
@@ -842,6 +852,73 @@ def load_model() -> bool:
 def get_model_info() -> Dict[str, Any]:
     instance = get_inference_instance()
     return instance.get_model_info()
+
+
+# Enhanced Inference Integration
+# ==============================
+
+try:
+    from .enhanced_inference import get_inference_manager, initialize_inference, analyze_position, get_best_move
+
+    # Global enhanced inference manager
+    _enhanced_manager = None
+
+    def get_enhanced_inference_manager():
+        """Get enhanced inference manager instance."""
+        global _enhanced_manager
+        if _enhanced_manager is None:
+            _enhanced_manager = get_inference_manager()
+        return _enhanced_manager
+
+    def initialize_enhanced_inference() -> bool:
+        """Initialize enhanced inference system."""
+        manager = get_enhanced_inference_manager()
+        return manager.initialize()
+
+    def analyze_chess_position(fen: str, mode: str = "tutor") -> Dict[str, Any]:
+        """Enhanced position analysis using optimized inference."""
+        return analyze_position(fen, mode)
+
+    def generate_best_move(fen: str) -> Dict[str, Any]:
+        """Enhanced best move generation."""
+        return get_best_move(fen)
+
+    def switch_inference_expert(expert_name: str) -> bool:
+        """Switch to a different expert adapter."""
+        manager = get_enhanced_inference_manager()
+        return manager.switch_expert(expert_name)
+
+    def get_inference_stats() -> Dict[str, Any]:
+        """Get enhanced inference performance statistics."""
+        manager = get_enhanced_inference_manager()
+        return manager.get_stats()
+
+    # Make enhanced functions available at module level
+    __all__.extend([
+        'get_enhanced_inference_manager',
+        'initialize_enhanced_inference',
+        'analyze_chess_position',
+        'generate_best_move',
+        'switch_inference_expert',
+        'get_inference_stats'
+    ])
+
+except ImportError as e:
+    # Enhanced inference not available, provide fallback functions
+    def initialize_enhanced_inference() -> bool:
+        return False
+
+    def analyze_chess_position(fen: str, mode: str = "tutor") -> Dict[str, Any]:
+        return {"error": "Enhanced inference not available", "response": ""}
+
+    def generate_best_move(fen: str) -> Dict[str, Any]:
+        return {"error": "Enhanced inference not available", "response": ""}
+
+    def switch_inference_expert(expert_name: str) -> bool:
+        return False
+
+    def get_inference_stats() -> Dict[str, Any]:
+        return {"error": "Enhanced inference not available"}
 
 
 class ChessModelInterface:
