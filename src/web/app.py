@@ -34,6 +34,7 @@ try:
     import chess
     from src.inference.inference import get_inference_instance
     from src.inference.chess_engine import ChessEngineManager
+    from src.inference.uci_utils import extract_first_legal_move, extract_first_legal_move_uci
     from src.web.chess_game import ChessGame, ChessRAG
     from src.web.stockfish_match import StockfishMatch
 except ImportError as e:
@@ -289,15 +290,8 @@ def debug_compare():
         board = chess.Board(fen)
 
         def parse_uci(text: str):
-            m = re.findall(r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b', text.lower())
-            for u in m:
-                try:
-                    mv = chess.Move.from_uci(u)
-                    if mv in board.legal_moves:
-                        return u
-                except Exception:
-                    continue
-            return None
+            mv = extract_first_legal_move(text, board)
+            return mv.uci() if mv else None
 
         # Engine mode
         eng = inf.generate_response(
@@ -627,7 +621,12 @@ Respond with your chosen move first, then your analysis."""
         
         # Try to extract a move from the response
         response_text = result.get('response', '')
-        move_uci = extract_move_from_response(response_text, legal_moves)
+        try:
+            b = chess.Board(fen)
+            strict_mv = extract_first_legal_move_uci(response_text, b)
+        except Exception:
+            strict_mv = None
+        move_uci = strict_mv or extract_move_from_response(response_text, legal_moves)
         
         print(f"AI Response: {response_text[:200]}...")
         print(f"Extracted move: {move_uci}")

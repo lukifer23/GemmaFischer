@@ -7,7 +7,6 @@ Outputs: prints summary and optional JSON report when --out is provided.
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
@@ -15,18 +14,11 @@ import chess
 
 from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
+from src.inference.uci_utils import extract_first_legal_move
 
 
 def parse_uci_from_text(text: str, board: chess.Board) -> Optional[chess.Move]:
-    pattern = r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b"
-    for m in re.findall(pattern, text.lower()):
-        try:
-            mv = chess.Move.from_uci(m)
-            if mv in board.legal_moves:
-                return mv
-        except Exception:
-            continue
-    return None
+    return extract_first_legal_move(text, board)
 
 
 def load_fens(path: Path, limit: Optional[int]) -> List[str]:

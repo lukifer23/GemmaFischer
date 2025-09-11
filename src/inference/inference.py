@@ -141,24 +141,16 @@ class ChessGemmaInference:
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
         system_prompt = self._load_prompt_template(mode)
-        
-        # Build a simpler prompt format that works better with the model
+
         if mode == "tutor":
-            if context:
-                full_question = f"{context}\n\n{question}"
-            else:
-                full_question = question
-            
-            # Use a simple instruction format instead of chat template
+            full_question = f"{context}\n\n{question}" if context else question
             prompt = f"Chess Tutor: {system_prompt}\n\nQuestion: {full_question}\n\nAnswer:"
-        else:
-            if context:
-                full_question = f"{context}\n\n{question}"
-            else:
-                full_question = question
-            
-            prompt = f"Chess Engine: {system_prompt}\n\nPosition: {full_question}\n\nMove:"
-        
+            return [{"role": "user", "content": prompt}]
+
+        # Engine mode expects strict minimal prompt: FEN then "Move:"
+        from .uci_utils import build_engine_prompt, extract_fen
+        fen = extract_fen(question) or (context or "").strip()
+        prompt = build_engine_prompt(fen) if fen else "Move:"
         return [{"role": "user", "content": prompt}]
 
     def generate_response(
@@ -196,17 +188,29 @@ class ChessGemmaInference:
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
 
             with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=True,
-                    top_p=top_p,
-                    temperature=temperature,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    repetition_penalty=1.1,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    use_cache=True,
-                )
+                if mode == "engine":
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=False,
+                        temperature=0.0,
+                        top_p=1.0,
+                        pad_token_id=self.tokenizer.eos_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        use_cache=True,
+                    )
+                else:
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=True,
+                        top_p=top_p,
+                        temperature=temperature,
+                        pad_token_id=self.tokenizer.eos_token_id,
+                        repetition_penalty=1.1,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        use_cache=True,
+                    )
 
             decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
@@ -258,45 +262,25 @@ class ChessGemmaInference:
             
             print(f"Final Answer Preview: {answer[:200]}{'...' if len(answer) > 200 else ''}")
 
-            # Post-process for engine mode: enforce a single legal UCI move if possible
+            # Post-process for engine mode: extract legal UCI move or fallback to engine
             postprocessed = False
-            if mode == 'engine':
-                import re, chess
-                mv = None
-                board = None
-                fen_match = re.search(r"position:\s*([^\n]+)", question, re.IGNORECASE)
-                if fen_match:
-                    try:
-                        board = chess.Board(fen_match.group(1).strip())
-                    except Exception:
-                        board = None
-                try:
-                    pattern = r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b"
-                    matches = re.findall(pattern, answer.lower())
-                    if matches:
-                        candidate = matches[0]
-                        if board:
-                            try:
-                                move_obj = chess.Move.from_uci(candidate)
-                                if move_obj in board.legal_moves:
-                                    mv = candidate
-                            except Exception:
-                                pass
-                        else:
-                            mv = candidate
-                except Exception:
-                    mv = None
+            if mode == "engine":
+                import chess
+                from .uci_utils import extract_fen, extract_first_legal_move_uci
 
-                if not mv and board:
-                    try:
-                        from .chess_engine import ChessEngineManager
-                        with ChessEngineManager() as ce:
-                            best = ce.get_best_move(board)
-                            if best:
-                                mv = best.uci()
-                    except Exception:
-                        pass
-
+                fen = extract_fen(question) or extract_fen(prompt_text)
+                board = chess.Board(fen) if fen else None
+                mv: Optional[str] = None
+                if board is not None:
+                    mv = extract_first_legal_move_uci(answer, board)
+                    if not mv:
+                        try:
+                            from .chess_engine import ChessEngineManager
+                            with ChessEngineManager() as ce:
+                                best = ce.get_best_move(board)
+                                mv = best.uci() if best else None
+                        except Exception:
+                            mv = None
                 if mv:
                     answer = mv
                     postprocessed = True
@@ -321,8 +305,19 @@ class ChessGemmaInference:
                 "mode": mode,
             }
 
-    def generate_text(self, prompt: str, max_new_tokens: int = 200) -> str:
-        """Generate raw text from a direct prompt string (no chat template)."""
+    def generate_text(
+        self,
+        prompt: str,
+        max_new_tokens: int = 200,
+        do_sample: bool = True,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+        repetition_penalty: float = 1.0,
+    ) -> str:
+        """Generate raw text from a direct prompt string (no chat template).
+
+        Decoding parameters are explicitly configurable for expert-specific needs.
+        """
         if not self.load_model():
             return ""
         try:
@@ -331,9 +326,10 @@ class ChessGemmaInference:
                 outputs = self.model.generate(
                     **inputs,
                     max_new_tokens=max_new_tokens,
-                    do_sample=True,
-                    top_p=0.9,
-                    temperature=0.7,
+                    do_sample=do_sample,
+                    top_p=top_p,
+                    temperature=temperature,
+                    repetition_penalty=repetition_penalty,
                     pad_token_id=self.tokenizer.eos_token_id,
                 )
             return self.tokenizer.decode(outputs[0], skip_special_tokens=True)

@@ -54,6 +54,116 @@
 
 ---
 
+## Mixture-of-Experts (MoE) Plan
+
+### Overview
+
+- Split responsibilities into specialized experts routed at request level over a single Gemma-3 270M base on MPS.
+- Three LoRA adapters: `uci` (move-only), `tutor` (explain + move), `director` (rules/theory/strategy Q&A).
+- Deterministic heuristic router initially; optional small classifier later.
+
+### Components & File Plan
+
+- [x] `src/inference/router.py`: request analysis, expert selection, optional sub-calls.
+- [x] `src/inference/experts/uci_expert.py`: strict UCI output, legality enforcement, Stockfish fallback.
+- [x] `src/inference/experts/tutor_expert.py`: CoT scaffold, explanation + final UCI move, legality check.
+- [x] `src/inference/experts/director_expert.py`: knowledge-first answers; may call tutor/uci as needed.
+- [ ] Extend `src/inference/inference.py`: multi-adapter load and `set_adapter(name)` switching.
+- [x] Update `src/inference/uci_bridge.py`: route via router; `Mode=engine` → UCI expert, `Mode=tutor` → Tutor expert.
+- [ ] Update `src/web/app.py`: expose expert selector (Auto/UCI/Tutor/Director).
+- [ ] `docs/MOE_GUIDE.md`: architecture, routing rules, datasets, evaluation.
+
+### Routing Policy (deterministic v1)
+
+- [ ] UCI expert triggers:
+  - UCI protocol or `Mode=engine` or prompts requesting “best move”/move-only.
+  - FEN present with explicit move intent.
+- [ ] Tutor expert triggers:
+  - FEN present with “analyze/explain/why”, or `Mode=tutor`.
+- [ ] Director expert triggers:
+  - No FEN; rules, opening names/plans, strategy, history, concepts.
+- [ ] Ambiguity resolution:
+  - FEN present without explicit intent → Tutor.
+  - Move-only requests with prose allowed → UCI.
+  - If user asks “explain but only output the move”, prefer UCI and suppress prose.
+
+### Datasets (by expert)
+
+- [ ] UCI dataset
+  - [ ] Lichess puzzles first-move; Stockfish-labeled random FENs; self-play slices.
+  - [ ] Format: `FEN: <fen>\nMode: Engine\nStyle: <style>\nMove:` → response is single UCI token.
+  - [ ] Corner cases: castling, promotions (incl. under-promo), en passant, checks/mates.
+- [ ] Tutor dataset
+  - [ ] Puzzles + explanations; commentary snippets; curated CoT.
+  - [ ] Format: stepwise bullets; final line `Best move: <uci>`.
+  - [ ] Ensure final UCI is legal/top-1/top-2 at depth 8–12.
+- [ ] Director dataset
+  - [ ] Rules/concepts, opening theory (ECO), endgames, strategy Q&A.
+  - [ ] No mandatory UCI unless asked; emphasize factual grounding.
+- [ ] Data tooling
+  - [ ] Builders/validators to enforce schema and legality; dedup; difficulty tags.
+  - [ ] Outputs to `data/formatted/{uci,tutor,director}.jsonl`.
+
+### Training (MPS-only)
+
+- [ ] Base: `unsloth/gemma-3-270m-it` (local snapshot).
+- [ ] LoRA per expert: r=16–32, alpha=32–64, dropout ≤0.05, targets `q,k,v,o,(gate,up,down)` as needed.
+- [ ] Seq length: 512–1024 (start 512 for MPS headroom).
+- [ ] Optim: cosine, 10% warmup, LR 1e-4–2e-4, batch 1, grad-accum as required.
+- [ ] Checkpointing: save every 200–400 steps; keep last 3.
+- [ ] Label masking: instruction-style (mask prompt, supervise response only).
+- [ ] Curriculum per expert:
+  - [ ] UCI: basics → tactics → edge cases.
+  - [ ] Tutor: structured analysis → multi-move puzzles.
+  - [ ] Director: rules → openings → endgames → strategy.
+
+### Inference & UCI Bridge
+
+- [ ] Multi-adapter lifecycle: load once, `set_adapter(name)` per request.
+- [ ] Expert-specific decoding defaults:
+  - [ ] UCI: do_sample=false, temperature=0, top_p=1, max_new_tokens=4–5.
+  - [ ] Tutor: temperature 0.6–0.8, top_p 0.85–0.9.
+  - [ ] Director: temperature 0.5–0.7, top_p 0.9.
+- [ ] Post-processing:
+  - [ ] UCI: extract first `^[a-h][1-8][a-h][1-8][qrbn]?$`; validate on FEN; fallback to Stockfish if missing/illegal.
+  - [ ] Tutor: extract final `Best move: <uci>`; validate; if illegal, replace with Stockfish best and note correction.
+  - [ ] Director: no move extraction unless asked; may route subcall to Tutor/UCI.
+
+### Evaluation
+
+- [ ] Per-expert scorecards:
+  - [ ] UCI: legality 100%; syntax ≥0.98; SF top-1/3 at depth 8/12; latency p50/p95.
+  - [ ] Tutor: first-move correctness vs depth-10; CoT structure adherence; small human rubric.
+  - [ ] Director: rules accuracy; opening-name accuracy; hallucination rate.
+- [ ] Router eval:
+  - [ ] Intent classification accuracy on mixed prompts; misroute rate.
+- [ ] Regression gates:
+  - [ ] Block promotion if UCI legality < 1.00 or Tutor final-line UCI missing > 0.5%.
+
+### Rollout Sequence
+
+1. [ ] Build/validate expert datasets and schemas.
+2. [ ] Train UCI adapter; integrate into UCI bridge with strict decoding/postprocess.
+3. [ ] Train Tutor adapter; integrate; enforce final UCI legality.
+4. [ ] Train Director adapter; integrate into web/chat; add heuristic router.
+5. [ ] Add optional retrieval for Tutor/Director; small intent classifier for router.
+6. [ ] Harden evaluation dashboards; iterate.
+
+### Risks & Mitigations
+
+- [ ] MPS memory pressure with multiple adapters → limit to active set; unload rarely used; keep 3 experts only.
+- [ ] Verbose outputs in UCI → strict templates + regex clamp + fallback.
+- [ ] Tutor hallucinations → legality checks, optional quick engine spot-checks.
+- [ ] Director factual drift → curated facts and opening tables; retrieval in later phase.
+
+### Targets (KPIs)
+
+- [ ] UCI expert: legality 100%; top-1 ≥50%, top-3 ≥75% (depth 8) on eval set.
+- [ ] Tutor expert: ≥70% first-move accuracy on curated puzzles; ≥90% CoT structure adherence.
+- [ ] Director expert: ≥90% rules QA; ≥80% opening-name accuracy on common openings.
+
+---
+
 ### Optional: Embedding Search Functions
 
 - [ ] Generate embeddings for:
@@ -446,13 +556,13 @@
   - [x] Remove duplicate `Position:` injection in engine prompts
   - [x] Update callers that currently embed `Position:` (web, eval scripts, docs examples)
 
-- [ ] Central UCI parsing/validation:
-  - [ ] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
-  - [ ] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
+- [x] Central UCI parsing/validation:
+  - [x] Create `src/inference/uci_utils.py` with `extract_first_uci(text) -> Optional[str]` and `is_legal_uci(fen, uci) -> bool`
+  - [x] Replace local helpers in `src/evaluation/stockfish_match_eval.py`, `src/evaluation/puzzle_eval.py`, `src/inference/uci_bridge.py`, `src/web/app.py`, `src/web/stockfish_match.py`
 
 - [ ] Deterministic engine decoding defaults:
-  - [ ] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
-  - [ ] Add `do_sample` parameter to `ChessGemmaInference.generate_response` and set by mode
+  - [x] Engine mode: `do_sample=false`, `temperature=0`, `top_p=1`, `max_new_tokens=4` (5 for promotions)
+  - [x] Add `do_sample` parameter to `ChessGemmaInference.generate_text` and expose decoding kwargs
 
 - [x] Stockfish fallback policy:
   - [x] Remove hardcoded fallback like `"e2e4"`
@@ -474,10 +584,10 @@
   - [ ] Add `InstructionDataCollator` (mask prompt tokens: labels = -100)
   - [ ] Update training scripts to use the instruction collator
 
-- [ ] Web/bridge integration:
-  - [ ] Route engine queries via `ChessGemmaInference.generate_response(..., mode='engine')`
-  - [ ] Use centralized UCI utils for extraction/legality
-  - [ ] Ensure deterministic decode + fallback is applied everywhere
+- [x] Web/bridge integration:
+  - [x] Route engine queries via `ChessGemmaInference.generate_response(..., mode='engine')`
+  - [x] Use centralized UCI utils for extraction/legality
+  - [x] Ensure deterministic decode + fallback is applied everywhere
 
 - [ ] Logging & debug controls:
   - [ ] Gate verbose inference logs behind `CHESSGEMMA_DEBUG=1`

@@ -15,12 +15,12 @@ from pathlib import Path
 def main():
     """Start the ChessGemma web application."""
     # Add the project root to Python path
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(project_root))
 
     try:
         # Import and run the web application
-        from web_app.app import app
+        from src.web.app import app
 
         print("=" * 60)
         print("🚀 Starting ChessGemma Web Application")

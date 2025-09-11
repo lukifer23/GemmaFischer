@@ -20,8 +20,9 @@ from pathlib import Path
 # Add the project root to the path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src.inference.inference import ChessModelInterface
+from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
+from src.inference.router import Router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -74,21 +75,22 @@ class UCIBridge:
             model_path: Path to the base model
             adapter_path: Path to the LoRA adapter
         """
-        self.model_interface = None
+        self.inference = None
         self.chess_engine = None
+        self.router = None
         self.options = UCIOptions()
         self.current_position = None
         self.engine_name = "GemmaFischer"
         self.author = "ChessGemma Team"
         self.version = "1.0.0"
         
-        # Initialize model interface (lazy load inside)
+        # Initialize inference and router
         try:
-            self.model_interface = ChessModelInterface(model_path, adapter_path)
-            logger.info("Model interface ready")
+            self.inference = ChessGemmaInference(model_path, adapter_path)
+            logger.info("Inference ready")
         except Exception as e:
-            logger.error(f"Failed to create model interface: {e}")
-            self.model_interface = None
+            logger.error(f"Failed to create inference: {e}")
+            self.inference = None
         
         # Initialize chess engine for fallback
         try:
@@ -97,6 +99,15 @@ class UCIBridge:
         except Exception as e:
             logger.error(f"Failed to initialize chess engine: {e}")
             self.chess_engine = None
+
+        # Router depends on inference; may be None if inference failed
+        if self.inference is not None:
+            try:
+                self.router = Router(self.inference, self.chess_engine)
+                logger.info("Router initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize router: {e}")
+                self.router = None
     
     def handle_uci_command(self, command: str) -> str:
         """
@@ -265,7 +276,10 @@ class UCIBridge:
     def _handle_quit(self) -> str:
         """Handle 'quit' command"""
         if self.chess_engine:
-            self.chess_engine.close()
+            try:
+                self.chess_engine.cleanup()
+            except Exception:
+                pass
         return ""
     
     def _generate_move(self, depth: int, time_limit: int) -> Optional[str]:
@@ -311,16 +325,23 @@ class UCIBridge:
     def _generate_engine_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
         """Generate a move in engine mode (fast, minimal output)"""
         try:
-            move = None
-            if self.model_interface:
-                prompt = self._create_engine_prompt(board)
-                response = self.model_interface.generate_response(prompt)
-                move = self._parse_move_from_response(response, board)
+            # Prefer router if available
+            if self.router is not None:
+                routed_move = self.router.suggest_move(
+                    board,
+                    mode="engine",
+                    style=self.options.style,
+                    depth=depth,
+                    time_limit_ms=time_limit,
+                )
+                if routed_move is not None:
+                    return routed_move
 
-            if not move and self.options.use_stockfish_fallback and self.chess_engine:
+            # Fallback to engine
+            if self.options.use_stockfish_fallback and self.chess_engine:
                 return self.chess_engine.get_best_move(board, depth, time_limit)
 
-            return move
+            return None
 
         except Exception as e:
             logger.error(f"Error in engine mode: {e}")
@@ -331,16 +352,22 @@ class UCIBridge:
     def _generate_tutor_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
         """Generate a move in tutor mode (with explanations)"""
         try:
-            move = None
-            if self.model_interface:
-                prompt = self._create_tutor_prompt(board)
-                response = self.model_interface.generate_response(prompt)
-                move = self._parse_move_from_response(response, board)
+            # Prefer router if available
+            if self.router is not None:
+                _, routed_move = self.router.analyze_with_move(
+                    board,
+                    style=self.options.style,
+                    depth=depth,
+                    time_limit_ms=time_limit,
+                )
+                if routed_move is not None:
+                    return routed_move
 
-            if not move and self.options.use_stockfish_fallback and self.chess_engine:
+            # Fallback to engine
+            if self.options.use_stockfish_fallback and self.chess_engine:
                 return self.chess_engine.get_best_move(board, depth, time_limit)
 
-            return move
+            return None
 
         except Exception as e:
             logger.error(f"Error in tutor mode: {e}")
@@ -349,17 +376,8 @@ class UCIBridge:
             return None
     
     def _create_engine_prompt(self, board: chess.Board) -> str:
-        """Create a prompt for engine mode (minimal, fast)"""
-        fen = board.fen()
-        style = self.options.style
-        
-        prompt = f"""FEN: {fen}
-Move:
-Style: {style}
-Mode: Engine
-Generate the best move in UCI format (e.g., e2e4). Respond with only the move."""
-        
-        return prompt
+        """Deprecated: use build_engine_prompt instead."""
+        return build_engine_prompt(board.fen())
     
     def _create_tutor_prompt(self, board: chess.Board) -> str:
         """Create a prompt for tutor mode (with explanations)"""
@@ -381,25 +399,8 @@ Respond with the best move in UCI format at the end."""
         return prompt
     
     def _parse_move_from_response(self, response: str, board: chess.Board) -> Optional[chess.Move]:
-        """Parse a move from the model response"""
-        try:
-            import re
-            uci_pattern = r'\b([a-h][1-8][a-h][1-8][qrbn]?)\b'
-            matches = re.findall(uci_pattern, response.lower())
-
-            for match in matches:
-                try:
-                    move = chess.Move.from_uci(match)
-                    if move in board.legal_moves:
-                        return move
-                except ValueError:
-                    continue
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Error parsing move from response: {e}")
-            return None
+        """Deprecated: use extract_first_legal_move instead."""
+        return extract_first_legal_move(response, board)
 
 def main():
     """Main UCI loop"""
@@ -426,7 +427,10 @@ def main():
                 
     finally:
         if bridge.chess_engine:
-            bridge.chess_engine.close()
+            try:
+                bridge.chess_engine.cleanup()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     main()

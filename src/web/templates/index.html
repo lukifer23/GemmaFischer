@@ -367,6 +367,7 @@
         let isLoading = false;
         let gameState = null;
         let selectedSquare = null;
+        let selectedSquareIndex = null;
         let gameMode = 'analysis'; // 'analysis' or 'play'
         let stockfishMatch = null;
         let matchActive = false;
@@ -385,21 +386,10 @@
         // Initialize chess board
         function initializeChessBoard() {
             const board = document.getElementById('chessBoard');
-            const pieces = [
-                '♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜',  // Black back rank
-                '♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟',  // Black pawns
-                '', '', '', '', '', '', '', '',          // Empty squares
-                '', '', '', '', '', '', '', '',
-                '', '', '', '', '', '', '', '',
-                '', '', '', '', '', '', '', '',
-                '♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙',  // White pawns
-                '♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'   // White back rank
-            ];
-
+            board.innerHTML = '';
             for (let i = 0; i < 64; i++) {
                 const square = document.createElement('div');
                 square.className = `chess-square ${(i + Math.floor(i / 8)) % 2 === 0 ? 'light' : 'dark'}`;
-                square.textContent = pieces[i] || '';
                 square.onclick = () => handleSquareClick(i);
                 board.appendChild(square);
             }
@@ -587,6 +577,7 @@
             if (selectedSquare === null) {
                 // First click - select piece
                 selectedSquare = square;
+                selectedSquareIndex = squareIndex;
                 const squares = document.querySelectorAll('.chess-square');
                 squares.forEach(sq => sq.classList.remove('selected'));
                 squares[squareIndex].classList.add('selected');
@@ -594,17 +585,27 @@
                 // Get legal moves for this piece
                 getLegalMoves(square);
             } else {
-                // Second click - make move
-                const move = `${selectedSquare}${square}`;
+                // Second click - make move with promotion handling
+                let move = `${selectedSquare}${square}`;
+                const squares = document.querySelectorAll('.chess-square');
+                const fromPiece = squares[selectedSquareIndex]?.textContent;
+                const destRank = parseInt(square[1]);
+                if ((fromPiece === '♙' && destRank === 8) || (fromPiece === '♟' && destRank === 1)) {
+                    let promo = (window.prompt('Promote to (q,r,b,n)?', 'q') || 'q').toLowerCase();
+                    if (!['q','r','b','n'].includes(promo)) promo = 'q';
+                    move = `${move}${promo}`;
+                }
                 makeMove(move);
                 selectedSquare = null;
+                selectedSquareIndex = null;
             }
         }
 
         // Get current board state as FEN
         function getCurrentBoardFEN() {
-            // For now, return the starting position FEN
-            // In a full implementation, this would track moves and update the FEN
+            if (gameState && gameState.fen) {
+                return gameState.fen;
+            }
             return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         }
 
@@ -640,6 +641,10 @@
                 const response = await fetch('/api/game/state');
                 gameState = await response.json();
                 console.log('Game state loaded:', gameState);
+                if (gameState && gameState.fen) {
+                    initializeChessBoard();
+                    updateBoardFromFEN(gameState.fen);
+                }
             } catch (error) {
                 console.error('Failed to load game state:', error);
             }
@@ -1027,5 +1032,6 @@
             }
         }
     </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

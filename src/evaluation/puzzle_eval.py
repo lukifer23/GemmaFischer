@@ -7,25 +7,17 @@ Outputs: prints summary and optional JSON report when --out is provided.
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import chess
 
 from src.inference.inference import ChessGemmaInference
+from src.inference.uci_utils import extract_first_legal_move_uci
 
 
 def parse_first_uci(text: str, board: chess.Board) -> Optional[str]:
-    pattern = r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b"
-    for m in re.findall(pattern, text.lower()):
-        try:
-            mv = chess.Move.from_uci(m)
-            if mv in board.legal_moves:
-                return m
-        except Exception:
-            continue
-    return None
+    return extract_first_legal_move_uci(text, board)
 
 
 def load_puzzles(path: Path, limit: int) -> List[Dict[str, Any]]:
