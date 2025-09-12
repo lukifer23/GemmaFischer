@@ -1,0 +1,47 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_134131",
+    "start_time": "2025-09-12T13:41:31.651628",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [],
+    "total_training_time": 109.93288397789001,
+    "system_info": {
+      "platform": "macOS-26.0-arm64-arm-64bit-Mach-O",
+      "python_version": "3.13.7",
+      "cpu_count": 11,
+      "total_memory_gb": 18.0,
+      "available_memory_gb": 8.589324951171875,
+      "mps_available": true,
+      "training_start_time": "2025-09-12T13:41:31.673319",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 0,
+    "total_training_time": 109.93288397789001,
+    "average_time_per_expert": 109.93288397789001,
+    "interrupted": true,
+    "error": null
+  },
+  "expert_results": [],
+  "system_performance": {
+    "final_memory_usage": 84.2,
+    "cpu_usage": 35.0,
+    "disk_usage": 25.5
+  },
+  "recommendations": [
+    "No training results available for analysis"
+  ],
+  "generated_at": "2025-09-12T13:43:21.973662"
+}

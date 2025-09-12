@@ -1,0 +1,94 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_133752",
+    "start_time": "2025-09-12T13:37:52.260159",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [
+      "uci",
+      "tutor"
+    ],
+    "total_training_time": 118.66495108604431,
+    "system_info": {
+      "platform": "macOS-26.0-arm64-arm-64bit-Mach-O",
+      "python_version": "3.13.7",
+      "cpu_count": 11,
+      "total_memory_gb": 18.0,
+      "available_memory_gb": 10.34600830078125,
+      "mps_available": true,
+      "training_start_time": "2025-09-12T13:37:52.289677",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 2,
+    "total_training_time": 118.66495108604431,
+    "average_time_per_expert": 59.332475543022156,
+    "interrupted": true,
+    "error": null
+  },
+  "expert_results": [
+    {
+      "expert_name": "uci",
+      "success": false,
+      "training_time": 23.13462805747986,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "uci",
+        "success": false,
+        "training_time": 21.807499170303345,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: train() got unexpected keyword arguments: callbacks."
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "tutor",
+      "success": false,
+      "training_time": 23.95140790939331,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "tutor",
+        "success": false,
+        "training_time": 23.009655237197876,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: train() got unexpected keyword arguments: callbacks."
+        ]
+      },
+      "error_message": null
+    }
+  ],
+  "system_performance": {
+    "final_memory_usage": 51.0,
+    "cpu_usage": 10.9,
+    "disk_usage": 22.6
+  },
+  "recommendations": [
+    "Consider investigating failures in failed experts",
+    "Check system resources and memory availability",
+    "MPS optimization is active - monitor memory usage during training",
+    "Consider clearing MPS cache between expert trainings",
+    "Checkpoint resume is working - training can be safely interrupted",
+    "Consider regular checkpoint validation for data integrity"
+  ],
+  "generated_at": "2025-09-12T13:39:51.668062"
+}

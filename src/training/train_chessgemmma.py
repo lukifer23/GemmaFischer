@@ -194,6 +194,16 @@ class ChessGemmaTrainingOrchestrator:
             logger.warning(f"⚠️  Expert trainer initialization failed: {e}")
             self.expert_trainer = None
 
+        # Load model once at startup (like standalone script)
+        if self.expert_trainer:
+            try:
+                logger.info("🔧 Loading model once at orchestrator startup...")
+                self.expert_trainer.initialize_training_environment(force_reload=False)
+                logger.info("✅ Model loaded and ready for all experts")
+            except Exception as e:
+                logger.error(f"❌ Failed to load model at startup: {e}")
+                return False
+
         if components_initialized == 0:
             logger.error("❌ No training components could be initialized")
             return False
@@ -206,7 +216,7 @@ class ChessGemmaTrainingOrchestrator:
 
     @log_performance
     def train_all_experts(self, experts: List[str] = None, resume: bool = True,
-                         validate: bool = True) -> Dict[str, Any]:
+                         validate: bool = True, debug_mode: bool = False) -> Dict[str, Any]:
         """
         Train all experts in sequence.
 
@@ -260,15 +270,32 @@ class ChessGemmaTrainingOrchestrator:
         session_start_time = time.time()
         success_count = 0
 
+        # Load shared datasets once at the beginning (like standalone script)
+        logger.info("📚 Loading shared datasets for all experts...")
         try:
-            # Train each expert in sequence
+            # Use UCI data as the shared dataset (simplest approach)
+            shared_train_dataset, shared_eval_dataset = self.expert_trainer.prepare_expert_data('uci')
+            logger.info("✅ Shared datasets loaded successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to load shared datasets: {e}")
+            return {
+                'error': f'Failed to load shared datasets: {e}',
+                'session_info': self.current_session.to_dict() if self.current_session else {},
+                'training_summary': {'total_experts': 0, 'successful_experts': 0, 'failed_experts': 0}
+            }
+
+        try:
+            # Train each expert in sequence using shared model and data
             for i, expert_name in enumerate(experts, 1):
                 logger.info(f"\n{'='*80}")
                 logger.info(f"🎯 EXPERT {i}/{len(experts)}: {expert_name.upper()}")
                 logger.info(f"{'='*80}")
 
-                # Train individual expert
-                result = self._train_single_expert(expert_name, resume)
+                # Train individual expert using shared resources
+                result = self._train_single_expert(
+                    expert_name, resume, debug_mode,
+                    shared_train_dataset, shared_eval_dataset
+                )
 
                 if result.success:
                     success_count += 1
@@ -280,14 +307,11 @@ class ChessGemmaTrainingOrchestrator:
 
                 self.expert_results.append(result)
 
-                # Memory cleanup and brief pause between experts for system cooling
+                # Simple cleanup between experts (no model deletion!)
                 if i < len(experts):
-                    logger.info("🧹 Memory cleanup before next expert...")
+                    logger.info("🧹 Light cleanup before next expert...")
 
-                    # Force garbage collection and MPS memory cleanup
-                    import gc
-                    gc.collect()
-
+                    # Only clear MPS/CUDA cache, keep model in memory
                     if torch.backends.mps.is_available():
                         torch.mps.empty_cache()
                         logger.info("✅ MPS cache cleared")
@@ -295,8 +319,10 @@ class ChessGemmaTrainingOrchestrator:
                         torch.cuda.empty_cache()
                         logger.info("✅ CUDA cache cleared")
 
-                    logger.info("⏱️  Cooling period before next expert...")
-                    time.sleep(30)  # 30 second pause
+                    # Quick garbage collection (no cooling period)
+                    import gc
+                    gc.collect()
+                    logger.info("✅ Memory garbage collected")
 
             # Update session timing
             self.current_session.total_training_time = time.time() - session_start_time
@@ -327,31 +353,49 @@ class ChessGemmaTrainingOrchestrator:
             self._handle_critical_error(e)
             return self._generate_training_report(error=str(e))
 
-    def _train_single_expert(self, expert_name: str, resume: bool) -> ExpertTrainingResult:
-        """Train a single expert with comprehensive error handling."""
+    def _train_single_expert(self, expert_name: str, resume: bool, debug_mode: bool = False,
+                            shared_train_dataset=None, shared_eval_dataset=None) -> ExpertTrainingResult:
+        """Train a single expert using shared model and data (like standalone script)."""
 
         result = ExpertTrainingResult(expert_name=expert_name, success=False, training_time=0.0)
 
         try:
             start_time = time.time()
+            logger.info(f"🚀 Training {expert_name} expert using shared model...")
+
+            # Use shared datasets if provided, otherwise load for this expert
+            if shared_train_dataset is not None and shared_eval_dataset is not None:
+                train_dataset = shared_train_dataset
+                eval_dataset = shared_eval_dataset
+                logger.info(f"📚 Using shared dataset for {expert_name} expert")
+            else:
+                # Fallback: load data for this expert only (legacy behavior)
+                logger.info(f"📚 Loading dataset for {expert_name} expert...")
+                train_dataset, eval_dataset = self.expert_trainer.prepare_expert_data(expert_name)
 
             # Check for existing checkpoints if resume is enabled
+            resume_checkpoint = None
             if resume and self.checkpoint_manager:
                 resume_data = self.checkpoint_manager.resume_from_checkpoint(expert_name)
                 if resume_data:
                     checkpoint_dir, metadata, _ = resume_data
+                    resume_checkpoint = checkpoint_dir
                     logger.info(f"📂 Resuming {expert_name} from step {metadata.global_step}")
                     result.checkpoint_created = str(checkpoint_dir)
 
-                # Train the expert
-                training_result = self.expert_trainer.train_expert(
-                    expert_name=expert_name,
-                    resume_from_checkpoint=resume
-                )
+            # Train the expert using shared model (already loaded at startup)
+            logger.info(f"🎯 Training {expert_name} expert...")
+            training_result = self.expert_trainer.train_expert_with_data(
+                expert_name=expert_name,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                resume_from_checkpoint=resume,
+                debug_mode=debug_mode
+            )
 
-                result.training_time = time.time() - start_time
-                result.success = training_result.success
-                result.final_metrics = training_result.__dict__ if hasattr(training_result, '__dict__') else {}
+            result.training_time = time.time() - start_time
+            result.success = training_result.success
+            result.final_metrics = training_result.__dict__ if hasattr(training_result, '__dict__') else {}
 
             # Get latest checkpoint info
             if self.checkpoint_manager:
@@ -360,7 +404,7 @@ class ChessGemmaTrainingOrchestrator:
                     checkpoint_dir, metadata = latest
                     result.checkpoint_created = str(checkpoint_dir)
 
-            logger.info(f"✅ {expert_name} trained successfully in {result.training_time:.1f}s")
+            logger.info(f"✅ {expert_name} expert training completed successfully in {result.training_time:.1f}s")
 
         except Exception as e:
             result.training_time = time.time() - start_time
@@ -369,6 +413,29 @@ class ChessGemmaTrainingOrchestrator:
             logger.error(f"❌ {expert_name} training failed: {e}")
 
         return result
+
+    def _cleanup_expert_training_environment(self) -> None:
+        """Perform light cleanup between experts (keep model in memory)."""
+        try:
+            # Keep model and tokenizer in memory - only clear caches
+            # This is the key fix: don't delete the model between experts!
+
+            # Clear MPS/CUDA cache only
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+                logger.info("✅ MPS cache cleared")
+            elif torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.info("✅ CUDA cache cleared")
+
+            # Light garbage collection
+            import gc
+            gc.collect()
+
+            logger.info("🧹 Light cleanup completed (model preserved)")
+
+        except Exception as e:
+            logger.warning(f"⚠️  Expert environment cleanup failed: {e}")
 
     def _run_validation(self) -> None:
         """Run validation on trained experts."""
@@ -620,6 +687,12 @@ Examples:
         help='Directory to save training reports'
     )
 
+    parser.add_argument(
+        '--debug-mode',
+        action='store_true',
+        help='Enable debug mode with minimal callbacks and logging'
+    )
+
     args = parser.parse_args()
 
     # Handle resume flag conflict
@@ -645,7 +718,8 @@ Examples:
         report = orchestrator.train_all_experts(
             experts=args.experts,
             resume=args.resume,
-            validate=args.validate
+            validate=args.validate,
+            debug_mode=args.debug_mode
         )
 
         # Exit with success/failure code

@@ -78,6 +78,7 @@ class MPSMemoryOptimizer:
                                    safety_margin: float = 0.1) -> Dict[str, Any]:
         """
         Calculate optimal batch size for given model and sequence length.
+        Uses conservative, static estimation to avoid memory profiling issues.
 
         Args:
             model: The model to profile
@@ -89,75 +90,47 @@ class MPSMemoryOptimizer:
             Dict with batch size recommendations and memory estimates
         """
 
-        # Sample input for memory profiling
-        sample_text = "This is a sample chess position analysis for memory profiling. " * 50
-        inputs = tokenizer(sample_text, return_tensors="pt", truncation=True,
-                         max_length=sequence_length, padding="max_length")
+        logger.info("🔧 Using ultra-conservative MPS batch sizing (no memory profiling)")
 
+        # Optimized settings for MPS performance with stability
         if self.is_mps:
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            model.to(self.device)
+            # For Gemma 3 270M model on MPS with 18GB system memory
+            # Balance performance with stability - slightly increased batch size
+            recommended_batch_size = 2  # Increased from 1 for better performance
+            gradient_accumulation_steps = 4  # Moderate accumulation for effective batch size
+            effective_batch_size = 8  # Better training dynamics
 
-        # Profile memory usage
-        torch.mps.empty_cache() if self.is_mps else None
+            # Estimate memory usage (rough approximation)
+            # Model: ~270M params * 4 bytes (fp32) = ~1GB
+            # LoRA: ~10MB
+            # Optimizer states: ~2-3GB
+            # Activations per sample: ~50MB
+            estimated_memory_per_sample = int(50 * 1024 * 1024)  # 50MB per sample estimate
 
-        try:
-            with torch.no_grad():
-                # Forward pass memory profiling
-                torch.mps.reset_peak_memory_stats() if self.is_mps else None
+        else:
+            # CPU settings (more liberal)
+            recommended_batch_size = 2
+            gradient_accumulation_steps = 8
+            effective_batch_size = 16
+            estimated_memory_per_sample = int(100 * 1024 * 1024)  # 100MB per sample estimate
 
-                outputs = model(**inputs)
-                loss = outputs.loss if hasattr(outputs, 'loss') else outputs.logits.mean()
+        result = {
+            'recommended_batch_size': recommended_batch_size,
+            'gradient_accumulation_steps': gradient_accumulation_steps,
+            'effective_batch_size': effective_batch_size,
+            'estimated_memory_per_sample': estimated_memory_per_sample,
+            'available_memory': int(self.available_memory * 0.7),  # Conservative 70% usage
+            'memory_utilization': 0.3,  # Conservative target
+            'device': self.device.type
+        }
 
-                if self.is_mps:
-                    peak_memory = torch.mps.current_allocated_memory()
-                    # Estimate memory per sample
-                    memory_per_sample = peak_memory
-                else:
-                    # CPU memory estimation (rough)
-                    memory_per_sample = sequence_length * 4 * 4  # Rough estimate
+        logger.info("📊 Conservative batch size settings:")
+        logger.info(f"   Recommended batch size: {recommended_batch_size}")
+        logger.info(f"   Gradient accumulation: {gradient_accumulation_steps}")
+        logger.info(f"   Effective batch size: {result['effective_batch_size']}")
+        logger.info("   Memory profiling disabled for MPS stability")
 
-            # Calculate optimal batch size
-            available_for_batch = int(self.available_memory * (1 - safety_margin))
-            max_batch_size = max(1, available_for_batch // memory_per_sample)
-
-            # Conservative batch sizing for gradient accumulation
-            recommended_batch_size = min(max_batch_size, 8)  # Cap at 8 for stability
-
-            # Calculate gradient accumulation steps
-            effective_batch_size = 32  # Target effective batch size
-            gradient_accumulation_steps = max(1, effective_batch_size // recommended_batch_size)
-
-            result = {
-                'recommended_batch_size': recommended_batch_size,
-                'gradient_accumulation_steps': gradient_accumulation_steps,
-                'effective_batch_size': recommended_batch_size * gradient_accumulation_steps,
-                'estimated_memory_per_sample': memory_per_sample,
-                'available_memory': available_for_batch,
-                'memory_utilization': memory_per_sample * recommended_batch_size / self.available_memory,
-                'device': self.device.type
-            }
-
-            logger.info(f"📊 Optimal batch size calculated:")
-            logger.info(f"   Recommended batch size: {recommended_batch_size}")
-            logger.info(f"   Gradient accumulation: {gradient_accumulation_steps}")
-            logger.info(f"   Effective batch size: {result['effective_batch_size']}")
-            logger.info(f"   Memory utilization: {result['memory_utilization']:.1%}")
-
-            return result
-
-        except Exception as e:
-            logger.warning(f"Memory profiling failed: {e}")
-            # Fallback conservative settings
-            return {
-                'recommended_batch_size': 2,
-                'gradient_accumulation_steps': 8,
-                'effective_batch_size': 16,
-                'estimated_memory_per_sample': 0,
-                'available_memory': self.available_memory,
-                'memory_utilization': 0.5,
-                'device': self.device.type
-            }
+        return result
 
     def get_mps_optimized_training_args(self, base_config: Dict[str, Any],
                                       model=None, tokenizer=None) -> Dict[str, Any]:
@@ -200,18 +173,19 @@ class MPSMemoryOptimizer:
             except ImportError:
                 pass
 
-        # Calculate optimal batch size if model provided
-        if model and tokenizer:
-            batch_info = self.calculate_optimal_batch_size(model, tokenizer)
-            # For MPS, override with very conservative settings to prevent buffer size errors
-            if self.is_mps:
-                # MPS is very sensitive to memory allocation - use ultra-conservative settings
-                optimized_config.update({
-                    'per_device_train_batch_size': 1,  # Fixed at 1 for MPS stability
-                    'gradient_accumulation_steps': 1,  # No accumulation for maximum stability
-                })
-                logger.info("🔧 Applied ultra-conservative MPS batch sizing (no accumulation) for stability")
-            else:
+        # Skip memory profiling for MPS to prevent buffer allocation errors
+        # Use fixed ultra-conservative settings for MPS stability
+        if self.is_mps:
+            # MPS conservative settings for maximum stability
+            optimized_config.update({
+                'per_device_train_batch_size': 1,  # Conservative batch size for MPS stability
+                'gradient_accumulation_steps': 2,   # Minimal accumulation for testing
+            })
+            logger.info("🔧 Applied conservative MPS batch sizing for stability")
+        else:
+            # Calculate optimal batch size if model provided for CPU training
+            if model and tokenizer:
+                batch_info = self.calculate_optimal_batch_size(model, tokenizer)
                 optimized_config.update({
                     'per_device_train_batch_size': batch_info['recommended_batch_size'],
                     'gradient_accumulation_steps': batch_info['gradient_accumulation_steps'],
@@ -240,28 +214,43 @@ class MPSMemoryOptimizer:
 
     def monitor_memory_usage(self) -> Dict[str, Any]:
         """Monitor current memory usage."""
-        if self.is_mps:
-            current_memory = torch.mps.current_allocated_memory()
-            peak_memory = torch.mps.peak_allocated_memory()
-        else:
-            # CPU memory monitoring
-            process = psutil.Process()
-            current_memory = process.memory_info().rss
-            peak_memory = current_memory  # Approximation
+        try:
+            if self.is_mps:
+                # MPS memory monitoring - use conservative estimates
+                # Avoid using torch.mps memory functions that may not be available
+                system_memory = psutil.virtual_memory()
+                current_memory = system_memory.total - system_memory.available
+                peak_memory = current_memory  # Approximation for MPS
+            else:
+                # CPU memory monitoring
+                process = psutil.Process()
+                current_memory = process.memory_info().rss
+                peak_memory = current_memory  # Approximation
 
-        memory_info = {
-            'current_memory': current_memory,
-            'peak_memory': peak_memory,
-            'available_memory': self.available_memory,
-            'memory_utilization': current_memory / self.available_memory,
-            'device': self.device.type
-        }
+            memory_info = {
+                'current_memory': current_memory,
+                'peak_memory': peak_memory,
+                'available_memory': self.available_memory,
+                'memory_utilization': min(current_memory / self.available_memory, 1.0),
+                'device': self.device.type
+            }
 
-        # Update tracking
-        self.current_memory_used = current_memory
-        self.peak_memory_used = max(self.peak_memory_used, peak_memory)
+            # Update tracking
+            self.current_memory_used = current_memory
+            self.peak_memory_used = max(self.peak_memory_used, peak_memory)
 
-        return memory_info
+            return memory_info
+
+        except Exception as e:
+            logger.warning(f"Memory monitoring failed: {e}")
+            return {
+                'current_memory': 0,
+                'peak_memory': 0,
+                'available_memory': self.available_memory,
+                'memory_utilization': 0.0,
+                'device': self.device.type,
+                'error': str(e)
+            }
 
     @contextmanager
     def memory_efficient_context(self):

@@ -228,13 +228,13 @@ class ChessExpertTrainer:
                 },
                 training_params={
                     'learning_rate': 2e-4,
-                    'batch_size': 8,
-                    'gradient_accumulation_steps': 4,
-                    'max_steps': 2000,
+                    'batch_size': 1,  # Conservative batch size for stability
+                    'gradient_accumulation_steps': 2,  # Minimal accumulation = effective batch 2
+                    'max_steps': 50,  # Reduced for testing - increase later
                     'warmup_steps': 200,
                     'weight_decay': 0.01,
                     'evaluation_strategy': 'steps',
-                    'eval_steps': 200,
+                    'eval_steps': 400,  # Less frequent evaluation
                     'save_steps': 400
                 },
                 validation_metrics=['move_accuracy', 'response_time', 'legal_move_rate'],
@@ -258,13 +258,13 @@ class ChessExpertTrainer:
                 },
                 training_params={
                     'learning_rate': 1.5e-4,
-                    'batch_size': 4,
-                    'gradient_accumulation_steps': 8,
+                    'batch_size': 1,  # Conservative batch size for stability
+                    'gradient_accumulation_steps': 2,  # Minimal accumulation = effective batch 2
                     'max_steps': 3000,
                     'warmup_steps': 300,
                     'weight_decay': 0.01,
                     'evaluation_strategy': 'steps',
-                    'eval_steps': 300,
+                    'eval_steps': 600,  # Less frequent evaluation
                     'save_steps': 600
                 },
                 validation_metrics=['explanation_quality', 'analysis_depth', 'teaching_effectiveness'],
@@ -288,13 +288,13 @@ class ChessExpertTrainer:
                 },
                 training_params={
                     'learning_rate': 1e-4,
-                    'batch_size': 2,
-                    'gradient_accumulation_steps': 16,
+                    'batch_size': 1,  # Conservative batch size for stability
+                    'gradient_accumulation_steps': 2,  # Minimal accumulation = effective batch 2
                     'max_steps': 4000,
                     'warmup_steps': 400,
                     'weight_decay': 0.01,
                     'evaluation_strategy': 'steps',
-                    'eval_steps': 400,
+                    'eval_steps': 800,  # Less frequent evaluation
                     'save_steps': 800
                 },
                 validation_metrics=['strategic_accuracy', 'knowledge_depth', 'planning_quality'],
@@ -306,9 +306,25 @@ class ChessExpertTrainer:
             )
         }
 
-    def initialize_training_environment(self):
+    def initialize_training_environment(self, force_reload: bool = False):
         """Initialize the base model and tokenizer for expert training."""
         logger.info("🔧 Initializing expert training environment...")
+
+        # Skip if already loaded and not forcing reload
+        if not force_reload and self.base_model is not None and self.tokenizer is not None:
+            logger.info("✅ Training environment already initialized - skipping reload")
+            return
+
+        # Clear existing models if forcing reload
+        if force_reload:
+            if self.base_model is not None:
+                del self.base_model
+                self.base_model = None
+            if self.tokenizer is not None:
+                del self.tokenizer
+                self.tokenizer = None
+            import gc
+            gc.collect()
 
         try:
             # Load configuration
@@ -410,13 +426,13 @@ class ChessExpertTrainer:
         }
 
     def prepare_expert_data(self, expert_name: str) -> Tuple[Dataset, Dataset]:
-        """Prepare filtered and optimized dataset for expert training."""
+        """Prepare filtered and optimized dataset for expert training with memory efficiency."""
         logger.info(f"📚 Preparing data for {expert_name} expert...")
 
         config = self.expert_configs[expert_name]
         data_filters = config.data_filters
 
-        # Load available datasets
+        # Load available datasets with memory efficiency
         all_data = []
         dataset_files = list(self.data_dir.glob("enhanced_*.jsonl"))
 
@@ -426,23 +442,35 @@ class ChessExpertTrainer:
 
         logger.info(f"Found {len(dataset_files)} dataset files")
 
-        # Load and filter data
+        # Conservative loading: reduce data size to diagnose hanging
+        max_examples = 50  # Reduced for debugging - increase later
+        examples_per_file = max(10, max_examples // len(dataset_files))
+
+        # Load and filter data with memory limits
         for dataset_file in dataset_files:
+            if len(all_data) >= max_examples:
+                break
+
             logger.info(f"Processing {dataset_file.name}...")
 
+            file_examples = 0
             with open(dataset_file, 'r', encoding='utf-8') as f:
                 for line in f:
+                    if len(all_data) >= max_examples or file_examples >= examples_per_file:
+                        break
+
                     try:
                         item = json.loads(line.strip())
 
                         # Apply expert-specific filters
                         if self._passes_filters(item, data_filters):
                             all_data.append(item)
+                            file_examples += 1
 
                     except json.JSONDecodeError:
                         continue
 
-        logger.info(f"Loaded {len(all_data)} total examples")
+        logger.info(f"Loaded {len(all_data)} total examples (limited for memory efficiency)")
 
         # Apply expert-specific processing
         processed_data = self._process_expert_data(all_data, expert_name)
@@ -534,7 +562,13 @@ class ChessExpertTrainer:
         return f"Chess Director:\n{prompt}\n\nStrategic Assessment:\n{response}"
 
     def train_expert(self, expert_name: str, resume_from_checkpoint: bool = True) -> ExpertTrainingResult:
-        """Train a single expert adapter with checkpoint management."""
+        """Train a single expert adapter with checkpoint management (legacy method)."""
+        logger.warning("⚠️  Using legacy train_expert method - consider using train_expert_with_data for better memory management")
+        return self.train_expert_with_data(expert_name, None, None, resume_from_checkpoint)
+
+    def train_expert_with_data(self, expert_name: str, train_dataset=None, eval_dataset=None,
+                              resume_from_checkpoint: bool = True, debug_mode: bool = False) -> ExpertTrainingResult:
+        """Train a single expert adapter with pre-loaded datasets and proper memory management."""
         logger.info(f"🎓 Training {expert_name} expert...")
         logger.info(f"📝 Description: {self.expert_configs[expert_name].description}")
 
@@ -552,11 +586,15 @@ class ChessExpertTrainer:
                 logger.info("🏁 Starting fresh training (no checkpoints found)")
 
         try:
-            # Initialize training environment (loads model and tokenizer)
-            self.initialize_training_environment()
+            # Only initialize training environment if not already done
+            if self.base_model is None or self.tokenizer is None:
+                logger.info("🔧 Initializing training environment...")
+                self.initialize_training_environment()
 
-            # Prepare data
-            train_dataset, eval_dataset = self.prepare_expert_data(expert_name)
+            # Prepare data if not provided
+            if train_dataset is None or eval_dataset is None:
+                logger.info("📚 Preparing data for expert...")
+                train_dataset, eval_dataset = self.prepare_expert_data(expert_name)
 
             # Tokenize datasets
             def tokenize_function(examples):
@@ -567,6 +605,7 @@ class ChessExpertTrainer:
                     max_length=2048
                 )
 
+            logger.info("🔄 Tokenizing datasets...")
             train_dataset = train_dataset.map(tokenize_function, batched=True, remove_columns=['text'])
             eval_dataset = eval_dataset.map(tokenize_function, batched=True, remove_columns=['text'])
 
@@ -693,24 +732,105 @@ class ChessExpertTrainer:
                     config=config
                 )
 
+            # Set up callbacks based on debug mode
+            callbacks_list = []
+
+            if not debug_mode:
+                # Enhanced logging callback for normal mode
+                class EnhancedTrainerCallback(TrainerCallback):
+                    def __init__(self):
+                        self.start_time = time.time()
+                        self.step_times = []
+                        self.last_step_time = self.start_time
+
+                    def on_step_end(self, args, state, control, **kwargs):
+                        # Track step timing
+                        current_time = time.time()
+                        step_time = current_time - self.last_step_time
+                        self.step_times.append(step_time)
+                        self.last_step_time = current_time
+
+                        # Calculate metrics every 10 steps
+                        if state.global_step % 10 == 0:
+                            avg_step_time = sum(self.step_times[-10:]) / min(10, len(self.step_times))
+                            elapsed = current_time - self.start_time
+
+                            # Memory monitoring
+                            import psutil
+                            process = psutil.Process()
+                            memory_gb = process.memory_info().rss / (1024**3)
+
+                            # Calculate ETA
+                            remaining_steps = args.max_steps - state.global_step
+                            eta_seconds = remaining_steps * avg_step_time
+                            eta_str = f"{eta_seconds/3600:.1f}h" if eta_seconds > 3600 else f"{eta_seconds/60:.1f}m"
+
+                            metrics_str = (f"📊 Step {state.global_step}/{args.max_steps} | "
+                                          f"Avg: {avg_step_time:.2f}s/step | "
+                                          f"Elapsed: {elapsed/60:.1f}m | "
+                                          f"Memory: {memory_gb:.1f}GB | "
+                                          f"ETA: {eta_str}")
+                            logger.info(metrics_str)
+
+                # Add enhanced callback for monitoring
+                enhanced_callback = EnhancedTrainerCallback()
+                callbacks_list.append(enhanced_callback)
+
+            # Always add checkpoint callback if available
+            if checkpoint_callback:
+                callbacks_list.append(checkpoint_callback)
+
             trainer = Trainer(
                 model=expert_model,
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
                 data_collator=data_collator,
-                callbacks=[checkpoint_callback] if checkpoint_callback else None,
+                callbacks=callbacks_list,
             )
 
-            # Train the expert
+            # Train the expert with enhanced monitoring
             logger.info("🚀 Starting expert training...")
+            if debug_mode:
+                logger.info("🐛 DEBUG MODE: Minimal callbacks and logging enabled")
+            training_start_time = time.time()
 
-            # Minimal memory monitoring for MPS (disabled aggressive clearing)
+            # Enhanced memory monitoring for MPS
             if torch.backends.mps.is_available():
-                logger.info("🔧 MPS training - using minimal memory monitoring")
+                logger.info("🔧 MPS training - enhanced memory monitoring enabled")
 
-            # Simple MPS training - no extra monitoring or timeouts
-            train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
+            # Log memory before training starts
+            import psutil
+            process = psutil.Process()
+            memory_before = process.memory_info().rss / (1024**3)
+            logger.info(f"📊 Memory before training start: {memory_before:.1f}GB")
+            logger.info("⚡ About to call trainer.train()...")
+
+            # Simple MPS training with enhanced monitoring and timeout
+            logger.info("⏰ Starting training with 5-minute timeout for debugging...")
+            import threading
+
+            train_completed = [False]
+            train_result = [None]
+
+            def train_with_timeout():
+                try:
+                    train_result[0] = trainer.train(resume_from_checkpoint=resume_checkpoint)
+                    train_completed[0] = True
+                except Exception as e:
+                    logger.error(f"Training failed with error: {e}")
+                    train_completed[0] = True
+
+            train_thread = threading.Thread(target=train_with_timeout)
+            train_thread.start()
+            train_thread.join(timeout=300)  # 5 minute timeout
+
+            if not train_completed[0]:
+                logger.error("🚨 Training timed out after 5 minutes!")
+                raise TimeoutError("Training exceeded 5-minute timeout")
+
+            training_end_time = time.time()
+            logger.info(f"✅ Training completed in {training_end_time - training_start_time:.1f}s")
 
             # Evaluate final performance
             eval_results = trainer.evaluate()

@@ -10,12 +10,12 @@
     "output_dir_base": "checkpoints/expert_training",
     "logging_steps": 50,
     "save_total_limit": 3,
-    "load_best_model_at_end": true,
+    "load_best_model_at_end": false,
     "metric_for_best_model": "eval_loss",
     "greater_is_better": false,
-    "fp16": true,
+    "fp16": false,
     "report_to": [],
-    "gradient_checkpointing": true
+    "gradient_checkpointing": false
   },
   "experts": {
     "uci": {
