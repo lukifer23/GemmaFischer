@@ -184,11 +184,16 @@ class MPSMemoryOptimizer:
                 'fp16': False,
                 'dataloader_pin_memory': False,  # MPS doesn't benefit from pinned memory
                 'dataloader_num_workers': 0,  # Avoid multiprocessing issues on MPS
-                'gradient_checkpointing': True,  # Memory optimization (critical for MPS)
+                'gradient_checkpointing': False,  # DISABLED: Causes buffer allocation issues on MPS
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
-                # Conservative batch sizing for MPS stability
-                'per_device_train_batch_size': 1,  # Very conservative for MPS
-                'gradient_accumulation_steps': 4,  # Reduced accumulation
+                # Ultra-conservative batch sizing for MPS stability
+                'per_device_train_batch_size': 1,  # Fixed at 1 for MPS stability
+                'gradient_accumulation_steps': 2,  # Very conservative accumulation
+                # Additional MPS stability settings
+                'torch_compile': False,  # MPS compilation can be unstable
+                'use_mps_device': True,  # Explicit MPS device usage
+                'torch_empty_cache_steps': 50,  # Frequent memory cleanup
+                'max_grad_norm': 1.0,  # Conservative gradient clipping
             })
 
             # Memory-efficient attention if available
@@ -208,9 +213,9 @@ class MPSMemoryOptimizer:
                 # MPS is very sensitive to memory allocation - use ultra-conservative settings
                 optimized_config.update({
                     'per_device_train_batch_size': 1,  # Fixed at 1 for MPS stability
-                    'gradient_accumulation_steps': 4,  # Reduced for stability
+                    'gradient_accumulation_steps': 1,  # No accumulation for maximum stability
                 })
-                logger.info("🔧 Applied ultra-conservative MPS batch sizing for stability")
+                logger.info("🔧 Applied ultra-conservative MPS batch sizing (no accumulation) for stability")
             else:
                 optimized_config.update({
                     'per_device_train_batch_size': batch_info['recommended_batch_size'],
@@ -219,10 +224,10 @@ class MPSMemoryOptimizer:
 
         # Learning rate adjustments for MPS
         if self.is_mps:
-            # MPS with conservative batch sizing - keep learning rate conservative
+            # MPS with ultra-conservative settings - very conservative learning rate
             current_lr = optimized_config.get('learning_rate', 2e-4)
-            # More conservative learning rate with smaller batches
-            optimized_config['learning_rate'] = min(current_lr * 0.8, 3e-4)
+            # Much more conservative learning rate for stability
+            optimized_config['learning_rate'] = min(current_lr * 0.5, 1e-4)
 
         # Memory monitoring
         optimized_config.update({
