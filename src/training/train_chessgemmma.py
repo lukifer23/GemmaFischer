@@ -329,15 +329,15 @@ class ChessGemmaTrainingOrchestrator:
                     logger.info(f"📂 Resuming {expert_name} from step {metadata.global_step}")
                     result.checkpoint_created = str(checkpoint_dir)
 
-            # Train the expert
-            training_result = self.expert_trainer.train_expert(
-                expert_name=expert_name,
-                resume_from_checkpoint=resume
-            )
+                # Train the expert
+                training_result = self.expert_trainer.train_expert(
+                    expert_name=expert_name,
+                    resume_from_checkpoint=resume
+                )
 
-            result.training_time = time.time() - start_time
-            result.success = True
-            result.final_metrics = training_result.__dict__ if hasattr(training_result, '__dict__') else {}
+                result.training_time = time.time() - start_time
+                result.success = training_result.success
+                result.final_metrics = training_result.__dict__ if hasattr(training_result, '__dict__') else {}
 
             # Get latest checkpoint info
             if self.checkpoint_manager:

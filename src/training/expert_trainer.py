@@ -79,12 +79,13 @@ class ExpertConfig:
 class ExpertTrainingResult:
     """Results from expert training."""
     expert_name: str
+    success: bool
     training_time: float
-    final_metrics: Dict[str, Any]
-    adapter_path: str
-    validation_results: Dict[str, Any]
-    performance_score: float
-    recommendations: List[str]
+    final_metrics: Dict[str, Any] = field(default_factory=dict)
+    adapter_path: str = ""
+    validation_results: Dict[str, Any] = field(default_factory=dict)
+    performance_score: float = 0.0
+    recommendations: List[str] = field(default_factory=list)
 
 
 class ChessCheckpointCallback(TrainerCallback):
@@ -512,6 +513,9 @@ class ChessExpertTrainer:
                 logger.info("🏁 Starting fresh training (no checkpoints found)")
 
         try:
+            # Initialize training environment (loads model and tokenizer)
+            self.initialize_training_environment()
+
             # Prepare data
             train_dataset, eval_dataset = self.prepare_expert_data(expert_name)
 
@@ -634,6 +638,7 @@ class ChessExpertTrainer:
 
             result = ExpertTrainingResult(
                 expert_name=expert_name,
+                success=True,
                 training_time=training_time,
                 final_metrics=eval_results,
                 adapter_path=str(output_dir),
@@ -654,6 +659,7 @@ class ChessExpertTrainer:
 
             return ExpertTrainingResult(
                 expert_name=expert_name,
+                success=False,
                 training_time=training_time,
                 final_metrics={},
                 adapter_path="",
