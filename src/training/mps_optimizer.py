@@ -188,7 +188,7 @@ class MPSMemoryOptimizer:
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
                 # Ultra-conservative batch sizing for MPS stability
                 'per_device_train_batch_size': 1,  # Fixed at 1 for MPS stability
-                'gradient_accumulation_steps': 2,  # Very conservative accumulation
+                'gradient_accumulation_steps': 1,  # No accumulation for maximum stability
                 # Additional MPS stability settings
                 'torch_compile': False,  # MPS compilation can be unstable
                 'use_mps_device': True,  # Explicit MPS device usage

@@ -279,8 +279,21 @@ class ChessGemmaTrainingOrchestrator:
 
                 self.expert_results.append(result)
 
-                # Brief pause between experts for system cooling
+                # Memory cleanup and brief pause between experts for system cooling
                 if i < len(experts):
+                    logger.info("🧹 Memory cleanup before next expert...")
+
+                    # Force garbage collection and MPS memory cleanup
+                    import gc
+                    gc.collect()
+
+                    if torch.backends.mps.is_available():
+                        torch.mps.empty_cache()
+                        logger.info("✅ MPS cache cleared")
+                    elif torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        logger.info("✅ CUDA cache cleared")
+
                     logger.info("⏱️  Cooling period before next expert...")
                     time.sleep(30)  # 30 second pause
 

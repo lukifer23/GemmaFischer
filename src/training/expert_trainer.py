@@ -348,10 +348,13 @@ class ChessExpertTrainer:
 
             logger.info(f"Using dtype {model_dtype} for device compatibility")
 
+            # MPS doesn't support device_map="auto" well - use None for MPS
+            device_map_setting = None if torch.backends.mps.is_available() else "auto"
+
             self.base_model = AutoModelForCausalLM.from_pretrained(
                 str(model_path),
                 local_files_only=True,
-                device_map="auto",
+                device_map=device_map_setting,
                 attn_implementation="eager",
                 torch_dtype=model_dtype
             )
@@ -363,6 +366,17 @@ class ChessExpertTrainer:
                 logger.info("Enabled gradient checkpointing for memory efficiency")
             else:
                 logger.info("Disabled gradient checkpointing for MPS compatibility")
+
+            # Ensure model is on correct device for MPS
+            if torch.backends.mps.is_available():
+                self.base_model = self.base_model.to(torch.device("mps"))
+                logger.info("Moved model to MPS device")
+            elif torch.cuda.is_available():
+                # Let CUDA handle device placement automatically
+                pass
+            else:
+                self.base_model = self.base_model.to(torch.device("cpu"))
+                logger.info("Moved model to CPU device")
 
             logger.info("✅ Expert training environment initialized")
 
