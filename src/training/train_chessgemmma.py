@@ -186,7 +186,7 @@ class ChessGemmaTrainingOrchestrator:
         # Initialize expert trainer
         try:
             from .expert_trainer import ChessExpertTrainer
-            self.expert_trainer = ChessExpertTrainer(str(self.config_path))
+            self.expert_trainer = ChessExpertTrainer(self.config_path)
             logger.info("✅ Expert trainer initialized")
             components_initialized += 1
         except Exception as e:

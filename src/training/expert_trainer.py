@@ -179,8 +179,8 @@ class ChessCheckpointCallback(TrainerCallback):
 class ChessExpertTrainer:
     """Specialized trainer for chess expert adapters."""
 
-    def __init__(self, config_path: Optional[str] = None):
-        self.config_path = config_path or Path(__file__).parent / "configs" / "expert_training_config.json"
+    def __init__(self, config_path: Optional[Union[str, Path]] = None):
+        self.config_path = Path(config_path) if config_path else Path(__file__).parent / "configs" / "expert_training_config.json"
         self.project_root = project_root
         self.checkpoints_dir = self.project_root / "checkpoints"
         self.data_dir = self.project_root / "data" / "formatted"
