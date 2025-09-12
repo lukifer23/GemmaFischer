@@ -316,8 +316,17 @@ class ChessExpertTrainer:
 
             # Load tokenizer
             model_path = config.get('model', {}).get('base_model', 'models/unsloth-gemma-3-270m-it')
-            if not Path(model_path).exists():
-                model_path = self.project_root / model_path
+            model_path = self.project_root / model_path
+
+            # Find the actual model snapshot path (handle Hugging Face cache structure)
+            if model_path.exists() and model_path.is_dir():
+                # Check if this is a Hugging Face cache directory with snapshots
+                snapshots_dir = model_path / "models--unsloth--gemma-3-270m-it" / "snapshots"
+                if snapshots_dir.exists():
+                    # Find the latest snapshot (should be only one)
+                    snapshot_dirs = list(snapshots_dir.iterdir())
+                    if snapshot_dirs:
+                        model_path = snapshot_dirs[0]  # Use the first (only) snapshot
 
             logger.info(f"Loading tokenizer from {model_path}")
             self.tokenizer = AutoTokenizer.from_pretrained(
