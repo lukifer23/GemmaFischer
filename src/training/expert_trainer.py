@@ -546,7 +546,7 @@ class ChessExpertTrainer:
                 r=32,
                 lora_alpha=64,
                 target_modules=["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj"],
-                dropout=0.05,
+                lora_dropout=0.05,
                 task_type="CAUSAL_LM",
                 bias="none"
             )
