@@ -26,7 +26,7 @@ from datetime import datetime
 import time
 import logging
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
+from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer, TrainerCallback
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import datasets
 from datasets import Dataset
@@ -37,9 +37,29 @@ import random
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
+# Import checkpoint manager
+try:
+    from .checkpoint_manager import CheckpointManager, CheckpointMetadata
+    CHECKPOINT_MANAGER_AVAILABLE = True
+except ImportError:
+    CHECKPOINT_MANAGER_AVAILABLE = False
+    logger.warning("Checkpoint manager not available - limited checkpoint functionality")
+
+# Import MPS optimizer
+try:
+    from .mps_optimizer import MPSMemoryOptimizer, optimize_training_for_mps
+    MPS_OPTIMIZER_AVAILABLE = True
+except ImportError:
+    MPS_OPTIMIZER_AVAILABLE = False
+    logger.warning("MPS optimizer not available - using standard training")
+
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+try:
+    from ..utils.logging_config import get_logger
+    logger = get_logger(__name__)
+except ImportError:
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,6 +87,94 @@ class ExpertTrainingResult:
     recommendations: List[str]
 
 
+class ChessCheckpointCallback(TrainerCallback):
+    """Custom callback for comprehensive checkpoint management."""
+
+    def __init__(self, expert_name: str, checkpoint_manager: CheckpointManager,
+                 expert_config: ExpertConfig, config: Dict[str, Any]):
+        self.expert_name = expert_name
+        self.checkpoint_manager = checkpoint_manager
+        self.expert_config = expert_config
+        self.config = config
+        self.start_time = time.time()
+
+    def on_save(self, args, state, control, **kwargs):
+        """Called when a checkpoint is saved."""
+        if not self.checkpoint_manager:
+            return
+
+        try:
+            # Get current metrics
+            metrics = {}
+            if hasattr(state, 'log_history') and state.log_history:
+                latest_log = state.log_history[-1]
+                metrics = {
+                    'training_loss': latest_log.get('train_loss'),
+                    'learning_rate': latest_log.get('learning_rate'),
+                    'epoch': latest_log.get('epoch', 0)
+                }
+
+            # Get evaluation metrics if available
+            eval_loss = None
+            if hasattr(state, 'log_history'):
+                for log_entry in reversed(state.log_history):
+                    if 'eval_loss' in log_entry:
+                        eval_loss = log_entry['eval_loss']
+                        break
+
+            # Calculate current learning rate
+            lr = metrics.get('learning_rate')
+            if lr is None and hasattr(args, 'learning_rate'):
+                lr = args.learning_rate
+
+            # Collect dataset info
+            dataset_info = {
+                'expert_filters': self.expert_config.data_filters,
+                'training_samples': getattr(self, '_train_samples', 0),
+                'validation_samples': getattr(self, '_eval_samples', 0)
+            }
+
+            # Collect validation metrics
+            validation_metrics = {
+                'expert_focus_areas': self.expert_config.focus_areas,
+                'target_performance': self.expert_config.target_performance
+            }
+
+            # Create checkpoint with full metadata
+            checkpoint_dir, metadata = self.checkpoint_manager.create_checkpoint(
+                expert_name=self.expert_name,
+                step=state.global_step,
+                epoch=float(metrics.get('epoch', 0)),
+                global_step=state.global_step,
+                training_loss=metrics.get('training_loss', 0.0),
+                eval_loss=eval_loss,
+                learning_rate=lr or 0.0,
+                model_config=self.config.get('model', {}),
+                training_config=self.config.get('training', {}),
+                dataset_info=dataset_info,
+                validation_metrics=validation_metrics
+            )
+
+            logger.info(f"✅ Checkpoint created: {checkpoint_dir.name}")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to create checkpoint: {e}")
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        """Called at the beginning of training."""
+        self.start_time = time.time()
+        logger.info(f"🏁 Training started for {self.expert_name}")
+
+    def on_train_end(self, args, state, control, **kwargs):
+        """Called at the end of training."""
+        duration = time.time() - self.start_time
+        logger.info(f"🎉 Training completed for {self.expert_name} in {duration:.1f}s")
+
+    def on_epoch_end(self, args, state, control, **kwargs):
+        """Called at the end of each epoch."""
+        logger.info(f"📊 Epoch {state.epoch:.1f} completed - Step {state.global_step}")
+
+
 class ChessExpertTrainer:
     """Specialized trainer for chess expert adapters."""
 
@@ -83,6 +191,22 @@ class ChessExpertTrainer:
         self.tokenizer = None
         self.base_model = None
         self.current_expert = None
+
+        # Initialize checkpoint manager
+        if CHECKPOINT_MANAGER_AVAILABLE:
+            self.checkpoint_manager = CheckpointManager(self.checkpoints_dir)
+            logger.info("✅ Checkpoint manager initialized")
+        else:
+            self.checkpoint_manager = None
+            logger.warning("⚠️  Checkpoint manager not available - using basic checkpointing")
+
+        # Initialize MPS optimizer
+        if MPS_OPTIMIZER_AVAILABLE:
+            self.mps_optimizer = MPSMemoryOptimizer()
+            logger.info("✅ MPS memory optimizer initialized")
+        else:
+            self.mps_optimizer = None
+            logger.warning("⚠️  MPS optimizer not available - using standard configuration")
 
         logger.info("🔧 Chess Expert Trainer initialized")
 
@@ -369,12 +493,23 @@ class ChessExpertTrainer:
 
         return f"Chess Director:\n{prompt}\n\nStrategic Assessment:\n{response}"
 
-    def train_expert(self, expert_name: str) -> ExpertTrainingResult:
-        """Train a single expert adapter."""
+    def train_expert(self, expert_name: str, resume_from_checkpoint: bool = True) -> ExpertTrainingResult:
+        """Train a single expert adapter with checkpoint management."""
         logger.info(f"🎓 Training {expert_name} expert...")
         logger.info(f"📝 Description: {self.expert_configs[expert_name].description}")
 
         start_time = time.time()
+        resume_checkpoint = None
+        trainer_state = {}
+
+        # Check for existing checkpoints to resume from
+        if resume_from_checkpoint and self.checkpoint_manager:
+            resume_data = self.checkpoint_manager.resume_from_checkpoint(expert_name)
+            if resume_data:
+                resume_checkpoint, resume_metadata, trainer_state = resume_data
+                logger.info(f"📂 Resuming training from step {resume_metadata.global_step}")
+            else:
+                logger.info("🏁 Starting fresh training (no checkpoints found)")
 
         try:
             # Prepare data
@@ -411,28 +546,44 @@ class ChessExpertTrainer:
             training_config = config["training"]
             expert_params = expert_config.training_params
 
-            output_dir = self.checkpoints_dir / f"expert_{expert_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            # Use checkpoint manager for output directory if available
+            if self.checkpoint_manager:
+                output_base = self.checkpoints_dir / expert_name
+                output_base.mkdir(parents=True, exist_ok=True)
+            else:
+                output_base = self.checkpoints_dir / f"expert_{expert_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            # Apply MPS optimizations if available
+            if self.mps_optimizer:
+                training_config = self.mps_optimizer.get_mps_optimized_training_args(
+                    training_config, self.base_model, self.tokenizer
+                )
+                logger.info("⚡ Applied MPS optimizations to training configuration")
+
+            # Merge expert-specific parameters
+            final_training_config = training_config.copy()
+            final_training_config.update({
+                'per_device_train_batch_size': expert_params['batch_size'],
+                'gradient_accumulation_steps': expert_params['gradient_accumulation_steps'],
+                'max_steps': expert_params['max_steps'],
+                'learning_rate': expert_params['learning_rate'],
+                'warmup_steps': expert_params['warmup_steps'],
+                'weight_decay': expert_params['weight_decay'],
+                'save_steps': expert_params['save_steps'],
+                'evaluation_strategy': expert_params['evaluation_strategy'],
+                'eval_steps': expert_params['eval_steps'],
+            })
 
             training_args = TrainingArguments(
-                output_dir=str(output_dir),
-                per_device_train_batch_size=expert_params['batch_size'],
-                gradient_accumulation_steps=expert_params['gradient_accumulation_steps'],
+                output_dir=str(output_base),
                 num_train_epochs=1,
-                max_steps=expert_params['max_steps'],
-                learning_rate=expert_params['learning_rate'],
-                warmup_steps=expert_params['warmup_steps'],
-                weight_decay=expert_params['weight_decay'],
-                logging_steps=training_config['logging_steps'],
-                save_steps=expert_params['save_steps'],
-                evaluation_strategy=expert_params['evaluation_strategy'],
-                eval_steps=expert_params['eval_steps'],
-                save_total_limit=training_config['save_total_limit'],
                 load_best_model_at_end=training_config['load_best_model_at_end'],
                 metric_for_best_model=training_config['metric_for_best_model'],
                 greater_is_better=training_config['greater_is_better'],
-                fp16=training_config['fp16'],
-                report_to=training_config['report_to'],
                 logging_first_step=True,
+                # Resume from checkpoint if available
+                resume_from_checkpoint=str(resume_checkpoint) if resume_checkpoint else None,
+                **final_training_config  # Include all optimized parameters
             )
 
             # Initialize trainer
@@ -442,17 +593,28 @@ class ChessExpertTrainer:
                 mlm=False
             )
 
+            # Create custom callback for checkpoint management
+            checkpoint_callback = None
+            if self.checkpoint_manager:
+                checkpoint_callback = ChessCheckpointCallback(
+                    expert_name=expert_name,
+                    checkpoint_manager=self.checkpoint_manager,
+                    expert_config=expert_config,
+                    config=config
+                )
+
             trainer = Trainer(
                 model=expert_model,
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
                 data_collator=data_collator,
+                callbacks=[checkpoint_callback] if checkpoint_callback else None,
             )
 
             # Train the expert
             logger.info("🚀 Starting expert training...")
-            trainer.train()
+            train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
 
             # Evaluate final performance
             eval_results = trainer.evaluate()
@@ -543,7 +705,7 @@ class ChessExpertTrainer:
 
         return recommendations if recommendations else ["Training results look good"]
 
-    def train_all_experts(self) -> Dict[str, ExpertTrainingResult]:
+    def train_all_experts(self, resume_from_checkpoint: bool = True) -> Dict[str, ExpertTrainingResult]:
         """Train all expert adapters."""
         logger.info("🎯 Training all chess experts...")
         logger.info("=" * 60)
@@ -558,7 +720,7 @@ class ChessExpertTrainer:
             logger.info(f"EXPERT: {expert_name.upper()}")
             logger.info(f"{'='*60}")
 
-            result = self.train_expert(expert_name)
+            result = self.train_expert(expert_name, resume_from_checkpoint=resume_from_checkpoint)
             results[expert_name] = result
 
             # Brief pause between expert trainings
@@ -661,11 +823,16 @@ def main():
     parser.add_argument('--config', type=str, help='Path to training configuration file')
     parser.add_argument('--output_dir', type=str, help='Output directory for trained experts')
     parser.add_argument('--validate', action='store_true', help='Run validation after training')
+    parser.add_argument('--resume', action='store_true', help='Resume training from latest checkpoint')
+    parser.add_argument('--no_resume', action='store_true', help='Start fresh training (ignore checkpoints)')
 
     args = parser.parse_args()
 
     print("🎓 Chess Expert Training System")
     print("=" * 50)
+
+    # Determine resume behavior (default is resume if available)
+    resume_training = args.resume or (not args.no_resume)
 
     # Initialize trainer
     trainer = ChessExpertTrainer(args.config)
@@ -675,7 +842,7 @@ def main():
 
     if args.expert == 'all':
         # Train all experts
-        results = trainer.train_all_experts()
+        results = trainer.train_all_experts(resume_from_checkpoint=resume_training)
 
         if args.validate:
             print("\n🧪 Running Expert Validation")
@@ -688,7 +855,7 @@ def main():
     else:
         # Train single expert
         print(f"🎯 Training {args.expert} expert...")
-        result = trainer.train_expert(args.expert)
+        result = trainer.train_expert(args.expert, resume_from_checkpoint=resume_training)
 
         print("\n📊 Training Results:")
         print(f"   Performance Score: {result.performance_score:.3f}")

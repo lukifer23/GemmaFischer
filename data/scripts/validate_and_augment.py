@@ -86,6 +86,10 @@ def process_line(obj: Dict[str, Any], mode: str, use_sf: bool) -> Optional[Dict[
     except Exception:
         return None
 
+    # Skip positions that are already checkmate or stalemate
+    if board is not None and (board.is_checkmate() or board.is_stalemate()):
+        return None
+
     # Extract/validate move
     mv: Optional[str] = None
     if mode == 'uci':

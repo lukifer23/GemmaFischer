@@ -98,6 +98,35 @@
         .play-mode-active {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%) !important;
             color: white !important;
+        }
+
+        .moe-info {
+            border-left: 3px solid #007bff;
+            font-size: 0.85em;
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .confidence-high {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .confidence-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .confidence-low {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
             border: 2px solid #ff4757 !important;
         }
 
@@ -780,6 +809,28 @@
                         if (data.active && keys.includes(data.active)) sel.value = data.active;
                     }
                 } catch (e) {}
+
+                // Show MoE information if available
+                try {
+                    const moeStatusEl = document.getElementById('moe-status');
+                    const moeInfoEl = document.getElementById('moe-info');
+                    const modelRes = await fetch('/api/model_info');
+                    const modelData = await modelRes.json();
+
+                    if (modelData.moe_enabled && modelData.moe_available) {
+                        moeStatusEl.style.display = 'block';
+                        const moeInfo = [];
+                        moeInfo.push(`Enabled: ${modelData.moe_enabled}`);
+                        moeInfo.push(`Experts: ${modelData.moe_experts ? modelData.moe_experts.join(', ') : 'none'}`);
+                        if (modelData.moe_info && modelData.moe_info.routing_parameters) {
+                            moeInfo.push(`Total Experts: ${modelData.moe_info.routing_parameters.num_experts}`);
+                        }
+                        moeInfoEl.innerHTML = moeInfo.join('<br>');
+                    } else {
+                        moeStatusEl.style.display = 'none';
+                    }
+                } catch (e) {}
+
             } catch (e) {
                 document.getElementById('adapters-status').textContent = 'Error: ' + e;
             }
@@ -817,13 +868,17 @@
                 const el = document.getElementById('engine-constrain');
                 if (el) el.checked = !!data.engine_constrain;
             }
+            if (typeof data.moe_enabled !== 'undefined') {
+                document.getElementById('moe-enabled').checked = !!data.moe_enabled;
+            }
         }
         async function saveSettings() {
             const engine_policy = document.getElementById('engine-policy').value;
             const engine_rerank = document.getElementById('engine-rerank').checked;
             const constrainEl = document.getElementById('engine-constrain');
             const engine_constrain = constrainEl ? constrainEl.checked : (engine_policy === 'logprob');
-            const res = await fetch('/api/settings/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ engine_policy, engine_rerank, engine_constrain }) });
+            const moe_enabled = document.getElementById('moe-enabled').checked;
+            const res = await fetch('/api/settings/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ engine_policy, engine_rerank, engine_constrain, moe_enabled }) });
             const data = await res.json();
             document.getElementById('adapters-status').textContent = JSON.stringify(data, null, 2);
         }
@@ -1380,9 +1435,903 @@
                                 <input id="engine-rerank" class="form-check-input" type="checkbox" checked>
                                 <label class="form-check-label" for="engine-rerank">Re-rank N-best engine candidates</label>
                             </div>
+                            <div class="form-check mt-2">
+                                <input id="moe-enabled" class="form-check-input" type="checkbox" checked>
+                                <label class="form-check-label" for="moe-enabled">Enable MoE (Mixture of Experts)</label>
+                            </div>
                             <button class="btn btn-sm btn-primary mt-2" onclick="saveSettings()">Save Settings</button>
                             <div class="small text-muted" id="adapters-meta"></div>
+                        </div>
+                        <div id="moe-status" class="mt-2" style="display: none;">
+                            <div class="small text-muted mb-1">MoE Status:</div>
+                            <div id="moe-info" class="small"></div>
                         </div>
                         <pre id="adapters-status" style="max-height: 180px; overflow:auto; background:#f7f7f7; padding:10px;"></pre>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let isLoading = false;
+        let gameState = null;
+        let selectedSquare = null;
+        let selectedSquareIndex = null;
+        let gameMode = 'analysis'; // 'analysis' or 'play'
+        let stockfishMatch = null;
+        let matchActive = false;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChessBoard();
+            loadExamples();
+            setupEventListeners();
+            loadGameState();
+
+            // Show welcome message
+            showMessage('🎮 **ChessGemma Ready!**\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
+        });
+
+        // Initialize chess board
+        function initializeChessBoard() {
+            const board = document.getElementById('chessBoard');
+            board.innerHTML = '';
+            for (let i = 0; i < 64; i++) {
+                const square = document.createElement('div');
+                square.className = `chess-square ${(i + Math.floor(i / 8)) % 2 === 0 ? 'light' : 'dark'}`;
+                square.onclick = () => handleSquareClick(i);
+                board.appendChild(square);
+            }
+        }
+
+        // Load example questions
+        async function loadExamples() {
+            try {
+                const response = await fetch('/api/examples');
+                const data = await response.json();
+                const container = document.getElementById('examplesContainer');
+
+                data.examples.forEach(example => {
+                    const button = document.createElement('button');
+                    button.className = 'example-btn';
+                    button.textContent = example;
+                    button.onclick = () => useExample(example);
+                    container.appendChild(button);
+                });
+            } catch (error) {
+                console.error('Failed to load examples:', error);
+            }
+        }
+
+        // Handle example question click
+        function useExample(question) {
+            document.getElementById('questionInput').value = question;
+            askQuestion();
+        }
+
+        // Handle Enter key in input
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !isLoading) {
+                askQuestion();
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Add any additional event listeners here
+            const startBtn = document.getElementById('btn-train-start');
+            const stopBtn = document.getElementById('btn-train-stop');
+            const refreshBtn = document.getElementById('btn-train-refresh');
+            if (startBtn) startBtn.onclick = startTraining;
+            if (stopBtn) stopBtn.onclick = stopTraining;
+            if (refreshBtn) refreshBtn.onclick = refreshTrainingStatus;
+            // Auto-refresh training status every 5 seconds when page is visible
+            setInterval(() => {
+                if (!document.hidden) {
+                    const el = document.getElementById('train-status');
+                    if (el) { refreshTrainingStatus(); }
+                }
+            }, 5000);
+            // Prime adapters/settings UI
+            refreshAdapters();
+            loadSettings();
+        }
+
+        // Ask a question
+        async function askQuestion() {
+            if (isLoading) return;
+
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+
+            if (!question) {
+                showMessage('Please enter a question.', 'error');
+                return;
+            }
+
+            // Add user message
+            addMessage(question, 'user');
+            input.value = '';
+            isLoading = true;
+
+            // Show loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-robot me-2"></i>
+                    <strong>ChessGemma</strong>
+                    <div class="loading ms-2"></div>
+                </div>
+                <p>Thinking about your question...</p>
+            `;
+            document.getElementById('chatMessages').appendChild(loadingDiv);
+            scrollToBottom();
+
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        context: '', // Add context if needed
+                        expert: (document.getElementById('expertSelect')?.value || 'auto')
+                    })
+                });
+
+                const data = await response.json();
+
+                // Remove loading indicator
+                loadingDiv.remove();
+
+                // Add assistant response
+                let messageClass = 'assistant';
+                let confidenceClass = 'confidence-low';
+
+                if (data.confidence > 0.7) {
+                    confidenceClass = 'confidence-high';
+                } else if (data.confidence > 0.4) {
+                    confidenceClass = 'confidence-medium';
+                }
+
+                const confidenceText = data.confidence ?
+                    `<div class="confidence-badge ${confidenceClass}">Confidence: ${(data.confidence * 100).toFixed(1)}%</div>` : '';
+
+                addMessage(`
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-robot me-2"></i>
+                        <strong>ChessGemma</strong>
+                    </div>
+                    <p>${data.response || data.error || 'No response received'}</p>
+                    ${confidenceText}
+                `, messageClass);
+
+            } catch (error) {
+                console.error('Error:', error);
+                loadingDiv.remove();
+                addMessage('Sorry, I encountered an error while processing your question. Please try again.', 'error');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        // Add message to chat
+        function addMessage(content, type = 'assistant') {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // -----------------
+        // Training Controls
+        // -----------------
+        async function startTraining() {
+            const expert = document.getElementById('train-expert').value;
+            const steps = parseInt(document.getElementById('train-steps').value || '1000', 10);
+            const useInstr = document.getElementById('train-use-instr').checked;
+            const disableEval = document.getElementById('train-disable-eval').checked;
+            try {
+                const res = await fetch('/api/train/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ expert, steps, use_instruction: useInstr, disable_eval: disableEval })
+                });
+                const data = await res.json();
+                document.getElementById('train-status').textContent = JSON.stringify(data, null, 2);
+                if (res.ok) {
+                    document.getElementById('btn-train-start').disabled = true;
+                }
+            } catch (e) {
+                document.getElementById('train-status').textContent = 'Error: ' + e;
+            }
+        }
+
+        async function stopTraining() {
+            try {
+                const res = await fetch('/api/train/stop', { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('train-status').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('btn-train-start').disabled = false;
+            } catch (e) {
+                document.getElementById('train-status').textContent = 'Error: ' + e;
+            }
+        }
+
+        async function refreshTrainingStatus() {
+            try {
+                const res = await fetch('/api/train/status');
+                const data = await res.json();
+                const log = data.logs_tail || '';
+                document.getElementById('train-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+                const running = !!data.running;
+                const meta = [];
+                if (data.checkpoint_dir) meta.push('Checkpoint: ' + data.checkpoint_dir);
+                if (data.log_file) meta.push('Log: ' + data.log_file);
+                if (data.elapsed_sec) meta.push('Elapsed: ' + Math.round(data.elapsed_sec) + 's');
+                document.getElementById('train-meta').textContent = meta.join('  |  ');
+                document.getElementById('btn-train-start').disabled = running;
+            } catch (e) {
+                document.getElementById('train-status').textContent = 'Error: ' + e;
+            }
+        }
+
+        // Evaluations
+        async function startEvalStockfish() {
+            const file = document.getElementById('eval-file').value;
+            const limit = parseInt(document.getElementById('eval-limit').value || '100', 10);
+            const depth = parseInt(document.getElementById('eval-depth').value || '12', 10);
+            const res = await fetch('/api/eval/stockfish', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, limit, depth }) });
+            document.getElementById('eval-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function startEvalPuzzles() {
+            const file = document.getElementById('puzz-file').value;
+            const limit = parseInt(document.getElementById('puzz-limit').value || '200', 10);
+            const res = await fetch('/api/eval/puzzles', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ file, limit }) });
+            document.getElementById('eval-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function refreshEvalStatus() {
+            const res = await fetch('/api/eval/status');
+            const data = await res.json();
+            const log = data.logs_tail || '';
+            document.getElementById('eval-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+        }
+        async function loadEvalHistory() {
+            const res = await fetch('/api/eval/history');
+            const data = await res.json();
+            document.getElementById('eval-history').textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Dataset tools
+        async function cleanDataset(mode) {
+            const inEl = document.getElementById(`data-${mode}-in`).value;
+            const outEl = document.getElementById(`data-${mode}-out`).value;
+            const res = await fetch('/api/data/clean', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mode, in: inEl, out: outEl, relabel_with_stockfish: (mode !== 'director') }) });
+            document.getElementById('data-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function refreshDataStatus() {
+            const res = await fetch('/api/data/status');
+            const data = await res.json();
+            const log = data.logs_tail || '';
+            document.getElementById('data-status').textContent = (JSON.stringify({ ...data, logs_tail: undefined }, null, 2) + '\n\n--- Logs ---\n' + log);
+        }
+
+        // Adapters & Settings
+        async function refreshAdapters() {
+            try {
+                const res = await fetch('/api/adapters/list');
+                const data = await res.json();
+                document.getElementById('adapters-status').textContent = JSON.stringify(data, null, 2);
+                if (data.active) {
+                    document.getElementById('adapter-select').value = data.active;
+                }
+                const meta = [];
+                if (data.available) meta.push('Available: ' + Object.keys(data.available).join(', '));
+                document.getElementById('adapters-meta').textContent = meta.join('  |  ');
+                // Update dropdown options with available keys
+                try {
+                    if (data.available) {
+                        const keys = Object.keys(data.available);
+                        const sel = document.getElementById('adapter-select');
+                        sel.innerHTML = '';
+                        keys.forEach(k => {
+                            const opt = document.createElement('option');
+                            opt.value = k; opt.textContent = k;
+                            sel.appendChild(opt);
+                        });
+                        if (data.active && keys.includes(data.active)) sel.value = data.active;
+                    }
+                } catch (e) {}
+
+                // Show MoE information if available
+                try {
+                    const moeStatusEl = document.getElementById('moe-status');
+                    const moeInfoEl = document.getElementById('moe-info');
+                    const modelRes = await fetch('/api/model_info');
+                    const modelData = await modelRes.json();
+
+                    if (modelData.moe_enabled && modelData.moe_available) {
+                        moeStatusEl.style.display = 'block';
+                        const moeInfo = [];
+                        moeInfo.push(`Enabled: ${modelData.moe_enabled}`);
+                        moeInfo.push(`Experts: ${modelData.moe_experts ? modelData.moe_experts.join(', ') : 'none'}`);
+                        if (modelData.moe_info && modelData.moe_info.routing_parameters) {
+                            moeInfo.push(`Total Experts: ${modelData.moe_info.routing_parameters.num_experts}`);
+                        }
+                        moeInfoEl.innerHTML = moeInfo.join('<br>');
+                    } else {
+                        moeStatusEl.style.display = 'none';
+                    }
+                } catch (e) {}
+
+            } catch (e) {
+                document.getElementById('adapters-status').textContent = 'Error: ' + e;
+            }
+        }
+        async function activateAdapter() {
+            const name = document.getElementById('adapter-select').value;
+            const res = await fetch('/api/adapters/activate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+            document.getElementById('adapters-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function loadCheckpoints() {
+            const expert = document.getElementById('adapter-select').value;
+            const res = await fetch('/api/adapters/checkpoints?expert=' + encodeURIComponent(expert));
+            const data = await res.json();
+            const sel = document.getElementById('checkpoint-select');
+            sel.innerHTML = '';
+            const items = (data.checkpoints && data.checkpoints[expert]) ? data.checkpoints[expert] : [];
+            items.forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+        }
+        async function activateCheckpoint() {
+            const expert = document.getElementById('adapter-select').value;
+            const path = document.getElementById('checkpoint-select').value;
+            const res = await fetch('/api/adapters/activate_checkpoint', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ expert, path }) });
+            document.getElementById('adapters-status').textContent = JSON.stringify(await res.json(), null, 2);
+        }
+        async function loadSettings() {
+            const res = await fetch('/api/settings/get');
+            const data = await res.json();
+            if (data.engine_policy) {
+                document.getElementById('engine-policy').value = data.engine_policy;
+            }
+            if (typeof data.engine_rerank !== 'undefined') {
+                document.getElementById('engine-rerank').checked = !!data.engine_rerank;
+            }
+            if (typeof data.engine_constrain !== 'undefined') {
+                const el = document.getElementById('engine-constrain');
+                if (el) el.checked = !!data.engine_constrain;
+            }
+            if (typeof data.moe_enabled !== 'undefined') {
+                document.getElementById('moe-enabled').checked = !!data.moe_enabled;
+            }
+        }
+        async function saveSettings() {
+            const engine_policy = document.getElementById('engine-policy').value;
+            const engine_rerank = document.getElementById('engine-rerank').checked;
+            const constrainEl = document.getElementById('engine-constrain');
+            const engine_constrain = constrainEl ? constrainEl.checked : (engine_policy === 'logprob');
+            const moe_enabled = document.getElementById('moe-enabled').checked;
+            const res = await fetch('/api/settings/set', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ engine_policy, engine_rerank, engine_constrain, moe_enabled }) });
+            const data = await res.json();
+            document.getElementById('adapters-status').textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Scroll to bottom of chat
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Handle chess square clicks
+        function handleSquareClick(squareIndex) {
+            const file = String.fromCharCode(97 + (squareIndex % 8)); // a-h
+            const rank = 8 - Math.floor(squareIndex / 8); // 1-8
+            const square = `${file}${rank}`;
+
+            console.log(`Clicked square: ${square}`);
+
+            if (gameMode === 'play') {
+                handlePlayModeClick(square, squareIndex);
+            } else {
+                handleAnalysisModeClick(square, squareIndex);
+            }
+        }
+
+        // Handle clicks in analysis mode
+        function handleAnalysisModeClick(square, squareIndex) {
+            // Visual feedback for clicked square
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => sq.classList.remove('selected'));
+            squares[squareIndex].classList.add('selected');
+
+            // Get piece on this square
+            const piece = squares[squareIndex].textContent;
+            const pieceName = getPieceName(piece);
+
+            // Show square info and ask if user wants to analyze this square
+            const message = piece ?
+                `Selected square ${square} with ${pieceName}` :
+                `Selected empty square ${square}`;
+
+            showMessage(message, 'info', 3000);
+
+            // Auto-ask a question about this square with board context
+            setTimeout(() => {
+                const currentFEN = getCurrentBoardFEN();
+                const question = piece ?
+                    `FEN: ${currentFEN}\nQuestion: What can the ${pieceName} on ${square} do?` :
+                    `FEN: ${currentFEN}\nQuestion: What pieces can move to ${square}?`;
+
+                document.getElementById('questionInput').value = question;
+                askQuestion();
+            }, 1000);
+        }
+
+        // Handle clicks in play mode
+        function handlePlayModeClick(square, squareIndex) {
+            if (selectedSquare === null) {
+                // First click - select piece
+                selectedSquare = square;
+                selectedSquareIndex = squareIndex;
+                const squares = document.querySelectorAll('.chess-square');
+                squares.forEach(sq => sq.classList.remove('selected'));
+                squares[squareIndex].classList.add('selected');
+
+                // Get legal moves for this piece
+                getLegalMoves(square);
+            } else {
+                // Second click - make move with promotion handling
+                let move = `${selectedSquare}${square}`;
+                const squares = document.querySelectorAll('.chess-square');
+                const fromPiece = squares[selectedSquareIndex]?.textContent;
+                const destRank = parseInt(square[1]);
+                if ((fromPiece === '♙' && destRank === 8) || (fromPiece === '♟' && destRank === 1)) {
+                    let promo = (window.prompt('Promote to (q,r,b,n)?', 'q') || 'q').toLowerCase();
+                    if (!['q','r','b','n'].includes(promo)) promo = 'q';
+                    move = `${move}${promo}`;
+                }
+                makeMove(move);
+                selectedSquare = null;
+                selectedSquareIndex = null;
+            }
+        }
+
+        // Get current board state as FEN
+        function getCurrentBoardFEN() {
+            if (gameState && gameState.fen) {
+                return gameState.fen;
+            }
+            return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        }
+
+        // Get piece name from Unicode symbol
+        function getPieceName(piece) {
+            const pieceNames = {
+                '♜': 'Black Rook', '♞': 'Black Knight', '♝': 'Black Bishop',
+                '♛': 'Black Queen', '♚': 'Black King', '♟': 'Black Pawn',
+                '♖': 'White Rook', '♘': 'White Knight', '♗': 'White Bishop',
+                '♕': 'White Queen', '♔': 'White King', '♙': 'White Pawn'
+            };
+            return pieceNames[piece] || 'Unknown Piece';
+        }
+
+        // Show a message (persistent by default)
+        function showMessage(message, type = 'info', duration = 0) {
+            addMessage(message, type);
+
+            // Only auto-remove if duration is specified and > 0
+            if (duration > 0) {
+                setTimeout(() => {
+                    const messages = document.querySelectorAll('.message');
+                    if (messages.length > 0) {
+                        messages[messages.length - 1].remove();
+                    }
+                }, duration);
+            }
+        }
+
+        // Load game state from server
+        async function loadGameState() {
+            try {
+                const response = await fetch('/api/game/state');
+                gameState = await response.json();
+                console.log('Game state loaded:', gameState);
+                if (gameState && gameState.fen) {
+                    initializeChessBoard();
+                    updateBoardFromFEN(gameState.fen);
+                }
+            } catch (error) {
+                console.error('Failed to load game state:', error);
+            }
+        }
+
+        // Make a move
+        async function makeMove(moveUCI) {
+            try {
+                console.log(`Making move: ${moveUCI}`);
+                console.log(`Current game state:`, gameState);
+
+                const response = await fetch('/api/game/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ move: moveUCI })
+                });
+
+                const result = await response.json();
+                console.log('Move result:', result);
+
+                if (result.success) {
+                    const moveText = result.san || result.move;
+                    const playerText = result.current_player === 'white' ? 'Black' : 'White';
+                    showMessage(`✅ ${playerText} played: ${moveText}`, 'success');
+                    updateBoardFromFEN(result.fen);
+                    gameState = result;
+
+                    // Clear selection
+                    selectedSquare = null;
+                    const squares = document.querySelectorAll('.chess-square');
+                    squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
+
+                    // If it's now the AI's turn, ask for AI move
+                    if (result.current_player === 'black' && gameMode === 'play') {
+                        showMessage('🤖 AI is thinking...', 'info', 3000);
+                        setTimeout(() => getAIMove(), 2000); // Increased delay for smoother experience
+                    }
+                } else {
+                    showMessage(`❌ Invalid move: ${result.error}`, 'danger');
+                    console.error('Move failed:', result.error);
+                }
+            } catch (error) {
+                console.error('Move error:', error);
+                showMessage('❌ Error making move', 'danger');
+            }
+        }
+
+        // Get AI move
+        async function getAIMove() {
+            try {
+                showMessage('AI is thinking...', 'info', 2000);
+
+                const response = await fetch('/api/game/ai_move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const moveText = result.san || result.move;
+                    let aiMessage = `🤖 **AI played: ${moveText}**`;
+
+                    // Add AI reasoning if available
+                    if (result.ai_response) {
+                        // Show full AI response, but format it nicely
+                        const reasoning = result.ai_response;
+                        aiMessage += `\n\n💭 **AI Reasoning:**\n${reasoning}`;
+                    }
+
+                    showMessage(aiMessage, 'info');
+                    updateBoardFromFEN(result.fen);
+                    gameState = result;
+                } else {
+                    showMessage(`❌ AI error: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('AI move error:', error);
+                showMessage('❌ Error getting AI move', 'danger');
+            }
+        }
+
+        // Get legal moves for a piece
+        async function getLegalMoves(square) {
+            try {
+                const response = await fetch('/api/game/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ square: square })
+                });
+
+                const analysis = await response.json();
+                console.log('Legal moves for', square, ':', analysis.legal_moves);
+
+                // Highlight legal moves on the board
+                highlightLegalMoves(analysis.legal_moves);
+
+                // Show analysis in chat
+                let message = `🔍 **${analysis.piece_name} on ${square}**\n`;
+                message += `**Legal moves:** ${analysis.legal_moves.join(', ')}`;
+
+                // Add RAG advice if available
+                if (analysis.rag_advice && analysis.rag_advice.length > 0) {
+                    message += `\n\n📚 **Chess Knowledge:**\n${analysis.rag_advice.join('\n')}`;
+                }
+
+                showMessage(message, 'info');
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+            }
+        }
+
+        // Highlight legal moves on the board
+        function highlightLegalMoves(legalMoves) {
+            // Remove existing highlights
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => sq.classList.remove('legal-move'));
+
+            // Add highlights for legal moves
+            legalMoves.forEach(move => {
+                const toSquare = move.slice(2, 4); // Extract destination square
+                const file = toSquare.charCodeAt(0) - 97; // a=0, b=1, etc.
+                const rank = 8 - parseInt(toSquare[1]); // 1=7, 2=6, etc.
+                const squareIndex = rank * 8 + file;
+
+                if (squareIndex >= 0 && squareIndex < 64) {
+                    squares[squareIndex].classList.add('legal-move');
+                }
+            });
+        }
+
+        // Update board from FEN
+        function updateBoardFromFEN(fen) {
+            console.log('Board updated to FEN:', fen);
+
+            // Parse FEN and update the visual board
+            const fenParts = fen.split(' ');
+            const boardState = fenParts[0];
+            const currentPlayer = fenParts[1];
+
+            // Clear the board
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => {
+                sq.textContent = '';
+                sq.classList.remove('selected', 'legal-move');
+            });
+
+            // Parse board state and place pieces
+            let rank = 0;
+            let file = 0;
+
+            for (let i = 0; i < boardState.length; i++) {
+                const char = boardState[i];
+
+                if (char === '/') {
+                    rank++;
+                    file = 0;
+                } else if (char >= '1' && char <= '8') {
+                    // Empty squares
+                    file += parseInt(char);
+                } else {
+                    // Piece
+                    const squareIndex = rank * 8 + file;
+                    if (squareIndex < 64) {
+                        squares[squareIndex].textContent = getPieceSymbol(char);
+                    }
+                    file++;
+                }
+            }
+
+            // Update game state display
+            updateGameStateDisplay(currentPlayer);
+        }
+
+        // Get piece symbol from FEN character
+        function getPieceSymbol(fenChar) {
+            const pieceMap = {
+                'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+                'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+            };
+            return pieceMap[fenChar] || '';
+        }
+
+        // Update game state display
+        function updateGameStateDisplay(currentPlayer) {
+            const playerText = currentPlayer === 'w' ? 'White' : 'Black';
+            showMessage(`${playerText} to move`, 'info', 2000);
+        }
+
+        // Toggle game mode
+        function toggleGameMode() {
+            gameMode = gameMode === 'analysis' ? 'play' : 'analysis';
+            const modeText = gameMode === 'play' ? 'Play Mode' : 'Analysis Mode';
+            const modeIcon = gameMode === 'play' ? '🎮' : '🔍';
+
+            showMessage(`${modeIcon} Switched to ${modeText}`, 'info', 3000);
+
+            // Update button appearance
+            const toggleButton = document.querySelector('button[onclick="toggleGameMode()"]');
+            if (toggleButton) {
+                toggleButton.classList.remove('play-mode-active', 'analysis-mode-active');
+                if (gameMode === 'play') {
+                    toggleButton.classList.add('play-mode-active');
+                    toggleButton.innerHTML = '<i class="fas fa-gamepad me-1"></i>Exit Play Mode';
+                } else {
+                    toggleButton.classList.add('analysis-mode-active');
+                    toggleButton.innerHTML = '<i class="fas fa-search me-1"></i>Enter Play Mode';
+                }
+            }
+
+            // Clear selection when switching modes
+            selectedSquare = null;
+            const squares = document.querySelectorAll('.chess-square');
+            squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
+        }
+
+        // Reset game
+        async function resetGame() {
+            try {
+                const response = await fetch('/api/game/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('🔄 Game reset to starting position', 'success');
+
+                    // Clear selection
+                    selectedSquare = null;
+                    const squares = document.querySelectorAll('.chess-square');
+                    squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
+
+                    // Reload game state and update board
+                    await loadGameState();
+                    if (gameState && gameState.fen) {
+                        updateBoardFromFEN(gameState.fen);
+                    } else {
+                        // Fallback to starting position
+                        initializeChessBoard();
+                    }
+                }
+            } catch (error) {
+                console.error('Reset error:', error);
+                showMessage('Error resetting game', 'error', 3000);
+            }
+        }
+
+        // Stockfish Match Functions
+        async function testStockfish() {
+            try {
+                showMessage('🔍 Testing Stockfish availability...', 'info');
+
+                const response = await fetch('/api/match/test');
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(`✅ ${result.message}\n📍 Path: ${result.path}\n🎯 Test move: ${result.test_move}`, 'success');
+                } else {
+                    showMessage(`❌ Stockfish test failed: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Stockfish test error:', error);
+                showMessage('❌ Error testing Stockfish', 'danger');
+            }
+        }
+
+        async function toggleStockfishMatch() {
+            if (matchActive) {
+                await stopStockfishMatch();
+            } else {
+                await startStockfishMatch();
+            }
+        }
+
+        async function startStockfishMatch() {
+            try {
+                showMessage('🎮 Starting Stockfish vs Model match...', 'info');
+
+                const response = await fetch('/api/match/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_plays_white: true,
+                        time_control: '10+0.1'  // 10 seconds + 0.1s increment
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    matchActive = true;
+                    stockfishMatch = result;
+                    showMessage(`🏆 ${result.message}`, 'success');
+
+                    // Update button
+                    const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
+                    button.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Match';
+                    button.className = 'btn btn-sm btn-danger';
+
+                    // Start playing moves
+                    playMatchMoves();
+                } else {
+                    showMessage(`❌ Failed to start match: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Match start error:', error);
+                showMessage('❌ Error starting match', 'danger');
+            }
+        }
+
+        async function stopStockfishMatch() {
+            try {
+                const response = await fetch('/api/match/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    matchActive = false;
+                    stockfishMatch = null;
+                    showMessage('🛑 Match stopped', 'info');
+
+                    // Update button
+                    const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
+                    button.innerHTML = '<i class="fas fa-chess me-1"></i>Stockfish Match';
+                    button.className = 'btn btn-sm btn-warning';
+                }
+            } catch (error) {
+                console.error('Match stop error:', error);
+            }
+        }
+
+        async function playMatchMoves() {
+            if (!matchActive) return;
+
+            try {
+                const response = await fetch('/api/match/play', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_plays_white: true
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const player = result.player;
+                    const move = result.san;
+                    const time = result.time_taken.toFixed(2);
+
+                    showMessage(`🏆 ${player} played: ${move} (${time}s)`, 'info');
+
+                    // Update board
+                    updateBoardFromFEN(result.fen);
+
+                    if (result.is_game_over) {
+                        const gameResult = result.game_result;
+                        showMessage(`🏁 Game Over! Winner: ${gameResult[0].toUpperCase()}, Reason: ${gameResult[1]}`, 'success');
+                        matchActive = false;
+
+                        // Update button
+                        const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
+                        button.innerHTML = '<i class="fas fa-chess me-1"></i>Stockfish Match';
+                        button.className = 'btn btn-sm btn-warning';
+                    } else {
+                        // Continue playing after a short delay
+                        setTimeout(() => playMatchMoves(), 1000);
+                    }
+                } else {
+                    showMessage(`❌ Match error: ${result.error}`, 'danger');
+                    matchActive = false;
+                }
+            } catch (error) {
+                console.error('Match play error:', error);
+                showMessage('❌ Error playing match', 'danger');
+                matchActive = false;
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

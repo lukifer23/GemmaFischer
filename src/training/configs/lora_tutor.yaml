@@ -2,24 +2,25 @@ model:
   pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
 training:
   output_dir: "checkpoints/lora_tutor"
-  per_device_train_batch_size: 1
-  gradient_accumulation_steps: 16
+  per_device_train_batch_size: 2  # Slightly larger batch
+  gradient_accumulation_steps: 8  # Reduced accumulation
   num_train_epochs: 1
   max_steps: 2000
-  learning_rate: 1e-4
+  learning_rate: 2e-4  # Higher learning rate
   fp16: false
-  logging_steps: 50
-  save_steps: 200
+  logging_steps: 25
+  save_steps: 100
   eval_strategy: "steps"
-  eval_steps: 200
+  eval_steps: 100
   save_strategy: "steps"
   load_best_model_at_end: true
   metric_for_best_model: "eval_loss"
   greater_is_better: false
   lr_scheduler_type: "cosine"
-  warmup_steps: 100
+  warmup_steps: 50
   weight_decay: 0.01
   max_grad_norm: 1.0
+  remove_unused_columns: false
 lora:
   r: 16
   lora_alpha: 32

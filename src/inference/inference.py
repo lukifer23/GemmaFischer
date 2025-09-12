@@ -19,6 +19,16 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 from transformers.generation.logits_process import LogitsProcessor
+from collections import OrderedDict
+
+# Import MoE components
+try:
+    from .moe_router import ChessMoERouter, MoEInferenceManager
+    MOE_AVAILABLE = True
+except ImportError:
+    MOE_AVAILABLE = False
+    ChessMoERouter = None
+    MoEInferenceManager = None
 
 __all__ = [
     'ChessGemmaInference',
@@ -29,6 +39,16 @@ __all__ = [
     'get_model_info'
 ]
 
+
+# Import logging
+try:
+    from ..utils.logging_config import get_logger, log_performance
+    logger = get_logger(__name__)
+except ImportError:
+    # Fallback to basic logging
+    import logging
+    logger = logging.getLogger(__name__)
+    log_performance = lambda func: func
 
 # Environment hygiene and resource constraints
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -102,7 +122,6 @@ class ChessGemmaInference:
         self._active_adapter: Optional[str] = None
 
         # Simple memoization for deterministic engine prompts (FEN -> move)
-        from collections import OrderedDict  # local import to avoid top-level pollution
         self._engine_cache_max = 512
         self._engine_cache: "OrderedDict[str, str]" = OrderedDict()
         # Feature flags
@@ -112,6 +131,42 @@ class ChessGemmaInference:
         self._engine_constrain_mode = os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN_MODE', 'simple').strip().lower()
         self._allowed_token_ids_cache: Optional[set] = None
         self._uci_token_info: Optional[Dict[int, str]] = None
+
+        # MoE Router integration
+        self.moe_router: Optional[ChessMoERouter] = None
+        self.moe_manager: Optional[MoEInferenceManager] = None
+        self.moe_enabled = MOE_AVAILABLE and (os.environ.get('CHESSGEMMA_MOE_ENABLED', '1') not in ('0', 'false', 'False'))
+        self._expert_paths: Dict[str, str] = {}
+
+        # Initialize MoE if available and enabled
+        if self.moe_enabled and MOE_AVAILABLE:
+            self._initialize_moe_system()
+
+    def _initialize_moe_system(self) -> None:
+        """Initialize the Mixture of Experts system."""
+        try:
+            # Set up expert paths for MoE
+            checkpoints_root = self.project_root / "checkpoints"
+            self._expert_paths = {
+                'uci': str(_find_latest_dir([str(checkpoints_root / "lora_uci" / "checkpoint-*")])),
+                'tutor': str(_find_latest_dir([str(checkpoints_root / "lora_tutor" / "checkpoint-*")])),
+                'director': str(_find_latest_dir([str(checkpoints_root / "lora_director" / "checkpoint-*")]))
+            }
+
+            # Filter out None values
+            self._expert_paths = {k: v for k, v in self._expert_paths.items() if v is not None}
+
+            if len(self._expert_paths) >= 2:  # Need at least 2 experts for MoE
+                self.moe_router = ChessMoERouter(num_experts=len(self._expert_paths))
+                self.moe_manager = MoEInferenceManager(self.moe_router, self._expert_paths)
+                print(f"🧠 MoE System initialized with {len(self._expert_paths)} experts: {list(self._expert_paths.keys())}")
+            else:
+                print("⚠️  Insufficient expert checkpoints for MoE (need at least 2), falling back to single-expert mode")
+                self.moe_enabled = False
+
+        except Exception as e:
+            print(f"⚠️  Failed to initialize MoE system: {e}")
+            self.moe_enabled = False
 
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
@@ -256,51 +311,37 @@ class ChessGemmaInference:
         """Load prompt template from prompts directory, fallback to defaults."""
         if mode == "engine":
             if self._engine_template is None:
-                # Use a proper system prompt instead of the documentation file
-                self._engine_template = (
-                    "You are a chess engine. Analyze the given position and respond with only the best move in UCI format (e.g., e2e4). "
-                    "Do not provide explanations, just the move."
-                )
+                # Clean, minimal prompt for move generation
+                self._engine_template = "Find the best chess move in UCI format."
             return self._engine_template
         elif mode == "tutor":
             if self._tutor_template is None:
-                # Use a proper system prompt instead of the documentation file
+                # Clean tutor prompt focused on analysis
                 self._tutor_template = (
-                    "You are a chess tutor and analyst playing a teaching game with a student. "
-                    "You MUST be aware of the current board position, material balance, and tactical situation. "
-                    "When making moves, explain your reasoning based on the ACTUAL position, comment on the opponent's previous move, "
-                    "and suggest what they should consider next. Be conversational and educational, "
-                    "like a chess teacher playing a teaching game. Always provide clear explanations based on the real position. "
-                    "CRITICAL: End your reply with a single line of the form: Best move: <uci> (e.g., Best move: e2e4)."
+                    "You are a chess tutor. Analyze the position and explain your reasoning. "
+                    "End with: Best move: <uci>"
                 )
             return self._tutor_template
         else:
-            # Director default
-            return (
-                "You are a concise, accurate chess teacher. Answer clearly, avoid fabrications, cite rules or standard principles when relevant."
-            )
+            # Director default - clean Q&A prompt
+            return "You are a chess expert. Answer questions accurately and concisely."
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
         system_prompt = self._load_prompt_template(mode)
 
         if mode == "tutor":
             full_question = f"{context}\n\n{question}" if context else question
-            prompt = f"Chess Tutor: {system_prompt}\n\nQuestion: {full_question}\n\nAnswer:"
+            prompt = f"{system_prompt}\n\n{full_question}"
             return [{"role": "user", "content": prompt}]
         if mode == "director":
             full_question = f"{context}\n\n{question}" if context else question
-            sys_prompt = self._load_prompt_template("director")
-            prompt = (
-                f"Chess Director: {sys_prompt}\n\n"
-                f"Question: {full_question}\n\n"
-                "Answer:"
-            )
+            prompt = f"{system_prompt}\n\n{full_question}"
             return [{"role": "user", "content": prompt}]
 
-        # Engine mode expects strict minimal prompt: FEN then "Move:"
-        from .uci_utils import build_engine_prompt, extract_fen
+        # Engine mode: clean FEN + minimal instruction
+        from .uci_utils import extract_fen
         fen = extract_fen(question) or (context or "").strip()
-        prompt = build_engine_prompt(fen) if fen else "Move:"
+        prompt = f"FEN: {fen}\n{system_prompt}" if fen else system_prompt
         return [{"role": "user", "content": prompt}]
 
     def generate_response(
@@ -321,6 +362,44 @@ class ChessGemmaInference:
                 "model_loaded": False,
             }
 
+        # Use MoE routing if available and enabled
+        if self.moe_enabled and self.moe_manager and mode in ['tutor', 'engine', 'director']:
+            try:
+                # Extract FEN for MoE routing
+                from .uci_utils import extract_fen
+                fen = extract_fen(question) or extract_fen(context or "")
+
+                if fen:
+                    # Determine query type for MoE
+                    query_type = "auto"
+                    if mode == "engine":
+                        query_type = "engine"
+                    elif mode == "tutor":
+                        query_type = "tutor"
+                    elif mode == "director":
+                        query_type = "director"
+
+                    # Use MoE for intelligent routing
+                    moe_result = self.moe_manager.analyze_position(fen, query_type)
+                    response = moe_result.get('response', '')
+
+                    # Add MoE metadata to response
+                    moe_info = moe_result.get('routing_info', {})
+                    return {
+                        "response": response,
+                        "confidence": moe_info.get('confidence_score', 0.5),
+                        "model_loaded": True,
+                        "mode": mode,
+                        "moe_used": True,
+                        "primary_expert": moe_info.get('primary_expert'),
+                        "ensemble_mode": moe_info.get('ensemble_mode'),
+                        "routing_reasoning": moe_info.get('reasoning'),
+                        "expert_weights": moe_info.get('expert_weights', {}),
+                    }
+            except Exception as e:
+                print(f"MoE routing failed, falling back to standard inference: {e}")
+                # Fall through to standard inference
+
         try:
             messages = self._build_messages(question, context, mode)
             prompt_text: str
@@ -338,7 +417,7 @@ class ChessGemmaInference:
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
 
             with torch.no_grad():
-            if mode == "engine":
+                if mode == "engine":
                     # Engine mode: try cached + policy/rerank constrained decoding
                     answer = self._generate_engine_move(question, messages[0]['content'], max_new_tokens)
                     if answer:
@@ -348,10 +427,10 @@ class ChessGemmaInference:
                         # Fallback to deterministic single-shot decoding (optionally constrained)
                         logits_processors = None
                         if self._engine_constrain_enabled and self._engine_policy == 'sample':
-                        if self._engine_constrain_mode == 'strict':
-                            logits_processors = [self._build_stateful_uci_processor(prompt_len=inputs['input_ids'].shape[1])]
-                        else:
-                            logits_processors = [self._build_uci_logits_processor(prompt_len=inputs['input_ids'].shape[1])]
+                            if self._engine_constrain_mode == 'strict':
+                                logits_processors = [self._build_stateful_uci_processor(prompt_len=inputs['input_ids'].shape[1])]
+                            else:
+                                logits_processors = [self._build_uci_logits_processor(prompt_len=inputs['input_ids'].shape[1])]
                         outputs = self.model.generate(
                             **inputs,
                             max_new_tokens=max_new_tokens,
@@ -817,7 +896,7 @@ class ChessGemmaInference:
 
     def get_model_info(self) -> Dict[str, Any]:
         device = str(next(self.model.parameters()).device) if (self.model is not None) else "unknown"
-        return {
+        info = {
             "base_model": str(self.model_path) if self.model_path else None,
             "adapter_path": str(self.adapter_path) if self.adapter_path else None,
             "is_loaded": self.is_loaded,
@@ -826,7 +905,16 @@ class ChessGemmaInference:
             "available_adapters": {
                 k: str(v) for k, v in self._adapter_paths.items()
             },
+            "moe_enabled": self.moe_enabled,
+            "moe_available": MOE_AVAILABLE,
         }
+
+        # Add MoE information if available
+        if self.moe_enabled and self.moe_router:
+            info["moe_info"] = self.moe_router.get_routing_stats()
+            info["moe_experts"] = list(self._expert_paths.keys())
+
+        return info
 
 
 _INFERENCE_SINGLETON: Optional[ChessGemmaInference] = None
@@ -857,68 +945,71 @@ def get_model_info() -> Dict[str, Any]:
 # Enhanced Inference Integration
 # ==============================
 
-try:
-    from .enhanced_inference import get_inference_manager, initialize_inference, analyze_position, get_best_move
+# Enhanced inference with MoE support
+def get_enhanced_inference_manager():
+    """Get enhanced inference manager instance (now uses MoE when available)."""
+    return get_inference_instance()
 
-    # Global enhanced inference manager
-    _enhanced_manager = None
+def initialize_enhanced_inference() -> bool:
+    """Initialize enhanced inference system with MoE support."""
+    instance = get_inference_instance()
+    return instance.load_model()
 
-    def get_enhanced_inference_manager():
-        """Get enhanced inference manager instance."""
-        global _enhanced_manager
-        if _enhanced_manager is None:
-            _enhanced_manager = get_inference_manager()
-        return _enhanced_manager
+def analyze_chess_position(fen: str, mode: str = "tutor") -> Dict[str, Any]:
+    """Enhanced position analysis using MoE routing when available."""
+    instance = get_inference_instance()
+    question = f"FEN: {fen}\nAnalyze this position."
+    return instance.generate_response(question, mode=mode)
 
-    def initialize_enhanced_inference() -> bool:
-        """Initialize enhanced inference system."""
-        manager = get_enhanced_inference_manager()
-        return manager.initialize()
+def generate_best_move(fen: str) -> Dict[str, Any]:
+    """Enhanced best move generation with MoE routing."""
+    instance = get_inference_instance()
+    question = f"FEN: {fen}\nWhat is the best move?"
+    return instance.generate_response(question, mode="engine")
 
-    def analyze_chess_position(fen: str, mode: str = "tutor") -> Dict[str, Any]:
-        """Enhanced position analysis using optimized inference."""
-        return analyze_position(fen, mode)
+def switch_inference_expert(expert_name: str) -> bool:
+    """Switch to a different expert adapter (legacy function, now uses MoE routing)."""
+    instance = get_inference_instance()
+    if instance.moe_enabled:
+        # MoE handles expert switching automatically
+        return True
+    else:
+        # Fall back to manual adapter switching
+        instance.set_active_adapter(expert_name)
+        return True
 
-    def generate_best_move(fen: str) -> Dict[str, Any]:
-        """Enhanced best move generation."""
-        return get_best_move(fen)
+def get_inference_stats() -> Dict[str, Any]:
+    """Get inference performance statistics including MoE metrics."""
+    instance = get_inference_instance()
+    info = instance.get_model_info()
 
-    def switch_inference_expert(expert_name: str) -> bool:
-        """Switch to a different expert adapter."""
-        manager = get_enhanced_inference_manager()
-        return manager.switch_expert(expert_name)
+    stats = {
+        "model_loaded": info.get("is_loaded", False),
+        "moe_enabled": info.get("moe_enabled", False),
+        "device": info.get("device", "unknown"),
+        "active_adapter": info.get("active_adapter"),
+    }
 
-    def get_inference_stats() -> Dict[str, Any]:
-        """Get enhanced inference performance statistics."""
-        manager = get_enhanced_inference_manager()
-        return manager.get_stats()
+    # Add MoE stats if available
+    if info.get("moe_enabled") and "moe_info" in info:
+        moe_info = info["moe_info"]
+        stats.update({
+            "moe_experts": info.get("moe_experts", []),
+            "moe_routing_stats": moe_info.get("routing_parameters", {}),
+            "expert_performance": moe_info.get("expert_performance", {}),
+        })
 
-    # Make enhanced functions available at module level
-    __all__.extend([
-        'get_enhanced_inference_manager',
-        'initialize_enhanced_inference',
-        'analyze_chess_position',
-        'generate_best_move',
-        'switch_inference_expert',
-        'get_inference_stats'
-    ])
+    return stats
 
-except ImportError as e:
-    # Enhanced inference not available, provide fallback functions
-    def initialize_enhanced_inference() -> bool:
-        return False
-
-    def analyze_chess_position(fen: str, mode: str = "tutor") -> Dict[str, Any]:
-        return {"error": "Enhanced inference not available", "response": ""}
-
-    def generate_best_move(fen: str) -> Dict[str, Any]:
-        return {"error": "Enhanced inference not available", "response": ""}
-
-    def switch_inference_expert(expert_name: str) -> bool:
-        return False
-
-    def get_inference_stats() -> Dict[str, Any]:
-        return {"error": "Enhanced inference not available"}
+# Make enhanced functions available at module level
+__all__.extend([
+    'get_enhanced_inference_manager',
+    'initialize_enhanced_inference',
+    'analyze_chess_position',
+    'generate_best_move',
+    'switch_inference_expert',
+    'get_inference_stats'
+])
 
 
 class ChessModelInterface:

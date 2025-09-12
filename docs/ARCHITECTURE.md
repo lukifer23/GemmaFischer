@@ -1,25 +1,28 @@
-# GemmaFischer Architecture
+# ChessGemma Architecture
 
 ## System Overview
 
-GemmaFischer is a comprehensive chess AI system that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst. Built around fine-tuned language models with chain-of-thought reasoning, it provides both tactical analysis and educational explanations. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
+ChessGemma is a comprehensive chess AI system featuring a Mixture of Experts (MoE) architecture that functions as both a chess engine (UCI-compatible) and a chess tutor/analyst. Built around fine-tuned Gemma-3 270M models with specialized LoRA adapters and intelligent routing, it provides tactical analysis, educational explanations, and dynamic expert selection. The architecture follows a clear separation of concerns with distinct layers for training, inference, evaluation, and presentation.
 
-**Platform**: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
+**Platform**: Mac-only (M3 Pro/Max) with MPS acceleration - optimized exclusively for Apple Silicon.
 
 ### Key Design Principles
-- **Modular Architecture**: Clean separation of concerns for easy extension
-- **Dual-Mode Operation**: Engine mode (fast moves) and Tutor mode (explanations)
-- **Hybrid Intelligence**: Combines LLM reasoning with chess engine precision
-- **Retrieval-Augmented Generation**: Context enhancement through similar position lookup
-- **Chain-of-Thought Reasoning**: Step-by-step analysis and explanation
-- **Style Conditioning**: Historical player style emulation capabilities
+- **Mixture of Experts (MoE)**: Dynamic routing between specialized expert models
+- **Multi-Modal Operation**: Engine (UCI moves), Tutor (explanations), and Director (Q&A) modes
+- **Hybrid Intelligence**: Combines LLM reasoning with chess engine precision and validation
+- **Advanced Evaluation**: ELO estimation, move quality scoring, and comprehensive metrics
+- **Data Standardization**: Automated validation and quality assurance pipeline
+- **Comprehensive Logging**: Structured logging with performance monitoring and error tracking
+- **Checkpoint Management**: Robust training resume with progress tracking and validation
+- **MPS Memory Optimization**: Dynamic batch sizing and memory-efficient training
+- **Position Embeddings**: Chess-aware similarity search and context enhancement
 
 ## High-Level Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Interface │    │ Training System │    │ Expert Adapters │    │ Evaluation Suite│
-│   (Flask + API) │    │  (Multi-Expert) │    │  (LoRA Models)  │    │  (Chess Metrics)│
+│   Web Interface │    │ Training System │    │   MoE Router    │    │ Evaluation Suite│
+│ (Flask + MoE UI)│    │  (LoRA Experts) │    │ (Expert Routing) │    │ (ELO + Quality)│
 │   http://localhost│    │                 │    │                 │    │                 │
 │       :5001      │    │                 │    │                 │    │                 │
 └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
@@ -27,13 +30,14 @@ GemmaFischer is a comprehensive chess AI system that functions as both a chess e
           └──────────────────────┼──────────────────────┼──────────────────────┘
                                  │                      │
                     ┌─────────────┴─────────────┐       │
-                    │   Dynamic Inference       │       │
-                    │ (Adapter Switching + CoT) │       │
+                    │   MoE Inference Manager  │       │
+                    │ (Dynamic Expert Selection│       │
+                    │    + Ensemble Mode)      │       │
                     └─────────────┬─────────────┘       │
                                  │                      │
                     ┌─────────────┴─────────────┐       │
-                    │    Expert Training        │       │
-                    │   (UCI/Tutor/Director)    │       │
+                    │   Specialized Experts     │       │
+                    │ (UCI/Tutor/Director LoRA) │       │
                     └─────────────┬─────────────┘       │
                                  │                      │
                     ┌─────────────┴─────────────┐       │
@@ -47,7 +51,8 @@ GemmaFischer is a comprehensive chess AI system that functions as both a chess e
                     └───────────────────────────┘       │
                                                        │
                                               ┌────────┴────────┐
-                                              │ Dataset Pipeline │
+                                              │ Data Standard-   │
+                                              │  ization Pipeline│
                                               │ (100k+ samples)  │
                                               └─────────────────┘
 ```
@@ -92,14 +97,43 @@ Expert Training Pipeline
 - **Multi-Expert Parallel**: Train different experts simultaneously
 - **Real-time Monitoring**: System stats and progress tracking
 
-### 2. Dynamic Inference Layer (`src/inference/`)
+### 2. Mixture of Experts (MoE) Inference Layer (`src/inference/`)
 
-**Purpose**: Intelligent adapter switching and inference with expert model selection based on query type
+**Purpose**: Dynamic expert routing and intelligent adapter switching based on position characteristics and query analysis
 
 **Key Components**:
-- `inference.py`: Main inference engine with adapter management
-- `chess_engine.py`: Stockfish integration and validation
+- `inference.py`: Enhanced inference engine with MoE integration
+- `moe_router.py`: Chess-specific MoE router with position feature extraction
+- `chess_engine.py`: Stockfish integration for validation and analysis
 - `uci_utils.py`: UCI move extraction and validation utilities
+
+**MoE Architecture**:
+```
+MoE Inference Flow
+├── Query Analysis
+│   ├── Position Feature Extraction
+│   │   ├── Material balance
+│   │   ├── King safety
+│   │   ├── Piece activity
+│   │   ├── Pawn structure
+│   │   └── Tactical motifs
+│   └── Query Type Classification
+│       ├── UCI move requests
+│       ├── Explanatory queries
+│       └── General Q&A
+├── Expert Selection
+│   ├── Primary Expert Routing
+│   ├── Ensemble Mode Detection
+│   └── Confidence Scoring
+├── Inference Execution
+│   ├── Adapter Loading/Caching
+│   ├── Response Generation
+│   └── Quality Validation
+└── Response Enhancement
+    ├── Routing Metadata
+    ├── Confidence Scores
+    └── Expert Attribution
+```
 - `prompt_templates/`: Expert-specific prompt formatting
 
 **Architecture**:
@@ -293,90 +327,267 @@ Web Interface Architecture
 - **Dataset**: `/api/data/clean`, `/api/data/status`
 - **System**: `/api/health`, `/api/stats`, `/api/examples`
 
-### 5. Evaluation Layer (`src/evaluation/`)
+### 5. Advanced Evaluation Layer (`src/evaluation/`)
 
-**Purpose**: Comprehensive evaluation suite for chess model performance assessment
+**Purpose**: Comprehensive evaluation suite with ELO estimation, move quality scoring, and performance benchmarking
 
 **Key Components**:
-- `stockfish_match_eval.py`: Stockfish vs model match evaluation
-- `puzzle_eval.py`: Tactical puzzle accuracy testing
+- `advanced_chess_eval.py`: ELO estimation and move quality analysis system
+- `stockfish_match_eval.py`: Stockfish vs model tournament evaluation
+- `puzzle_eval.py`: Tactical puzzle accuracy testing with quality metrics
 - `chess_evaluation.py`: General evaluation framework
+- `comprehensive_eval.py`: Multi-dimensional performance assessment
 
 **Architecture**:
 ```
-Evaluation Pipeline
-├── Stockfish Match Testing
-│   ├── Position Generation (Mixed FENs)
-│   ├── Model vs Stockfish Games
-│   ├── Win/Loss/Draw Tracking
-│   └── Performance Metrics
-├── Puzzle Accuracy Testing
-│   ├── Lichess Puzzle Database
-│   ├── First-Move Accuracy
-│   ├── Sequence Accuracy
-│   └── Difficulty Analysis
-├── Real-time Web Evaluation
-│   ├── Live Results Display
-│   ├── Progress Monitoring
+Advanced Evaluation Pipeline
+├── ELO Rating Estimation
+│   ├── Tournament Simulation (vs Stockfish)
+│   ├── Performance Rating Calculation
+│   ├── Confidence Interval Analysis
+│   └── Rating Category Assessment
+├── Move Quality Analysis
+│   ├── Centipawn Loss Calculation
+│   ├── Move Categorization (best/excellent/good/blunder)
+│   ├── Stockfish Validation
+│   └── Quality Distribution Analysis
+├── Position Evaluation
+│   ├── Static Position Assessment
+│   ├── Evaluation Accuracy Metrics
+│   ├── Phase-specific Analysis
+│   └── Error Distribution Analysis
+├── Comprehensive Benchmarking
+│   ├── Multi-dataset Evaluation
+│   ├── Cross-validation Testing
+│   ├── Performance Regression Detection
 │   └── Comparative Analysis
-└── Performance Reporting
-    ├── Accuracy Metrics
-    ├── Response Time Analysis
-    ├── Error Classification
-    └── Benchmark Comparisons
+└── Reporting & Visualization
+    ├── Structured JSON Reports
+    ├── Performance Dashboards
+    ├── Trend Analysis
+    └── Automated Benchmarking
 ```
 
 **Key Features**:
-- **Stockfish Match Evaluation**: Automated games against Stockfish at various depths
-- **Puzzle Database Testing**: Accuracy testing on 1000+ rated chess puzzles
-- **Real-time Evaluation**: Live evaluation progress in web interface
-- **Comprehensive Metrics**: Win rates, accuracy scores, response times
-- **Error Analysis**: Classification of model mistakes and failure modes
+- **ELO Estimation**: Tournament-based rating calculation with confidence intervals
+- **Move Quality Scoring**: Centipawn loss analysis and move categorization
+- **Position Evaluation**: Stockfish-verified position assessment accuracy
+- **Comprehensive Metrics**: Win rates, accuracy scores, quality distributions
+- **Automated Benchmarking**: Continuous evaluation and performance tracking
+- **Advanced Error Analysis**: Detailed classification of model mistakes and failure modes
 
-### 6. Dataset Pipeline (`data/`)
+### 6. Checkpoint Management System (`src/training/checkpoint_manager.py`)
 
-**Purpose**: Large-scale dataset processing and quality assurance for training
+**Purpose**: Robust training resume functionality with comprehensive progress tracking and validation
 
 **Key Components**:
-- `data/scripts/validate_and_augment.py`: Dataset validation and cleaning
-- `data/processed/`: Cleaned training datasets (100k+ samples)
-- `data/formatted/`: Expert-specific dataset symlinks
+- `CheckpointManager`: Core checkpoint management with metadata tracking
+- `CheckpointMetadata`: Structured metadata for training state
+- `TrainingProgress`: Progress tracking across training sessions
+- Custom training callbacks for automatic checkpointing
 
 **Architecture**:
 ```
-Dataset Processing Pipeline
-├── Raw Data Collection
-│   ├── ChessInstruct Dataset
-│   ├── Lichess Puzzles
-│   ├── Historical Games
-│   └── Opening Theory
-├── Data Validation & Cleaning
-│   ├── Stockfish Move Validation
-│   ├── Legal Move Verification
-│   ├── Format Standardization
-│   └── Quality Assurance
-├── Expert-Specific Formatting
-│   ├── UCI Expert Dataset (50k samples)
-│   ├── Tutor Expert Dataset (50k samples)
-│   ├── Director Expert Dataset (3.2MB)
-│   └── Format Conversion
-├── Quality Control
-│   ├── Duplicate Removal
-│   ├── Error Detection
-│   ├── Balance Verification
-│   └── Final Validation
-└── Training-Ready Datasets
-    ├── Symlink Management
-    ├── Version Control
-    └── Distribution
+Checkpoint Management System
+├── Checkpoint Discovery & Loading
+│   ├── Latest Checkpoint Detection
+│   ├── Metadata Validation
+│   ├── Resume State Reconstruction
+│   └── Integrity Verification
+├── Automatic Checkpoint Creation
+│   ├── Training Progress Capture
+│   ├── Loss Metrics & Learning Rates
+│   ├── Dataset & Model Metadata
+│   └── System Information Logging
+├── Progress Tracking & Reporting
+│   ├── Training Statistics
+│   ├── Estimated Completion Time
+│   ├── Best Model Identification
+│   └── Performance Trend Analysis
+├── Checkpoint Maintenance
+│   ├── Automatic Cleanup (Old Checkpoints)
+│   ├── Storage Optimization
+│   ├── Backup & Recovery
+│   └── Version Management
+└── Training Resume Functionality
+    ├── State Restoration
+    ├── Optimizer State Loading
+    ├── DataLoader Resumption
+    └── Progress Continuation
+```
+
+**Key Features**:
+- **Robust Resume**: Automatic detection and resumption from latest checkpoints
+- **Metadata Tracking**: Comprehensive training state with loss curves and metrics
+- **Progress Monitoring**: Real-time training progress with completion estimates
+- **Integrity Validation**: Checkpoint corruption detection and recovery
+- **Smart Cleanup**: Automatic removal of old checkpoints while preserving best models
+- **Multi-Expert Support**: Separate checkpoint management for each expert type
+
+### 7. MPS Memory Optimization (`src/training/mps_optimizer.py`)
+
+**Purpose**: Dynamic memory management and performance optimization for Apple Silicon MPS training
+
+**Key Components**:
+- `MPSMemoryOptimizer`: Core memory optimization with dynamic batch sizing
+- `MPSDataLoaderOptimizer`: DataLoader optimizations for MPS efficiency
+- Memory profiling and monitoring utilities
+- Training configuration optimization
+
+**Architecture**:
+```
+MPS Memory Optimization Pipeline
+├── System Memory Assessment
+│   ├── Available Memory Detection
+│   ├── MPS Capability Verification
+│   ├── Memory Usage Monitoring
+│   └── Resource Allocation Planning
+├── Dynamic Batch Size Calculation
+│   ├── Model Memory Profiling
+│   ├── Optimal Batch Size Determination
+│   ├── Gradient Accumulation Adjustment
+│   └── Memory Utilization Optimization
+├── MPS-Specific Optimizations
+│   ├── fp16 Training Enablement
+│   ├── Gradient Checkpointing
+│   ├── Memory-Efficient Attention
+│   ├── Learning Rate Adjustments
+│   └── Optimizer Selection
+├── Performance Monitoring
+│   ├── Real-time Memory Tracking
+│   ├── Training Speed Optimization
+│   ├── Bottleneck Identification
+│   └── Automatic Adjustment
+└── Memory Management Utilities
+    ├── Cache Clearing Automation
+    ├── Memory Leak Prevention
+    ├── Efficient Data Loading
+    └── Resource Cleanup
+```
+
+**Key Features**:
+- **Dynamic Batch Sizing**: Automatic batch size calculation based on available memory
+- **Memory Profiling**: Real-time memory usage monitoring and optimization
+- **MPS Optimization**: Native Apple Silicon performance tuning
+- **Gradient Checkpointing**: Memory-efficient training with reduced VRAM usage
+- **Performance Monitoring**: Training speed and memory utilization tracking
+- **Automatic Adjustment**: Self-tuning parameters based on system capabilities
+
+### 8. Chess Position Embeddings (`src/inference/chess_embeddings.py`)
+
+**Purpose**: Chess-aware position embeddings and similarity search for enhanced context and analysis
+
+**Key Components**:
+- `ChessPositionEmbedder`: Domain-specific embedding creation
+- `ChessPositionRetriever`: Efficient similarity search and retrieval
+- Position metadata extraction and analysis
+- Retrieval-augmented generation support
+
+**Architecture**:
+```
+Chess Position Embedding System
+├── Feature Extraction Pipeline
+│   ├── Material Balance Analysis
+│   │   ├── Piece Values & Distribution
+│   │   ├── Material Imbalance Calculation
+│   │   └── Positional Material Value
+│   ├── King Safety Assessment
+│   │   ├── King Zone Attack Analysis
+│   │   ├── Open File Detection
+│   │   └── Castling Rights Evaluation
+│   ├── Pawn Structure Analysis
+│   │   ├── Pawn Islands & Chains
+│   │   ├── Doubled Pawns Detection
+│   │   └── Pawn Weaknesses
+│   ├── Piece Mobility Calculation
+│   │   ├── Legal Moves Counting
+│   │   ├── Piece-Specific Activity
+│   │   └── Development Assessment
+│   ├── Tactical Motif Detection
+│   │   ├── Pin Identification
+│   │   ├── Check Patterns
+│   │   └── Hanging Piece Analysis
+│   └── Positional Feature Extraction
+│       ├── Center Control
+│       ├── Space Advantage
+│       └── Coordination Metrics
+├── Vector Embedding Creation
+│   ├── Feature Normalization
+│   ├── Dimensionality Reduction
+│   ├── Unit Vector Normalization
+│   └── Embedding Optimization
+├── Similarity Search Engine
+│   ├── Cosine Distance Calculation
+│   ├── Top-K Retrieval
+│   ├── Common Feature Identification
+│   └── Relevance Scoring
+└── Context Enhancement
+    ├── Similar Position Retrieval
+    ├── Response Augmentation
+    ├── Analysis Enrichment
+    └── Learning Context Provision
+```
+
+**Key Features**:
+- **Chess-Domain Embeddings**: Position-aware vector representations using chess-specific features
+- **Similarity Search**: Efficient retrieval of related chess positions
+- **Context Enhancement**: Retrieval-augmented generation for improved analysis
+- **Position Clustering**: Pattern recognition and strategic motif identification
+- **Metadata Integration**: Rich position information for enhanced search capabilities
+- **Performance Optimized**: Fast similarity calculations with pre-computed embeddings
+
+### 9. Data Standardization Pipeline (`data/`)
+
+**Purpose**: Automated dataset validation, quality assurance, and format standardization across 977K+ training samples
+
+**Key Components**:
+- `data/scripts/standardize_data_formats.py`: Comprehensive format standardization
+- `data/scripts/validate_dataset_comprehensive.py`: Quality assessment and validation
+- `data/standardized/`: Standardized datasets in consistent expert format
+- `validation/`: Quality assessment reports and metrics
+
+**Architecture**:
+```
+Data Standardization Pipeline
+├── Multi-Format Input Processing
+│   ├── Expert Format (task/prompt/response/meta)
+│   ├── Legacy Text Format (conversational)
+│   ├── Raw FEN Format (puzzle datasets)
+│   └── Format Detection & Conversion
+├── Comprehensive Validation
+│   ├── Move Legality Verification
+│   ├── FEN Position Validation
+│   ├── Response Format Checking
+│   └── Quality Score Assignment
+├── Quality Assurance
+│   ├── Position Complexity Analysis
+│   ├── Move Type Distribution
+│   ├── Metadata Completeness
+│   └── Statistical Quality Metrics
+├── Standardization & Cleaning
+│   ├── Consistent JSON Schema
+│   ├── Response Format Normalization
+│   ├── Metadata Enrichment
+│   └── Duplicate Removal
+├── Expert-Specific Datasets
+│   ├── UCI Expert (977K+ move generation samples)
+│   ├── Tutor Expert (500K+ explanation samples)
+│   ├── Director Expert (5.1K+ Q&A samples)
+│   └── Quality-Filtered Outputs
+└── Quality Control & Reporting
+    ├── Automated Validation Reports
+    ├── Quality Distribution Analysis
+    ├── Error Classification
+    └── Performance Benchmarking
 ```
 
 **Dataset Features**:
-- **100k+ Training Samples**: Comprehensive chess knowledge base
-- **Stockfish Validation**: All moves verified for legality
-- **Expert Specialization**: Tailored datasets for each expert type
-- **Quality Assurance**: Automated cleaning and validation pipeline
-- **Symlink Management**: Clean dataset routing to training configs
+- **977K+ Standardized Samples**: Multi-format datasets converted to consistent expert schema
+- **Quality Assurance**: 93.1% average quality score with comprehensive validation
+- **Expert Specialization**: Separate high-quality datasets for UCI, Tutor, and Director modes
+- **Automated Processing**: Batch standardization and validation across all input formats
+- **Stockfish Validation**: All moves verified for legality and position validity
+- **Quality Metrics**: Position complexity analysis, move type distribution, metadata completeness
 
 ## Data Flow
 

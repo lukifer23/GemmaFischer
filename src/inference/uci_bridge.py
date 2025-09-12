@@ -22,7 +22,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
-from src.inference.router import Router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -53,10 +52,11 @@ class UCIPosition:
 @dataclass
 class UCIOptions:
     """UCI engine options"""
-    mode: str = "engine"  # "engine" or "tutor"
+    mode: str = "auto"  # "auto", "uci", "tutor", "director"
     style: str = "balanced"  # "fischer", "aggressive", "defensive", "balanced"
     depth: int = 12
     time_limit: int = 5000  # milliseconds
+    moe_enabled: bool = True  # Use MoE routing
     use_stockfish_fallback: bool = True
 
 class UCIBridge:
@@ -70,44 +70,34 @@ class UCIBridge:
     def __init__(self, model_path: Optional[str] = None, adapter_path: Optional[str] = None):
         """
         Initialize UCI Bridge
-        
+
         Args:
             model_path: Path to the base model
-            adapter_path: Path to the LoRA adapter
+            adapter_path: Path to the LoRA adapter (optional with MoE)
         """
         self.inference = None
         self.chess_engine = None
-        self.router = None
         self.options = UCIOptions()
         self.current_position = None
-        self.engine_name = "GemmaFischer"
+        self.engine_name = "ChessGemma"
         self.author = "ChessGemma Team"
-        self.version = "1.0.0"
-        
-        # Initialize inference and router
+        self.version = "2.0.0"
+
+        # Initialize inference with MoE support
         try:
             self.inference = ChessGemmaInference(model_path, adapter_path)
-            logger.info("Inference ready")
+            logger.info("ChessGemma inference initialized with MoE support")
         except Exception as e:
             logger.error(f"Failed to create inference: {e}")
             self.inference = None
-        
-        # Initialize chess engine for fallback
+
+        # Initialize chess engine for fallback and validation
         try:
             self.chess_engine = ChessEngineManager()
-            logger.info("Chess engine initialized successfully")
+            logger.info("Chess engine initialized for validation and fallback")
         except Exception as e:
             logger.error(f"Failed to initialize chess engine: {e}")
             self.chess_engine = None
-
-        # Router depends on inference; may be None if inference failed
-        if self.inference is not None:
-            try:
-                self.router = Router(self.inference, self.chess_engine)
-                logger.info("Router initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize router: {e}")
-                self.router = None
     
     def handle_uci_command(self, command: str) -> str:
         """
@@ -155,12 +145,14 @@ class UCIBridge:
     def _handle_uci(self) -> str:
         """Handle 'uci' command"""
         response = [
-            f"id name {self.engine_name}",
+            f"id name {self.engine_name} {self.version}",
             f"id author {self.author}",
-            "option name Mode type combo default engine var engine var tutor",
+            "option name Mode type combo default auto var auto var uci var tutor var director",
+            "option name MoE_Enabled type check default true",
             "option name Style type combo default balanced var fischer var aggressive var defensive var balanced",
             "option name Depth type spin default 12 min 1 max 20",
             "option name TimeLimit type spin default 5000 min 100 max 300000",
+            "option name Movetime type spin default 5000 min 100 max 300000",
             "option name UseStockfishFallback type check default true",
             "uciok"
         ]
@@ -189,8 +181,13 @@ class UCIBridge:
         option_value = args[3]
         
         if option_name == "Mode":
-            if option_value in ["engine", "tutor"]:
+            if option_value in ["auto", "uci", "tutor", "director"]:
                 self.options.mode = option_value
+        elif option_name == "UCI_Mode":  # Legacy support
+            if option_value in ["engine", "tutor"]:
+                self.options.mode = "uci" if option_value == "engine" else option_value
+        elif option_name == "MoE_Enabled":
+            self.options.moe_enabled = option_value.lower() in ("true", "1", "yes", "on")
         elif option_name == "Style":
             if option_value in ["fischer", "aggressive", "defensive", "balanced"]:
                 self.options.style = option_value
@@ -204,8 +201,13 @@ class UCIBridge:
                 self.options.time_limit = int(option_value)
             except ValueError:
                 pass
+        elif option_name == "Movetime":
+            try:
+                self.options.time_limit = int(option_value)
+            except ValueError:
+                pass
         elif option_name == "UseStockfishFallback":
-            self.options.use_stockfish_fallback = option_value.lower() == "true"
+            self.options.use_stockfish_fallback = option_value.lower() in ("true", "1", "yes", "on")
         
         return ""
     
@@ -310,70 +312,87 @@ class UCIBridge:
             if board.is_game_over():
                 return None
             
-            # Generate move based on mode
-            if self.options.mode == "tutor":
-                move = self._generate_tutor_move(board, depth, time_limit)
-            else:
-                move = self._generate_engine_move(board, depth, time_limit)
-            
-            return move.uci() if move else None
+            # Generate move using ChessGemma with MoE routing
+            move_uci = self._generate_chessgemmma_move(board, depth, time_limit)
+
+            if move_uci:
+                try:
+                    move = chess.Move.from_uci(move_uci)
+                    if move in board.legal_moves:
+                        return move
+                except ValueError:
+                    pass
+
+            # Fallback to Stockfish if available and enabled
+            if self.options.use_stockfish_fallback and self.chess_engine:
+                return self._generate_stockfish_move(board, depth, time_limit)
+
+            return None
             
         except Exception as e:
             logger.error(f"Error generating move: {e}")
             return None
-    
-    def _generate_engine_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
-        """Generate a move in engine mode (fast, minimal output)"""
-        try:
-            # Prefer router if available
-            if self.router is not None:
-                routed_move = self.router.suggest_move(
-                    board,
-                    mode="engine",
-                    style=self.options.style,
-                    depth=depth,
-                    time_limit_ms=time_limit,
-                )
-                if routed_move is not None:
-                    return routed_move
 
-            # Fallback to engine
-            if self.options.use_stockfish_fallback and self.chess_engine:
-                return self.chess_engine.get_best_move(board, depth, time_limit)
+    def _generate_chessgemmma_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[str]:
+        """Generate a move using ChessGemma with MoE routing"""
+        if self.inference is None:
+            return None
+
+        try:
+            # Convert board to FEN
+            fen = board.fen()
+
+            # Determine expert mode based on UCI options
+            expert_mode = self.options.mode
+            if expert_mode == "auto":
+                # Use MoE auto-routing if enabled
+                expert_mode = "auto" if self.options.moe_enabled else "uci"
+
+            # Create prompt based on mode
+            if expert_mode == "tutor":
+                prompt = f"FEN: {fen}\nQuestion: Analyze this position step by step.\nStyle: {self.options.style}\nMode: Tutor\n\n1. Evaluate the current position\n2. Consider candidate moves\n3. Choose the best move with reasoning\n\nRespond with the best move in UCI format at the end."
+            else:
+                prompt = f"FEN: {fen}\nMove:\nStyle: {self.options.style}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+
+            # Generate response using ChessGemma
+            response = self.inference.generate_response(prompt, expert=expert_mode)
+
+            # Extract move from response
+            if expert_mode == "tutor":
+                # Look for "Best move: <uci>" pattern in tutor mode
+                import re
+                match = re.search(r'Best move:\s*([a-h][1-8][a-h][1-8][qrbn]?)', response, re.IGNORECASE)
+                if match:
+                    return match.group(1).lower()
+            else:
+                # UCI mode: response should be just the move
+                response = response.strip()
+                if response and len(response) >= 4 and len(response) <= 6:
+                    return response.lower()
 
             return None
 
         except Exception as e:
-            logger.error(f"Error in engine mode: {e}")
-            if self.options.use_stockfish_fallback and self.chess_engine:
-                return self.chess_engine.get_best_move(board, depth, time_limit)
+            logger.error(f"Error generating ChessGemma move: {e}")
             return None
-    
-    def _generate_tutor_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
-        """Generate a move in tutor mode (with explanations)"""
+
+    def _generate_stockfish_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
+        """Generate a move using Stockfish as fallback"""
+        if not self.chess_engine:
+            return None
+
         try:
-            # Prefer router if available
-            if self.router is not None:
-                _, routed_move = self.router.analyze_with_move(
-                    board,
-                    style=self.options.style,
-                    depth=depth,
-                    time_limit_ms=time_limit,
-                )
-                if routed_move is not None:
-                    return routed_move
-
-            # Fallback to engine
-            if self.options.use_stockfish_fallback and self.chess_engine:
-                return self.chess_engine.get_best_move(board, depth, time_limit)
-
-            return None
-
+            # Use Stockfish to find best move
+            result = self.chess_engine.get_best_move(
+                board,
+                depth=min(depth, 15),  # Limit depth for UCI compatibility
+                time_limit=time_limit
+            )
+            return result
         except Exception as e:
-            logger.error(f"Error in tutor mode: {e}")
-            if self.options.use_stockfish_fallback and self.chess_engine:
-                return self.chess_engine.get_best_move(board, depth, time_limit)
+            logger.error(f"Error generating Stockfish move: {e}")
             return None
+
     
     def _create_engine_prompt(self, board: chess.Board) -> str:
         """Deprecated: use build_engine_prompt instead."""

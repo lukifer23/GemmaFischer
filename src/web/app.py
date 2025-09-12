@@ -17,15 +17,10 @@ import os
 from pathlib import Path
 import sys
 import time
-import torch
 from typing import Dict, List, Any, Optional
-import traceback
 import psutil
 import threading
 from datetime import datetime
-import subprocess
-import threading as _threading
-import queue as _queue
 
 # Add the project root to the Python path
 project_root = Path(__file__).resolve().parents[2]
@@ -35,7 +30,7 @@ sys.path.append(str(project_root))
 try:
     import torch
     import chess
-from src.inference.inference import get_inference_instance
+    from src.inference.inference import get_inference_instance
     from src.inference.chess_engine import ChessEngineManager
     from src.inference.uci_utils import extract_first_legal_move, extract_first_legal_move_uci
     from src.web.chess_game import ChessGame, ChessRAG
@@ -595,7 +590,13 @@ def api_settings_get():
         rerank = bool(os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0','false','False'))
         policy = os.environ.get('CHESSGEMMA_ENGINE_POLICY', 'sample')
         constrain = bool(os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN', '0') not in ('0','false','False'))
-        return jsonify({'engine_rerank': rerank, 'engine_policy': policy, 'engine_constrain': constrain})
+        moe_enabled = bool(os.environ.get('CHESSGEMMA_MOE_ENABLED', '1') not in ('0','false','False'))
+        return jsonify({
+            'engine_rerank': rerank,
+            'engine_policy': policy,
+            'engine_constrain': constrain,
+            'moe_enabled': moe_enabled
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -607,6 +608,7 @@ def api_settings_set():
         rerank = data.get('engine_rerank')
         policy = data.get('engine_policy')
         constrain = data.get('engine_constrain')
+        moe_enabled = data.get('moe_enabled')
         inf = get_inference_instance()
         _ = inf.load_model()
         if rerank is not None:
@@ -626,6 +628,18 @@ def api_settings_set():
             os.environ['CHESSGEMMA_ENGINE_POLICY'] = str(policy)
             try:
                 inf._engine_policy = str(policy)
+            except Exception:
+                pass
+        if moe_enabled is not None:
+            os.environ['CHESSGEMMA_MOE_ENABLED'] = '1' if bool(moe_enabled) else '0'
+            # Reinitialize MoE if needed
+            try:
+                if bool(moe_enabled) and not inf.moe_enabled:
+                    inf._initialize_moe_system()
+                elif not bool(moe_enabled):
+                    inf.moe_enabled = False
+                    inf.moe_router = None
+                    inf.moe_manager = None
             except Exception:
                 pass
         return jsonify({'success': True})
@@ -851,7 +865,8 @@ def get_model_info():
             'Tactical explanations',
             'Strategic concepts',
             'Endgame principles',
-            'Move recommendations'
+            'Move recommendations',
+            'Mixture of Experts routing (when enabled)'
         ],
         'limitations': [
             'No real-time engine analysis',
@@ -862,6 +877,10 @@ def get_model_info():
         'device': model_info.get('device') if loaded else None,
         'active_adapter': model_info.get('active_adapter') if loaded else None,
         'available_adapters': model_info.get('available_adapters') if loaded else {},
+        'moe_enabled': model_info.get('moe_enabled', False) if loaded else False,
+        'moe_available': model_info.get('moe_available', False) if loaded else False,
+        'moe_experts': model_info.get('moe_experts', []) if loaded else [],
+        'moe_info': model_info.get('moe_info', {}) if loaded else {},
     }
 
     return jsonify(info)

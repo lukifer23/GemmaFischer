@@ -109,13 +109,29 @@ async function askQuestion() {
     if (data.confidence > 0.7) confidenceClass = 'confidence-high';
     else if (data.confidence > 0.4) confidenceClass = 'confidence-medium';
     const confidenceText = data.confidence ? `<div class="confidence-badge ${confidenceClass}">Confidence: ${(data.confidence * 100).toFixed(1)}%</div>` : '';
+
+    // Add MoE information if available
+    let moeInfo = '';
+    if (data.moe_used) {
+      moeInfo = `
+        <div class="moe-info small text-muted mt-2 p-2 bg-light rounded">
+          <i class="fas fa-network-wired me-1"></i>
+          <strong>MoE Routing:</strong> ${data.primary_expert || 'auto'}
+          ${data.ensemble_mode ? '(ensemble)' : ''}
+          ${data.routing_reasoning ? `<br><em>${data.routing_reasoning}</em>` : ''}
+        </div>
+      `;
+    }
+
     addMessage(`
       <div class="d-flex align-items-center mb-2">
         <i class="fas fa-robot me-2"></i>
         <strong>ChessGemma</strong>
+        ${data.expert && data.expert !== 'auto' ? `<span class="badge bg-secondary ms-2">${data.expert}</span>` : ''}
       </div>
       <p>${data.response || data.error || 'No response received'}</p>
       ${confidenceText}
+      ${moeInfo}
     `, messageClass);
   } catch (error) {
     console.error('Error:', error);
