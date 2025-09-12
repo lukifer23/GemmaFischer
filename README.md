@@ -91,6 +91,31 @@ ChessGemma combines several advanced components to create a comprehensive chess 
 
 ## Quick Start
 
+### Unified Training Orchestrator (Recommended)
+Train all ChessGemma experts with intelligent checkpoint management and MPS optimization:
+
+```bash
+# Train all experts with automatic resume and validation
+python -m src.training.train_chessgemmma
+
+# Train specific experts only
+python -m src.training.train_chessgemmma --experts uci tutor
+
+# Fresh training (no checkpoint resume)
+python -m src.training.train_chessgemmma --no-resume
+
+# Training with comprehensive validation
+python -m src.training.train_chessgemmma --validate
+```
+
+**Unified Training Features:**
+- ✅ **Automatic Checkpoint Resume**: Never lose progress due to interruptions
+- ✅ **MPS Memory Optimization**: Dynamic batch sizing for Apple Silicon
+- ✅ **Sequential Expert Training**: UCI → Tutor → Director with cooling periods
+- ✅ **Comprehensive Progress Tracking**: Real-time updates and ETA calculations
+- ✅ **Error Recovery**: Graceful failure handling and detailed error reporting
+- ✅ **Post-Training Validation**: Automated performance benchmarking
+
 ### Prerequisites
 
 - **Mac with M3 Pro chip** (required for optimal MPS performance)

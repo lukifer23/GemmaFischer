@@ -151,6 +151,31 @@ checkpoints/lora_tutor/    # Chess Tutor Expert (200, 400 steps)
 checkpoints/lora_director/ # Q&A Director Expert (500, 1000 steps)
 ```
 
+#### Unified Training Orchestrator (Easiest Method)
+The recommended approach for training ChessGemma is using the unified orchestrator:
+
+```bash
+# Train all experts with intelligent management
+python -m src.training.train_chessgemmma
+
+# Train specific experts only
+python -m src.training.train_chessgemmma --experts uci tutor
+
+# Fresh training (no checkpoint resume)
+python -m src.training.train_chessgemmma --no-resume
+
+# Training with validation and detailed reports
+python -m src.training.train_chessgemmma --validate
+```
+
+**Orchestrator Advantages:**
+- **One Command**: Train all experts without managing multiple scripts
+- **Smart Resume**: Automatically detects and resumes from latest checkpoints
+- **MPS Optimization**: Applies memory optimization to all training runs
+- **Progress Tracking**: Real-time progress across all experts with ETA
+- **Error Recovery**: Handles failures gracefully and continues with remaining experts
+- **Comprehensive Reporting**: Generates detailed training reports and recommendations
+
 #### Individual Expert Training
 Train each expert model with optimized configurations:
 
