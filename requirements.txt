@@ -1,24 +1,28 @@
 # Dependencies for GemmaFischer - Chess LLM Engine + Tutor
 # Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks
+#
+# When updating dependencies, install the desired versions and regenerate
+# pins with:
+#   pip freeze > requirements.txt
 
 # Core ML dependencies (MPS-optimized)
-transformers
+transformers==4.38.*
 datasets
 accelerate
 peft
 trl
 huggingface_hub
 unsloth  # Optimized for Apple Silicon MPS
-torch  # With MPS support for M3 Pro
-torchvision  # With MPS support
-torchaudio  # With MPS support
+torch==2.2.*  # With MPS support for M3 Pro
+torchvision==0.17.*  # With MPS support
+torchaudio==2.2.*  # With MPS support
 
 # Chess and UCI support
 python-chess
 stockfish  # Python wrapper for Stockfish engine
 
 # Web interface
-flask
+flask==3.0.*
 flask-cors
 
 # Data processing and embeddings (MPS-compatible)
