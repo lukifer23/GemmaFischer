@@ -89,6 +89,19 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Updating dependency pins
+
+`requirements.txt` pins critical packages to versions compatible with Apple Silicon
+MPS (for example, `transformers==4.38.*` and `torch==2.2.*`). When dependencies
+change, regenerate the pinned list after installing the desired versions:
+
+```bash
+pip freeze > requirements.txt
+```
+
+This captures the exact versions in your environment and keeps the project
+reproducible.
+
 ### Basic Usage
 
 1. **Start web interface:**
