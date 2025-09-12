@@ -164,42 +164,33 @@ class ChessGemmaTrainingOrchestrator:
         total_components = 3
 
         # Initialize checkpoint manager
-        if CHECKPOINT_MANAGER_AVAILABLE:
-            try:
-                self.checkpoint_manager = CheckpointManager(self.checkpoints_dir)
-                logger.info("✅ Checkpoint manager initialized")
-                components_initialized += 1
-            except Exception as e:
-                logger.warning(f"⚠️  Checkpoint manager initialization failed: {e}")
-                self.checkpoint_manager = None
-        else:
-            logger.warning("⚠️  Checkpoint manager not available")
+        try:
+            from .checkpoint_manager import CheckpointManager
+            self.checkpoint_manager = CheckpointManager(self.checkpoints_dir)
+            logger.info("✅ Checkpoint manager initialized")
+            components_initialized += 1
+        except Exception as e:
+            logger.warning(f"⚠️  Checkpoint manager initialization failed: {e}")
             self.checkpoint_manager = None
 
         # Initialize MPS optimizer
-        if MPS_OPTIMIZER_AVAILABLE:
-            try:
-                self.mps_optimizer = MPSMemoryOptimizer()
-                logger.info("✅ MPS optimizer initialized")
-                components_initialized += 1
-            except Exception as e:
-                logger.warning(f"⚠️  MPS optimizer initialization failed: {e}")
-                self.mps_optimizer = None
-        else:
-            logger.warning("⚠️  MPS optimizer not available")
+        try:
+            from .mps_optimizer import MPSMemoryOptimizer
+            self.mps_optimizer = MPSMemoryOptimizer()
+            logger.info("✅ MPS optimizer initialized")
+            components_initialized += 1
+        except Exception as e:
+            logger.warning(f"⚠️  MPS optimizer initialization failed: {e}")
             self.mps_optimizer = None
 
         # Initialize expert trainer
-        if EXPERT_TRAINER_AVAILABLE:
-            try:
-                self.expert_trainer = ChessExpertTrainer(str(self.config_path))
-                logger.info("✅ Expert trainer initialized")
-                components_initialized += 1
-            except Exception as e:
-                logger.warning(f"⚠️  Expert trainer initialization failed: {e}")
-                self.expert_trainer = None
-        else:
-            logger.warning("⚠️  Expert trainer not available")
+        try:
+            from .expert_trainer import ChessExpertTrainer
+            self.expert_trainer = ChessExpertTrainer(str(self.config_path))
+            logger.info("✅ Expert trainer initialized")
+            components_initialized += 1
+        except Exception as e:
+            logger.warning(f"⚠️  Expert trainer initialization failed: {e}")
             self.expert_trainer = None
 
         if components_initialized == 0:
@@ -243,9 +234,9 @@ class ChessGemmaTrainingOrchestrator:
 
         # Update system info with component availability
         self.current_session.system_info.update({
-            'expert_trainer_available': EXPERT_TRAINER_AVAILABLE,
-            'checkpoint_manager_available': CHECKPOINT_MANAGER_AVAILABLE,
-            'mps_optimizer_available': MPS_OPTIMIZER_AVAILABLE
+            'expert_trainer_available': self.expert_trainer is not None,
+            'checkpoint_manager_available': self.checkpoint_manager is not None,
+            'mps_optimizer_available': self.mps_optimizer is not None
         })
 
         # Check if we have the required components
