@@ -590,9 +590,6 @@ class ChessExpertTrainer:
             training_args = TrainingArguments(
                 output_dir=str(output_base),
                 num_train_epochs=1,
-                load_best_model_at_end=training_config['load_best_model_at_end'],
-                metric_for_best_model=training_config['metric_for_best_model'],
-                greater_is_better=training_config['greater_is_better'],
                 logging_first_step=True,
                 # Resume from checkpoint if available
                 resume_from_checkpoint=str(resume_checkpoint) if resume_checkpoint else None,
