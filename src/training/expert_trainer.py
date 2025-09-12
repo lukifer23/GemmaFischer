@@ -690,7 +690,47 @@ class ChessExpertTrainer:
 
             # Train the expert
             logger.info("🚀 Starting expert training...")
-            train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
+
+            # Add memory monitoring for MPS
+            if torch.backends.mps.is_available():
+                import psutil
+                import os
+                process = psutil.Process(os.getpid())
+                initial_memory = process.memory_info().rss / (1024**3)  # GB
+                logger.info(".2f")
+
+                # Monitor memory during training
+                class MemoryCallback:
+                    def on_step_end(self, args, state, control, **kwargs):
+                        if state.global_step % 10 == 0:  # Check every 10 steps
+                            current_memory = process.memory_info().rss / (1024**3)
+                            logger.info(".2f")
+
+                memory_callback = MemoryCallback()
+                trainer.add_callback(memory_callback)
+
+            # Add timeout protection for MPS training
+            import signal
+            def timeout_handler(signum, frame):
+                logger.error("⏰ Training timeout reached - MPS may be hanging")
+                raise TimeoutError("Training timeout")
+
+            if torch.backends.mps.is_available():
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(300)  # 5 minute timeout for MPS
+                logger.info("⏰ Set 5-minute timeout for MPS training safety")
+
+            try:
+                train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
+                if torch.backends.mps.is_available():
+                    signal.alarm(0)  # Cancel timeout
+                    logger.info("✅ Training completed within timeout")
+            except TimeoutError:
+                logger.error("❌ Training timed out - MPS stability issue")
+                raise
+            finally:
+                if torch.backends.mps.is_available():
+                    signal.alarm(0)  # Make sure to cancel timeout
 
             # Evaluate final performance
             eval_results = trainer.evaluate()
