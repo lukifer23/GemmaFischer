@@ -1,0 +1,108 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_100828",
+    "start_time": "2025-09-12T10:08:28.071091",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "total_training_time": 113.75680899620056,
+    "system_info": {
+      "error": "Could not collect system info",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 3,
+    "total_training_time": 113.75680899620056,
+    "average_time_per_expert": 37.918936332066856,
+    "interrupted": false,
+    "error": null
+  },
+  "expert_results": [
+    {
+      "expert_name": "uci",
+      "success": false,
+      "training_time": 19.583062171936035,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "uci",
+        "success": false,
+        "training_time": 19.582880973815918,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: LoraConfig.__init__() got an unexpected keyword argument 'dropout'"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "tutor",
+      "success": false,
+      "training_time": 17.38659906387329,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "tutor",
+        "success": false,
+        "training_time": 17.38569188117981,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: LoraConfig.__init__() got an unexpected keyword argument 'dropout'"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "director",
+      "success": false,
+      "training_time": 16.77458167076111,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "director",
+        "success": false,
+        "training_time": 16.77432894706726,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: LoraConfig.__init__() got an unexpected keyword argument 'dropout'"
+        ]
+      },
+      "error_message": null
+    }
+  ],
+  "system_performance": {
+    "final_memory_usage": 65.1,
+    "cpu_usage": 4.5,
+    "disk_usage": 21.4
+  },
+  "recommendations": [
+    "Consider investigating failures in failed experts",
+    "Check system resources and memory availability",
+    "MPS optimization is active - monitor memory usage during training",
+    "Consider clearing MPS cache between expert trainings",
+    "Checkpoint resume is working - training can be safely interrupted",
+    "Consider regular checkpoint validation for data integrity"
+  ],
+  "generated_at": "2025-09-12T10:10:21.848140"
+}

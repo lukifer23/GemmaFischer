@@ -1,0 +1,108 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_122800",
+    "start_time": "2025-09-12T12:28:00.676067",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "total_training_time": 136.3763771057129,
+    "system_info": {
+      "error": "Could not collect system info",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 3,
+    "total_training_time": 136.3763771057129,
+    "average_time_per_expert": 45.45879236857096,
+    "interrupted": false,
+    "error": null
+  },
+  "expert_results": [
+    {
+      "expert_name": "uci",
+      "success": false,
+      "training_time": 26.60536503791809,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "uci",
+        "success": false,
+        "training_time": 26.604857683181763,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: Your setup doesn't support bf16/gpu."
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "tutor",
+      "success": false,
+      "training_time": 24.819252967834473,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "tutor",
+        "success": false,
+        "training_time": 24.818573713302612,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: Your setup doesn't support bf16/gpu."
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "director",
+      "success": false,
+      "training_time": 24.940585136413574,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "director",
+        "success": false,
+        "training_time": 24.939974069595337,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: Your setup doesn't support bf16/gpu."
+        ]
+      },
+      "error_message": null
+    }
+  ],
+  "system_performance": {
+    "final_memory_usage": 64.3,
+    "cpu_usage": 18.4,
+    "disk_usage": 22.4
+  },
+  "recommendations": [
+    "Consider investigating failures in failed experts",
+    "Check system resources and memory availability",
+    "MPS optimization is active - monitor memory usage during training",
+    "Consider clearing MPS cache between expert trainings",
+    "Checkpoint resume is working - training can be safely interrupted",
+    "Consider regular checkpoint validation for data integrity"
+  ],
+  "generated_at": "2025-09-12T12:30:17.084396"
+}

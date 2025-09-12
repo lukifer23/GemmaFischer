@@ -1,0 +1,70 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_125614",
+    "start_time": "2025-09-12T12:56:14.557907",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "total_training_time": 0.0,
+    "system_info": {
+      "error": "Could not collect system info",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 3,
+    "total_training_time": 0.0,
+    "average_time_per_expert": 0.0,
+    "interrupted": false,
+    "error": "name 'torch' is not defined"
+  },
+  "expert_results": [
+    {
+      "expert_name": "uci",
+      "success": false,
+      "training_time": 0.0005860328674316406,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "uci",
+        "success": false,
+        "training_time": 0.00037598609924316406,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: Expecting property name enclosed in double quotes: line 32 column 27 (char 859)"
+        ]
+      },
+      "error_message": null
+    }
+  ],
+  "system_performance": {
+    "final_memory_usage": 48.3,
+    "cpu_usage": 19.5,
+    "disk_usage": 22.9
+  },
+  "recommendations": [
+    "Consider investigating failures in failed experts",
+    "Check system resources and memory availability",
+    "MPS optimization is active - monitor memory usage during training",
+    "Consider clearing MPS cache between expert trainings",
+    "Checkpoint resume is working - training can be safely interrupted",
+    "Consider regular checkpoint validation for data integrity"
+  ],
+  "generated_at": "2025-09-12T12:56:15.696673"
+}

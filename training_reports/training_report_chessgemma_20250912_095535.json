@@ -1,0 +1,103 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_095535",
+    "start_time": "2025-09-12T09:55:35.903168",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "failed_experts": [],
+    "total_training_time": 60.11982798576355,
+    "system_info": {
+      "error": "Could not collect system info",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 3,
+    "failed_experts": 0,
+    "total_training_time": 60.11982798576355,
+    "average_time_per_expert": 20.039942661921184,
+    "interrupted": false,
+    "error": null
+  },
+  "expert_results": [
+    {
+      "expert_name": "uci",
+      "success": true,
+      "training_time": 0.0385127067565918,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "uci",
+        "training_time": 0.03812003135681152,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: 'NoneType' object is not callable"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "tutor",
+      "success": true,
+      "training_time": 0.05152416229248047,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "tutor",
+        "training_time": 0.05090785026550293,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: 'NoneType' object is not callable"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "director",
+      "success": true,
+      "training_time": 0.022233247756958008,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "director",
+        "training_time": 0.021853923797607422,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: 'NoneType' object is not callable"
+        ]
+      },
+      "error_message": null
+    }
+  ],
+  "system_performance": {
+    "final_memory_usage": 62.0,
+    "cpu_usage": 16.7,
+    "disk_usage": 21.4
+  },
+  "recommendations": [
+    "MPS optimization is active - monitor memory usage during training",
+    "Consider clearing MPS cache between expert trainings",
+    "Checkpoint resume is working - training can be safely interrupted",
+    "Consider regular checkpoint validation for data integrity"
+  ],
+  "generated_at": "2025-09-12T09:56:36.047256"
+}

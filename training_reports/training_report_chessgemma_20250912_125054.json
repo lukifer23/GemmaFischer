@@ -1,0 +1,41 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_125054",
+    "start_time": "2025-09-12T12:50:54.878950",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [],
+    "total_training_time": 50.29356908798218,
+    "system_info": {
+      "error": "Could not collect system info",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 0,
+    "total_training_time": 50.29356908798218,
+    "average_time_per_expert": 50.29356908798218,
+    "interrupted": true,
+    "error": null
+  },
+  "expert_results": [],
+  "system_performance": {
+    "final_memory_usage": 98.9,
+    "cpu_usage": 32.3,
+    "disk_usage": 29.5
+  },
+  "recommendations": [
+    "No training results available for analysis"
+  ],
+  "generated_at": "2025-09-12T12:51:45.928273"
+}

@@ -1,0 +1,108 @@
+{
+  "session_info": {
+    "session_id": "chessgemma_20250912_102228",
+    "start_time": "2025-09-12T10:22:28.773986",
+    "experts_to_train": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "completed_experts": [],
+    "failed_experts": [
+      "uci",
+      "tutor",
+      "director"
+    ],
+    "total_training_time": 115.73565220832825,
+    "system_info": {
+      "error": "Could not collect system info",
+      "expert_trainer_available": true,
+      "checkpoint_manager_available": true,
+      "mps_optimizer_available": true
+    },
+    "mps_optimization_applied": true,
+    "checkpoint_resume_used": true
+  },
+  "training_summary": {
+    "total_experts": 3,
+    "successful_experts": 0,
+    "failed_experts": 3,
+    "total_training_time": 115.73565220832825,
+    "average_time_per_expert": 38.57855073610941,
+    "interrupted": false,
+    "error": null
+  },
+  "expert_results": [
+    {
+      "expert_name": "uci",
+      "success": false,
+      "training_time": 17.079442024230957,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "uci",
+        "success": false,
+        "training_time": 17.079007863998413,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: --load_best_model_at_end requires the save and eval strategy to match, but found\n- Evaluation strategy: IntervalStrategy.NO\n- Save strategy: SaveStrategy.STEPS"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "tutor",
+      "success": false,
+      "training_time": 17.222881078720093,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "tutor",
+        "success": false,
+        "training_time": 17.22151517868042,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: --load_best_model_at_end requires the save and eval strategy to match, but found\n- Evaluation strategy: IntervalStrategy.NO\n- Save strategy: SaveStrategy.STEPS"
+        ]
+      },
+      "error_message": null
+    },
+    {
+      "expert_name": "director",
+      "success": false,
+      "training_time": 21.421188831329346,
+      "checkpoint_created": null,
+      "final_metrics": {
+        "expert_name": "director",
+        "success": false,
+        "training_time": 21.420357942581177,
+        "final_metrics": {},
+        "adapter_path": "",
+        "validation_results": {},
+        "performance_score": 0.0,
+        "recommendations": [
+          "Training failed: --load_best_model_at_end requires the save and eval strategy to match, but found\n- Evaluation strategy: IntervalStrategy.NO\n- Save strategy: SaveStrategy.STEPS"
+        ]
+      },
+      "error_message": null
+    }
+  ],
+  "system_performance": {
+    "final_memory_usage": 66.6,
+    "cpu_usage": 10.6,
+    "disk_usage": 21.4
+  },
+  "recommendations": [
+    "Consider investigating failures in failed experts",
+    "Check system resources and memory availability",
+    "MPS optimization is active - monitor memory usage during training",
+    "Consider clearing MPS cache between expert trainings",
+    "Checkpoint resume is working - training can be safely interrupted",
+    "Consider regular checkpoint validation for data integrity"
+  ],
+  "generated_at": "2025-09-12T10:24:24.528250"
+}

@@ -1,0 +1,22 @@
+{
+  "session_id": "chessgemma_20250912_124057",
+  "start_time": "2025-09-12T12:40:57.384551",
+  "experts_to_train": [
+    "uci",
+    "tutor",
+    "director"
+  ],
+  "completed_experts": [],
+  "failed_experts": [
+    "uci"
+  ],
+  "total_training_time": 29.62633180618286,
+  "system_info": {
+    "error": "Could not collect system info",
+    "expert_trainer_available": true,
+    "checkpoint_manager_available": true,
+    "mps_optimizer_available": true
+  },
+  "mps_optimization_applied": true,
+  "checkpoint_resume_used": true
+}
