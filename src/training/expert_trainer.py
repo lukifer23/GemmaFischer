@@ -715,10 +715,23 @@ class ChessExpertTrainer:
 
                 # Monitor memory during training
                 class MemoryCallback(TrainerCallback):
-                    def on_step_end(self, args, state, control, **kwargs):
-                        if state.global_step % 10 == 0:  # Check every 10 steps
+                    def on_step_begin(self, args, state, control, **kwargs):
+                        if state.global_step % 5 == 0:  # Check every 5 steps
                             current_memory = process.memory_info().rss / (1024**3)
                             logger.info(".2f")
+                            # Aggressive MPS memory management
+                            if torch.backends.mps.is_available():
+                                torch.mps.empty_cache()
+                                logger.debug("MPS cache cleared at step start")
+
+                    def on_step_end(self, args, state, control, **kwargs):
+                        if state.global_step % 5 == 0:  # Check every 5 steps
+                            current_memory = process.memory_info().rss / (1024**3)
+                            logger.info(".2f")
+                            # Aggressive MPS memory management
+                            if torch.backends.mps.is_available():
+                                torch.mps.empty_cache()
+                                logger.debug("MPS cache cleared at step end")
 
                 memory_callback = MemoryCallback()
                 trainer.add_callback(memory_callback)

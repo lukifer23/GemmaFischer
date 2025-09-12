@@ -24,7 +24,7 @@
       "data_filters": {
         "task": "engine_uci",
         "min_rating": 1200,
-        "max_examples": 5000
+        "max_examples": 100
       },
       "training": {
         "learning_rate": 2e-4,
@@ -44,7 +44,7 @@
       "data_filters": {
         "task": "tutor_explain",
         "min_rating": 1300,
-        "max_examples": 3000
+        "max_examples": 60
       },
       "training": {
         "learning_rate": 1.5e-4,
@@ -64,7 +64,7 @@
       "data_filters": {
         "task": "director_qa",
         "min_rating": 1400,
-        "max_examples": 2000
+        "max_examples": 40
       },
       "training": {
         "learning_rate": 1e-4,
