@@ -186,6 +186,9 @@ class MPSMemoryOptimizer:
                 'dataloader_num_workers': 0,  # Avoid multiprocessing issues on MPS
                 'gradient_checkpointing': True,  # Memory optimization (critical for MPS)
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
+                # Conservative batch sizing for MPS stability
+                'per_device_train_batch_size': 1,  # Very conservative for MPS
+                'gradient_accumulation_steps': 4,  # Reduced accumulation
             })
 
             # Memory-efficient attention if available
@@ -200,16 +203,26 @@ class MPSMemoryOptimizer:
         # Calculate optimal batch size if model provided
         if model and tokenizer:
             batch_info = self.calculate_optimal_batch_size(model, tokenizer)
-            optimized_config.update({
-                'per_device_train_batch_size': batch_info['recommended_batch_size'],
-                'gradient_accumulation_steps': batch_info['gradient_accumulation_steps'],
-            })
+            # For MPS, override with very conservative settings to prevent buffer size errors
+            if self.is_mps:
+                # MPS is very sensitive to memory allocation - use ultra-conservative settings
+                optimized_config.update({
+                    'per_device_train_batch_size': 1,  # Fixed at 1 for MPS stability
+                    'gradient_accumulation_steps': 4,  # Reduced for stability
+                })
+                logger.info("🔧 Applied ultra-conservative MPS batch sizing for stability")
+            else:
+                optimized_config.update({
+                    'per_device_train_batch_size': batch_info['recommended_batch_size'],
+                    'gradient_accumulation_steps': batch_info['gradient_accumulation_steps'],
+                })
 
         # Learning rate adjustments for MPS
         if self.is_mps:
-            # MPS can often handle slightly higher learning rates
+            # MPS with conservative batch sizing - keep learning rate conservative
             current_lr = optimized_config.get('learning_rate', 2e-4)
-            optimized_config['learning_rate'] = min(current_lr * 1.1, 5e-4)
+            # More conservative learning rate with smaller batches
+            optimized_config['learning_rate'] = min(current_lr * 0.8, 3e-4)
 
         # Memory monitoring
         optimized_config.update({
