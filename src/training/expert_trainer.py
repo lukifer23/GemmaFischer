@@ -583,9 +583,16 @@ class ChessExpertTrainer:
                 'warmup_steps': expert_params['warmup_steps'],
                 'weight_decay': expert_params['weight_decay'],
                 'save_steps': expert_params['save_steps'],
-                'evaluation_strategy': expert_params['evaluation_strategy'],
-                'eval_steps': expert_params['eval_steps'],
             })
+
+            # Set evaluation strategy to match save strategy when load_best_model_at_end is enabled
+            if final_training_config.get('load_best_model_at_end', False):
+                final_training_config['evaluation_strategy'] = 'steps'  # Match save strategy
+                final_training_config['eval_steps'] = expert_params['save_steps']  # Match save frequency
+            else:
+                # Use default evaluation settings if available
+                final_training_config['evaluation_strategy'] = expert_params.get('evaluation_strategy', 'no')
+                final_training_config['eval_steps'] = expert_params.get('eval_steps', None)
 
             # Filter out parameters that are not valid for TrainingArguments
             # (e.g., output_dir_base is used internally but not a valid TrainingArguments param)
