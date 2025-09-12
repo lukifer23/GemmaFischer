@@ -29,8 +29,8 @@
       "training": {
         "learning_rate": 2e-4,
         "batch_size": 8,
-        "max_steps": 50,  // TEMPORARILY REDUCED FOR MPS TESTING
-        "evaluation_frequency": 25  // Match reduced steps
+        "max_steps": 50
+        "evaluation_frequency": 25
       },
       "target_metrics": {
         "move_accuracy": 0.75,
@@ -49,8 +49,8 @@
       "training": {
         "learning_rate": 1.5e-4,
         "batch_size": 4,
-        "max_steps": 30,  // TEMPORARILY REDUCED FOR MPS TESTING
-        "evaluation_frequency": 15  // Match reduced steps
+        "max_steps": 30
+        "evaluation_frequency": 15
       },
       "target_metrics": {
         "explanation_quality": 0.8,
@@ -69,8 +69,8 @@
       "training": {
         "learning_rate": 1e-4,
         "batch_size": 2,
-        "max_steps": 20,  // TEMPORARILY REDUCED FOR MPS TESTING
-        "evaluation_frequency": 10  // Match reduced steps
+        "max_steps": 20
+        "evaluation_frequency": 10
       },
       "target_metrics": {
         "strategic_accuracy": 0.8,
