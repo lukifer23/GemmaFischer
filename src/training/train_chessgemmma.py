@@ -206,7 +206,7 @@ class ChessGemmaTrainingOrchestrator:
 
     @log_performance
     def train_all_experts(self, experts: List[str] = None, resume: bool = True,
-                         validate: bool = True, cpu_only: bool = False) -> Dict[str, Any]:
+                         validate: bool = True) -> Dict[str, Any]:
         """
         Train all experts in sequence.
 
@@ -346,8 +346,7 @@ class ChessGemmaTrainingOrchestrator:
                 # Train the expert
                 training_result = self.expert_trainer.train_expert(
                     expert_name=expert_name,
-                    resume_from_checkpoint=resume,
-                    cpu_only=cpu_only
+                    resume_from_checkpoint=resume
                 )
 
                 result.training_time = time.time() - start_time
@@ -621,12 +620,6 @@ Examples:
         help='Directory to save training reports'
     )
 
-    parser.add_argument(
-        '--cpu-only',
-        action='store_true',
-        help='Force CPU training instead of MPS/CUDA for compatibility'
-    )
-
     args = parser.parse_args()
 
     # Handle resume flag conflict
@@ -652,8 +645,7 @@ Examples:
         report = orchestrator.train_all_experts(
             experts=args.experts,
             resume=args.resume,
-            validate=args.validate,
-            cpu_only=args.cpu_only
+            validate=args.validate
         )
 
         # Exit with success/failure code

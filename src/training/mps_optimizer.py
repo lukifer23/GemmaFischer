@@ -186,14 +186,9 @@ class MPSMemoryOptimizer:
                 'dataloader_num_workers': 0,  # Avoid multiprocessing issues on MPS
                 'gradient_checkpointing': False,  # DISABLED: Causes buffer allocation issues on MPS
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
-                # Ultra-conservative batch sizing for MPS stability
-                'per_device_train_batch_size': 1,  # Fixed at 1 for MPS stability
-                'gradient_accumulation_steps': 1,  # No accumulation for maximum stability
-                # Additional MPS stability settings
-                'torch_compile': False,  # MPS compilation can be unstable
-                'use_mps_device': True,  # Explicit MPS device usage
-                'torch_empty_cache_steps': 50,  # Frequent memory cleanup
-                'max_grad_norm': 1.0,  # Conservative gradient clipping
+                # Basic MPS settings - let transformers handle optimization
+                'per_device_train_batch_size': 1,  # Minimal batch size
+                'gradient_accumulation_steps': 1   # No accumulation
             })
 
             # Memory-efficient attention if available

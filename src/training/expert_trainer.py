@@ -339,10 +339,7 @@ class ChessExpertTrainer:
             logger.info(f"Loading base model from {model_path}")
 
             # Determine appropriate dtype for the device
-            if cpu_only:
-                model_dtype = torch.float32  # CPU always uses fp32
-                logger.info("🔧 CPU-only mode enabled - using fp32")
-            elif torch.cuda.is_available():
+            if torch.cuda.is_available():
                 model_dtype = torch.float16  # CUDA supports fp16
             elif torch.backends.mps.is_available():
                 model_dtype = torch.float32  # MPS requires fp32
@@ -351,8 +348,8 @@ class ChessExpertTrainer:
 
             logger.info(f"Using dtype {model_dtype} for device compatibility")
 
-            # MPS doesn't support device_map="auto" well - use None for MPS
-            device_map_setting = None if torch.backends.mps.is_available() else "auto"
+            # Use auto device mapping for all devices
+            device_map_setting = "auto"
 
             self.base_model = AutoModelForCausalLM.from_pretrained(
                 str(model_path),
@@ -363,21 +360,15 @@ class ChessExpertTrainer:
             )
 
             # Configure model for training
-            # Enable gradient checkpointing for memory efficiency (works on CPU and CUDA)
-            if not cpu_only and not torch.backends.mps.is_available():
+            # Only enable gradient checkpointing if it won't cause MPS buffer issues
+            if not torch.backends.mps.is_available():
                 self.base_model.gradient_checkpointing_enable()
                 logger.info("Enabled gradient checkpointing for memory efficiency")
-            elif cpu_only:
-                self.base_model.gradient_checkpointing_enable()
-                logger.info("Enabled gradient checkpointing for CPU memory efficiency")
             else:
                 logger.info("Disabled gradient checkpointing for MPS compatibility")
 
-            # Ensure model is on correct device
-            if cpu_only:
-                self.base_model = self.base_model.to(torch.device("cpu"))
-                logger.info("🔧 CPU-only mode: Forced model to CPU device")
-            elif torch.backends.mps.is_available():
+            # Ensure model is on correct device for MPS
+            if torch.backends.mps.is_available():
                 self.base_model = self.base_model.to(torch.device("mps"))
                 logger.info("Moved model to MPS device")
             elif torch.cuda.is_available():
@@ -542,7 +533,7 @@ class ChessExpertTrainer:
 
         return f"Chess Director:\n{prompt}\n\nStrategic Assessment:\n{response}"
 
-    def train_expert(self, expert_name: str, resume_from_checkpoint: bool = True, cpu_only: bool = False) -> ExpertTrainingResult:
+    def train_expert(self, expert_name: str, resume_from_checkpoint: bool = True) -> ExpertTrainingResult:
         """Train a single expert adapter with checkpoint management."""
         logger.info(f"🎓 Training {expert_name} expert...")
         logger.info(f"📝 Description: {self.expert_configs[expert_name].description}")
@@ -714,59 +705,12 @@ class ChessExpertTrainer:
             # Train the expert
             logger.info("🚀 Starting expert training...")
 
-            # Add memory monitoring for MPS
+            # Minimal memory monitoring for MPS (disabled aggressive clearing)
             if torch.backends.mps.is_available():
-                import psutil
-                import os
-                process = psutil.Process(os.getpid())
-                initial_memory = process.memory_info().rss / (1024**3)  # GB
-                logger.info(".2f")
+                logger.info("🔧 MPS training - using minimal memory monitoring")
 
-                # Monitor memory during training
-                class MemoryCallback(TrainerCallback):
-                    def on_step_begin(self, args, state, control, **kwargs):
-                        if state.global_step % 5 == 0:  # Check every 5 steps
-                            current_memory = process.memory_info().rss / (1024**3)
-                            logger.info(".2f")
-                            # Aggressive MPS memory management
-                            if torch.backends.mps.is_available():
-                                torch.mps.empty_cache()
-                                logger.debug("MPS cache cleared at step start")
-
-                    def on_step_end(self, args, state, control, **kwargs):
-                        if state.global_step % 5 == 0:  # Check every 5 steps
-                            current_memory = process.memory_info().rss / (1024**3)
-                            logger.info(".2f")
-                            # Aggressive MPS memory management
-                            if torch.backends.mps.is_available():
-                                torch.mps.empty_cache()
-                                logger.debug("MPS cache cleared at step end")
-
-                memory_callback = MemoryCallback()
-                trainer.add_callback(memory_callback)
-
-            # Add timeout protection for MPS training
-            import signal
-            def timeout_handler(signum, frame):
-                logger.error("⏰ Training timeout reached - MPS may be hanging")
-                raise TimeoutError("Training timeout")
-
-            if torch.backends.mps.is_available():
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(300)  # 5 minute timeout for MPS
-                logger.info("⏰ Set 5-minute timeout for MPS training safety")
-
-            try:
-                train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
-                if torch.backends.mps.is_available():
-                    signal.alarm(0)  # Cancel timeout
-                    logger.info("✅ Training completed within timeout")
-            except TimeoutError:
-                logger.error("❌ Training timed out - MPS stability issue")
-                raise
-            finally:
-                if torch.backends.mps.is_available():
-                    signal.alarm(0)  # Make sure to cancel timeout
+            # Simple MPS training - no extra monitoring or timeouts
+            train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
 
             # Evaluate final performance
             eval_results = trainer.evaluate()
