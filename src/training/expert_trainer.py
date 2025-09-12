@@ -587,13 +587,54 @@ class ChessExpertTrainer:
                 'eval_steps': expert_params['eval_steps'],
             })
 
+            # Filter out parameters that are not valid for TrainingArguments
+            # (e.g., output_dir_base is used internally but not a valid TrainingArguments param)
+            valid_training_args = {
+                'accelerator_config', 'adafactor', 'adam_beta1', 'adam_beta2', 'adam_epsilon',
+                'auto_find_batch_size', 'average_tokens_across_devices', 'batch_eval_metrics',
+                'bf16', 'bf16_full_eval', 'data_seed', 'dataloader_drop_last', 'dataloader_num_workers',
+                'dataloader_persistent_workers', 'dataloader_pin_memory', 'dataloader_prefetch_factor',
+                'ddp_backend', 'ddp_broadcast_buffers', 'ddp_bucket_cap_mb', 'ddp_find_unused_parameters',
+                'ddp_timeout', 'debug', 'deepspeed', 'disable_tqdm', 'do_eval', 'do_predict', 'do_train',
+                'eval_accumulation_steps', 'eval_delay', 'eval_do_concat_batches', 'eval_on_start',
+                'eval_steps', 'eval_strategy', 'eval_use_gather_object', 'fp16', 'fp16_backend',
+                'fp16_full_eval', 'fp16_opt_level', 'fsdp', 'fsdp_config', 'fsdp_min_num_params',
+                'fsdp_transformer_layer_cls_to_wrap', 'full_determinism', 'gradient_accumulation_steps',
+                'gradient_checkpointing', 'gradient_checkpointing_kwargs', 'greater_is_better',
+                'group_by_length', 'half_precision_backend', 'hub_always_push', 'hub_model_id',
+                'hub_private_repo', 'hub_revision', 'hub_strategy', 'hub_token', 'ignore_data_skip',
+                'include_for_metrics', 'include_inputs_for_metrics', 'include_num_input_tokens_seen',
+                'include_tokens_per_second', 'jit_mode_eval', 'label_names', 'label_smoothing_factor',
+                'learning_rate', 'length_column_name', 'liger_kernel_config', 'load_best_model_at_end',
+                'local_rank', 'log_level', 'log_level_replica', 'logging_dir', 'logging_first_step',
+                'logging_nan_inf_filter', 'logging_steps', 'logging_strategy', 'lr_scheduler_kwargs',
+                'lr_scheduler_type', 'max_grad_norm', 'max_steps', 'metric_for_best_model', 'mp_parameters',
+                'neftune_noise_alpha', 'no_cuda', 'num_train_epochs', 'optim', 'optim_args',
+                'optim_target_modules', 'output_dir', 'overwrite_output_dir', 'past_index',
+                'per_device_eval_batch_size', 'per_device_train_batch_size', 'per_gpu_eval_batch_size',
+                'per_gpu_train_batch_size', 'prediction_loss_only', 'push_to_hub', 'push_to_hub_model_id',
+                'push_to_hub_organization', 'push_to_hub_token', 'ray_scope', 'remove_unused_columns',
+                'report_to', 'restore_callback_states_from_checkpoint', 'resume_from_checkpoint', 'run_name',
+                'save_on_each_node', 'save_only_model', 'save_safetensors', 'save_steps', 'save_strategy',
+                'save_total_limit', 'seed', 'skip_memory_metrics', 'tf32', 'torch_compile',
+                'torch_compile_backend', 'torch_compile_mode', 'torch_empty_cache_steps', 'torchdynamo',
+                'tpu_metrics_debug', 'tpu_num_cores', 'use_cpu', 'use_ipex', 'use_legacy_prediction_loop',
+                'use_liger_kernel', 'use_mps_device', 'warmup_ratio', 'warmup_steps', 'weight_decay'
+            }
+
+            # Filter final_training_config to only include valid TrainingArguments parameters
+            filtered_training_config = {
+                k: v for k, v in final_training_config.items()
+                if k in valid_training_args
+            }
+
             training_args = TrainingArguments(
                 output_dir=str(output_base),
                 num_train_epochs=1,
                 logging_first_step=True,
                 # Resume from checkpoint if available
                 resume_from_checkpoint=str(resume_checkpoint) if resume_checkpoint else None,
-                **final_training_config  # Include all optimized parameters
+                **filtered_training_config  # Include only valid TrainingArguments parameters
             )
 
             # Initialize trainer
