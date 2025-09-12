@@ -339,7 +339,10 @@ class ChessExpertTrainer:
             logger.info(f"Loading base model from {model_path}")
 
             # Determine appropriate dtype for the device
-            if torch.cuda.is_available():
+            if cpu_only:
+                model_dtype = torch.float32  # CPU always uses fp32
+                logger.info("🔧 CPU-only mode enabled - using fp32")
+            elif torch.cuda.is_available():
                 model_dtype = torch.float16  # CUDA supports fp16
             elif torch.backends.mps.is_available():
                 model_dtype = torch.float32  # MPS requires fp32
@@ -360,15 +363,21 @@ class ChessExpertTrainer:
             )
 
             # Configure model for training
-            # Only enable gradient checkpointing if it won't cause MPS buffer issues
-            if not torch.backends.mps.is_available():
+            # Enable gradient checkpointing for memory efficiency (works on CPU and CUDA)
+            if not cpu_only and not torch.backends.mps.is_available():
                 self.base_model.gradient_checkpointing_enable()
                 logger.info("Enabled gradient checkpointing for memory efficiency")
+            elif cpu_only:
+                self.base_model.gradient_checkpointing_enable()
+                logger.info("Enabled gradient checkpointing for CPU memory efficiency")
             else:
                 logger.info("Disabled gradient checkpointing for MPS compatibility")
 
-            # Ensure model is on correct device for MPS
-            if torch.backends.mps.is_available():
+            # Ensure model is on correct device
+            if cpu_only:
+                self.base_model = self.base_model.to(torch.device("cpu"))
+                logger.info("🔧 CPU-only mode: Forced model to CPU device")
+            elif torch.backends.mps.is_available():
                 self.base_model = self.base_model.to(torch.device("mps"))
                 logger.info("Moved model to MPS device")
             elif torch.cuda.is_available():
@@ -533,7 +542,7 @@ class ChessExpertTrainer:
 
         return f"Chess Director:\n{prompt}\n\nStrategic Assessment:\n{response}"
 
-    def train_expert(self, expert_name: str, resume_from_checkpoint: bool = True) -> ExpertTrainingResult:
+    def train_expert(self, expert_name: str, resume_from_checkpoint: bool = True, cpu_only: bool = False) -> ExpertTrainingResult:
         """Train a single expert adapter with checkpoint management."""
         logger.info(f"🎓 Training {expert_name} expert...")
         logger.info(f"📝 Description: {self.expert_configs[expert_name].description}")
