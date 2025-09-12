@@ -10,13 +10,22 @@ uniform structure before constructing a weighted mixture using
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from datasets import load_dataset, Dataset, interleave_datasets
+from datasets import (
+    load_dataset,
+    Dataset,
+    IterableDataset,
+    interleave_datasets,
+)
 
 
-def _load_single_jsonl(path: str) -> Dataset:
+def _load_single_jsonl(
+    path: str,
+    *,
+    streaming: bool = False,
+    cache_dir: Optional[str] = None,
+) -> Dataset | IterableDataset:
     """Load a JSONL dataset and normalize its columns.
 
     Supports two layouts:
@@ -29,7 +38,13 @@ def _load_single_jsonl(path: str) -> Dataset:
     field is synthesized by concatenating them.
     """
 
-    ds = load_dataset("json", data_files=path, split="train")
+    ds = load_dataset(
+        "json",
+        data_files=path,
+        split="train",
+        streaming=streaming,
+        cache_dir=cache_dir,
+    )
 
     expected_cols = ["text", "prompt", "response", "task", "meta"]
 
@@ -47,19 +62,19 @@ def _load_single_jsonl(path: str) -> Dataset:
             "meta": example.get("meta"),
         }
 
-    ds = ds.map(_normalize)
-    # Ensure a consistent column set across datasets
-    for col in expected_cols:
-        if col not in ds.column_names:
-            ds = ds.add_column(col, [None] * len(ds))
-    # Remove any unexpected columns to avoid interleave mismatches
+    # Map lazily and drop any unexpected columns
     extra_cols = [c for c in ds.column_names if c not in expected_cols]
-    if extra_cols:
-        ds = ds.remove_columns(extra_cols)
+    ds = ds.map(_normalize, remove_columns=extra_cols)
     return ds
 
 
-def build_mixture(dataset_specs: List[Dict[str, Any]], seed: int = 3407) -> Dataset:
+def build_mixture(
+    dataset_specs: List[Dict[str, Any]],
+    seed: int = 3407,
+    *,
+    streaming: bool = False,
+    cache_dir: Optional[str] = None,
+) -> Dataset | IterableDataset:
     """Build an interleaved mixture from dataset specs.
 
     dataset_specs: list of { 'path': str, 'weight': float }
@@ -68,7 +83,7 @@ def build_mixture(dataset_specs: List[Dict[str, Any]], seed: int = 3407) -> Data
     if not dataset_specs:
         raise ValueError('No dataset specs provided for mixture.')
 
-    datasets_list: List[Dataset] = []
+    datasets_list: List[Dataset | IterableDataset] = []
     weights: List[float] = []
 
     for spec in dataset_specs:
@@ -79,7 +94,7 @@ def build_mixture(dataset_specs: List[Dict[str, Any]], seed: int = 3407) -> Data
         if weight <= 0:
             # Skip zero/negative weights
             continue
-        ds = _load_single_jsonl(path)
+        ds = _load_single_jsonl(path, streaming=streaming, cache_dir=cache_dir)
         datasets_list.append(ds)
         weights.append(weight)
 
