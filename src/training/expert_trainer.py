@@ -714,7 +714,7 @@ class ChessExpertTrainer:
                 logger.info(".2f")
 
                 # Monitor memory during training
-                class MemoryCallback:
+                class MemoryCallback(TrainerCallback):
                     def on_step_end(self, args, state, control, **kwargs):
                         if state.global_step % 10 == 0:  # Check every 10 steps
                             current_memory = process.memory_info().rss / (1024**3)
