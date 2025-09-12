@@ -585,14 +585,18 @@ class ChessExpertTrainer:
                 'save_steps': expert_params['save_steps'],
             })
 
-            # Set evaluation strategy to match save strategy when load_best_model_at_end is enabled
+            # Ensure evaluation strategy matches save strategy for load_best_model_at_end
             if final_training_config.get('load_best_model_at_end', False):
-                final_training_config['evaluation_strategy'] = 'steps'  # Match save strategy
-                final_training_config['eval_steps'] = expert_params['save_steps']  # Match save frequency
+                # When load_best_model_at_end is enabled, evaluation must happen
+                final_training_config['evaluation_strategy'] = 'steps'
+                final_training_config['eval_steps'] = expert_params.get('save_steps', 500)  # Default to reasonable value
+            elif 'save_steps' in final_training_config:
+                # If save_steps is set, evaluation should match save strategy
+                final_training_config['evaluation_strategy'] = 'steps'
+                final_training_config['eval_steps'] = expert_params.get('save_steps', 500)
             else:
-                # Use default evaluation settings if available
-                final_training_config['evaluation_strategy'] = expert_params.get('evaluation_strategy', 'no')
-                final_training_config['eval_steps'] = expert_params.get('eval_steps', None)
+                # Use default evaluation settings
+                final_training_config['evaluation_strategy'] = 'no'
 
             # Filter out parameters that are not valid for TrainingArguments
             # (e.g., output_dir_base is used internally but not a valid TrainingArguments param)
