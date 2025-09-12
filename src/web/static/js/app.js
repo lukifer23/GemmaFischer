@@ -95,8 +95,7 @@ async function askQuestion() {
   scrollToBottom();
 
   try {
-    const expertEl = document.getElementById('expertSelect');
-    const expert = expertEl ? expertEl.value : 'auto';
+    const expert = 'auto'; // Always use auto mode for intelligent routing
     const response = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -121,6 +120,8 @@ async function askQuestion() {
           ${data.routing_reasoning ? `<br><em>${data.routing_reasoning}</em>` : ''}
         </div>
       `;
+      // Update the expert status display
+      updateExpertStatus(data);
     }
 
     addMessage(`
@@ -310,12 +311,10 @@ async function makeMove(moveUCI) {
 async function getAIMove() {
   try {
     showMessage('AI is thinking...', 'info', 2000);
-    const expertEl = document.getElementById('expertSelect');
-    const expert = expertEl ? expertEl.value : 'tutor';
     const response = await fetch('/api/game/ai_move', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    , body: JSON.stringify({ expert })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expert: 'auto' })
     });
     const result = await response.json();
     if (result.success) {
@@ -560,5 +559,58 @@ async function playMatchMoves() {
     matchActive = false;
   }
 }
+
+// Update the expert status display based on MoE routing
+function updateExpertStatus(data) {
+  try {
+    // Update MoE status badge
+    const moeStatusEl = document.getElementById('moe-status');
+    if (moeStatusEl) {
+      moeStatusEl.textContent = data.moe_used ? 'MoE Active' : 'Single Expert';
+      moeStatusEl.className = data.moe_used ? 'badge bg-success ms-2' : 'badge bg-secondary ms-2';
+    }
+
+    // Update routing indicator
+    const routingEl = document.getElementById('routing-indicator');
+    if (routingEl) {
+      if (data.primary_expert) {
+        routingEl.textContent = `Using: ${data.primary_expert} expert`;
+      } else {
+        routingEl.textContent = 'Auto-routing active';
+      }
+    }
+
+    // Highlight the active expert badge
+    const badges = document.querySelectorAll('#expert-badges .badge');
+    badges.forEach(badge => {
+      badge.classList.remove('bg-success');
+      badge.classList.add('bg-secondary');
+    });
+
+    // Highlight the expert that was used
+    if (data.primary_expert) {
+      const expertBadge = document.querySelector(`#expert-badges .badge[data-expert="${data.primary_expert}"]`);
+      if (expertBadge) {
+        expertBadge.classList.remove('bg-secondary');
+        expertBadge.classList.add('bg-success');
+      }
+    }
+
+    console.log('Expert status updated:', data.primary_expert, data.moe_used);
+  } catch (error) {
+    console.error('Error updating expert status:', error);
+  }
+}
+
+// Initialize expert status on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Set data attributes for expert badges
+  const badges = document.querySelectorAll('#expert-badges .badge');
+  badges[0].setAttribute('data-expert', 'uci');
+  badges[1].setAttribute('data-expert', 'tutor');
+  badges[2].setAttribute('data-expert', 'director');
+
+  console.log('Expert status display initialized');
+});
 
 

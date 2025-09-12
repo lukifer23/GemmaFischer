@@ -281,6 +281,29 @@
             font-size: 1.2rem;
             opacity: 0.9;
         }
+
+        .expert-status-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--primary-color);
+        }
+
+        .expert-indicator {
+            font-size: 1.5rem;
+        }
+
+        .expert-badges .badge {
+            margin-right: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .routing-info {
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -303,6 +326,29 @@
         <div class="welcome-section">
             <h1><i class="fas fa-chess-queen me-3"></i>ChessGemma</h1>
             <p>Your AI-powered chess analysis and learning companion</p>
+
+            <!-- Expert Status Display -->
+            <div class="expert-status-card mt-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="expert-indicator me-3">
+                            <i class="fas fa-brain text-primary"></i>
+                            <span class="badge bg-success ms-2" id="moe-status">MoE Active</span>
+                        </div>
+                        <div class="expert-info">
+                            <small class="text-muted">Intelligent routing between:</small>
+                            <div class="expert-badges mt-1" id="expert-badges">
+                                <span class="badge bg-primary" data-expert="uci">UCI Engine</span>
+                                <span class="badge bg-info" data-expert="tutor">Chess Tutor</span>
+                                <span class="badge bg-warning" data-expert="director">Director</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="routing-info">
+                        <small class="text-muted" id="routing-indicator">Auto-routing active</small>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row">
@@ -320,12 +366,6 @@
 
                     <div class="input-group">
                         <div class="input-group">
-                            <select id="expertSelect" class="form-select form-select-sm" style="max-width: 220px; margin-right: 8px;">
-                                <option value="auto" selected>Auto</option>
-                                <option value="uci">UCI (Move only)</option>
-                                <option value="tutor">Tutor (Guided Play)</option>
-                                <option value="director">Director (Knowledge)</option>
-                            </select>
                             <input type="text" class="form-control" id="questionInput"
                                    placeholder="Ask a chess question..."
                                    onkeypress="handleKeyPress(event)">
@@ -1397,11 +1437,11 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
-                <div class="card mt-3">
+                <div class="card mt-3" style="display: none;">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-sliders-h me-2"></i>
-                            Adapters & Settings
+                            Adapters & Settings (Advanced)
                         </h5>
                     </div>
                     <div class="card-body">

@@ -148,7 +148,7 @@ class ChessGemmaInference:
             # Set up expert paths for MoE
             checkpoints_root = self.project_root / "checkpoints"
             self._expert_paths = {
-                'uci': str(_find_latest_dir([str(checkpoints_root / "lora_uci" / "checkpoint-*")])),
+                'uci': str(_find_latest_dir([str(checkpoints_root / "lora_full" / "checkpoint-*")])),  # Use full model for UCI
                 'tutor': str(_find_latest_dir([str(checkpoints_root / "lora_tutor" / "checkpoint-*")])),
                 'director': str(_find_latest_dir([str(checkpoints_root / "lora_director" / "checkpoint-*")]))
             }
@@ -158,7 +158,7 @@ class ChessGemmaInference:
 
             if len(self._expert_paths) >= 2:  # Need at least 2 experts for MoE
                 self.moe_router = ChessMoERouter(num_experts=len(self._expert_paths))
-                self.moe_manager = MoEInferenceManager(self.moe_router, self._expert_paths)
+                self.moe_manager = MoEInferenceManager(self.moe_router, self._expert_paths, self)
                 print(f"🧠 MoE System initialized with {len(self._expert_paths)} experts: {list(self._expert_paths.keys())}")
             else:
                 print("⚠️  Insufficient expert checkpoints for MoE (need at least 2), falling back to single-expert mode")
@@ -218,9 +218,9 @@ class ChessGemmaInference:
         """
         checkpoints_root = self.project_root / "checkpoints"
 
-        # Primary expert-specific locations
+        # Primary expert-specific locations - prioritize better trained models
         primary = {
-            "uci": [checkpoints_root / "lora_uci"],
+            "uci": [checkpoints_root / "lora_full"],  # Use ONLY full model for UCI (2000 steps vs 1000)
             "tutor": [checkpoints_root / "lora_tutor"],
             "director": [checkpoints_root / "lora_director"],
         }

@@ -20,6 +20,8 @@ import time
 from typing import Dict, List, Any, Optional
 import psutil
 import threading
+import subprocess
+import queue
 from datetime import datetime
 
 # Add the project root to the Python path
@@ -190,9 +192,9 @@ class TrainingJob:
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
         self.args: Dict[str, Any] = {}
-        self._log_q: _queue.Queue[str] = _queue.Queue(maxsize=10000)
+        self._log_q: queue.Queue[str] = queue.Queue(maxsize=10000)
         self._log_tail: list[str] = []
-        self._lock = _threading.Lock()
+        self._lock = threading.Lock()
         self.ckpt_dir: Optional[str] = None
         self.log_file: Optional[str] = None
 
@@ -258,7 +260,7 @@ class TrainingJob:
         self.ckpt_dir = self._infer_output_dir(expert)
         self.log_file = str(Path(self.ckpt_dir) / 'enhanced_train_log.jsonl')
         # reader thread
-        t = _threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True)
+        t = threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True)
         t.start()
         # watcher thread
         def _watch():
@@ -267,7 +269,7 @@ class TrainingJob:
             finally:
                 self.running = False
                 self.end_time = time.time()
-        _threading.Thread(target=_watch, daemon=True).start()
+        threading.Thread(target=_watch, daemon=True).start()
         return True
 
     def stop(self) -> bool:
@@ -329,7 +331,7 @@ class SimpleJob:
         self.end_time: Optional[float] = None
         self.args: Dict[str, Any] = {}
         self._log_tail: list[str] = []
-        self._lock = _threading.Lock()
+        self._lock = threading.Lock()
 
     def _reader(self, stream):
         try:
@@ -352,14 +354,14 @@ class SimpleJob:
         self.start_time = time.time()
         self.end_time = None
         self.args = args
-        _threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True).start()
+        threading.Thread(target=self._reader, args=(self.proc.stdout,), daemon=True).start()
         def _watch():
             try:
                 self.proc.wait()
             finally:
                 self.running = False
                 self.end_time = time.time()
-        _threading.Thread(target=_watch, daemon=True).start()
+        threading.Thread(target=_watch, daemon=True).start()
         return True
 
     def status(self) -> Dict[str, Any]:
@@ -1179,8 +1181,13 @@ def get_ai_move():
         fen = chess_game.get_fen()
         current_player = chess_game.current_player
         legal_moves = chess_game.get_legal_moves()
-        data = request.get_json() or {}
-        expert = (data.get('expert') or 'tutor').strip().lower()
+        try:
+            data = request.get_json() or {}
+        except Exception as e:
+            print(f"JSON parsing error: {e}")
+            data = {}
+
+        expert = (data.get('expert') or 'auto').strip().lower()
         
         start_time = time.time()
         print(f"\n🤖 AI MOVE REQUEST")

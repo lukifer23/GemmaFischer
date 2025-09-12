@@ -482,9 +482,10 @@ class ChessMoERouter(nn.Module):
 class MoEInferenceManager:
     """Manages MoE inference with automatic routing and ensemble capabilities."""
 
-    def __init__(self, router: ChessMoERouter, expert_models: Dict[str, Any]):
+    def __init__(self, router: ChessMoERouter, expert_models: Dict[str, Any], inference_system=None):
         self.router = router
         self.expert_models = expert_models
+        self.inference_system = inference_system
         self.metrics = MoERoutingMetrics()
 
         # Load expert models
@@ -524,8 +525,36 @@ class MoEInferenceManager:
 
     def _execute_single_expert_inference(self, fen: str, expert_name: str) -> Dict[str, Any]:
         """Execute inference with a single expert."""
-        # This would integrate with the actual expert model
-        # For now, return a placeholder response
+        if self.inference_system:
+            try:
+                # Switch to the correct expert
+                self.inference_system.set_active_adapter(expert_name)
+
+                # Generate question based on expert type
+                if expert_name == 'uci':
+                    question = f"FEN: {fen}\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+                elif expert_name == 'tutor':
+                    question = f"FEN: {fen}\nExplain the position and suggest the best move."
+                else:  # director
+                    question = f"FEN: {fen}\nAnalyze this chess position strategically."
+
+                # Get response from the actual inference system
+                result = self.inference_system.generate_response(
+                    question,
+                    context=f"Current position: {fen}",
+                    mode=expert_name
+                )
+
+                return {
+                    'response': result.get('response', f'Analysis from {expert_name} expert'),
+                    'expert_used': expert_name,
+                    'analysis_type': 'single_expert',
+                    'confidence': result.get('confidence', 0.5)
+                }
+            except Exception as e:
+                logger.error(f"Error in single expert inference: {e}")
+
+        # Fallback placeholder response
         return {
             'response': f"Analysis from {expert_name} expert",
             'expert_used': expert_name,
@@ -602,13 +631,13 @@ class MoEInferenceManager:
         }
 
 
-def create_moe_system(expert_paths: Dict[str, str]) -> Tuple[ChessMoERouter, MoEInferenceManager]:
+def create_moe_system(expert_paths: Dict[str, str], inference_system=None) -> Tuple[ChessMoERouter, MoEInferenceManager]:
     """Create a complete MoE system with router and inference manager."""
     # Initialize router
     router = ChessMoERouter()
 
     # Initialize inference manager
-    inference_manager = MoEInferenceManager(router, expert_paths)
+    inference_manager = MoEInferenceManager(router, expert_paths, inference_system)
 
     logger.info("🎯 MoE System created successfully")
     return router, inference_manager

@@ -27,5 +27,5 @@ lora:
   target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]  # Simplified modules
   dropout: 0.05
 dataset:
-  path: "data/formatted/uci_expert.jsonl"
+  path: "data/standardized/standardized_uci_expert.jsonl"
 
