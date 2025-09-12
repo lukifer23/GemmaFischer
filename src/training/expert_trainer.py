@@ -337,16 +337,32 @@ class ChessExpertTrainer:
 
             # Load base model
             logger.info(f"Loading base model from {model_path}")
+
+            # Determine appropriate dtype for the device
+            if torch.cuda.is_available():
+                model_dtype = torch.float16  # CUDA supports fp16
+            elif torch.backends.mps.is_available():
+                model_dtype = torch.float32  # MPS requires fp32
+            else:
+                model_dtype = torch.float32  # CPU fallback
+
+            logger.info(f"Using dtype {model_dtype} for device compatibility")
+
             self.base_model = AutoModelForCausalLM.from_pretrained(
                 str(model_path),
                 local_files_only=True,
                 device_map="auto",
                 attn_implementation="eager",
-                torch_dtype=torch.float16
+                torch_dtype=model_dtype
             )
 
             # Configure model for training
-            self.base_model.gradient_checkpointing_enable()
+            # Only enable gradient checkpointing if it won't cause MPS buffer issues
+            if not torch.backends.mps.is_available():
+                self.base_model.gradient_checkpointing_enable()
+                logger.info("Enabled gradient checkpointing for memory efficiency")
+            else:
+                logger.info("Disabled gradient checkpointing for MPS compatibility")
 
             logger.info("✅ Expert training environment initialized")
 
