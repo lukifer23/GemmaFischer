@@ -99,6 +99,22 @@ class ChessMoERouter(nn.Module):
 
         logger.info(f"🧠 MoE Router initialized with {num_experts} experts")
 
+        # The router is used purely for inference; ensure dropout layers are disabled
+        self.eval()
+
+    def train(self, mode: bool = False):
+        """Override to keep the router in evaluation mode.
+
+        Dropout in the gating networks would introduce nondeterminism during
+        routing.  Regardless of the requested mode, the router remains in
+        evaluation mode.
+        """
+        if mode:
+            logger.warning(
+                "ChessMoERouter.train(True) called, but router stays in eval mode"
+            )
+        return super().train(False)
+
     def forward(self, position_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward pass through the gating network."""
         # Extract position features
@@ -115,6 +131,9 @@ class ChessMoERouter(nn.Module):
     def route_query(self, position_fen: str, query_type: str = "auto",
                    complexity_score: Optional[float] = None) -> RoutingDecision:
         """Route a chess query to the appropriate expert(s)."""
+
+        # Ensure evaluation mode during routing to keep dropout disabled
+        self.eval()
 
         # Extract features from position
         position_features = self._extract_position_features(position_fen, query_type)
