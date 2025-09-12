@@ -179,10 +179,12 @@ class MPSMemoryOptimizer:
         # MPS-specific optimizations
         if self.is_mps:
             optimized_config.update({
-                'bf16': True,  # MPS supports bf16, not fp16
+                # MPS doesn't support bf16/fp16 mixed precision - use fp32
+                'bf16': False,
+                'fp16': False,
                 'dataloader_pin_memory': False,  # MPS doesn't benefit from pinned memory
                 'dataloader_num_workers': 0,  # Avoid multiprocessing issues on MPS
-                'gradient_checkpointing': True,  # Memory optimization
+                'gradient_checkpointing': True,  # Memory optimization (critical for MPS)
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
             })
 
@@ -218,7 +220,7 @@ class MPSMemoryOptimizer:
         logger.info("⚡ MPS-optimized training configuration:")
         for key, value in optimized_config.items():
             if key in ['learning_rate', 'per_device_train_batch_size', 'gradient_accumulation_steps',
-                      'bf16', 'gradient_checkpointing']:
+                      'bf16', 'fp16', 'gradient_checkpointing']:
                 logger.info(f"   {key}: {value}")
 
         return optimized_config
