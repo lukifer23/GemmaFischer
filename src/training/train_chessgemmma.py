@@ -49,11 +49,27 @@ except ImportError:
     # Try to import what we can
     try:
         from .expert_trainer import ChessExpertTrainer
+        EXPERT_TRAINER_AVAILABLE = True
+    except ImportError as e:
+        logger.warning(f"Expert trainer not available (likely missing torch): {e}")
+        EXPERT_TRAINER_AVAILABLE = False
+        ChessExpertTrainer = None
+
+    try:
         from .checkpoint_manager import CheckpointManager
+        CHECKPOINT_MANAGER_AVAILABLE = True
+    except ImportError as e:
+        logger.warning(f"Checkpoint manager not available: {e}")
+        CHECKPOINT_MANAGER_AVAILABLE = False
+        CheckpointManager = None
+
+    try:
         from .mps_optimizer import MPSMemoryOptimizer
-    except ImportError:
-        logger.error("Required training modules not available")
-        sys.exit(1)
+        MPS_OPTIMIZER_AVAILABLE = True
+    except ImportError as e:
+        logger.warning(f"MPS optimizer not available (likely missing torch): {e}")
+        MPS_OPTIMIZER_AVAILABLE = False
+        MPSMemoryOptimizer = None
 
 
 @dataclass
@@ -143,25 +159,58 @@ class ChessGemmaTrainingOrchestrator:
         logger.info(f"   Reports: {self.output_dir}")
 
     def initialize_components(self) -> bool:
-        """Initialize all training components."""
-        try:
-            # Initialize checkpoint manager
-            self.checkpoint_manager = CheckpointManager(self.checkpoints_dir)
-            logger.info("✅ Checkpoint manager initialized")
+        """Initialize all available training components."""
+        components_initialized = 0
+        total_components = 3
 
-            # Initialize MPS optimizer
-            self.mps_optimizer = MPSMemoryOptimizer()
-            logger.info("✅ MPS optimizer initialized")
+        # Initialize checkpoint manager
+        if CHECKPOINT_MANAGER_AVAILABLE:
+            try:
+                self.checkpoint_manager = CheckpointManager(self.checkpoints_dir)
+                logger.info("✅ Checkpoint manager initialized")
+                components_initialized += 1
+            except Exception as e:
+                logger.warning(f"⚠️  Checkpoint manager initialization failed: {e}")
+                self.checkpoint_manager = None
+        else:
+            logger.warning("⚠️  Checkpoint manager not available")
+            self.checkpoint_manager = None
 
-            # Initialize expert trainer
-            self.expert_trainer = ChessExpertTrainer(str(self.config_path))
-            logger.info("✅ Expert trainer initialized")
+        # Initialize MPS optimizer
+        if MPS_OPTIMIZER_AVAILABLE:
+            try:
+                self.mps_optimizer = MPSMemoryOptimizer()
+                logger.info("✅ MPS optimizer initialized")
+                components_initialized += 1
+            except Exception as e:
+                logger.warning(f"⚠️  MPS optimizer initialization failed: {e}")
+                self.mps_optimizer = None
+        else:
+            logger.warning("⚠️  MPS optimizer not available")
+            self.mps_optimizer = None
 
-            return True
+        # Initialize expert trainer
+        if EXPERT_TRAINER_AVAILABLE:
+            try:
+                self.expert_trainer = ChessExpertTrainer(str(self.config_path))
+                logger.info("✅ Expert trainer initialized")
+                components_initialized += 1
+            except Exception as e:
+                logger.warning(f"⚠️  Expert trainer initialization failed: {e}")
+                self.expert_trainer = None
+        else:
+            logger.warning("⚠️  Expert trainer not available")
+            self.expert_trainer = None
 
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize components: {e}")
+        if components_initialized == 0:
+            logger.error("❌ No training components could be initialized")
             return False
+
+        if components_initialized < total_components:
+            logger.warning(f"⚠️  Only {components_initialized}/{total_components} components initialized")
+            logger.warning("   Limited functionality available - some features may not work")
+
+        return True
 
     @log_performance
     def train_all_experts(self, experts: List[str] = None, resume: bool = True,
@@ -192,11 +241,29 @@ class ChessGemmaTrainingOrchestrator:
             checkpoint_resume_used=resume
         )
 
+        # Update system info with component availability
+        self.current_session.system_info.update({
+            'expert_trainer_available': EXPERT_TRAINER_AVAILABLE,
+            'checkpoint_manager_available': CHECKPOINT_MANAGER_AVAILABLE,
+            'mps_optimizer_available': MPS_OPTIMIZER_AVAILABLE
+        })
+
+        # Check if we have the required components
+        if not self.expert_trainer:
+            error_msg = "Expert trainer not available - cannot proceed with training"
+            logger.error(f"❌ {error_msg}")
+            return {
+                'error': error_msg,
+                'session_info': self.current_session.to_dict() if self.current_session else {},
+                'training_summary': {'total_experts': 0, 'successful_experts': 0, 'failed_experts': 0}
+            }
+
         logger.info("🚀 Starting ChessGemma unified training session")
         logger.info(f"   Session ID: {session_id}")
         logger.info(f"   Experts to train: {', '.join(experts)}")
         logger.info(f"   Resume enabled: {resume}")
         logger.info(f"   MPS optimization: {'enabled' if self.mps_optimizer else 'disabled'}")
+        logger.info(f"   Checkpoint management: {'enabled' if self.checkpoint_manager else 'disabled'}")
 
         session_start_time = time.time()
         success_count = 0
