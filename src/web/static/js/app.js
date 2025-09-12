@@ -7,6 +7,23 @@ let gameMode = 'analysis'; // 'analysis' or 'play'
 let stockfishMatch = null;
 let matchActive = false;
 
+// Sanitize helpers
+function sanitizeString(str) {
+  if (window.DOMPurify) {
+    return DOMPurify.sanitize(str, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  }
+  return str;
+}
+
+function sanitizeHTML(html) {
+  if (window.DOMPurify) {
+    return DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
+  }
+  const fragment = document.createDocumentFragment();
+  fragment.appendChild(document.createTextNode(html));
+  return fragment;
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
   initializeChessBoard();
@@ -104,36 +121,64 @@ async function askQuestion() {
     const data = await response.json();
     loadingDiv.remove();
     let messageClass = 'assistant';
-    let confidenceClass = 'confidence-low';
-    if (data.confidence > 0.7) confidenceClass = 'confidence-high';
-    else if (data.confidence > 0.4) confidenceClass = 'confidence-medium';
-    const confidenceText = data.confidence ? `<div class="confidence-badge ${confidenceClass}">Confidence: ${(data.confidence * 100).toFixed(1)}%</div>` : '';
 
-    // Add MoE information if available
-    let moeInfo = '';
+    const container = document.createElement('div');
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'd-flex align-items-center mb-2';
+    const botIcon = document.createElement('i');
+    botIcon.className = 'fas fa-robot me-2';
+    headerDiv.appendChild(botIcon);
+    const strongEl = document.createElement('strong');
+    strongEl.textContent = 'ChessGemma';
+    headerDiv.appendChild(strongEl);
+    if (data.expert && data.expert !== 'auto') {
+      const expertBadge = document.createElement('span');
+      expertBadge.className = 'badge bg-secondary ms-2';
+      expertBadge.textContent = sanitizeString(data.expert);
+      headerDiv.appendChild(expertBadge);
+    }
+    container.appendChild(headerDiv);
+
+    const responsePara = document.createElement('p');
+    const safeResponse = sanitizeHTML(data.response || data.error || 'No response received');
+    responsePara.appendChild(safeResponse);
+    container.appendChild(responsePara);
+
+    if (data.confidence) {
+      let confidenceClass = 'confidence-low';
+      if (data.confidence > 0.7) confidenceClass = 'confidence-high';
+      else if (data.confidence > 0.4) confidenceClass = 'confidence-medium';
+      const confidenceDiv = document.createElement('div');
+      confidenceDiv.className = `confidence-badge ${confidenceClass}`;
+      confidenceDiv.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+      container.appendChild(confidenceDiv);
+    }
+
     if (data.moe_used) {
-      moeInfo = `
-        <div class="moe-info small text-muted mt-2 p-2 bg-light rounded">
-          <i class="fas fa-network-wired me-1"></i>
-          <strong>MoE Routing:</strong> ${data.primary_expert || 'auto'}
-          ${data.ensemble_mode ? '(ensemble)' : ''}
-          ${data.routing_reasoning ? `<br><em>${data.routing_reasoning}</em>` : ''}
-        </div>
-      `;
-      // Update the expert status display
+      const moeDiv = document.createElement('div');
+      moeDiv.className = 'moe-info small text-muted mt-2 p-2 bg-light rounded';
+      const moeIcon = document.createElement('i');
+      moeIcon.className = 'fas fa-network-wired me-1';
+      moeDiv.appendChild(moeIcon);
+      const moeStrong = document.createElement('strong');
+      moeStrong.textContent = 'MoE Routing:';
+      moeDiv.appendChild(moeStrong);
+      moeDiv.appendChild(document.createTextNode(` ${sanitizeString(data.primary_expert || 'auto')}`));
+      if (data.ensemble_mode) {
+        moeDiv.appendChild(document.createTextNode(' (ensemble)'));
+      }
+      if (data.routing_reasoning) {
+        moeDiv.appendChild(document.createElement('br'));
+        const em = document.createElement('em');
+        em.textContent = sanitizeString(data.routing_reasoning);
+        moeDiv.appendChild(em);
+      }
+      container.appendChild(moeDiv);
       updateExpertStatus(data);
     }
 
-    addMessage(`
-      <div class="d-flex align-items-center mb-2">
-        <i class="fas fa-robot me-2"></i>
-        <strong>ChessGemma</strong>
-        ${data.expert && data.expert !== 'auto' ? `<span class="badge bg-secondary ms-2">${data.expert}</span>` : ''}
-      </div>
-      <p>${data.response || data.error || 'No response received'}</p>
-      ${confidenceText}
-      ${moeInfo}
-    `, messageClass);
+    addMessage(container, messageClass);
   } catch (error) {
     console.error('Error:', error);
     loadingDiv.remove();
@@ -147,7 +192,11 @@ function addMessage(content, type = 'assistant') {
   const messagesDiv = document.getElementById('chatMessages');
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${type}`;
-  messageDiv.innerHTML = content;
+  if (typeof content === 'string') {
+    messageDiv.textContent = sanitizeString(content);
+  } else if (content instanceof Node || content instanceof DocumentFragment) {
+    messageDiv.appendChild(content);
+  }
   messagesDiv.appendChild(messageDiv);
   scrollToBottom();
 }
