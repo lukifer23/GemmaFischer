@@ -4,7 +4,71 @@
 
 This document provides comprehensive API reference for ChessGemma, a multi-expert chess AI system with web interface, training controls, and evaluation capabilities. The system supports UCI-compatible engine play, educational analysis, and real-time Q&A through specialized expert models.
 
-**Current Status**: Full web interface at http://localhost:5001 with REST API, multi-expert training support, and comprehensive evaluation tools.
+**Current Status**: Full web interface at http://localhost:5000 with REST API, multi-expert training support, and comprehensive evaluation tools.
+
+## Web Interface API
+
+### Chess Q&A Endpoints
+
+#### POST `/api/ask`
+Main chess question answering endpoint with MoE routing.
+
+**Parameters:**
+- `question` (string): Chess-related question
+- `context` (string, optional): Additional context (FEN, position description)
+- `expert` (string): Expert selection - `"auto"`, `"uci"`, `"tutor"`, `"director"`
+
+**Response:**
+```json
+{
+  "response": "Analysis and answer...",
+  "confidence": 0.85,
+  "model_loaded": true,
+  "mode": "tutor",
+  "moe_used": true,
+  "primary_expert": "tutor",
+  "ensemble_mode": false,
+  "routing_reasoning": "Query contains educational elements"
+}
+```
+
+**Examples:**
+```bash
+# Auto-routing (recommended)
+curl -X POST http://localhost:5000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What's the best move here?", "context": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3", "expert": "auto"}'
+
+# Manual expert selection
+curl -X POST http://localhost:5000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "e2e4", "expert": "uci"}'
+```
+
+#### GET `/api/model_info`
+Get system status and MoE information.
+
+**Response:**
+```json
+{
+  "model_type": "ChessGemma (Gemma-3 270M fine-tuned)",
+  "loaded": true,
+  "active_adapter": "tutor",
+  "available_adapters": ["uci", "tutor", "director"],
+  "moe_enabled": true,
+  "moe_experts": ["uci", "tutor", "director"],
+  "device": "mps"
+}
+```
+
+#### GET `/api/adapters/list`
+List available expert adapters and their status.
+
+#### POST `/api/adapters/activate`
+Manually switch to a specific expert adapter.
+
+**Parameters:**
+- `expert` (string): Expert name (`"uci"`, `"tutor"`, `"director"`)
 
 ## Training API
 
@@ -31,17 +95,17 @@ python src/training/train_lora_poc.py --expert [EXPERT] [OPTIONS]
 
 **Examples:**
 ```bash
-# Train UCI Expert (recommended)
-python src/training/train_lora_poc.py --expert uci --config auto --max_steps_override 1000 --disable_eval
+# Train UCI Expert (recommended) - 1600 steps from checkpoint-1000
+python -m src.training.train_lora_poc --expert uci --config auto --max_steps_override 1600 --disable_eval
 
-# Train Tutor Expert
-python src/training/train_lora_poc.py --expert tutor --config auto --max_steps_override 1000 --disable_eval
+# Train Tutor Expert - 1600 steps from checkpoint-800
+python -m src.training.train_lora_poc --expert tutor --config auto --max_steps_override 1600 --disable_eval
 
-# Train Director Expert
-python src/training/train_lora_poc.py --expert director --config auto --max_steps_override 1000 --disable_eval
+# Train Director Expert - 1600 steps from checkpoint-1000
+python -m src.training.train_lora_poc --expert director --config auto --max_steps_override 1600 --disable_eval
 
-# Resume training from checkpoint
-python src/training/train_lora_poc.py --expert uci --config auto --resume_from_checkpoint checkpoints/lora_uci/checkpoint-600 --max_steps_override 1000 --disable_eval
+# Orchestrator training (all experts sequentially)
+python -m src.training.train_chessgemmma --experts uci tutor director --resume
 ```
 
 #### Python API

@@ -183,7 +183,7 @@ class ChessExpertTrainer:
         self.config_path = Path(config_path) if config_path else Path(__file__).parent / "configs" / "expert_training_config.json"
         self.project_root = project_root
         self.checkpoints_dir = self.project_root / "checkpoints"
-        self.data_dir = self.project_root / "data" / "formatted"
+        self.data_dir = self.project_root / "data" / "standardized"
 
         # Expert configurations
         self.expert_configs = self._define_expert_configs()
@@ -434,16 +434,16 @@ class ChessExpertTrainer:
 
         # Load available datasets with memory efficiency
         all_data = []
-        dataset_files = list(self.data_dir.glob("enhanced_*.jsonl"))
+        dataset_files = list(self.data_dir.glob("standardized_*.jsonl"))
 
         if not dataset_files:
-            # Fallback to original datasets
+            # Fallback to all standardized datasets
             dataset_files = list(self.data_dir.glob("*.jsonl"))
 
         logger.info(f"Found {len(dataset_files)} dataset files")
 
-        # Conservative loading: reduce data size to diagnose hanging
-        max_examples = 50  # Reduced for debugging - increase later
+        # Load full dataset for proper training (we have 50K+ samples now)
+        max_examples = 50000  # Use full standardized datasets
         examples_per_file = max(10, max_examples // len(dataset_files))
 
         # Load and filter data with memory limits
@@ -772,7 +772,8 @@ class ChessExpertTrainer:
                                           f"ETA: {eta_str}")
                             logger.info(metrics_str)
 
-                # Add enhanced callback for monitoring
+            # Add enhanced callback for monitoring (only in debug mode)
+            if debug_mode:
                 enhanced_callback = EnhancedTrainerCallback()
                 callbacks_list.append(enhanced_callback)
 

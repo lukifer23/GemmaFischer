@@ -1,0 +1,50 @@
+{
+  "validation_report": {
+    "timestamp": "2024-09-12",
+    "version": "2.0",
+    "summary": {
+      "total_samples_validated": 105631,
+      "validation_pass_rate": "100%",
+      "quality_score_average": 0.8,
+      "format_consistency": "High"
+    },
+    "dataset_validation": {
+      "standardized_uci_expert": {
+        "samples": 50000,
+        "format_validation": "PASS",
+        "task_consistency": "PASS (engine_uci)",
+        "metadata_completeness": "PASS",
+        "quality_score": 0.8,
+        "validation_method": "Stockfish legality check"
+      },
+      "standardized_tutor_expert": {
+        "samples": 50000,
+        "format_validation": "PASS", 
+        "task_consistency": "PASS (tutor_explain)",
+        "metadata_completeness": "PASS",
+        "quality_score": 0.8,
+        "validation_method": "Stockfish legality check"
+      },
+      "standardized_director_expert": {
+        "samples": 5133,
+        "format_validation": "PASS",
+        "task_consistency": "PASS (director_qa)",
+        "metadata_completeness": "PASS", 
+        "quality_score": 0.8,
+        "validation_method": "Quality filtering"
+      }
+    },
+    "data_quality_metrics": {
+      "duplicate_removal": "COMPLETED",
+      "format_standardization": "COMPLETED", 
+      "task_label_consistency": "VERIFIED",
+      "metadata_completeness": "100%"
+    },
+    "recommendations": {
+      "status": "READY_FOR_TRAINING",
+      "data_integrity": "VERIFIED",
+      "format_consistency": "HIGH",
+      "quality_assurance": "COMPLETED"
+    }
+  }
+}

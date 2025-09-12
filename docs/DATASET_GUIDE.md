@@ -2,9 +2,9 @@
 
 ## Overview
 
-This guide covers the comprehensive dataset preparation, curation, and management system for ChessGemma. The system currently has 100k+ processed training samples across three expert domains, all validated with Stockfish for move legality and quality.
+This guide covers the comprehensive dataset preparation, curation, and management system for ChessGemma. The system currently has 105k+ processed training samples across three expert domains, all validated with Stockfish for move legality and quality.
 
-**Current Status**: 100k+ training samples processed and validated, with automated dataset pipeline and expert-specific data preparation.
+**Current Status**: 105k+ training samples processed and validated, with automated dataset pipeline and expert-specific data preparation.
 
 ## Current Dataset Status
 
@@ -12,25 +12,31 @@ This guide covers the comprehensive dataset preparation, curation, and managemen
 
 ```bash
 # UCI Expert Dataset - Chess Move Generation
-Location: data/processed/uci_clean.jsonl
+Location: data/standardized/standardized_uci_expert.jsonl
 Size: 50,000 samples
 Format: Position → UCI move pairs
-Validation: Stockfish legality checking
+Validation: Stockfish legality checking with quality scores
 Purpose: Fast, accurate move generation for UCI engine mode
 
 # Tutor Expert Dataset - Chess Explanations
-Location: data/processed/tutor_clean.jsonl
+Location: data/standardized/standardized_tutor_expert.jsonl
 Size: 50,000 samples
 Format: Position → Step-by-step analysis → UCI move
-Validation: Stockfish move validation
+Validation: Stockfish move validation with quality scores
 Purpose: Educational explanations with reasoning
 
 # Director Expert Dataset - Q&A Reasoning
-Location: data/formatted/director_expert.jsonl
-Size: 3.2MB (reasoning examples)
+Location: data/standardized/standardized_director_expert.jsonl
+Size: 5,133 samples
 Format: Chess questions → Tactical analysis
 Validation: Quality filtering and deduplication
 Purpose: Strategic reasoning and chess knowledge
+
+# Legacy Formatted Datasets (Backup)
+Location: data/formatted/
+Size: 52K+ samples (various processed datasets)
+Format: Mixed formats with metadata
+Purpose: Additional training data and backup
 ```
 
 ### Dataset Processing Pipeline
@@ -38,10 +44,11 @@ Purpose: Strategic reasoning and chess knowledge
 ```bash
 # Current processing status
 Raw Data Sources: ✓ Collected (5M+ Lichess puzzles, master games, theory)
-Data Validation: ✓ Completed (Stockfish integration)
+Data Validation: ✓ Completed (Stockfish integration with quality scores)
 Expert Formatting: ✓ Completed (UCI/Tutor/Director specific formats)
-Quality Assurance: ✓ Completed (Deduplication, legality checks)
-Training Ready: ✓ Available (100k+ processed samples)
+Data Standardization: ✓ Completed (105K+ samples with consistent metadata)
+Quality Assurance: ✓ Completed (Deduplication, legality checks, ratings)
+Training Ready: ✓ Available (105K+ processed samples in standardized format)
 ```
 
 ## Dataset Categories

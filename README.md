@@ -32,7 +32,7 @@ ChessGemma combines several advanced components to create a comprehensive chess 
 - **Smart Expert Routing**: Automatic selection of best expert based on position complexity and query type
 - **Move Quality Analysis**: Centipawn loss calculation and move categorization (best/excellent/good/blunder)
 - **Position Evaluation**: Stockfish-verified position assessments with confidence metrics
-- **Data Standardization**: Automated dataset cleaning and format consistency across 977K+ samples
+- **Data Standardization**: Automated dataset cleaning and format consistency across 105K+ samples
 - **Comprehensive Logging**: Structured JSON logging with performance monitoring and error tracking
 - **Web Interface Enhancements**: Real-time MoE routing display and expert switching controls
 

@@ -5,7 +5,7 @@
 This guide covers the complete training process for ChessGemma, featuring advanced checkpoint management, MPS memory optimization, and multi-expert LoRA fine-tuning. The system uses specialized expert models for different chess domains (UCI Engine, Chess Tutor, and Director Q&A) with optimized training on Apple Silicon Macs using MPS acceleration.
 
 **Platform**: Mac-only (M3 Pro/Max) with MPS acceleration - no CUDA/CPU fallbacks.
-**Current Status**: 977K+ standardized training samples processed, robust checkpoint management with automatic resume capability.
+**Current Status**: 105K+ standardized training samples processed, robust checkpoint management with automatic resume capability.
 
 ## Prerequisites
 
@@ -37,13 +37,13 @@ device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 ### 1. Dataset Preparation (Current Status)
 
 #### Available Datasets
-The system has 977K+ standardized training samples across three expert domains:
+The system has 105K+ standardized training samples across three expert domains:
 
 ```bash
 # Current dataset sizes (processed and validated)
-data/standardized/standardized_uci_expert.jsonl:     500,000+ samples (UCI move generation)
-data/standardized/standardized_tutor_expert.jsonl:   500,000+ samples (Chess explanations)
-data/standardized/standardized_director_expert.jsonl: 5,100+ samples (Q&A reasoning)
+data/standardized/standardized_uci_expert.jsonl:     50,000 samples (UCI move generation)
+data/standardized/standardized_tutor_expert.jsonl:   50,000 samples (Chess explanations)
+data/standardized/standardized_director_expert.jsonl: 5,133 samples (Q&A reasoning)
 ```
 
 #### Data Quality Metrics

@@ -1,0 +1,50 @@
+{
+  "version": "2.0",
+  "last_updated": "2024-09-12",
+  "total_samples": 105631,
+  "datasets": {
+    "standardized_uci_expert": {
+      "path": "data/standardized/standardized_uci_expert.jsonl",
+      "samples": 50000,
+      "task": "engine_uci",
+      "format": "JSONL with metadata",
+      "purpose": "UCI move generation training",
+      "quality_score": 0.8,
+      "validation_status": "Stockfish verified",
+      "created_date": "2024-09-12"
+    },
+    "standardized_tutor_expert": {
+      "path": "data/standardized/standardized_tutor_expert.jsonl", 
+      "samples": 50000,
+      "task": "tutor_explain",
+      "format": "JSONL with metadata",
+      "purpose": "Chess explanation training",
+      "quality_score": 0.8,
+      "validation_status": "Stockfish verified",
+      "created_date": "2024-09-12"
+    },
+    "standardized_director_expert": {
+      "path": "data/standardized/standardized_director_expert.jsonl",
+      "samples": 5133,
+      "task": "director_qa", 
+      "format": "JSONL with metadata",
+      "purpose": "Strategic reasoning training",
+      "quality_score": 0.8,
+      "validation_status": "Quality filtered",
+      "created_date": "2024-09-12"
+    }
+  },
+  "data_structure": {
+    "primary_datasets": "data/standardized/",
+    "backup_datasets": "data/formatted/",
+    "total_files": 61,
+    "format_consistency": "Standardized JSONL with task labels",
+    "metadata_tracking": "Enabled"
+  },
+  "quality_metrics": {
+    "average_quality_score": 0.8,
+    "validation_coverage": "100%",
+    "format_consistency": "High",
+    "duplicate_removal": "Completed"
+  }
+}

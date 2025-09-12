@@ -9,6 +9,7 @@ ChessGemma is a comprehensive chess AI system featuring a Mixture of Experts (Mo
 ### Key Design Principles
 - **Mixture of Experts (MoE)**: Dynamic routing between specialized expert models
 - **Multi-Modal Operation**: Engine (UCI moves), Tutor (explanations), and Director (Q&A) modes
+- **Intelligent Auto-Routing**: Automatic expert selection based on query analysis
 - **Hybrid Intelligence**: Combines LLM reasoning with chess engine precision and validation
 - **Advanced Evaluation**: ELO estimation, move quality scoring, and comprehensive metrics
 - **Data Standardization**: Automated validation and quality assurance pipeline
@@ -17,6 +18,14 @@ ChessGemma is a comprehensive chess AI system featuring a Mixture of Experts (Mo
 - **MPS Memory Optimization**: Dynamic batch sizing and memory-efficient training
 - **Position Embeddings**: Chess-aware similarity search and context enhancement
 
+### Current MoE Routing Features
+- **Automatic Expert Selection**: Based on FEN position analysis and query type
+- **Ensemble Mode**: Combines multiple experts for complex queries
+- **Confidence Scoring**: Shows routing confidence and reasoning
+- **Fallback System**: Uses available experts when preferred one missing
+- **Real-time Feedback**: Displays which expert was used and why
+- **Expert Switching**: Manual override via dropdown (Auto/UCI/Tutor/Director)
+
 ## High-Level Architecture
 
 ```
@@ -24,7 +33,7 @@ ChessGemma is a comprehensive chess AI system featuring a Mixture of Experts (Mo
 │   Web Interface │    │ Training System │    │   MoE Router    │    │ Evaluation Suite│
 │ (Flask + MoE UI)│    │  (LoRA Experts) │    │ (Expert Routing) │    │ (ELO + Quality)│
 │   http://localhost│    │                 │    │                 │    │                 │
-│       :5001      │    │                 │    │                 │    │                 │
+│       :5000      │    │                 │    │                 │    │                 │
 └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
           │                      │                      │                      │
           └──────────────────────┼──────────────────────┼──────────────────────┘
@@ -283,7 +292,13 @@ Vision Pipeline
 **Architecture**:
 ```
 Web Interface Architecture
-├── Flask Application (http://localhost:5001)
+├── Flask Application (http://localhost:5000)
+├── Chess Q&A Interface (/)
+│   ├── Interactive Chess Board
+│   ├── Expert Selection (Auto/UCI/Tutor/Director)
+│   ├── Real-time MoE Routing Display
+│   ├── Example Questions Library
+│   └── Conversation History
 ├── Training Dashboard (/training)
 │   ├── Expert Selection (UCI/Tutor/Director)
 │   ├── Real-time Progress Monitoring
@@ -294,6 +309,16 @@ Web Interface Architecture
 │   ├── Real-time Q&A System
 │   ├── Move Validation & Suggestions
 │   └── Expert Model Switching
+├── API Endpoints
+│   ├── `/api/ask` - Chess Q&A with MoE routing
+│   ├── `/api/adapters/list` - Available expert models
+│   ├── `/api/adapters/activate` - Manual expert switching
+│   ├── `/api/model_info` - System status and MoE info
+│   └── `/api/stats` - Performance monitoring
+├── WebSocket Support
+│   ├── Real-time MoE routing feedback
+│   ├── Live expert selection updates
+│   └── Streaming response handling
 ├── Evaluation Suite (/evaluation)
 │   ├── Stockfish Match Testing
 │   ├── Puzzle Accuracy Evaluation

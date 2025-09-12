@@ -685,7 +685,7 @@ def ask_question():
         
         print(f"🧠 RAG Knowledge: {rag_knowledge}")
 
-        # Decide mode based on expert selector
+        # Handle expert selection
         mode = 'tutor'
         if expert == 'uci':
             mode = 'engine'
@@ -693,11 +693,15 @@ def ask_question():
             mode = 'tutor'
         elif expert == 'director':
             mode = 'director'
+        elif expert == 'auto':
+            # Auto mode: let MoE router decide
+            mode = 'auto'
 
-        # Switch adapter explicitly by expert
+        # Switch adapter explicitly by expert (only for specific experts, not auto)
         try:
             if expert in ('uci', 'tutor', 'director'):
                 chess_model._inference.set_active_adapter(expert)
+            # For auto mode, let MoE routing handle it naturally
         except Exception:
             pass
 
