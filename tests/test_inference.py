@@ -5,6 +5,7 @@ Comprehensive tests for ChessGemma inference functionality.
 
 import pytest
 import sys
+import logging
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -35,7 +36,7 @@ class TestChessGemmaInference:
     
     @patch('src.inference.inference.AutoTokenizer')
     @patch('src.inference.inference.AutoModelForCausalLM')
-    def test_load_model_success(self, mock_model, mock_tokenizer):
+    def test_load_model_success(self, mock_model, mock_tokenizer, tmp_path):
         """Test successful model loading."""
         # Mock the model and tokenizer
         mock_tokenizer_instance = Mock()
@@ -44,6 +45,7 @@ class TestChessGemmaInference:
         mock_model.from_pretrained.return_value = mock_model_instance
         
         inference = ChessGemmaInference()
+        inference.model_path = tmp_path
         result = inference.load_model()
         
         assert result is True
@@ -91,6 +93,32 @@ class TestChessGemmaInference:
         assert "response" in result
         assert "confidence" in result
         assert result["model_loaded"] is True
+
+    @patch('src.inference.inference.AutoTokenizer')
+    @patch('src.inference.inference.AutoModelForCausalLM')
+    def test_generate_response_debug_logging(self, mock_model, mock_tokenizer, caplog, monkeypatch):
+        """Ensure debug logs are emitted when CHESSGEMMA_DEBUG is set."""
+        monkeypatch.setenv('CHESSGEMMA_DEBUG', '1')
+
+        mock_tokenizer_instance = Mock()
+        mock_model_instance = Mock()
+        mock_tokenizer.from_pretrained.return_value = mock_tokenizer_instance
+        mock_model.from_pretrained.return_value = mock_model_instance
+
+        mock_tokenizer_instance.return_value = {"input_ids": Mock()}
+        mock_tokenizer_instance.decode.return_value = "test response"
+        mock_model_instance.generate.return_value = Mock()
+        mock_model_instance.device = "cpu"
+
+        inference = ChessGemmaInference()
+        inference.is_loaded = True
+        inference.model = mock_model_instance
+        inference.tokenizer = mock_tokenizer_instance
+
+        with caplog.at_level(logging.DEBUG):
+            inference.generate_response("Test question")
+
+        assert any("INFERENCE DEBUG" in record.message for record in caplog.records)
     
     def test_generate_response_not_loaded(self):
         """Test response generation when model not loaded."""

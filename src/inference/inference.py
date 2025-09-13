@@ -20,6 +20,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 from transformers.generation.logits_process import LogitsProcessor
 from collections import OrderedDict
+import logging
 
 # Import MoE components
 try:
@@ -106,6 +107,12 @@ class ChessGemmaInference:
         self.tokenizer = None
         self.model = None
         self.is_loaded = False
+        self.debug = os.environ.get('CHESSGEMMA_DEBUG', '0') not in ('0', 'false', 'False')
+        if self.debug:
+            try:
+                logger.logger.setLevel(logging.DEBUG)
+            except AttributeError:
+                logger.setLevel(logging.DEBUG)
 
         # Prompt templates cache
         self._engine_template: Optional[str] = None
@@ -397,7 +404,7 @@ class ChessGemmaInference:
                         "expert_weights": moe_info.get('expert_weights', {}),
                     }
             except Exception as e:
-                print(f"MoE routing failed, falling back to standard inference: {e}")
+                logger.info(f"MoE routing failed, falling back to standard inference: {e}")
                 # Fall through to standard inference
 
         try:
@@ -408,11 +415,12 @@ class ChessGemmaInference:
             prompt_text = messages[0]['content']
 
             # Debug logging
-            print(f"\n🔍 INFERENCE DEBUG:")
-            print(f"Mode: {mode}")
-            print(f"Question: {question[:100]}{'...' if len(question) > 100 else ''}")
-            print(f"System Prompt: {messages[0]['content'][:100]}{'...' if len(messages[0]['content']) > 100 else ''}")
-            print(f"Prompt Length: {len(prompt_text)} chars")
+            if self.debug:
+                logger.debug("INFERENCE DEBUG:")
+                logger.debug(f"Mode: {mode}")
+                logger.debug(f"Question: {question[:100]}{'...' if len(question) > 100 else ''}")
+                logger.debug(f"System Prompt: {messages[0]['content'][:100]}{'...' if len(messages[0]['content']) > 100 else ''}")
+                logger.debug(f"Prompt Length: {len(prompt_text)} chars")
 
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
 
@@ -461,17 +469,20 @@ class ChessGemmaInference:
                 decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
             # Debug logging for response
-            print(f"Raw Response Length: {len(decoded)} chars")
-            print(f"Raw Response Preview: {decoded[:300]}{'...' if len(decoded) > 300 else ''}")
-            print(f"Raw Response Full: {decoded}")
+            if self.debug:
+                logger.debug(f"Raw Response Length: {len(decoded)} chars")
+                logger.debug(f"Raw Response Preview: {decoded[:300]}{'...' if len(decoded) > 300 else ''}")
+                logger.debug(f"Raw Response Full: {decoded}")
             
             # Try to strip prompt prefix if echoed
             if decoded.startswith(prompt_text):
                 answer = decoded[len(prompt_text):].strip()
-                print(f"Stripped prompt prefix, answer length: {len(answer)}")
+                if self.debug:
+                    logger.debug(f"Stripped prompt prefix, answer length: {len(answer)}")
             else:
                 answer = decoded.strip()
-                print(f"No prompt prefix found, using full response")
+                if self.debug:
+                    logger.debug("No prompt prefix found, using full response")
             
             # Clean up common artifacts
             if answer.startswith("Answer:"):
@@ -482,21 +493,27 @@ class ChessGemmaInference:
             # Remove any remaining prompt fragments
             lines = answer.split('\n')
             content_lines = []
-            print(f"🔍 Processing {len(lines)} lines from model response")
+            if self.debug:
+                logger.debug(f"Processing {len(lines)} lines from model response")
             for i, line in enumerate(lines):
                 line = line.strip()
-                print(f"  Line {i}: '{line[:50]}{'...' if len(line) > 50 else ''}'")
+                if self.debug:
+                    logger.debug(f"  Line {i}: '{line[:50]}{'...' if len(line) > 50 else ''}'")
                 if line and not line.startswith(('Chess Tutor:', 'Chess Engine:', 'Question:', 'Position:', 'Answer:', 'Move:')):
                     content_lines.append(line)
-                    print(f"    ✅ Kept line {i}")
+                    if self.debug:
+                        logger.debug(f"    Kept line {i}")
                 else:
-                    print(f"    ❌ Filtered out line {i}")
+                    if self.debug:
+                        logger.debug(f"    Filtered out line {i}")
             
             if content_lines:
                 answer = '\n'.join(content_lines).strip()
-                print(f"Final processed answer: '{answer[:100]}{'...' if len(answer) > 100 else ''}'")
+                if self.debug:
+                    logger.debug(f"Final processed answer: '{answer[:100]}{'...' if len(answer) > 100 else ''}'")
             else:
-                print("⚠️  All lines were filtered out!")
+                if self.debug:
+                    logger.debug("All lines were filtered out!")
             
             # Fallback if we still don't have a good answer
             if not answer or len(answer) < 10:
@@ -504,9 +521,11 @@ class ChessGemmaInference:
                     answer = "I'm having trouble generating a response. Please try rephrasing your question or ask about a specific chess position."
                 else:
                     answer = ""  # Defer to engine fallback
-                print("Using fallback response due to poor model output")
-            
-            print(f"Final Answer Preview: {answer[:200]}{'...' if len(answer) > 200 else ''}")
+                if self.debug:
+                    logger.info("Using fallback response due to poor model output")
+
+            if self.debug:
+                logger.debug(f"Final Answer Preview: {answer[:200]}{'...' if len(answer) > 200 else ''}")
 
             # Post-process for engine mode: extract legal UCI move or fallback to engine
             postprocessed = False
