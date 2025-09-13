@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import statistics
 import concurrent.futures
+import threading
 from collections import defaultdict, Counter
 import math
 import sys
@@ -127,6 +128,7 @@ class AdvancedChessEvaluator:
         self.engine = None
         self.max_workers = max_workers
         self.inference = ChessGemmaInference()
+        self.engine_lock = threading.Lock()
 
         if self.stockfish_path:
             try:
@@ -249,24 +251,26 @@ class AdvancedChessEvaluator:
             logging.warning("Stockfish not available - skipping move quality evaluation")
             return
 
-        quality_scores = []
+        quality_scores: List[MoveQualityScore] = []
         valid_responses = 0
         correct_first_moves = 0
 
-        for sample in samples[:500]:  # Limit for performance
-            try:
-                quality_score = self._analyze_move_quality(sample, mode)
-                if quality_score:
-                    quality_scores.append(quality_score)
-                    valid_responses += 1
+        def analyze(sample: Dict[str, Any]) -> Optional[MoveQualityScore]:
+            with self.engine_lock:
+                return self._analyze_move_quality(sample, mode)
 
-                    # Check if it's the best move
-                    if quality_score.move_type == 'best':
-                        correct_first_moves += 1
-
-            except Exception as e:
-                report.errors.append(f"Move quality analysis error: {e}")
-                continue
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = [executor.submit(analyze, s) for s in samples[:500]]
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    quality_score = future.result()
+                    if quality_score:
+                        quality_scores.append(quality_score)
+                        valid_responses += 1
+                        if quality_score.move_type == 'best':
+                            correct_first_moves += 1
+                except Exception as e:
+                    report.errors.append(f"Move quality analysis error: {e}")
 
         if quality_scores:
             report.valid_responses = valid_responses
@@ -283,7 +287,9 @@ class AdvancedChessEvaluator:
             total_moves = len(quality_scores)
             report.blunder_rate = sum(1 for qs in quality_scores if qs.move_type == 'blunder') / total_moves
             report.mistake_rate = sum(1 for qs in quality_scores if qs.move_type == 'mistake') / total_moves
-            report.excellent_move_rate = sum(1 for qs in quality_scores if qs.move_type in ['best', 'excellent']) / total_moves
+            report.excellent_move_rate = (
+                sum(1 for qs in quality_scores if qs.move_type in ['best', 'excellent']) / total_moves
+            )
 
             report.move_quality_scores = quality_scores
 
