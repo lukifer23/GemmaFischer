@@ -32,7 +32,6 @@ import datasets
 from datasets import Dataset
 import pandas as pd
 import random
-
 # Add project root to path
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
@@ -44,6 +43,11 @@ try:
 except ImportError:
     CHECKPOINT_MANAGER_AVAILABLE = False
     logger.warning("Checkpoint manager not available - limited checkpoint functionality")
+
+from src.training.config_validation import (
+    ConfigValidationError,
+    validate_lora_config,
+)
 
 # Import MPS optimizer
 try:
@@ -404,26 +408,34 @@ class ChessExpertTrainer:
         """Load training configuration."""
         if self.config_path.exists():
             with open(self.config_path, 'r') as f:
-                return json.load(f)
-
-        # Default configuration
-        return {
-            'model': {
-                'base_model': 'models/unsloth-gemma-3-270m-it',
-                'max_seq_length': 2048,
-                'torch_dtype': 'float16'
-            },
-            'training': {
-                'output_dir_base': 'checkpoints/expert_training',
-                'logging_steps': 50,
-                'save_total_limit': 3,
-                'load_best_model_at_end': True,
-                'metric_for_best_model': 'eval_loss',
-                'greater_is_better': False,
-                'fp16': True,
-                'report_to': []
+                config = json.load(f)
+        else:
+            # Default configuration
+            config = {
+                'model': {
+                    'base_model': 'models/unsloth-gemma-3-270m-it',
+                    'max_seq_length': 2048,
+                    'torch_dtype': 'float16'
+                },
+                'training': {
+                    'output_dir_base': 'checkpoints/expert_training',
+                    'logging_steps': 50,
+                    'save_total_limit': 3,
+                    'load_best_model_at_end': True,
+                    'metric_for_best_model': 'eval_loss',
+                    'greater_is_better': False,
+                    'fp16': True,
+                    'report_to': []
+                }
             }
-        }
+
+        if 'lora' in config:
+            try:
+                config['lora'] = validate_lora_config(config['lora'])
+            except ConfigValidationError as e:
+                raise ValueError(f"Invalid LoRA configuration: {e}")
+
+        return config
 
     def prepare_expert_data(self, expert_name: str) -> Tuple[Dataset, Dataset]:
         """Prepare filtered and optimized dataset for expert training with memory efficiency."""

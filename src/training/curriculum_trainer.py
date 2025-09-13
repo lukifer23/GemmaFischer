@@ -34,6 +34,11 @@ sys.path.insert(0, str(project_root))
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+from src.training.config_validation import (
+    ConfigValidationError,
+    validate_lora_config,
+)
+
 
 @dataclass
 class CurriculumStage:
@@ -163,39 +168,46 @@ class ChessCurriculumTrainer:
         """Load curriculum configuration from file."""
         if self.config_path.exists():
             with open(self.config_path, 'r') as f:
-                return json.load(f)
-
-        # Default configuration
-        return {
-            "model": {
-                "base_model": "models/unsloth-gemma-3-270m-it",
-                "max_seq_length": 2048,
-                "torch_dtype": "float16"
-            },
-            "training": {
-                "gradient_accumulation_steps": 8,
-                "warmup_steps": 100,
-                "weight_decay": 0.01,
-                "max_grad_norm": 1.0,
-                "save_steps": 500,
-                "logging_steps": 50,
-                "evaluation_strategy": "steps"
-            },
-            "lora": {
-                "r": 32,
-                "lora_alpha": 64,
-                "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj"],
-                "dropout": 0.05,
-                "task_type": "CAUSAL_LM"
-            },
-            "curriculum": {
-                "enable_progression": True,
-                "min_stage_completion": 0.85,
-                "max_stage_attempts": 3,
-                "early_stopping_patience": 5,
-                "checkpoint_best_only": True
+                config = json.load(f)
+        else:
+            # Default configuration
+            config = {
+                "model": {
+                    "base_model": "models/unsloth-gemma-3-270m-it",
+                    "max_seq_length": 2048,
+                    "torch_dtype": "float16"
+                },
+                "training": {
+                    "gradient_accumulation_steps": 8,
+                    "warmup_steps": 100,
+                    "weight_decay": 0.01,
+                    "max_grad_norm": 1.0,
+                    "save_steps": 500,
+                    "logging_steps": 50,
+                    "evaluation_strategy": "steps"
+                },
+                "lora": {
+                    "r": 32,
+                    "lora_alpha": 64,
+                    "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj"],
+                    "dropout": 0.05,
+                    "task_type": "CAUSAL_LM"
+                },
+                "curriculum": {
+                    "enable_progression": True,
+                    "min_stage_completion": 0.85,
+                    "max_stage_attempts": 3,
+                    "early_stopping_patience": 5,
+                    "checkpoint_best_only": True
+                },
             }
-        }
+
+        try:
+            config["lora"] = validate_lora_config(config.get("lora", {}))
+        except ConfigValidationError as e:
+            raise ValueError(f"Invalid LoRA configuration: {e}")
+
+        return config
 
     def initialize_training_environment(self):
         """Initialize the complete training environment."""

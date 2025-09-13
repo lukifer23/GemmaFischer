@@ -34,6 +34,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.training.config_validation import (
+    ConfigValidationError,
+    validate_lora_config,
+)
+
 
 def log_system_stats(prefix=""):
     vm = psutil.virtual_memory()
@@ -232,6 +237,13 @@ def main():
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
 
+    # Validate LoRA configuration
+    try:
+        cfg["lora"] = validate_lora_config(cfg.get("lora", {}))
+    except ConfigValidationError as e:
+        print(f"Invalid LoRA configuration: {e}")
+        sys.exit(1)
+
     # Cap CPU threads to 2 by default if not set
     os.environ.setdefault('OMP_NUM_THREADS', '2')
     os.environ.setdefault('MKL_NUM_THREADS', '2')
@@ -305,7 +317,7 @@ def main():
         r=lcfg['r'],
         lora_alpha=lcfg['lora_alpha'],
         target_modules=lcfg['target_modules'],
-    lora_dropout=lcfg.get('dropout', 0.0),
+        lora_dropout=lcfg.get('lora_dropout', 0.0),
         bias='none',
         task_type='CAUSAL_LM'
     )
