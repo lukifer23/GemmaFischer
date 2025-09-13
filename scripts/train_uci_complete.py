@@ -58,6 +58,7 @@ def run_uci_training(max_steps=1600, timeout_minutes=240):
         # Monitor training progress
         start_time = time.time()
         last_checkpoint_time = start_time
+        checkpoint_count = 0
 
         while True:
             output = process.stdout.readline()
@@ -68,19 +69,21 @@ def run_uci_training(max_steps=1600, timeout_minutes=240):
 
                 # Monitor for checkpoint saves
                 if "checkpoint saved" in output.lower() or "💾" in output:
+                    checkpoint_count += 1
                     last_checkpoint_time = time.time()
                     elapsed = last_checkpoint_time - start_time
-                    print(".1f"
+                    print(f"💾 Checkpoint saved after {elapsed:.1f} seconds")
         rc = process.poll()
         total_time = time.time() - start_time
 
         print("\n" + "=" * 60)
         if rc == 0:
             print("✅ UCI Training Completed Successfully!")
-            print(".1f"            print(f"📊 Average checkpoint interval: {(total_time / max(1, checkpoint_count)):.1f} seconds")
+            print(f"⏱️  Total training time: {total_time:.1f} seconds")
+            print(f"📊 Average checkpoint interval: {(total_time / max(1, checkpoint_count)):.1f} seconds")
         else:
             print(f"❌ UCI Training Failed (Exit Code: {rc})")
-            print(".1f"
+            print(f"⏱️  Training time before failure: {total_time:.1f} seconds")
         print("=" * 60)
 
         return rc == 0
@@ -152,7 +155,7 @@ def validate_uci_data():
         print(f"   Total Samples: {total_samples}")
         print(f"   Valid Samples: {valid_samples}")
         print(f"   Invalid Samples: {invalid_samples}")
-        print(".1f"
+        print(f"   Success Rate: {(valid_samples / max(total_samples, 1)):.1f}")
         return (valid_samples / max(total_samples, 1)) > 0.95  # Require 95% validity
 
     except Exception as e:
@@ -187,7 +190,8 @@ def check_training_progress():
                 print("📊 Latest Training Summary:")
                 print(f"   Steps Completed: {summary.get('total_steps', step_count)}")
                 print(f"   Best Eval Loss: {summary.get('best_eval_loss', 'N/A')}")
-                print(".1f"        except Exception as e:
+                print(f"   Training Time: {summary.get('training_time_seconds', 0):.1f} seconds")
+        except Exception as e:
             print(f"⚠️  Could not read training summary: {e}")
 
     print(f"🎯 Latest Checkpoint: {latest_checkpoint.name} ({step_count} steps)")
