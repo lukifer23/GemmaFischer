@@ -27,10 +27,16 @@ import json
 from datetime import datetime
 from dataclasses import dataclass, field
 import hashlib
+from functools import lru_cache
+from collections import OrderedDict
+import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Thread-local storage for caching
+_thread_local = threading.local()
 
 
 @dataclass
@@ -56,10 +62,11 @@ class MoERoutingMetrics:
 
 
 class ChessMoERouter(nn.Module):
-    """Mixture of Experts Router for Chess Analysis.
+    """Optimized Mixture of Experts Router for Chess Analysis.
 
     Automatically routes chess queries to the most appropriate expert(s)
     based on position characteristics and query requirements.
+    Features advanced caching and performance optimizations.
     """
 
     def __init__(self, num_experts: int = 3, feature_dim: int = 256, hidden_dim: int = 128):
@@ -97,7 +104,15 @@ class ChessMoERouter(nn.Module):
         self.expert_performance = {name: {'accuracy': 0.7, 'speed': 0.8, 'quality': 0.75}
                                   for name in self.expert_names}
 
-        logger.info(f"🧠 MoE Router initialized with {num_experts} experts")
+        # Performance optimization caches
+        self._position_cache = OrderedDict()  # LRU cache for position features
+        self._routing_cache = OrderedDict()   # LRU cache for routing decisions
+        self._cache_max_size = 1000
+        self._feature_cache_hits = 0
+        self._routing_cache_hits = 0
+        self._total_requests = 0
+
+        logger.info(f"🧠 Optimized MoE Router initialized with {num_experts} experts")
 
         # The router is used purely for inference; ensure dropout layers are disabled
         self.eval()
@@ -130,13 +145,27 @@ class ChessMoERouter(nn.Module):
 
     def route_query(self, position_fen: str, query_type: str = "auto",
                    complexity_score: Optional[float] = None) -> RoutingDecision:
-        """Route a chess query to the appropriate expert(s)."""
+        """Optimized routing with advanced caching and performance improvements."""
+
+        self._total_requests += 1
 
         # Ensure evaluation mode during routing to keep dropout disabled
         self.eval()
 
-        # Extract features from position
-        position_features = self._extract_position_features(position_fen, query_type)
+        # Create cache key for this query
+        cache_key = self._create_cache_key(position_fen, query_type, complexity_score)
+
+        # Check routing cache first
+        if cache_key in self._routing_cache:
+            self._routing_cache_hits += 1
+            cached_decision = self._routing_cache[cache_key]
+            # Update LRU order
+            self._routing_cache.move_to_end(cache_key)
+            logger.info(f"🎯 Cached routing: {cached_decision.primary_expert} (confidence: {cached_decision.confidence_score:.3f})")
+            return cached_decision
+
+        # Extract features from position (with caching)
+        position_features = self._extract_position_features_cached(position_fen, query_type)
 
         # Get routing decision
         with torch.no_grad():
@@ -149,7 +178,10 @@ class ChessMoERouter(nn.Module):
         # Make routing decision
         decision = self._make_routing_decision(weighted_probs, confidence.item(), position_fen, query_type)
 
-        logger.info(f"🎯 Routed query to {decision.primary_expert} (confidence: {decision.confidence_score:.3f})")
+        # Cache the decision
+        self._cache_routing_decision(cache_key, decision)
+
+        logger.info(f"🎯 Computed routing: {decision.primary_expert} (confidence: {decision.confidence_score:.3f})")
         return decision
 
     def _extract_position_features(self, fen: str, query_type: str) -> torch.Tensor:
@@ -190,6 +222,78 @@ class ChessMoERouter(nn.Module):
             feature_tensor = torch.cat([feature_tensor, padding])
 
         return feature_tensor[:self.feature_dim]
+
+    def _create_cache_key(self, fen: str, query_type: str, complexity_score: Optional[float]) -> str:
+        """Create a unique cache key for position and query combination."""
+        key_components = [fen, query_type]
+        if complexity_score is not None:
+            key_components.append(f"{complexity_score:.3f}")
+        key_string = "|".join(key_components)
+        return hashlib.md5(key_string.encode()).hexdigest()
+
+    def _extract_position_features_cached(self, fen: str, query_type: str) -> torch.Tensor:
+        """Extract position features with caching for improved performance."""
+        cache_key = f"features_{fen}_{query_type}"
+
+        # Check cache first
+        if cache_key in self._position_cache:
+            self._feature_cache_hits += 1
+            cached_features = self._position_cache[cache_key]
+            # Update LRU order
+            self._position_cache.move_to_end(cache_key)
+            return cached_features
+
+        # Compute features
+        features = self._extract_position_features(fen, query_type)
+
+        # Cache the result
+        self._position_cache[cache_key] = features.clone()
+        self._maintain_cache_size()
+
+        return features
+
+    def _cache_routing_decision(self, cache_key: str, decision: RoutingDecision):
+        """Cache routing decision for future use."""
+        self._routing_cache[cache_key] = decision
+        self._maintain_cache_size()
+
+    def _maintain_cache_size(self):
+        """Maintain cache size limits using LRU eviction."""
+        # Maintain position feature cache
+        while len(self._position_cache) > self._cache_max_size:
+            self._position_cache.popitem(last=False)
+
+        # Maintain routing decision cache
+        while len(self._routing_cache) > self._cache_max_size:
+            self._routing_cache.popitem(last=False)
+
+    def clear_caches(self):
+        """Clear all caches."""
+        self._position_cache.clear()
+        self._routing_cache.clear()
+        self._feature_cache_hits = 0
+        self._routing_cache_hits = 0
+        logger.info("🧹 MoE Router caches cleared")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get comprehensive cache performance statistics."""
+        total_requests = max(self._total_requests, 1)  # Avoid division by zero
+
+        return {
+            'position_cache_size': len(self._position_cache),
+            'routing_cache_size': len(self._routing_cache),
+            'cache_max_size': self._cache_max_size,
+            'feature_cache_hit_rate': self._feature_cache_hits / total_requests,
+            'routing_cache_hit_rate': self._routing_cache_hits / total_requests,
+            'total_requests': self._total_requests,
+            'cache_memory_usage_mb': self._estimate_cache_memory_usage()
+        }
+
+    def _estimate_cache_memory_usage(self) -> float:
+        """Estimate memory usage of caches in MB."""
+        # Rough estimation: each cached tensor/feature is ~1KB
+        cache_entries = len(self._position_cache) + len(self._routing_cache)
+        return cache_entries * 1024 / (1024 * 1024)  # Convert to MB
 
     def _fen_to_board(self, fen: str) -> List[List[str]]:
         """Convert FEN to board representation."""
@@ -458,7 +562,9 @@ class ChessMoERouter(nn.Module):
         logger.info(f"📊 Updated performance for {expert_name}: {self.expert_performance[expert_name]}")
 
     def get_routing_stats(self) -> Dict[str, Any]:
-        """Get comprehensive routing statistics."""
+        """Get comprehensive routing statistics including cache performance."""
+        cache_stats = self.get_cache_stats()
+
         return {
             'expert_performance': self.expert_performance,
             'routing_parameters': {
@@ -469,6 +575,12 @@ class ChessMoERouter(nn.Module):
             'model_info': {
                 'total_parameters': sum(p.numel() for p in self.parameters()),
                 'trainable_parameters': sum(p.numel() for p in self.parameters() if p.requires_grad)
+            },
+            'cache_performance': cache_stats,
+            'performance_metrics': {
+                'cache_hit_rate': (cache_stats['feature_cache_hit_rate'] + cache_stats['routing_cache_hit_rate']) / 2,
+                'cache_memory_efficiency': cache_stats['cache_memory_usage_mb'],
+                'routing_speedup': 1.0 / (1.0 - cache_stats['routing_cache_hit_rate']) if cache_stats['routing_cache_hit_rate'] < 1.0 else 10.0
             }
         }
 
@@ -517,9 +629,9 @@ class MoEInferenceManager:
 
     def analyze_position(self, fen: str, query_type: str = "auto",
                         complexity_score: Optional[float] = None) -> Dict[str, Any]:
-        """Analyze a chess position using MoE routing."""
+        """Analyze a chess position using optimized MoE routing with caching."""
 
-        # Get routing decision
+        # Get routing decision (with caching)
         routing_decision = self.router.route_query(fen, query_type, complexity_score)
 
         # Execute routing decision
@@ -637,7 +749,9 @@ class MoEInferenceManager:
         )
 
     def get_performance_report(self) -> Dict[str, Any]:
-        """Generate comprehensive performance report."""
+        """Generate comprehensive performance report with cache metrics."""
+        router_stats = self.router.get_routing_stats()
+
         return {
             'routing_metrics': {
                 'total_requests': self.metrics.total_requests,
@@ -645,9 +759,33 @@ class MoEInferenceManager:
                 'ensemble_usage_rate': self.metrics.ensemble_usage_rate,
                 'expert_usage_distribution': self.metrics.expert_usage_stats
             },
-            'router_stats': self.router.get_routing_stats(),
+            'cache_performance': router_stats.get('cache_performance', {}),
+            'performance_optimization': {
+                'cache_hit_rate': router_stats.get('performance_metrics', {}).get('cache_hit_rate', 0.0),
+                'routing_speedup': router_stats.get('performance_metrics', {}).get('routing_speedup', 1.0),
+                'memory_efficiency': router_stats.get('performance_metrics', {}).get('cache_memory_efficiency', 0.0)
+            },
+            'router_stats': router_stats,
             'expert_models': list(self.expert_models.keys())
         }
+
+    def optimize_performance(self):
+        """Apply performance optimizations."""
+        # Clear caches periodically for optimal memory usage
+        cache_stats = self.router.get_cache_stats()
+        if cache_stats['cache_memory_usage_mb'] > 50:  # Clear if cache > 50MB
+            self.router.clear_caches()
+            logger.info("🧹 Auto-cleared MoE caches for memory optimization")
+
+        # Log performance metrics
+        perf_report = self.get_performance_report()
+        logger.info(f"⚡ MoE Performance: Cache Hit Rate: {perf_report['performance_optimization']['cache_hit_rate']:.1%}, "
+                   f"Speedup: {perf_report['performance_optimization']['routing_speedup']:.1f}x")
+
+    def clear_all_caches(self):
+        """Clear all caches in the MoE system."""
+        self.router.clear_caches()
+        logger.info("🧹 All MoE system caches cleared")
 
 
 def create_moe_system(expert_paths: Dict[str, str], inference_system=None) -> Tuple[ChessMoERouter, MoEInferenceManager]:

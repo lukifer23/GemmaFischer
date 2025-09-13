@@ -37,6 +37,7 @@ pgnparser  # For PGN file parsing
 # Evaluation and testing
 pytest
 mlflow  # For experiment tracking and monitoring
+scipy  # For statistical analysis and regression detection
 
 # Utilities
 pyyaml

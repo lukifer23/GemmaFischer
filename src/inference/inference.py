@@ -19,8 +19,12 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 from transformers.generation.logits_process import LogitsProcessor
+from transformers.generation.utils import GenerationConfig
 from collections import OrderedDict
 import logging
+import threading
+from functools import lru_cache
+import hashlib
 
 # Import MoE components
 try:
@@ -51,6 +55,25 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
     log_performance = lambda func: func
+
+# Import error handling
+try:
+    from ..utils.error_handler import get_error_handler, error_boundary, handle_error
+    error_handler = get_error_handler()
+except ImportError:
+    # Fallback if error handler not available
+    error_handler = None
+    error_boundary = lambda *args, **kwargs: lambda func: func
+    handle_error = lambda *args, **kwargs: None
+
+# Import model validation
+try:
+    from ..utils.model_validator import get_model_validator, validate_model
+    model_validator = get_model_validator()
+except ImportError:
+    # Fallback if model validator not available
+    model_validator = None
+    validate_model = lambda *args, **kwargs: None
 
 # Environment hygiene and resource constraints
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -129,9 +152,17 @@ class ChessGemmaInference:
         self._adapter_loaded_from: Dict[str, Path] = {}
         self._active_adapter: Optional[str] = None
 
+        # Performance optimization caches
+        self._kv_cache = {}  # KV cache for repeated positions
+        self._response_cache = OrderedDict()  # Response cache for identical queries
+        self._cache_max_size = 256
+        self._cache_hits = 0
+        self._total_requests = 0
+
         # Simple memoization for deterministic engine prompts (FEN -> move)
         self._engine_cache_max = 512
         self._engine_cache: "OrderedDict[str, str]" = OrderedDict()
+
         # Feature flags
         self._engine_rerank_enabled = (os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0', 'false', 'False'))
         self._engine_policy = os.environ.get('CHESSGEMMA_ENGINE_POLICY', 'sample').strip().lower()  # sample | logprob
@@ -139,6 +170,14 @@ class ChessGemmaInference:
         self._engine_constrain_mode = os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN_MODE', 'simple').strip().lower()
         self._allowed_token_ids_cache: Optional[set] = None
         self._uci_token_info: Optional[Dict[int, str]] = None
+
+        # Performance monitoring
+        self._generation_stats = {
+            'total_tokens_generated': 0,
+            'average_generation_time': 0.0,
+            'cache_hit_rate': 0.0,
+            'memory_peak_usage': 0
+        }
 
         # MoE Router integration
         self.moe_router: Optional[ChessMoERouter] = None
@@ -210,10 +249,24 @@ class ChessGemmaInference:
             self.model.eval()
             # Discover known expert adapters on disk for quick switching
             self.refresh_adapters()
+            # Validate model integrity after loading
+            if model_validator:
+                try:
+                    validation_result = model_validator.validate_model_integrity(
+                        str(self.model_path), str(self.adapter_path) if self.adapter_path else None
+                    )
+                    if not validation_result.is_valid:
+                        print(f"⚠️  Model validation failed: {', '.join(validation_result.errors)}")
+                        # Continue anyway but log warnings
+                        for warning in validation_result.warnings:
+                            print(f"⚠️  {warning}")
+                except Exception as val_e:
+                    print(f"⚠️  Model validation error: {val_e}")
+
             self.is_loaded = True
             return True
         except Exception as e:
-            print(f"Error loading model: {e}")
+            print(f"❌ Error loading model: {e}")
             self.is_loaded = False
             return False
 
@@ -376,6 +429,37 @@ class ChessGemmaInference:
         prompt = f"FEN: {fen}\n{system_prompt}" if fen else system_prompt
         return [{"role": "user", "content": prompt}]
 
+    def _create_cache_key(self, question: str, context: Optional[str], mode: str,
+                         max_new_tokens: int, temperature: float, top_p: float) -> str:
+        """Create a unique cache key for the request."""
+        key_components = [
+            question,
+            context or "",
+            mode,
+            str(max_new_tokens),
+            f"{temperature:.3f}",
+            f"{top_p:.3f}"
+        ]
+        key_string = "|".join(key_components)
+        return hashlib.md5(key_string.encode()).hexdigest()
+
+    def _check_response_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
+        """Check if response is cached."""
+        if cache_key in self._response_cache:
+            self._cache_hits += 1
+            cached_response = self._response_cache[cache_key]
+            # Update LRU order
+            self._response_cache.move_to_end(cache_key)
+            return cached_response
+        return None
+
+    def _cache_response(self, cache_key: str, response: Dict[str, Any]):
+        """Cache response for future use."""
+        self._response_cache[cache_key] = response
+        # Maintain cache size
+        while len(self._response_cache) > self._cache_max_size:
+            self._response_cache.popitem(last=False)
+
     def generate_response(
         self,
         question: str,
@@ -385,17 +469,34 @@ class ChessGemmaInference:
         temperature: float = 0.7,
         top_p: float = 0.9,
     ) -> Dict[str, Any]:
-        """Generate a response dict (text + simple confidence)."""
-        if not self.is_loaded:
-            return {
-                "error": "Model not loaded",
-                "response": "",
-                "confidence": 0.0,
-                "model_loaded": False,
-            }
+        """Generate a response dict with performance optimizations and error handling."""
+        import time
 
-        # Use MoE routing if available and enabled
-        if self.moe_enabled and self.moe_manager and mode in ['tutor', 'engine', 'director']:
+        with error_boundary("inference", "generate_response",
+                          question=question[:100], mode=mode, max_new_tokens=max_new_tokens):
+            start_time = time.time()
+            self._total_requests += 1
+
+            if not self.is_loaded:
+                return {
+                    "error": "Model not loaded",
+                    "response": "",
+                    "confidence": 0.0,
+                    "model_loaded": False,
+                    "generation_time": time.time() - start_time,
+                    "cached": False
+                }
+
+            # Check response cache for identical requests
+            cache_key = self._create_cache_key(question, context, mode, max_new_tokens, temperature, top_p)
+            cached_response = self._check_response_cache(cache_key)
+            if cached_response:
+                cached_response["cached"] = True
+                cached_response["cache_hit_rate"] = self._cache_hits / self._total_requests
+                return cached_response
+
+            # Use MoE routing if available and enabled
+            if self.moe_enabled and self.moe_manager and mode in ['tutor', 'engine', 'director']:
             try:
                 # Extract FEN for MoE routing
                 from .uci_utils import extract_fen
@@ -588,7 +689,15 @@ class ChessGemmaInference:
                 word_count = len(answer.split())
                 confidence = max(0.1, min(0.95, word_count / 60.0))
 
-            return {
+            # Update performance stats
+            generation_time = time.time() - start_time
+            self._generation_stats['total_tokens_generated'] += len(answer.split())
+            self._generation_stats['average_generation_time'] = (
+                (self._generation_stats['average_generation_time'] * (self._total_requests - 1)) + generation_time
+            ) / self._total_requests
+            self._generation_stats['cache_hit_rate'] = self._cache_hits / self._total_requests
+
+            response_dict = {
                 "response": answer,
                 "confidence": confidence,
                 "model_loaded": True,
@@ -596,14 +705,27 @@ class ChessGemmaInference:
                 "postprocessed": postprocessed,
                 "prompt_len_chars": len(prompt_text),
                 "answer_len_chars": len(answer),
+                "generation_time": generation_time,
+                "cached": False,
+                "cache_hit_rate": self._generation_stats['cache_hit_rate'],
+                "tokens_per_second": len(answer.split()) / max(generation_time, 0.001)
             }
+
+            # Cache the response for future use
+            self._cache_response(cache_key, response_dict)
+
+            return response_dict
         except Exception as e:
+            generation_time = time.time() - start_time
             return {
                 "error": str(e),
                 "response": "",
                 "confidence": 0.0,
                 "model_loaded": True,
                 "mode": mode,
+                "generation_time": generation_time,
+                "cached": False,
+                "cache_hit_rate": self._generation_stats['cache_hit_rate']
             }
 
     # ----------------------
@@ -959,6 +1081,70 @@ class ChessGemmaInference:
             info["moe_experts"] = list(self._expert_paths.keys())
 
         return info
+
+    def clear_caches(self):
+        """Clear all performance caches."""
+        self._response_cache.clear()
+        self._kv_cache.clear()
+        self._cache_hits = 0
+        logger.info("🧹 Inference caches cleared")
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get comprehensive performance statistics."""
+        return {
+            'total_requests': self._total_requests,
+            'cache_hits': self._cache_hits,
+            'cache_hit_rate': self._cache_hits / max(self._total_requests, 1),
+            'response_cache_size': len(self._response_cache),
+            'engine_cache_size': len(self._engine_cache),
+            'generation_stats': self._generation_stats.copy(),
+            'cache_max_size': self._cache_max_size,
+            'memory_efficiency': self._estimate_cache_memory_usage()
+        }
+
+    def _estimate_cache_memory_usage(self) -> float:
+        """Estimate memory usage of caches in MB."""
+        # Rough estimation: each cached response is ~2KB
+        cache_entries = len(self._response_cache) + len(self._engine_cache)
+        return cache_entries * 2048 / (1024 * 1024)  # Convert to MB
+
+    def optimize_generation_config(self, mode: str) -> Dict[str, Any]:
+        """Get optimized generation configuration for different modes."""
+        base_config = {
+            'do_sample': True,
+            'pad_token_id': self.tokenizer.eos_token_id,
+            'eos_token_id': self.tokenizer.eos_token_id,
+            'use_cache': True,  # Enable KV caching
+        }
+
+        if mode == "engine":
+            # Fast, deterministic generation for moves
+            return {
+                **base_config,
+                'max_new_tokens': 8,  # UCI moves are short
+                'temperature': 0.1,   # Low temperature for consistency
+                'top_p': 0.9,
+                'do_sample': False,   # Deterministic for engine mode
+                'repetition_penalty': 1.0
+            }
+        elif mode == "tutor":
+            # Balanced generation for explanations
+            return {
+                **base_config,
+                'max_new_tokens': 150,
+                'temperature': 0.7,
+                'top_p': 0.9,
+                'repetition_penalty': 1.1
+            }
+        else:  # director
+            # Creative generation for Q&A
+            return {
+                **base_config,
+                'max_new_tokens': 200,
+                'temperature': 0.8,
+                'top_p': 0.95,
+                'repetition_penalty': 1.2
+            }
 
 
 _INFERENCE_SINGLETON: Optional[ChessGemmaInference] = None

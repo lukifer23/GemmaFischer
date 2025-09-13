@@ -8,8 +8,11 @@ import time
 import json
 import os
 import sys
+import signal
+import threading
 from pathlib import Path
 from datetime import datetime
+from contextlib import contextmanager
 
 import torch
 from transformers import (
@@ -38,6 +41,7 @@ from src.training.config_validation import (
     ConfigValidationError,
     validate_lora_config,
 )
+from src.training.mps_optimizer import MPSMemoryOptimizer, optimize_training_for_mps
 
 
 def log_system_stats(prefix=""):
@@ -205,6 +209,43 @@ class InstructionDataCollator:
         }
 
 
+# Global timeout handling
+training_timeout_event = threading.Event()
+training_completed = False
+
+def timeout_handler(signum, frame):
+    """Handle training timeout signal."""
+    print("\n⏰ Training timeout reached! Saving checkpoint and exiting gracefully...")
+    training_timeout_event.set()
+
+def setup_training_timeout(timeout_minutes: int = 300):  # 5 hours default
+    """Setup training timeout handler."""
+    if timeout_minutes > 0:
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout_minutes * 60)  # Convert to seconds
+        print(f"⏰ Training timeout set to {timeout_minutes} minutes")
+
+@contextmanager
+def training_stability_context():
+    """Context manager for training stability."""
+    try:
+        # Setup MPS environment
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+            os.environ.setdefault('PYTORCH_MPS_HIGH_WATERMARK_RATIO', '0.0')
+
+        yield
+
+    except Exception as e:
+        print(f"⚠️  Training stability context error: {e}")
+        raise
+    finally:
+        # Cleanup
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        import gc
+        gc.collect()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='auto', help='Path to YAML config or "auto" to choose per --expert')
@@ -213,9 +254,16 @@ def main():
     parser.add_argument('--disable_eval', action='store_true', help='Disable periodic evaluation to speed up smoke runs')
     parser.add_argument('--eval_steps', type=int, default=None, help='Override evaluation frequency in steps (when eval enabled)')
     parser.add_argument('--max_steps_override', type=int, default=0, help='Override max_steps from config for quick smoke runs')
+    parser.add_argument('--timeout_minutes', type=int, default=300, help='Training timeout in minutes (0 to disable)')
+    parser.add_argument('--resume_from_checkpoint', type=str, default=None, help='Resume training from specific checkpoint')
     args = parser.parse_args()
 
-    # Resolve config path (support "auto" and robust relative paths)
+    # Setup training timeout
+    setup_training_timeout(args.timeout_minutes)
+
+    # Use training stability context
+    with training_stability_context():
+        # Resolve config path (support "auto" and robust relative paths)
     cfg_path = args.config
     cfg_dir = Path(__file__).parent / 'configs'
     if cfg_path == 'auto':
@@ -252,6 +300,22 @@ def main():
     model_path = cfg['model']['pretrained_model_path']
     out_dir = Path(cfg['training']['output_dir'])
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Handle checkpoint resumption
+    resume_from_checkpoint = args.resume_from_checkpoint
+    if resume_from_checkpoint is None and out_dir.exists():
+        # Auto-resume from latest checkpoint
+        checkpoints = list(out_dir.glob("checkpoint-*"))
+        if checkpoints:
+            latest_checkpoint = max(checkpoints, key=lambda x: int(x.name.split("-")[1]))
+            resume_from_checkpoint = str(latest_checkpoint)
+            print(f"📂 Auto-resuming from latest checkpoint: {resume_from_checkpoint}")
+
+    if resume_from_checkpoint:
+        print(f"🔄 Resuming training from checkpoint: {resume_from_checkpoint}")
+        if not Path(resume_from_checkpoint).exists():
+            print(f"⚠️  Checkpoint not found: {resume_from_checkpoint}")
+            resume_from_checkpoint = None
 
     # Detect curriculum early. If present, we'll build per-phase datasets below
     use_curriculum = bool(isinstance(cfg, dict) and cfg.get('curriculum'))
@@ -323,6 +387,14 @@ def main():
     )
     model = get_peft_model(model, peft_config)
 
+    # Apply MPS optimizations to the model if available
+    if torch.backends.mps.is_available():
+        print("🔧 Applying MPS model optimizations...")
+        mps_optimizer = MPSMemoryOptimizer()
+        model = mps_optimizer.optimize_model_for_mps(model)
+        # Apply safe gradient checkpointing
+        mps_optimizer.apply_safe_gradient_checkpointing(model)
+
     # tokenization / collator
     # allow shorter sequences on memory-constrained devices
     tokenizer_max_length = 512
@@ -370,35 +442,49 @@ def main():
     eval_strategy_value = 'no' if args.disable_eval else 'steps'
     eval_steps_value = int(args.eval_steps) if (args.eval_steps is not None) else save_steps
 
-    training_args = TrainingArguments(
-        output_dir=str(out_dir),
-        per_device_train_batch_size=per_device_train_batch_size,
-        gradient_accumulation_steps=gradient_accumulation_steps,
-        num_train_epochs=num_train_epochs,
-        max_steps=max_steps,
-        learning_rate=learning_rate,
-        logging_steps=logging_steps,
-        save_steps=save_steps,
-        save_total_limit=3,  # Keep only last 3 checkpoints to save disk space
-        eval_strategy=eval_strategy_value,
-        eval_steps=eval_steps_value,
-        save_strategy="steps",
-        load_best_model_at_end=(not args.disable_eval),
-        metric_for_best_model="eval_loss",
-        greater_is_better=False,
-        fp16=tcfg.get('fp16', False),
-        bf16=tcfg.get('bf16', False),
-        lr_scheduler_type="cosine",  # Cosine annealing for better convergence
-        warmup_steps=int(max_steps * 0.1),  # 10% warmup steps
-        weight_decay=0.01,
-        adam_beta1=0.9,
-        adam_beta2=0.999,
-        max_grad_norm=1.0,
-        report_to=[],  # We'll add MLflow later
-        logging_first_step=True,
-        logging_nan_inf_filter=False,
-        remove_unused_columns=not use_instruction,
-    )
+    # Create base training arguments
+    base_training_args = {
+        'output_dir': str(out_dir),
+        'per_device_train_batch_size': per_device_train_batch_size,
+        'gradient_accumulation_steps': gradient_accumulation_steps,
+        'num_train_epochs': num_train_epochs,
+        'max_steps': max_steps,
+        'learning_rate': learning_rate,
+        'logging_steps': logging_steps,
+        'save_steps': save_steps,
+        'save_total_limit': 3,  # Keep only last 3 checkpoints to save disk space
+        'eval_strategy': eval_strategy_value,
+        'eval_steps': eval_steps_value,
+        'save_strategy': "steps",
+        'load_best_model_at_end': (not args.disable_eval),
+        'metric_for_best_model': "eval_loss",
+        'greater_is_better': False,
+        'fp16': tcfg.get('fp16', False),
+        'bf16': tcfg.get('bf16', False),
+        'lr_scheduler_type': "cosine",  # Cosine annealing for better convergence
+        'warmup_steps': int(max_steps * 0.1),  # 10% warmup steps
+        'weight_decay': 0.01,
+        'adam_beta1': 0.9,
+        'adam_beta2': 0.999,
+        'max_grad_norm': 1.0,
+        'report_to': [],  # We'll add MLflow later
+        'logging_first_step': True,
+        'logging_nan_inf_filter': False,
+        'remove_unused_columns': not use_instruction,
+    }
+
+    # Apply MPS optimizations if available
+    if torch.backends.mps.is_available():
+        print("🔧 Applying MPS optimizations for enhanced stability...")
+        mps_optimizer = MPSMemoryOptimizer()
+        optimized_args = mps_optimizer.get_mps_optimized_training_args(base_training_args, model, tokenizer)
+        training_args = TrainingArguments(**optimized_args)
+    else:
+        training_args = TrainingArguments(**base_training_args)
+
+    # Add resume from checkpoint if specified
+    if resume_from_checkpoint:
+        training_args.resume_from_checkpoint = resume_from_checkpoint
 
     # Create evaluation dataset (10% split)
     def split_train_eval(dataset):
@@ -466,8 +552,31 @@ def main():
         trainer.state.start_time = time.time()
         trainer.train()
 
-    print('=' * 60)
-    print('Training complete. Enhanced logs and checkpoints in', out_dir)
+        print('=' * 60)
+        print('Training complete. Enhanced logs and checkpoints in', out_dir)
+
+        # Mark training as completed
+        global training_completed
+        training_completed = True
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n🛑 Training interrupted by user")
+    except Exception as e:
+        print(f"\n❌ Training failed with error: {e}")
+        # Try to save any partial progress
+        try:
+            if 'trainer' in locals() and trainer is not None:
+                trainer.save_model()
+                print("💾 Emergency checkpoint saved")
+        except Exception:
+            pass
+        raise
+    finally:
+        # Cleanup on exit
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        import gc
+        gc.collect()

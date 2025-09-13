@@ -135,7 +135,7 @@ class MPSMemoryOptimizer:
     def get_mps_optimized_training_args(self, base_config: Dict[str, Any],
                                       model=None, tokenizer=None) -> Dict[str, Any]:
         """
-        Get MPS-optimized training arguments.
+        Get MPS-optimized training arguments with improved stability.
 
         Args:
             base_config: Base training configuration
@@ -149,7 +149,7 @@ class MPSMemoryOptimizer:
         # Start with base configuration
         optimized_config = base_config.copy()
 
-        # MPS-specific optimizations
+        # MPS-specific optimizations with improved stability
         if self.is_mps:
             optimized_config.update({
                 # MPS doesn't support bf16/fp16 mixed precision - use fp32
@@ -157,57 +157,51 @@ class MPSMemoryOptimizer:
                 'fp16': False,
                 'dataloader_pin_memory': False,  # MPS doesn't benefit from pinned memory
                 'dataloader_num_workers': 0,  # Avoid multiprocessing issues on MPS
-                'gradient_checkpointing': False,  # DISABLED: Causes buffer allocation issues on MPS
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
-                # Basic MPS settings - let transformers handle optimization
-                'per_device_train_batch_size': 1,  # Minimal batch size
-                'gradient_accumulation_steps': 1   # No accumulation
+                'gradient_checkpointing': True,  # ENABLED: Critical for memory efficiency on MPS
+                'attn_implementation': 'eager',  # Use eager attention for MPS stability
             })
 
-            # Memory-efficient attention if available
-            try:
-                from transformers.models.gemma.modeling_gemma import GemmaAttention
-                # Enable flash attention if available (memory efficient)
-                if hasattr(torch.nn.functional, 'scaled_dot_product_attention'):
-                    optimized_config['attn_implementation'] = 'flash_attention_2'
-            except ImportError:
-                pass
-
-        # Skip memory profiling for MPS to prevent buffer allocation errors
-        # Use fixed ultra-conservative settings for MPS stability
-        if self.is_mps:
-            # MPS conservative settings for maximum stability
+            # Improved batch sizing for MPS stability
             optimized_config.update({
-                'per_device_train_batch_size': 1,  # Conservative batch size for MPS stability
-                'gradient_accumulation_steps': 2,   # Minimal accumulation for testing
+                'per_device_train_batch_size': 1,  # Stable batch size for MPS
+                'gradient_accumulation_steps': 4,   # Effective batch size of 4
             })
-            logger.info("🔧 Applied conservative MPS batch sizing for stability")
-        else:
-            # Calculate optimal batch size if model provided for CPU training
-            if model and tokenizer:
-                batch_info = self.calculate_optimal_batch_size(model, tokenizer)
-                optimized_config.update({
-                    'per_device_train_batch_size': batch_info['recommended_batch_size'],
-                    'gradient_accumulation_steps': batch_info['gradient_accumulation_steps'],
-                })
 
-        # Learning rate adjustments for MPS
-        if self.is_mps:
-            # MPS with ultra-conservative settings - very conservative learning rate
-            current_lr = optimized_config.get('learning_rate', 2e-4)
-            # Much more conservative learning rate for stability
-            optimized_config['learning_rate'] = min(current_lr * 0.5, 1e-4)
-
-        # Memory monitoring
+        # Memory monitoring with more frequent logging
         optimized_config.update({
-            'logging_steps': min(optimized_config.get('logging_steps', 50), 25),
+            'logging_steps': min(optimized_config.get('logging_steps', 50), 10),  # More frequent logging
             'save_steps': optimized_config.get('save_steps', 500),
+            'evaluation_strategy': 'steps',
+            'eval_steps': optimized_config.get('save_steps', 500),  # Evaluate at save points
+            'save_total_limit': 3,  # Keep only last 3 checkpoints
+            'load_best_model_at_end': True,
+            'metric_for_best_model': 'eval_loss',
+            'greater_is_better': False,
         })
 
-        logger.info("⚡ MPS-optimized training configuration:")
+        # Learning rate adjustments for MPS stability
+        if self.is_mps:
+            current_lr = optimized_config.get('learning_rate', 2e-4)
+            # Conservative learning rate for stability
+            optimized_config['learning_rate'] = min(current_lr, 1e-4)
+
+            # Add warmup and cosine annealing for better convergence
+            max_steps = optimized_config.get('max_steps', 1000)
+            optimized_config['warmup_steps'] = max(10, int(max_steps * 0.1))  # 10% warmup
+            optimized_config['lr_scheduler_type'] = 'cosine'
+
+        # Timeout and stability settings
+        optimized_config.update({
+            'dataloader_timeout': 0,  # Disable timeout for stability
+            'remove_unused_columns': False,  # Keep all columns for stability
+            'report_to': [],  # Disable external reporting for stability
+        })
+
+        logger.info("⚡ Enhanced MPS-optimized training configuration:")
         for key, value in optimized_config.items():
             if key in ['learning_rate', 'per_device_train_batch_size', 'gradient_accumulation_steps',
-                      'bf16', 'fp16', 'gradient_checkpointing']:
+                      'bf16', 'fp16', 'gradient_checkpointing', 'warmup_steps']:
                 logger.info(f"   {key}: {value}")
 
         return optimized_config
@@ -266,21 +260,58 @@ class MPSMemoryOptimizer:
             gc.collect()
 
     def optimize_model_for_mps(self, model):
-        """Apply MPS-specific model optimizations."""
+        """Apply MPS-specific model optimizations with improved stability."""
         if not self.is_mps:
             return model
 
-        # Enable gradient checkpointing for memory efficiency
-        model.gradient_checkpointing_enable()
+        try:
+            # Safe gradient checkpointing for MPS
+            if hasattr(model, 'gradient_checkpointing_enable'):
+                model.gradient_checkpointing_enable()
+                logger.info("✅ Gradient checkpointing enabled for memory efficiency")
+        except Exception as e:
+            logger.warning(f"⚠️  Gradient checkpointing failed: {e}")
+            # Continue without gradient checkpointing
 
         # MPS-specific optimizations
-        for module in model.modules():
-            if hasattr(module, 'to'):
-                # Ensure all parameters are on MPS
-                module.to(self.device)
+        try:
+            for module in model.modules():
+                if hasattr(module, 'to'):
+                    # Ensure all parameters are on MPS
+                    module.to(self.device)
+        except Exception as e:
+            logger.warning(f"⚠️  Module device placement failed: {e}")
 
-        logger.info("🔧 Model optimized for MPS training")
+        # Additional MPS optimizations
+        try:
+            # Set model to evaluation mode initially to avoid issues
+            model.eval()
+            # Enable training mode when needed
+            model.train()
+        except Exception as e:
+            logger.warning(f"⚠️  Model mode switching failed: {e}")
+
+        logger.info("🔧 Model optimized for MPS training with enhanced stability")
         return model
+
+    def apply_safe_gradient_checkpointing(self, model):
+        """Apply gradient checkpointing safely for MPS."""
+        if not self.is_mps:
+            return False
+
+        try:
+            # Check if gradient checkpointing is already enabled
+            if hasattr(model, 'is_gradient_checkpointing') and model.is_gradient_checkpointing:
+                logger.info("ℹ️  Gradient checkpointing already enabled")
+                return True
+
+            # Enable gradient checkpointing with error handling
+            model.gradient_checkpointing_enable()
+            logger.info("✅ Gradient checkpointing enabled successfully")
+            return True
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to enable gradient checkpointing: {e}")
+            return False
 
     def get_memory_optimization_tips(self) -> List[str]:
         """Get memory optimization tips for MPS training."""
