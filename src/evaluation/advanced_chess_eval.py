@@ -138,6 +138,28 @@ class AdvancedChessEvaluator:
         else:
             logging.warning("Stockfish not found - limited evaluation capabilities")
 
+    def close(self) -> None:
+        """Terminate the Stockfish engine if it was initialized."""
+        if self.engine:
+            try:
+                self.engine.quit()
+            except Exception as e:
+                logging.warning(f"Failed to close Stockfish engine: {e}")
+            finally:
+                self.engine = None
+
+    def __enter__(self) -> "AdvancedChessEvaluator":
+        """Enter the runtime context related to this object."""
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        """Exit the runtime context and ensure resources are cleaned up."""
+        self.close()
+
+    def __del__(self) -> None:
+        """Fallback cleanup if the evaluator is garbage collected."""
+        self.close()
+
     def _find_stockfish(self) -> Optional[str]:
         """Find Stockfish binary."""
         common_paths = [
@@ -658,25 +680,23 @@ def main():
 
     args = parser.parse_args()
 
-    # Initialize evaluator
-    evaluator = AdvancedChessEvaluator(
+    # Run evaluation within a managed context
+    with AdvancedChessEvaluator(
         stockfish_path=args.stockfish_path,
         max_workers=args.workers
-    )
+    ) as evaluator:
+        print("Starting comprehensive chess evaluation...")
+        report = evaluator.evaluate_dataset(
+            Path(args.dataset),
+            mode=args.mode,
+            max_samples=args.max_samples
+        )
 
-    # Run evaluation
-    print("Starting comprehensive chess evaluation...")
-    report = evaluator.evaluate_dataset(
-        Path(args.dataset),
-        mode=args.mode,
-        max_samples=args.max_samples
-    )
+        # Generate and display report
+        output_path = Path(args.output) if args.output else None
+        report_str = evaluator.generate_report(report, output_path)
 
-    # Generate and display report
-    output_path = Path(args.output) if args.output else None
-    report_str = evaluator.generate_report(report, output_path)
-
-    print("\n" + report_str)
+        print("\n" + report_str)
 
 
 if __name__ == '__main__':
