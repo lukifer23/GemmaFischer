@@ -12,6 +12,7 @@ from pathlib import Path
 from datetime import datetime
 
 import torch
+import random
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -33,6 +34,25 @@ import psutil
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+
+def set_seed(seed: int) -> None:
+    """Seed Python, NumPy, and PyTorch for reproducibility.
+
+    Args:
+        seed: Seed value to use for RNGs.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    if hasattr(torch, "mps") and torch.backends.mps.is_available():
+        torch.mps.manual_seed(seed)
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
 
 
 def log_system_stats(prefix=""):
@@ -208,6 +228,7 @@ def main():
     parser.add_argument('--disable_eval', action='store_true', help='Disable periodic evaluation to speed up smoke runs')
     parser.add_argument('--eval_steps', type=int, default=None, help='Override evaluation frequency in steps (when eval enabled)')
     parser.add_argument('--max_steps_override', type=int, default=0, help='Override max_steps from config for quick smoke runs')
+    parser.add_argument('--seed', type=int, default=None, help='Random seed for reproducibility (overrides config)')
     args = parser.parse_args()
 
     # Resolve config path (support "auto" and robust relative paths)
@@ -231,6 +252,9 @@ def main():
 
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
+
+    seed = args.seed if args.seed is not None else int(cfg.get('training', {}).get('seed', 3407))
+    set_seed(seed)
 
     # Cap CPU threads to 2 by default if not set
     os.environ.setdefault('OMP_NUM_THREADS', '2')
@@ -260,7 +284,7 @@ def main():
                 if not specs:
                     print('No valid dataset specs found in config.datasets.')
                     return
-                ds = build_mixture(specs)
+                ds = build_mixture(specs, seed=seed)
                 print(f"Loaded mixed dataset from {len(specs)} sources")
             except Exception as e:
                 print(f"Failed to build mixed dataset: {e}")
@@ -391,7 +415,7 @@ def main():
     # Create evaluation dataset (10% split)
     def split_train_eval(dataset):
         if hasattr(dataset, 'train_test_split'):
-            s = dataset.train_test_split(test_size=0.1, seed=3407)
+            s = dataset.train_test_split(test_size=0.1, seed=seed)
             return s['train'], s['test']
         size = len(dataset)
         trn = int(0.9 * size)
@@ -416,7 +440,7 @@ def main():
             if not specs:
                 print('  Skipping phase; no valid datasets')
                 continue
-            mixed = build_mixture(specs)
+            mixed = build_mixture(specs, seed=seed)
             if len(mixed) == 0:
                 print('  Skipping phase; built dataset is empty')
                 continue

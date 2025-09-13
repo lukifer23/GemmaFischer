@@ -10,6 +10,7 @@ training:
   fp16: false
   logging_steps: 25  # More frequent logging
   save_steps: 100  # More frequent checkpoints
+  seed: 3407  # Random seed for reproducibility
   eval_strategy: "steps"
   eval_steps: 100
   save_strategy: "steps"

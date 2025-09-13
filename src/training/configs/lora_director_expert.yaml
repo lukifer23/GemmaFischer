@@ -10,6 +10,7 @@ training:
   fp16: false
   logging_steps: 50
   save_steps: 200
+  seed: 3407  # Random seed for reproducibility
   eval_strategy: "steps"
   eval_steps: 200
   save_strategy: "steps"
