@@ -12,7 +12,13 @@ from unittest.mock import Mock, patch
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.inference.inference import ChessGemmaInference, run_inference, load_model, get_model_info
+from src.inference.inference import (
+    ChessGemmaInference,
+    run_inference,
+    load_model,
+    unload_model,
+    get_model_info,
+)
 
 
 class TestChessGemmaInference:
@@ -61,6 +67,31 @@ class TestChessGemmaInference:
         
         assert result is False
         assert inference.is_loaded is False
+
+    @patch('src.inference.inference.torch')
+    def test_unload_model(self, mock_torch):
+        """Test unloading frees resources and resets state."""
+        inference = ChessGemmaInference()
+        inference.model = Mock()
+        inference.tokenizer = Mock()
+        inference.is_loaded = True
+        inference._loaded_adapters = {'a': True}
+        inference._logical_to_physical = {'a': 'a@1'}
+        inference._adapter_loaded_from = {'a': Path('path')}
+        inference._engine_cache['x'] = 'y'
+        mock_torch.cuda.is_available.return_value = True
+        mock_torch.cuda.empty_cache = Mock()
+
+        inference.unload_model()
+
+        assert inference.model is None
+        assert inference.tokenizer is None
+        assert inference.is_loaded is False
+        assert inference._loaded_adapters == {}
+        assert inference._logical_to_physical == {}
+        assert inference._adapter_loaded_from == {}
+        assert inference._engine_cache == {}
+        mock_torch.cuda.empty_cache.assert_called_once()
     
     @patch('src.inference.inference.AutoTokenizer')
     @patch('src.inference.inference.AutoModelForCausalLM')
@@ -138,6 +169,16 @@ class TestConvenienceFunctions:
         
         assert result is True
         mock_inference.load_model.assert_called_once()
+
+    @patch('src.inference.inference.get_inference_instance')
+    def test_unload_model_function(self, mock_get_instance):
+        """Test unload_model convenience function."""
+        mock_inference = Mock()
+        mock_get_instance.return_value = mock_inference
+
+        unload_model()
+
+        mock_inference.unload_model.assert_called_once()
     
     @patch('src.inference.inference.get_inference_instance')
     def test_get_model_info_function(self, mock_get_instance):

@@ -36,6 +36,7 @@ __all__ = [
     'get_inference_instance',
     'run_inference',
     'load_model',
+    'unload_model',
     'get_model_info'
 ]
 
@@ -208,6 +209,30 @@ class ChessGemmaInference:
             print(f"Error loading model: {e}")
             self.is_loaded = False
             return False
+
+    def unload_model(self) -> None:
+        """Free model resources and reset state."""
+        try:
+            if self.model is not None:
+                del self.model
+            if self.tokenizer is not None:
+                del self.tokenizer
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
+        finally:
+            self.model = None
+            self.tokenizer = None
+            self.is_loaded = False
+            self._active_adapter = None
+            self._loaded_adapters.clear()
+            self._logical_to_physical.clear()
+            self._adapter_loaded_from.clear()
+            self._allowed_token_ids_cache = None
+            self._uci_token_info = None
+            self._engine_cache.clear()
 
     def _discover_adapter_paths(self) -> None:
         """Populate mapping of expert names to latest adapter checkpoint paths.
@@ -935,6 +960,11 @@ def run_inference(question: str) -> Dict[str, Any]:
 def load_model() -> bool:
     instance = get_inference_instance()
     return instance.load_model()
+
+
+def unload_model() -> None:
+    instance = get_inference_instance()
+    return instance.unload_model()
 
 
 def get_model_info() -> Dict[str, Any]:
