@@ -5,6 +5,7 @@ Comprehensive tests for ChessGemma inference functionality.
 
 import pytest
 import sys
+import logging
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -42,10 +43,12 @@ class TestChessGemmaInference:
         mock_model_instance = Mock()
         mock_tokenizer.from_pretrained.return_value = mock_tokenizer_instance
         mock_model.from_pretrained.return_value = mock_model_instance
-        
         inference = ChessGemmaInference()
-        result = inference.load_model()
-        
+        inference.adapter_path = None
+        inference.model_path = "some/model"
+        with patch('pathlib.Path.exists', return_value=True):
+            result = inference.load_model()
+
         assert result is True
         assert inference.is_loaded is True
         assert inference.model is not None
@@ -55,12 +58,36 @@ class TestChessGemmaInference:
     def test_load_model_failure(self, mock_tokenizer):
         """Test model loading failure."""
         mock_tokenizer.from_pretrained.side_effect = Exception("Load failed")
-        
+
         inference = ChessGemmaInference()
         result = inference.load_model()
-        
+
         assert result is False
         assert inference.is_loaded is False
+
+    @patch('src.inference.inference.PeftModel')
+    @patch('src.inference.inference.AutoTokenizer')
+    @patch('src.inference.inference.AutoModelForCausalLM')
+    def test_load_model_adapter_failure_logs(self, mock_model, mock_tokenizer, mock_peft, caplog):
+        """Adapter loading failure should be logged and base model used."""
+        mock_tokenizer_instance = Mock()
+        mock_model_instance = Mock()
+        mock_tokenizer.from_pretrained.return_value = mock_tokenizer_instance
+        mock_model.from_pretrained.return_value = mock_model_instance
+        mock_peft.from_pretrained.side_effect = Exception("adapter boom")
+
+        inference = ChessGemmaInference()
+        inference.model_path = "some/model"
+        inference.adapter_path = "adapter/path"
+        caplog.clear()
+        with patch('pathlib.Path.exists', return_value=True):
+            with caplog.at_level(logging.ERROR):
+                result = inference.load_model()
+
+        assert result is True
+        assert inference.model is mock_model_instance
+        assert "adapter/path" in caplog.text
+        assert "adapter boom" in caplog.text
     
     @patch('src.inference.inference.AutoTokenizer')
     @patch('src.inference.inference.AutoModelForCausalLM')
@@ -208,9 +235,22 @@ class TestErrorHandling:
         mock_model_instance.generate.side_effect = Exception("Generation failed")
         
         result = inference.generate_response("Test question")
-        
+
         assert "error" in result
         assert result["confidence"] == 0.0
+
+    def test_ensure_adapter_loaded_failure(self, caplog):
+        """Ensure adapter loading failures are logged and raised."""
+        inference = ChessGemmaInference()
+        inference.model = Mock()
+        inference.model.load_adapter.side_effect = Exception("bad adapter")
+        path = Path("adapter/path")
+        caplog.clear()
+        with caplog.at_level(logging.ERROR):
+            with pytest.raises(Exception):
+                inference._ensure_adapter_loaded("uci", path)
+        assert "adapter/path" in caplog.text
+        assert "bad adapter" in caplog.text
 
 
 if __name__ == "__main__":

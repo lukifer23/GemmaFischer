@@ -190,11 +190,22 @@ class ChessGemmaInference:
             applied_adapter = False
             try:
                 if self.adapter_path and Path(self.adapter_path).exists():
-                    self.model = PeftModel.from_pretrained(base_model, str(self.adapter_path), is_trainable=False)
-                    applied_adapter = True
-                    self._active_adapter = "default"
-                    self._loaded_adapters["default"] = True
-            except Exception:
+                    try:
+                        self.model = PeftModel.from_pretrained(base_model, str(self.adapter_path), is_trainable=False)
+                        applied_adapter = True
+                        self._active_adapter = "default"
+                        self._loaded_adapters["default"] = True
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to load adapter from {self.adapter_path}: {e}",
+                            exc_info=True,
+                        )
+                        self.model = base_model
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error while applying adapter from {self.adapter_path}: {e}",
+                    exc_info=True,
+                )
                 self.model = base_model
             if not applied_adapter:
                 self.model = self.model or base_model
@@ -265,8 +276,12 @@ class ChessGemmaInference:
             self._loaded_adapters[physical_name] = True
             self._logical_to_physical[logical_name] = physical_name
             self._adapter_loaded_from[logical_name] = path
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(
+                f"Failed to load adapter '{logical_name}' from {path}: {e}",
+                exc_info=True,
+            )
+            raise
 
     def refresh_adapters(self) -> None:
         """Re-discover latest checkpoints and ensure corresponding adapters are loaded.
@@ -276,7 +291,13 @@ class ChessGemmaInference:
         """
         self._discover_adapter_paths()
         for logical_name, path in self._adapter_paths.items():
-            self._ensure_adapter_loaded(logical_name, path)
+            try:
+                self._ensure_adapter_loaded(logical_name, path)
+            except Exception as e:
+                logger.error(
+                    f"Failed to refresh adapter '{logical_name}' from {path}: {e}",
+                    exc_info=True,
+                )
 
     def set_active_adapter(self, name: Optional[str]) -> None:
         """Switch the active LoRA adapter by logical name (uci/tutor/director).
