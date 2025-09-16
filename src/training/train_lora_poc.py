@@ -86,18 +86,31 @@ class CustomCallback(TrainerCallback):
             enhanced_logs['progress_percent'] = progress
             enhanced_logs['time_elapsed'] = time.time() - state.start_time if hasattr(state, 'start_time') else 0
 
-            # Log enhanced metrics
-            loss_val = logs.get('loss', 'N/A')
-            loss_str = f"{loss_val:.4f}" if isinstance(loss_val, (int, float)) else str(loss_val)
+            # Log enhanced metrics with more details
+            loss_val = logs.get('loss', None)
+            learning_rate = logs.get('learning_rate', None)
+            grad_norm = logs.get('grad_norm', None)
+
+            # Format values safely
+            loss_str = f"{loss_val:.6f}" if isinstance(loss_val, (int, float)) and loss_val is not None else "N/A"
+            lr_str = f"{learning_rate:.2e}" if isinstance(learning_rate, (int, float)) and learning_rate is not None else "N/A"
+            grad_str = f"{grad_norm:.4f}" if isinstance(grad_norm, (int, float)) and grad_norm is not None else "N/A"
+
             cpu_val = system_stats['cpu_percent']
             cpu_str = f"{cpu_val:.1f}" if isinstance(cpu_val, (int, float)) else str(cpu_val)
             mem_used_gb = system_stats['mem_used_calc'] / (1024**3)
             proc_rss_gb = system_stats['proc_rss'] / (1024**3)
-            swap_used_gb = system_stats['swap_used'] / (1024**3)
+
             print(
-                f"Step {state.global_step}/{state.max_steps} ({progress:.1f}%) | Loss: {loss_str} | "
-                f"CPU: {cpu_str}% | SystemUsed: {mem_used_gb:.1f}GB | ProcRSS: {proc_rss_gb:.2f}GB | SwapUsed: {swap_used_gb:.1f}GB"
+                f"Step {state.global_step}/{state.max_steps} ({progress:.1f}%) | "
+                f"Loss: {loss_str} | LR: {lr_str} | GradNorm: {grad_str} | "
+                f"CPU: {cpu_str}% | Mem: {mem_used_gb:.1f}GB | Proc: {proc_rss_gb:.2f}GB"
             )
+
+            # Debug: Print all available log keys
+            if state.global_step % 10 == 0:  # Every 10 steps
+                available_keys = list(logs.keys()) if logs else []
+                print(f"Available log keys: {available_keys}")
 
             # Save enhanced logs
             log_file = Path(args.output_dir) / 'enhanced_train_log.jsonl'
@@ -264,272 +277,332 @@ def main():
     # Use training stability context
     with training_stability_context():
         # Resolve config path (support "auto" and robust relative paths)
-    cfg_path = args.config
-    cfg_dir = Path(__file__).parent / 'configs'
-    if cfg_path == 'auto':
-        auto_map = {
-            'uci': cfg_dir / 'lora_uci.yaml',
-            'tutor': cfg_dir / 'lora_tutor.yaml',
-            'director': cfg_dir / 'lora_director_expert.yaml',
-            'all': cfg_dir / 'lora_finetune.yaml',
+        cfg_path = args.config
+        cfg_dir = Path(__file__).parent / 'configs'
+        if cfg_path == 'auto':
+            auto_map = {
+                'uci': cfg_dir / 'lora_uci.yaml',
+                'tutor': cfg_dir / 'lora_tutor.yaml',
+                'director': cfg_dir / 'lora_director_expert.yaml',
+                'all': cfg_dir / 'lora_finetune.yaml',
+            }
+            cfg_path = str(auto_map.get(args.expert, auto_map['all']))
+        else:
+            # If not an absolute path and not found relative to CWD, try relative to this script
+            p = Path(cfg_path)
+            if not p.exists():
+                alt = cfg_dir / p.name
+                if alt.exists():
+                    cfg_path = str(alt)
+
+        with open(cfg_path, 'r', encoding='utf-8') as f:
+            cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
+
+        # Validate LoRA configuration
+        try:
+            cfg["lora"] = validate_lora_config(cfg.get("lora", {}))
+        except ConfigValidationError as e:
+            print(f"Invalid LoRA configuration: {e}")
+            sys.exit(1)
+
+        # Cap CPU threads to 2 by default if not set
+        os.environ.setdefault('OMP_NUM_THREADS', '2')
+        os.environ.setdefault('MKL_NUM_THREADS', '2')
+        os.environ.setdefault('NUMEXPR_NUM_THREADS', '2')
+
+        model_path = cfg['model']['pretrained_model_path']
+        out_dir = Path(cfg['training']['output_dir'])
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Handle checkpoint resumption
+        resume_from_checkpoint = args.resume_from_checkpoint
+        if resume_from_checkpoint is None and out_dir.exists():
+            # Auto-resume from latest checkpoint
+            checkpoints = list(out_dir.glob("checkpoint-*"))
+            if checkpoints:
+                latest_checkpoint = max(checkpoints, key=lambda x: int(x.name.split("-")[1]))
+                resume_from_checkpoint = str(latest_checkpoint)
+                print(f"📂 Auto-resuming from latest checkpoint: {resume_from_checkpoint}")
+
+        if resume_from_checkpoint:
+            print(f"🔄 Resuming training from checkpoint: {resume_from_checkpoint}")
+            if not Path(resume_from_checkpoint).exists():
+                print(f"⚠️  Checkpoint not found: {resume_from_checkpoint}")
+                resume_from_checkpoint = None
+
+        # Detect curriculum early. If present, we'll build per-phase datasets below
+        use_curriculum = bool(isinstance(cfg, dict) and cfg.get('curriculum'))
+
+        # load dataset(s) only if NOT using curriculum
+        ds = None
+        if not use_curriculum:
+            if 'datasets' in cfg and isinstance(cfg['datasets'], list) and cfg['datasets']:
+                # Weighted mixture using dataset_mixer
+                try:
+                    from src.training.dataset_mixer import build_mixture
+                    specs = []
+                    for item in cfg['datasets']:
+                        p = item.get('path')
+                        w = float(item.get('weight', 1.0))
+                        if p and Path(p).exists():
+                            specs.append({'path': p, 'weight': w})
+                    if not specs:
+                        print('No valid dataset specs found in config.datasets.')
+                        return
+                    ds = build_mixture(specs)
+                    print(f"Loaded mixed dataset from {len(specs)} sources")
+                except Exception as e:
+                    print(f"Failed to build mixed dataset: {e}")
+                    return
+            else:
+                ds_path = cfg.get('dataset', {}).get('path') if isinstance(cfg.get('dataset'), dict) else None
+                if not ds_path:
+                    print('Config must include either curriculum, datasets list, or dataset.path')
+                    return
+                if not Path(ds_path).exists():
+                    print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py or refine_dataset.py first.")
+                    return
+                from src.training.dataset_mixer import _load_single_jsonl
+                ds = _load_single_jsonl(ds_path)
+
+        # Optional expert filtering by task field
+        if ds is not None and args.expert != 'all':
+            task_map = {'uci': 'engine_uci', 'tutor': 'tutor_explain', 'director': 'director_qa'}
+            target_task = task_map.get(args.expert)
+            if target_task:
+                try:
+                    ds = ds.filter(lambda ex: (ex.get('task') or '') == target_task)
+                    print(f"Filtered dataset for task={target_task}, size={len(ds)}")
+                    if len(ds) == 0:
+                        print("No samples matched the requested expert task. Please use --expert all or provide a dataset with task tags.")
+                        return
+                except Exception as e:
+                    print(f"Warning: task filter failed ({e}); proceeding without filtering")
+
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        # load model with the recommended eager attention implementation for Gemma3
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            local_files_only=True,
+            device_map='auto',
+            attn_implementation='eager'
+        )
+
+        # prepare peft lora
+        lcfg = cfg['lora']
+        peft_config = LoraConfig(
+            r=lcfg['r'],
+            lora_alpha=lcfg['lora_alpha'],
+            target_modules=lcfg['target_modules'],
+            lora_dropout=lcfg.get('lora_dropout', 0.0),
+            bias='none',
+            task_type='CAUSAL_LM'
+        )
+        model = get_peft_model(model, peft_config)
+
+        # Move model to MPS device and ensure proper setup
+        if torch.backends.mps.is_available():
+            print("🔧 Moving model to MPS device...")
+            model = model.to('mps')
+            print("🔧 Applying MPS model optimizations...")
+            mps_optimizer = MPSMemoryOptimizer()
+            model = mps_optimizer.optimize_model_for_mps(model)
+            # Apply safe gradient checkpointing
+            mps_optimizer.apply_safe_gradient_checkpointing(model)
+
+            # Ensure gradients are enabled for MPS
+            model.requires_grad_(True)
+            for param in model.parameters():
+                if param.device.type == 'mps':
+                    param.requires_grad_(True)
+
+            print(f"✅ Model ready on MPS device: {next(model.parameters()).device}")
+            print(f"✅ Gradients enabled: {next(model.parameters()).requires_grad}")
+        else:
+            print("🔧 Moving model to CPU...")
+            model = model.to('cpu')
+
+        # tokenization / collator
+        # allow shorter sequences on memory-constrained devices
+        tokenizer_max_length = 512
+        if torch.backends.mps.is_available():
+            print('MPS backend detected — applying memory-safe defaults: batch_size=1, max_length=256')
+            tokenizer_max_length = 256
+
+        # Default collator preference: enable for tutor/director when not explicitly requested
+        use_instruction = bool(args.use_instruction_collator)
+        if not use_instruction and args.expert in ('tutor', 'director'):
+            use_instruction = True
+
+        if not use_instruction:
+            def preprocess(example):
+                if example.get('prompt') is not None and example.get('response') is not None:
+                    text = f"{example['prompt']}{example['response']}"
+                else:
+                    text = example.get('text', '')
+                return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
+
+        # Only map here if a single/mixed dataset was already built (no curriculum)
+        if 'curriculum' not in cfg or not cfg.get('curriculum'):
+            ds = ds.map(preprocess, batched=False)
+            data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+        else:
+            data_collator = InstructionDataCollator(tokenizer, max_length=tokenizer_max_length)
+
+        # Coerce numeric config values to expected types
+        tcfg = cfg['training']
+        per_device_train_batch_size = int(tcfg.get('per_device_train_batch_size', 1))
+        gradient_accumulation_steps = int(tcfg.get('gradient_accumulation_steps', 1))
+        num_train_epochs = int(tcfg.get('num_train_epochs', 1))
+        max_steps = int(tcfg.get('max_steps', 0))
+        if int(args.max_steps_override or 0) > 0:
+            max_steps = int(args.max_steps_override)
+        learning_rate = float(tcfg.get('learning_rate', 1e-4))
+        logging_steps = int(tcfg.get('logging_steps', 10))
+        save_steps = int(tcfg.get('save_steps', 50))
+
+        # If MPS is available, enforce tiny per-device batch size to reduce memory usage
+        if torch.backends.mps.is_available():
+            per_device_train_batch_size = min(per_device_train_batch_size, 1)
+
+        # Evaluation configuration
+        eval_strategy_value = 'no' if args.disable_eval else 'steps'
+        eval_steps_value = int(args.eval_steps) if (args.eval_steps is not None) else save_steps
+
+        # Create base training arguments
+        base_training_args = {
+            'output_dir': str(out_dir),
+            'per_device_train_batch_size': per_device_train_batch_size,
+            'gradient_accumulation_steps': gradient_accumulation_steps,
+            'num_train_epochs': num_train_epochs,
+            'max_steps': max_steps,
+            'learning_rate': learning_rate,
+            'logging_steps': logging_steps,
+            'save_steps': save_steps,
+            'save_total_limit': 3,  # Keep only last 3 checkpoints to save disk space
+            'eval_strategy': eval_strategy_value,
+            'eval_steps': eval_steps_value,
+            'save_strategy': "steps",
+            'load_best_model_at_end': (not args.disable_eval),
+            'metric_for_best_model': "eval_loss",
+            'greater_is_better': False,
+            'fp16': tcfg.get('fp16', False),
+            'bf16': tcfg.get('bf16', False),
+            'lr_scheduler_type': "cosine",  # Cosine annealing for better convergence
+            'warmup_steps': int(max_steps * 0.1),  # 10% warmup steps
+            'weight_decay': 0.01,
+            'adam_beta1': 0.9,
+            'adam_beta2': 0.999,
+            'max_grad_norm': 1.0,
+            'report_to': [],  # We'll add MLflow later
+            'logging_first_step': True,
+            'logging_nan_inf_filter': False,  # Keep all logs for debugging
+            'disable_tqdm': False,  # Ensure progress bar is enabled
+            'log_level': 'info',  # Set logging level to info
+            'log_level_replica': 'warning',  # Replica logging level
+            'remove_unused_columns': not use_instruction,
+            # MPS-specific dataloader settings to avoid pin_memory warnings
+            'dataloader_pin_memory': False,
+            'dataloader_num_workers': 0,
         }
-        cfg_path = str(auto_map.get(args.expert, auto_map['all']))
-    else:
-        # If not an absolute path and not found relative to CWD, try relative to this script
-        p = Path(cfg_path)
-        if not p.exists():
-            alt = cfg_dir / p.name
-            if alt.exists():
-                cfg_path = str(alt)
 
-    with open(cfg_path, 'r', encoding='utf-8') as f:
-        cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
+        # Apply MPS optimizations if available
+        if torch.backends.mps.is_available():
+            print("🔧 Applying MPS optimizations for enhanced stability...")
+            mps_optimizer = MPSMemoryOptimizer()
+            optimized_args = mps_optimizer.get_mps_optimized_training_args(base_training_args, model, tokenizer)
+            training_args = TrainingArguments(**optimized_args)
+        else:
+            training_args = TrainingArguments(**base_training_args)
 
-    # Validate LoRA configuration
-    try:
-        cfg["lora"] = validate_lora_config(cfg.get("lora", {}))
-    except ConfigValidationError as e:
-        print(f"Invalid LoRA configuration: {e}")
-        sys.exit(1)
+        # Add resume from checkpoint if specified
+        if resume_from_checkpoint:
+            training_args.resume_from_checkpoint = resume_from_checkpoint
 
-    # Cap CPU threads to 2 by default if not set
-    os.environ.setdefault('OMP_NUM_THREADS', '2')
-    os.environ.setdefault('MKL_NUM_THREADS', '2')
-    os.environ.setdefault('NUMEXPR_NUM_THREADS', '2')
+        # Create evaluation dataset (10% split)
+        def split_train_eval(dataset):
+            if hasattr(dataset, 'train_test_split'):
+                s = dataset.train_test_split(test_size=0.1, seed=3407)
+                return s['train'], s['test']
+            size = len(dataset)
+            trn = int(0.9 * size)
+            return dataset.select(range(trn)), dataset.select(range(trn, size))
 
-    model_path = cfg['model']['pretrained_model_path']
-    out_dir = Path(cfg['training']['output_dir'])
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    # Handle checkpoint resumption
-    resume_from_checkpoint = args.resume_from_checkpoint
-    if resume_from_checkpoint is None and out_dir.exists():
-        # Auto-resume from latest checkpoint
-        checkpoints = list(out_dir.glob("checkpoint-*"))
-        if checkpoints:
-            latest_checkpoint = max(checkpoints, key=lambda x: int(x.name.split("-")[1]))
-            resume_from_checkpoint = str(latest_checkpoint)
-            print(f"📂 Auto-resuming from latest checkpoint: {resume_from_checkpoint}")
-
-    if resume_from_checkpoint:
-        print(f"🔄 Resuming training from checkpoint: {resume_from_checkpoint}")
-        if not Path(resume_from_checkpoint).exists():
-            print(f"⚠️  Checkpoint not found: {resume_from_checkpoint}")
-            resume_from_checkpoint = None
-
-    # Detect curriculum early. If present, we'll build per-phase datasets below
-    use_curriculum = bool(isinstance(cfg, dict) and cfg.get('curriculum'))
-
-    # load dataset(s) only if NOT using curriculum
-    ds = None
-    if not use_curriculum:
-        if 'datasets' in cfg and isinstance(cfg['datasets'], list) and cfg['datasets']:
-            # Weighted mixture using dataset_mixer
-            try:
-                from src.training.dataset_mixer import build_mixture
+        # Curriculum support: if cfg['curriculum'] present, iterate phases
+        curriculum = cfg.get('curriculum') if isinstance(cfg, dict) else None
+        if curriculum and isinstance(curriculum, list) and len(curriculum) > 0:
+            print('Using curriculum with', len(curriculum), 'phases')
+            from src.training.dataset_mixer import build_mixture
+            total_phases = len(curriculum)
+            for idx, phase in enumerate(curriculum, 1):
+                phase_steps = int(phase.get('steps', 0))
+                phase_specs = phase.get('datasets', [])
+                print(f"Phase {idx}/{total_phases}: steps={phase_steps}")
                 specs = []
-                for item in cfg['datasets']:
+                for item in phase_specs:
                     p = item.get('path')
                     w = float(item.get('weight', 1.0))
                     if p and Path(p).exists():
                         specs.append({'path': p, 'weight': w})
                 if not specs:
-                    print('No valid dataset specs found in config.datasets.')
-                    return
-                ds = build_mixture(specs)
-                print(f"Loaded mixed dataset from {len(specs)} sources")
-            except Exception as e:
-                print(f"Failed to build mixed dataset: {e}")
-                return
+                    print('  Skipping phase; no valid datasets')
+                    continue
+                mixed = build_mixture(specs)
+                if len(mixed) == 0:
+                    print('  Skipping phase; built dataset is empty')
+                    continue
+                # Tokenize per-phase dataset only if not using instruction collator
+                if not use_instruction:
+                    mixed = mixed.map(preprocess, batched=False)
+                train_dataset, eval_dataset = split_train_eval(mixed)
+                # Override steps for this phase if provided
+                phase_args = TrainingArguments(
+                    **{**training_args.to_dict(), 'max_steps': (int(args.max_steps_override) or phase_steps or max_steps)}
+                )
+
+                # Ensure model is in training mode and gradients are enabled for each phase
+                model.train()
+                model.requires_grad_(True)
+
+                # For MPS, ensure proper gradient computation
+                if torch.backends.mps.is_available():
+                    for param in model.parameters():
+                        if param.device.type == 'mps':
+                            param.requires_grad_(True)
+                            # Ensure parameter data type is compatible with MPS
+                            if param.dtype not in [torch.float32, torch.float16]:
+                                param.data = param.data.float()
+
+                trainer = Trainer(
+                    model=model,
+                    args=phase_args,
+                    train_dataset=train_dataset,
+                    eval_dataset=None if args.disable_eval else eval_dataset,
+                    data_collator=data_collator,
+                    callbacks=[CustomCallback()]
+                )
+                trainer.state.start_time = time.time()
+                trainer.train()
+                print(f"Completed curriculum phase {idx}")
         else:
-            ds_path = cfg.get('dataset', {}).get('path') if isinstance(cfg.get('dataset'), dict) else None
-            if not ds_path:
-                print('Config must include either curriculum, datasets list, or dataset.path')
-                return
-            if not Path(ds_path).exists():
-                print(f"Dataset {ds_path} not found. Run create_finetune_dataset.py or refine_dataset.py first.")
-                return
-            from src.training.dataset_mixer import _load_single_jsonl
-            ds = _load_single_jsonl(ds_path)
+            # Single-phase training
+            train_dataset, eval_dataset = split_train_eval(ds)
+            # Ensure model is in training mode and gradients are enabled
+            model.train()
+            model.requires_grad_(True)
 
-    # Optional expert filtering by task field
-    if ds is not None and args.expert != 'all':
-        task_map = {'uci': 'engine_uci', 'tutor': 'tutor_explain', 'director': 'director_qa'}
-        target_task = task_map.get(args.expert)
-        if target_task:
-            try:
-                ds = ds.filter(lambda ex: (ex.get('task') or '') == target_task)
-                print(f"Filtered dataset for task={target_task}, size={len(ds)}")
-                if len(ds) == 0:
-                    print("No samples matched the requested expert task. Please use --expert all or provide a dataset with task tags.")
-                    return
-            except Exception as e:
-                print(f"Warning: task filter failed ({e}); proceeding without filtering")
-
-    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-    # load model with the recommended eager attention implementation for Gemma3
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        local_files_only=True,
-        device_map='auto',
-        attn_implementation='eager'
-    )
-
-    # prepare peft lora
-    lcfg = cfg['lora']
-    peft_config = LoraConfig(
-        r=lcfg['r'],
-        lora_alpha=lcfg['lora_alpha'],
-        target_modules=lcfg['target_modules'],
-        lora_dropout=lcfg.get('lora_dropout', 0.0),
-        bias='none',
-        task_type='CAUSAL_LM'
-    )
-    model = get_peft_model(model, peft_config)
-
-    # Apply MPS optimizations to the model if available
-    if torch.backends.mps.is_available():
-        print("🔧 Applying MPS model optimizations...")
-        mps_optimizer = MPSMemoryOptimizer()
-        model = mps_optimizer.optimize_model_for_mps(model)
-        # Apply safe gradient checkpointing
-        mps_optimizer.apply_safe_gradient_checkpointing(model)
-
-    # tokenization / collator
-    # allow shorter sequences on memory-constrained devices
-    tokenizer_max_length = 512
-    if torch.backends.mps.is_available():
-        print('MPS backend detected — applying memory-safe defaults: batch_size=1, max_length=256')
-        tokenizer_max_length = 256
-
-    # Default collator preference: enable for tutor/director when not explicitly requested
-    use_instruction = bool(args.use_instruction_collator)
-    if not use_instruction and args.expert in ('tutor', 'director'):
-        use_instruction = True
-
-    if not use_instruction:
-        def preprocess(example):
-            if example.get('prompt') is not None and example.get('response') is not None:
-                text = f"{example['prompt']}{example['response']}"
-            else:
-                text = example.get('text', '')
-            return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
-
-        # Only map here if a single/mixed dataset was already built (no curriculum)
-        if 'curriculum' not in cfg or not cfg.get('curriculum'):
-            ds = ds.map(preprocess, batched=False)
-        data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
-    else:
-        data_collator = InstructionDataCollator(tokenizer, max_length=tokenizer_max_length)
-
-    # Coerce numeric config values to expected types
-    tcfg = cfg['training']
-    per_device_train_batch_size = int(tcfg.get('per_device_train_batch_size', 1))
-    gradient_accumulation_steps = int(tcfg.get('gradient_accumulation_steps', 1))
-    num_train_epochs = int(tcfg.get('num_train_epochs', 1))
-    max_steps = int(tcfg.get('max_steps', 0))
-    if int(args.max_steps_override or 0) > 0:
-        max_steps = int(args.max_steps_override)
-    learning_rate = float(tcfg.get('learning_rate', 1e-4))
-    logging_steps = int(tcfg.get('logging_steps', 10))
-    save_steps = int(tcfg.get('save_steps', 50))
-
-    # If MPS is available, enforce tiny per-device batch size to reduce memory usage
-    if torch.backends.mps.is_available():
-        per_device_train_batch_size = min(per_device_train_batch_size, 1)
-
-    # Evaluation configuration
-    eval_strategy_value = 'no' if args.disable_eval else 'steps'
-    eval_steps_value = int(args.eval_steps) if (args.eval_steps is not None) else save_steps
-
-    # Create base training arguments
-    base_training_args = {
-        'output_dir': str(out_dir),
-        'per_device_train_batch_size': per_device_train_batch_size,
-        'gradient_accumulation_steps': gradient_accumulation_steps,
-        'num_train_epochs': num_train_epochs,
-        'max_steps': max_steps,
-        'learning_rate': learning_rate,
-        'logging_steps': logging_steps,
-        'save_steps': save_steps,
-        'save_total_limit': 3,  # Keep only last 3 checkpoints to save disk space
-        'eval_strategy': eval_strategy_value,
-        'eval_steps': eval_steps_value,
-        'save_strategy': "steps",
-        'load_best_model_at_end': (not args.disable_eval),
-        'metric_for_best_model': "eval_loss",
-        'greater_is_better': False,
-        'fp16': tcfg.get('fp16', False),
-        'bf16': tcfg.get('bf16', False),
-        'lr_scheduler_type': "cosine",  # Cosine annealing for better convergence
-        'warmup_steps': int(max_steps * 0.1),  # 10% warmup steps
-        'weight_decay': 0.01,
-        'adam_beta1': 0.9,
-        'adam_beta2': 0.999,
-        'max_grad_norm': 1.0,
-        'report_to': [],  # We'll add MLflow later
-        'logging_first_step': True,
-        'logging_nan_inf_filter': False,
-        'remove_unused_columns': not use_instruction,
-    }
-
-    # Apply MPS optimizations if available
-    if torch.backends.mps.is_available():
-        print("🔧 Applying MPS optimizations for enhanced stability...")
-        mps_optimizer = MPSMemoryOptimizer()
-        optimized_args = mps_optimizer.get_mps_optimized_training_args(base_training_args, model, tokenizer)
-        training_args = TrainingArguments(**optimized_args)
-    else:
-        training_args = TrainingArguments(**base_training_args)
-
-    # Add resume from checkpoint if specified
-    if resume_from_checkpoint:
-        training_args.resume_from_checkpoint = resume_from_checkpoint
-
-    # Create evaluation dataset (10% split)
-    def split_train_eval(dataset):
-        if hasattr(dataset, 'train_test_split'):
-            s = dataset.train_test_split(test_size=0.1, seed=3407)
-            return s['train'], s['test']
-        size = len(dataset)
-        trn = int(0.9 * size)
-        return dataset.select(range(trn)), dataset.select(range(trn, size))
-
-    # Curriculum support: if cfg['curriculum'] present, iterate phases
-    curriculum = cfg.get('curriculum') if isinstance(cfg, dict) else None
-    if curriculum and isinstance(curriculum, list) and len(curriculum) > 0:
-        print('Using curriculum with', len(curriculum), 'phases')
-        from src.training.dataset_mixer import build_mixture
-        total_phases = len(curriculum)
-        for idx, phase in enumerate(curriculum, 1):
-            phase_steps = int(phase.get('steps', 0))
-            phase_specs = phase.get('datasets', [])
-            print(f"Phase {idx}/{total_phases}: steps={phase_steps}")
-            specs = []
-            for item in phase_specs:
-                p = item.get('path')
-                w = float(item.get('weight', 1.0))
-                if p and Path(p).exists():
-                    specs.append({'path': p, 'weight': w})
-            if not specs:
-                print('  Skipping phase; no valid datasets')
-                continue
-            mixed = build_mixture(specs)
-            if len(mixed) == 0:
-                print('  Skipping phase; built dataset is empty')
-                continue
-            # Tokenize per-phase dataset only if not using instruction collator
-            if not use_instruction:
-                mixed = mixed.map(preprocess, batched=False)
-            train_dataset, eval_dataset = split_train_eval(mixed)
-            # Override steps for this phase if provided
-            phase_args = TrainingArguments(
-                **{**training_args.to_dict(), 'max_steps': (int(args.max_steps_override) or phase_steps or max_steps)}
-            )
+            # For MPS, ensure proper gradient computation
+            if torch.backends.mps.is_available():
+                for param in model.parameters():
+                    if param.device.type == 'mps':
+                        param.requires_grad_(True)
+                        # Ensure parameter data type is compatible with MPS
+                        if param.dtype not in [torch.float32, torch.float16]:
+                            param.data = param.data.float()
 
             trainer = Trainer(
                 model=model,
-                args=phase_args,
+                args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=None if args.disable_eval else eval_dataset,
                 data_collator=data_collator,
@@ -537,20 +610,6 @@ def main():
             )
             trainer.state.start_time = time.time()
             trainer.train()
-            print(f"Completed curriculum phase {idx}")
-    else:
-        # Single-phase training
-        train_dataset, eval_dataset = split_train_eval(ds)
-        trainer = Trainer(
-            model=model,
-            args=training_args,
-            train_dataset=train_dataset,
-            eval_dataset=None if args.disable_eval else eval_dataset,
-            data_collator=data_collator,
-            callbacks=[CustomCallback()]
-        )
-        trainer.state.start_time = time.time()
-        trainer.train()
 
         print('=' * 60)
         print('Training complete. Enhanced logs and checkpoints in', out_dir)

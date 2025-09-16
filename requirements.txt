@@ -42,6 +42,7 @@ scipy  # For statistical analysis and regression detection
 # Utilities
 pyyaml
 psutil
+pydantic  # For configuration validation
 
 # Mac-specific optimizations
 # Note: All ML operations use MPS acceleration on M3 Pro

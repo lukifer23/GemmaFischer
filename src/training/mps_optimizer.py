@@ -155,11 +155,10 @@ class MPSMemoryOptimizer:
                 # MPS doesn't support bf16/fp16 mixed precision - use fp32
                 'bf16': False,
                 'fp16': False,
-                'dataloader_pin_memory': False,  # MPS doesn't benefit from pinned memory
-                'dataloader_num_workers': 0,  # Avoid multiprocessing issues on MPS
+                # Note: dataloader parameters are handled in base config to avoid conflicts
                 'optim': 'adamw_torch',  # MPS-optimized optimizer
                 'gradient_checkpointing': True,  # ENABLED: Critical for memory efficiency on MPS
-                'attn_implementation': 'eager',  # Use eager attention for MPS stability
+                # Note: attn_implementation should be set in model loading, not TrainingArguments
             })
 
             # Improved batch sizing for MPS stability
@@ -170,15 +169,21 @@ class MPSMemoryOptimizer:
 
         # Memory monitoring with more frequent logging
         optimized_config.update({
-            'logging_steps': min(optimized_config.get('logging_steps', 50), 10),  # More frequent logging
+            'logging_steps': min(optimized_config.get('logging_steps', 50), 5),  # More frequent logging (every 5 steps)
             'save_steps': optimized_config.get('save_steps', 500),
-            'evaluation_strategy': 'steps',
-            'eval_steps': optimized_config.get('save_steps', 500),  # Evaluate at save points
             'save_total_limit': 3,  # Keep only last 3 checkpoints
-            'load_best_model_at_end': True,
-            'metric_for_best_model': 'eval_loss',
-            'greater_is_better': False,
+            'logging_first_step': True,  # Ensure first step is logged
         })
+
+        # Only add evaluation-related parameters if evaluation is enabled
+        eval_strategy = optimized_config.get('eval_strategy')
+        if eval_strategy and eval_strategy != 'no':
+            optimized_config.update({
+                'eval_steps': optimized_config.get('save_steps', 500),  # Evaluate at save points
+                'load_best_model_at_end': True,
+                'metric_for_best_model': 'eval_loss',
+                'greater_is_better': False,
+            })
 
         # Learning rate adjustments for MPS stability
         if self.is_mps:
@@ -191,12 +196,13 @@ class MPSMemoryOptimizer:
             optimized_config['warmup_steps'] = max(10, int(max_steps * 0.1))  # 10% warmup
             optimized_config['lr_scheduler_type'] = 'cosine'
 
-        # Timeout and stability settings
+        # Timeout and stability settings - only add valid parameters
         optimized_config.update({
-            'dataloader_timeout': 0,  # Disable timeout for stability
-            'remove_unused_columns': False,  # Keep all columns for stability
             'report_to': [],  # Disable external reporting for stability
         })
+
+        # Note: remove_unused_columns and dataloader_timeout are handled in base config
+        # to avoid conflicts with TrainingArguments validation
 
         logger.info("⚡ Enhanced MPS-optimized training configuration:")
         for key, value in optimized_config.items():
