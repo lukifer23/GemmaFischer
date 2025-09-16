@@ -501,41 +501,41 @@ class ChessGemmaInference:
 
             # Use MoE routing if available and enabled
             if self.moe_enabled and self.moe_manager and mode in ['tutor', 'engine', 'director']:
-            try:
-                # Extract FEN for MoE routing
-                from .uci_utils import extract_fen
-                fen = extract_fen(question) or extract_fen(context or "")
+                try:
+                    # Extract FEN for MoE routing
+                    from .uci_utils import extract_fen
+                    fen = extract_fen(question) or extract_fen(context or "")
 
-                if fen:
-                    # Determine query type for MoE
-                    query_type = "auto"
-                    if mode == "engine":
-                        query_type = "engine"
-                    elif mode == "tutor":
-                        query_type = "tutor"
-                    elif mode == "director":
-                        query_type = "director"
+                    if fen:
+                        # Determine query type for MoE
+                        query_type = "auto"
+                        if mode == "engine":
+                            query_type = "engine"
+                        elif mode == "tutor":
+                            query_type = "tutor"
+                        elif mode == "director":
+                            query_type = "director"
 
-                    # Use MoE for intelligent routing
-                    moe_result = self.moe_manager.analyze_position(fen, query_type)
-                    response = moe_result.get('response', '')
+                        # Use MoE for intelligent routing
+                        moe_result = self.moe_manager.analyze_position(fen, query_type)
+                        response = moe_result.get('response', '')
 
-                    # Add MoE metadata to response
-                    moe_info = moe_result.get('routing_info', {})
-                    return {
-                        "response": response,
-                        "confidence": moe_info.get('confidence_score', 0.5),
-                        "model_loaded": True,
-                        "mode": mode,
-                        "moe_used": True,
-                        "primary_expert": moe_info.get('primary_expert'),
-                        "ensemble_mode": moe_info.get('ensemble_mode'),
-                        "routing_reasoning": moe_info.get('reasoning'),
-                        "expert_weights": moe_info.get('expert_weights', {}),
-                    }
-            except Exception as e:
-                logger.info(f"MoE routing failed, falling back to standard inference: {e}")
-                # Fall through to standard inference
+                        # Add MoE metadata to response
+                        moe_info = moe_result.get('routing_info', {})
+                        return {
+                            "response": response,
+                            "confidence": moe_info.get('confidence_score', 0.5),
+                            "model_loaded": True,
+                            "mode": mode,
+                            "moe_used": True,
+                            "primary_expert": moe_info.get('primary_expert'),
+                            "ensemble_mode": moe_info.get('ensemble_mode'),
+                            "routing_reasoning": moe_info.get('reasoning'),
+                            "expert_weights": moe_info.get('expert_weights', {}),
+                        }
+                except Exception as e:
+                    logger.info(f"MoE routing failed, falling back to standard inference: {e}")
+                    # Fall through to standard inference
 
         try:
             messages = self._build_messages(question, context, mode)
