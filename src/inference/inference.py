@@ -466,8 +466,9 @@ class ChessGemmaInference:
         context: Optional[str] = None,
         mode: str = "tutor",
         max_new_tokens: int = 200,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        do_sample: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Generate a response dict with performance optimizations and error handling."""
         import time
@@ -486,6 +487,9 @@ class ChessGemmaInference:
                     "generation_time": time.time() - start_time,
                     "cached": False
                 }
+
+            # Apply expert-specific decoding parameters
+            temperature, top_p, do_sample = self._get_expert_decoding_params(mode, temperature, top_p, do_sample)
 
             # Check response cache for identical requests
             cache_key = self._create_cache_key(question, context, mode, max_new_tokens, temperature, top_p)
@@ -580,7 +584,7 @@ class ChessGemmaInference:
                     outputs = self.model.generate(
                         **inputs,
                         max_new_tokens=max_new_tokens,
-                        do_sample=True,
+                        do_sample=do_sample,
                         top_p=top_p,
                         temperature=temperature,
                         pad_token_id=self.tokenizer.eos_token_id,
@@ -727,6 +731,51 @@ class ChessGemmaInference:
                 "cached": False,
                 "cache_hit_rate": self._generation_stats['cache_hit_rate']
             }
+
+    # ----------------------
+    # Expert-specific decoding parameters
+    # ----------------------
+    def _get_expert_decoding_params(self, mode: str, temperature: Optional[float], 
+                                  top_p: Optional[float], do_sample: Optional[bool]) -> Tuple[float, float, bool]:
+        """Get expert-specific decoding parameters based on mode.
+        
+        Args:
+            mode: Expert mode (engine, tutor, director)
+            temperature: Override temperature (None to use expert default)
+            top_p: Override top_p (None to use expert default)
+            do_sample: Override do_sample (None to use expert default)
+            
+        Returns:
+            Tuple of (temperature, top_p, do_sample)
+        """
+        # Expert-specific defaults
+        expert_params = {
+            "engine": {
+                "temperature": 0.0,
+                "top_p": 1.0,
+                "do_sample": False
+            },
+            "tutor": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "do_sample": True
+            },
+            "director": {
+                "temperature": 0.6,
+                "top_p": 0.9,
+                "do_sample": True
+            }
+        }
+        
+        # Get expert defaults
+        expert_defaults = expert_params.get(mode, expert_params["tutor"])
+        
+        # Use provided values or expert defaults
+        final_temperature = temperature if temperature is not None else expert_defaults["temperature"]
+        final_top_p = top_p if top_p is not None else expert_defaults["top_p"]
+        final_do_sample = do_sample if do_sample is not None else expert_defaults["do_sample"]
+        
+        return final_temperature, final_top_p, final_do_sample
 
     # ----------------------
     # Engine helpers

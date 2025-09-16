@@ -22,6 +22,12 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
+from src.inference.uci_utils import (
+    post_process_uci_response, 
+    create_engine_prompt_strict,
+    create_tutor_prompt_with_uci,
+    extract_and_validate_uci
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -334,7 +340,7 @@ class UCIBridge:
             return None
 
     def _generate_chessgemmma_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[str]:
-        """Generate a move using ChessGemma with MoE routing"""
+        """Generate a move using ChessGemma with enhanced UCI validation and post-processing"""
         if self.inference is None:
             return None
 
@@ -348,29 +354,39 @@ class UCIBridge:
                 # Use MoE auto-routing if enabled
                 expert_mode = "auto" if self.options.moe_enabled else "uci"
 
-            # Create prompt based on mode
+            # Create prompt based on mode using enhanced prompt functions
             if expert_mode == "tutor":
-                prompt = f"FEN: {fen}\nQuestion: Analyze this position step by step.\nStyle: {self.options.style}\nMode: Tutor\n\n1. Evaluate the current position\n2. Consider candidate moves\n3. Choose the best move with reasoning\n\nRespond with the best move in UCI format at the end."
+                prompt = create_tutor_prompt_with_uci(fen, "Analyze this position step by step")
             else:
-                prompt = f"FEN: {fen}\nMove:\nStyle: {self.options.style}\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+                prompt = create_engine_prompt_strict(fen)
 
             # Generate response using ChessGemma
-            response = self.inference.generate_response(prompt, expert=expert_mode)
+            response_dict = self.inference.generate_response(
+                prompt, 
+                mode=expert_mode,
+                max_new_tokens=8,  # Limit for UCI moves
+                temperature=0.0,   # Deterministic for engine mode
+                top_p=1.0
+            )
+            
+            response = response_dict.get('response', '')
+            if not response:
+                logger.warning("Empty response from ChessGemma")
+                return None
 
-            # Extract move from response
-            if expert_mode == "tutor":
-                # Look for "Best move: <uci>" pattern in tutor mode
-                import re
-                match = re.search(r'Best move:\s*([a-h][1-8][a-h][1-8][qrbn]?)', response, re.IGNORECASE)
-                if match:
-                    return match.group(1).lower()
+            # Use enhanced post-processing with strict validation
+            uci_move = post_process_uci_response(
+                response, 
+                board, 
+                fallback_to_stockfish=self.options.use_stockfish_fallback
+            )
+            
+            if uci_move:
+                logger.info(f"ChessGemma generated valid UCI move: {uci_move}")
+                return uci_move
             else:
-                # UCI mode: response should be just the move
-                response = response.strip()
-                if response and len(response) >= 4 and len(response) <= 6:
-                    return response.lower()
-
-            return None
+                logger.warning(f"ChessGemma failed to generate valid UCI move from: {response[:100]}...")
+                return None
 
         except Exception as e:
             logger.error(f"Error generating ChessGemma move: {e}")

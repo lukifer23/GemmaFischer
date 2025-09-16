@@ -1,0 +1,104 @@
+{
+  "queries": [
+    {
+      "question": "What is the best move for white in this position? FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "expected_expert": "uci",
+      "category": "move_generation"
+    },
+    {
+      "question": "Explain the Sicilian Defense and its main variations",
+      "expected_expert": "director",
+      "category": "opening_theory"
+    },
+    {
+      "question": "Analyze this tactical position: FEN: r3k2r/Pppp1ppp/1b3nbN/nP6/1BBP1P1q/3P4/Pp1P1PPp/RNBQ1RK1 w kq - 0 1",
+      "expected_expert": "tutor",
+      "category": "position_analysis"
+    },
+    {
+      "question": "What are the rules for castling in chess?",
+      "expected_expert": "director",
+      "category": "rules"
+    },
+    {
+      "question": "Find the best move: FEN: rnbqkb1r/pppp1ppp/5n2/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+      "expected_expert": "uci",
+      "category": "move_generation"
+    },
+    {
+      "question": "How do I improve my chess strategy?",
+      "expected_expert": "director",
+      "category": "strategy"
+    },
+    {
+      "question": "Explain this endgame position: FEN: 8/8/8/8/8/8/4K3/4k3 w - - 0 1",
+      "expected_expert": "tutor",
+      "category": "endgame_analysis"
+    },
+    {
+      "question": "What is a fork in chess?",
+      "expected_expert": "director",
+      "category": "tactics"
+    },
+    {
+      "question": "Best move for black: FEN: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "expected_expert": "uci",
+      "category": "move_generation"
+    },
+    {
+      "question": "Analyze the pawn structure in this position: FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+      "expected_expert": "tutor",
+      "category": "positional_analysis"
+    },
+    {
+      "question": "What is the difference between a pin and a skewer?",
+      "expected_expert": "director",
+      "category": "tactics"
+    },
+    {
+      "question": "Find the winning move: FEN: r3k2r/Pppp1ppp/1b3nbN/nP6/1BBP1P1q/3P4/Pp1P1PPp/RNBQ1RK1 w kq - 0 1",
+      "expected_expert": "uci",
+      "category": "tactical_solve"
+    },
+    {
+      "question": "Explain the concept of tempo in chess",
+      "expected_expert": "director",
+      "category": "strategy"
+    },
+    {
+      "question": "Analyze this complex middlegame position: FEN: r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1",
+      "expected_expert": "tutor",
+      "category": "middlegame_analysis"
+    },
+    {
+      "question": "What is the best opening for beginners?",
+      "expected_expert": "director",
+      "category": "opening_advice"
+    },
+    {
+      "question": "Calculate the best move: FEN: r3k2r/Pppp1ppp/1b3nbN/nP6/1BBP1P1q/3P4/Pp1P1PPp/RNBQ1RK1 w kq - 0 1",
+      "expected_expert": "uci",
+      "category": "calculation"
+    },
+    {
+      "question": "How do I recognize tactical patterns?",
+      "expected_expert": "director",
+      "category": "tactics"
+    },
+    {
+      "question": "Explain the key ideas in the Ruy Lopez opening",
+      "expected_expert": "director",
+      "category": "opening_theory"
+    },
+    {
+      "question": "Analyze this endgame: FEN: 8/8/8/8/8/8/4K3/4k3 w - - 0 1",
+      "expected_expert": "tutor",
+      "category": "endgame_analysis"
+    },
+    {
+      "question": "What move should I play here? FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "expected_expert": "uci",
+      "category": "move_generation"
+    }
+  ]
+}

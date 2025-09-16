@@ -34,7 +34,13 @@ try:
     import chess
     from src.inference.inference import get_inference_instance
     from src.inference.chess_engine import ChessEngineManager
-    from src.inference.uci_utils import extract_first_legal_move, extract_first_legal_move_uci
+    from src.inference.uci_utils import (
+        extract_first_legal_move, 
+        extract_first_legal_move_uci,
+        post_process_uci_response,
+        create_engine_prompt_strict,
+        create_tutor_prompt_with_uci
+    )
     from src.web.chess_game import ChessGame, ChessRAG
     from src.web.stockfish_match import StockfishMatch
 except ImportError as e:
