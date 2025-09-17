@@ -434,18 +434,20 @@ def main():
         if not use_instruction and args.expert in ('tutor', 'director'):
             use_instruction = True
 
-        if not use_instruction:
-            def preprocess(example):
-                if example.get('prompt') is not None and example.get('response') is not None:
-                    text = f"{example['prompt']}{example['response']}"
-                else:
-                    text = example.get('text', '')
-                return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
+        def preprocess(example):
+            if example.get('prompt') is not None and example.get('response') is not None:
+                text = f"{example['prompt']}{example['response']}"
+            else:
+                text = example.get('text', '')
+            return tokenizer(text, truncation=True, max_length=tokenizer_max_length)
 
         # Only map here if a single/mixed dataset was already built (no curriculum)
         if 'curriculum' not in cfg or not cfg.get('curriculum'):
             ds = ds.map(preprocess, batched=False)
-            data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
+            if use_instruction:
+                data_collator = InstructionDataCollator(tokenizer, max_length=tokenizer_max_length)
+            else:
+                data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
         else:
             data_collator = InstructionDataCollator(tokenizer, max_length=tokenizer_max_length)
 

@@ -26,5 +26,5 @@ lora:
   target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
   dropout: 0.05
 dataset:
-  path: "data/formatted/director_expert.jsonl"
+  path: "data/standardized/standardized_director_expert.jsonl"
 
