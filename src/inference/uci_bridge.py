@@ -88,6 +88,11 @@ class UCIBridge:
         self.engine_name = "ChessGemma"
         self.author = "ChessGemma Team"
         self.version = "2.0.0"
+        self._last_generation_metadata: Dict[str, Optional[str]] = {
+            "requested_mode": None,
+            "routed_mode": None,
+            "generation_mode": None,
+        }
 
         # Initialize inference with MoE support
         try:
@@ -347,6 +352,11 @@ class UCIBridge:
     def _generate_chessgemmma_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[str]:
         """Generate a move using ChessGemma with enhanced UCI validation and post-processing"""
         if self.inference is None:
+            self._last_generation_metadata = {
+                "requested_mode": self.options.mode,
+                "routed_mode": None,
+                "generation_mode": None,
+            }
             return None
 
         try:
@@ -354,21 +364,28 @@ class UCIBridge:
             fen = board.fen()
 
             # Determine expert mode based on UCI options
-            expert_mode = self.options.mode
-            if expert_mode == "auto":
-                # Use MoE auto-routing if enabled
-                expert_mode = "auto" if self.options.moe_enabled else "uci"
+            requested_mode = self.options.mode
+            routed_mode = requested_mode
+            if routed_mode == "auto" and not self.options.moe_enabled:
+                routed_mode = "uci"
+
+            generation_mode = "engine" if routed_mode in ("uci", "auto") else routed_mode
+            self._last_generation_metadata = {
+                "requested_mode": requested_mode,
+                "routed_mode": routed_mode,
+                "generation_mode": generation_mode,
+            }
 
             # Create prompt based on mode using enhanced prompt functions
-            if expert_mode == "tutor":
+            if routed_mode == "tutor":
                 prompt = create_tutor_prompt_with_uci(fen, "Analyze this position step by step")
             else:
                 prompt = create_engine_prompt_strict(fen)
 
             # Generate response using ChessGemma
             response_dict = self.inference.generate_response(
-                prompt, 
-                mode=expert_mode,
+                prompt,
+                mode=generation_mode,
                 max_new_tokens=8,  # Limit for UCI moves
                 temperature=0.0,   # Deterministic for engine mode
                 top_p=1.0
