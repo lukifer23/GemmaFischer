@@ -19,7 +19,7 @@ Features:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple, Union, Set
 import numpy as np
 import logging
 from pathlib import Path
@@ -618,14 +618,103 @@ class MoEInferenceManager:
         self.expert_models = expert_models
         self.inference_system = inference_system
         self.metrics = MoERoutingMetrics()
+        self._expert_adapter_paths: Dict[str, Path] = {}
+        self._expert_ready: Dict[str, bool] = {}
+        self._missing_expert_logged: Set[str] = set()
+        self._priming_lock = threading.Lock()
+        self._deferred_prime_logged = False
 
-        # Load expert models
+        if self.inference_system and hasattr(self.inference_system, "refresh_adapters"):
+            try:
+                self.inference_system.refresh_adapters()
+            except Exception as refresh_err:
+                logger.warning(
+                    "Unable to refresh adapters during MoE initialization: %s",
+                    refresh_err,
+                )
+
         for expert_name, model_path in expert_models.items():
-            if Path(model_path).exists():
-                logger.info(f"Loading {expert_name} expert from {model_path}")
-                # Load logic would go here
+            path_obj = Path(model_path) if model_path else None
+            if path_obj and path_obj.exists():
+                self._expert_adapter_paths[expert_name] = path_obj
+                self._expert_ready[expert_name] = False
+                logger.info("Registered %s expert adapter at %s", expert_name, path_obj)
             else:
-                logger.warning(f"Expert model not found: {model_path}")
+                logger.warning(
+                    "Expert model not found for %s: %s", expert_name, model_path
+                )
+
+        self.prime_available_experts()
+
+    def prime_available_experts(self) -> None:
+        """Ensure all known experts are loaded into the shared inference model."""
+        if not self.inference_system or not hasattr(
+            self.inference_system, "set_active_adapter"
+        ):
+            logger.debug("No inference system available to prime MoE experts")
+            return
+
+        if not getattr(self.inference_system, "is_loaded", False):
+            if not self._deferred_prime_logged:
+                logger.info(
+                    "MoE expert priming deferred until base model weights are loaded"
+                )
+                self._deferred_prime_logged = True
+            return
+
+        with self._priming_lock:
+            self._deferred_prime_logged = False
+            for expert_name in list(self._expert_adapter_paths.keys()):
+                self._prime_single_expert(expert_name)
+
+    def _prime_single_expert(self, expert_name: str) -> None:
+        if self._expert_ready.get(expert_name):
+            return
+
+        adapter_path = self._expert_adapter_paths.get(expert_name)
+        if adapter_path is None:
+            return
+
+        active_adapter = getattr(self.inference_system, "_active_adapter", None)
+        try:
+            self.inference_system.set_active_adapter(expert_name)
+            self._expert_ready[expert_name] = True
+            logger.info(
+                "Primed %s expert using adapter at %s", expert_name, adapter_path
+            )
+        except Exception as exc:
+            self._expert_ready[expert_name] = False
+            logger.error(
+                "Failed to prime %s expert from %s: %s",
+                expert_name,
+                adapter_path,
+                exc,
+            )
+        finally:
+            if active_adapter and active_adapter != expert_name:
+                try:
+                    self.inference_system.set_active_adapter(active_adapter)
+                except Exception:
+                    logger.debug(
+                        "Unable to restore previous adapter %s after priming %s",
+                        active_adapter,
+                        expert_name,
+                    )
+
+    def _ensure_expert_ready(self, expert_name: str) -> None:
+        if expert_name not in self._expert_adapter_paths:
+            return
+
+        if not self._expert_ready.get(expert_name):
+            self.prime_available_experts()
+            if (
+                not self._expert_ready.get(expert_name)
+                and expert_name not in self._missing_expert_logged
+            ):
+                logger.warning(
+                    "Expert %s is not primed; using fallback behaviour", expert_name
+                )
+                self._missing_expert_logged.add(expert_name)
 
     def analyze_position(self, fen: str, query_type: str = "auto",
                         complexity_score: Optional[float] = None) -> Dict[str, Any]:
@@ -656,6 +745,7 @@ class MoEInferenceManager:
 
     def _execute_single_expert_inference(self, fen: str, expert_name: str) -> Dict[str, Any]:
         """Execute inference with a single expert."""
+        self._ensure_expert_ready(expert_name)
         if self.inference_system:
             try:
                 # Switch to the correct expert
