@@ -174,8 +174,13 @@ class UCIBridge:
     
     def _handle_isready(self) -> str:
         """Handle 'isready' command"""
-        if self.model_interface is None:
+        if self.inference is None:
+            logger.debug("Inference not initialized; responding with readyok")
             return "readyok"
+
+        if not getattr(self.inference, "is_loaded", False):
+            logger.debug("Inference not yet loaded; responding with readyok")
+
         return "readyok"
     
     def _handle_setoption(self, args: List[str]) -> str:
