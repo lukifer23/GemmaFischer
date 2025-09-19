@@ -336,8 +336,12 @@ class ChessMoERouter(nn.Module):
         # Simplified king safety assessment
         king_positions = self._find_kings(board)
 
-        white_safety = self._calculate_king_safety_score(board, king_positions['white'])
-        black_safety = self._calculate_king_safety_score(board, king_positions['black'])
+        white_safety = self._calculate_king_safety_score(
+            board, king_positions['white'], 'white'
+        )
+        black_safety = self._calculate_king_safety_score(
+            board, king_positions['black'], 'black'
+        )
 
         return (white_safety + black_safety) / 2
 
@@ -354,7 +358,12 @@ class ChessMoERouter(nn.Module):
 
         return positions
 
-    def _calculate_king_safety_score(self, board: List[List[str]], king_pos: Tuple[int, int]) -> float:
+    def _calculate_king_safety_score(
+        self,
+        board: List[List[str]],
+        king_pos: Tuple[int, int],
+        king_color: Optional[str] = None
+    ) -> float:
         """Calculate safety score for a king position."""
         if not king_pos:
             return 0.5
@@ -362,6 +371,25 @@ class ChessMoERouter(nn.Module):
         i, j = king_pos
         defenders = 0
         attackers = 0
+
+        # Determine king color if not provided
+        square_piece = board[i][j] if 0 <= i < 8 and 0 <= j < 8 else ''
+        is_white = None
+        if king_color is not None:
+            if king_color in ('K', 'k'):
+                is_white = king_color == 'K'
+            else:
+                lowered = king_color.lower()
+                if lowered in ('white', 'w'):
+                    is_white = True
+                elif lowered in ('black', 'b'):
+                    is_white = False
+
+        if is_white is None and square_piece:
+            is_white = square_piece.isupper()
+
+        if is_white is None:
+            return 0.5
 
         # Check adjacent squares for defenders/attackers
         for di in [-1, 0, 1]:
@@ -373,10 +401,16 @@ class ChessMoERouter(nn.Module):
                 if 0 <= ni < 8 and 0 <= nj < 8:
                     piece = board[ni][nj]
                     if piece:
-                        if piece.isupper():  # White piece near white king
-                            defenders += 1
-                        else:  # Black piece near white king
-                            attackers += 1
+                        if is_white:
+                            if piece.isupper():
+                                defenders += 1
+                            elif piece.islower():
+                                attackers += 1
+                        else:
+                            if piece.islower():
+                                defenders += 1
+                            elif piece.isupper():
+                                attackers += 1
 
         total_pieces = defenders + attackers
         return defenders / max(total_pieces, 1)
