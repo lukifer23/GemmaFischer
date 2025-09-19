@@ -160,6 +160,22 @@ ChessGemma/
 └── docs/             # Documentation
 ```
 
+## MoE Checkpoint Layout
+
+The MoE inference stack expects checkpoints to be organized relative to the
+project root:
+
+- `checkpoints/lora_full/checkpoint-*/` – UCI expert adapter snapshots.
+- `checkpoints/lora_tutor/checkpoint-*/` – Tutor expert adapter snapshots.
+- `checkpoints/lora_director/checkpoint-*/` – Director expert adapter snapshots.
+- `checkpoints/moe_router/` – Router weights (for example `router.pt` or
+  `checkpoint-*/router.pt`).
+
+Set the `CHESSGEMMA_MOE_ROUTER_CKPT` environment variable to point at a custom
+router file if it lives outside the default directory. When any of the expected
+checkpoints are missing the system automatically falls back to single-expert
+mode with detailed logging.
+
 ## Architecture Overview
 
 - **Mixture of Experts (MoE)**: Intelligent routing between UCI, Tutor, and Director experts

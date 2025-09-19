@@ -93,6 +93,20 @@ def _find_latest_dir(patterns: List[str]) -> Optional[Path]:
     return candidates[0]
 
 
+def _find_latest_file(patterns: List[str]) -> Optional[Path]:
+    """Find the most recently modified file matching any of the glob patterns."""
+    candidates: List[Path] = []
+    for pattern in patterns:
+        for path in glob.glob(pattern):
+            p = Path(path)
+            if p.is_file():
+                candidates.append(p)
+    if not candidates:
+        return None
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return candidates[0]
+
+
 def _resolve_default_model_path(project_root: Path) -> Optional[Path]:
     """Resolve the local base model snapshot directory under models/."""
     base = project_root / "models" / "unsloth-gemma-3-270m-it" / "models--unsloth--gemma-3-270m-it" / "snapshots"
@@ -190,30 +204,121 @@ class ChessGemmaInference:
             self._initialize_moe_system()
 
     def _initialize_moe_system(self) -> None:
-        """Initialize the Mixture of Experts system."""
+        """Initialize the Mixture of Experts system.
+
+        Router checkpoints are expected under ``checkpoints/moe_router/`` and
+        expert adapters under ``checkpoints/lora_<expert>/checkpoint-*/``.
+        """
+
+        def _disable_moe(message: str, level: str = "warning") -> None:
+            log_fn = getattr(logger, level, logger.warning)
+            log_fn(message)
+            self.moe_enabled = False
+            self.moe_router = None
+            self.moe_manager = None
+
         try:
-            # Set up expert paths for MoE
             checkpoints_root = self.project_root / "checkpoints"
-            self._expert_paths = {
-                'uci': str(_find_latest_dir([str(checkpoints_root / "lora_full" / "checkpoint-*")])),  # Use full model for UCI
-                'tutor': str(_find_latest_dir([str(checkpoints_root / "lora_tutor" / "checkpoint-*")])),
-                'director': str(_find_latest_dir([str(checkpoints_root / "lora_director" / "checkpoint-*")]))
+            if not checkpoints_root.exists():
+                _disable_moe(
+                    f"MoE checkpoints directory not found at {checkpoints_root}. "
+                    "Falling back to single-expert mode.",
+                    level="info",
+                )
+                return
+
+            expert_search_patterns = {
+                "uci": [str(checkpoints_root / "lora_full" / "checkpoint-*")],
+                "tutor": [str(checkpoints_root / "lora_tutor" / "checkpoint-*")],
+                "director": [str(checkpoints_root / "lora_director" / "checkpoint-*")],
             }
 
-            # Filter out None values
-            self._expert_paths = {k: v for k, v in self._expert_paths.items() if v is not None}
+            expert_paths: Dict[str, str] = {}
+            for expert, patterns in expert_search_patterns.items():
+                latest_dir = _find_latest_dir(patterns)
+                if latest_dir is not None:
+                    expert_paths[expert] = str(latest_dir)
+                    logger.debug(
+                        "Discovered %s expert adapter at %s", expert, latest_dir
+                    )
+                else:
+                    logger.info(
+                        "No adapter checkpoint found for %s expert (searched %s)",
+                        expert,
+                        patterns,
+                    )
 
-            if len(self._expert_paths) >= 2:  # Need at least 2 experts for MoE
-                self.moe_router = ChessMoERouter(num_experts=len(self._expert_paths))
-                self.moe_manager = MoEInferenceManager(self.moe_router, self._expert_paths, self)
-                print(f"🧠 MoE System initialized with {len(self._expert_paths)} experts: {list(self._expert_paths.keys())}")
-            else:
-                print("⚠️  Insufficient expert checkpoints for MoE (need at least 2), falling back to single-expert mode")
-                self.moe_enabled = False
+            self._expert_paths = expert_paths
+
+            if len(self._expert_paths) < 2:
+                _disable_moe(
+                    "Insufficient expert checkpoints for MoE (need at least 2). "
+                    "Falling back to single-expert mode.",
+                    level="info",
+                )
+                return
+
+            router_override = os.environ.get("CHESSGEMMA_MOE_ROUTER_CKPT")
+            router_checkpoint: Optional[Path] = None
+            if router_override:
+                candidate = Path(router_override).expanduser()
+                if candidate.is_file():
+                    router_checkpoint = candidate
+                    logger.info(
+                        "Using MoE router checkpoint override from %s", candidate
+                    )
+                else:
+                    logger.warning(
+                        "MoE router checkpoint override %s not found; falling back to default search",
+                        router_override,
+                    )
+
+            if router_checkpoint is None:
+                router_dir = checkpoints_root / "moe_router"
+                router_patterns = [
+                    str(router_dir / "router*.pt"),
+                    str(router_dir / "router*.bin"),
+                    str(router_dir / "router*.safetensors"),
+                    str(router_dir / "checkpoint-*" / "router*.pt"),
+                    str(router_dir / "checkpoint-*" / "*.pt"),
+                    str(router_dir / "checkpoint-*" / "*.bin"),
+                    str(router_dir / "checkpoint-*" / "*.safetensors"),
+                    str(router_dir / "*.pt"),
+                    str(router_dir / "*.bin"),
+                    str(router_dir / "*.safetensors"),
+                ]
+                router_checkpoint = _find_latest_file(router_patterns)
+
+            if router_checkpoint is None:
+                _disable_moe(
+                    "MoE router checkpoint not found (expected under checkpoints/moe_router/). "
+                    "Falling back to single-expert mode.",
+                    level="info",
+                )
+                return
+
+            self.moe_router = ChessMoERouter(num_experts=len(self._expert_paths))
+            try:
+                self.moe_router.load_router(str(router_checkpoint))
+            except Exception as exc:
+                _disable_moe(
+                    f"Failed to load MoE router checkpoint at {router_checkpoint}: {exc}",
+                    level="error",
+                )
+                return
+
+            self.moe_manager = MoEInferenceManager(
+                self.moe_router, self._expert_paths, self
+            )
+            logger.info(
+                "MoE System initialized with experts: %s", list(self._expert_paths.keys())
+            )
 
         except Exception as e:
-            print(f"⚠️  Failed to initialize MoE system: {e}")
-            self.moe_enabled = False
+            _disable_moe(
+                f"Unexpected error while initializing MoE system: {e}",
+                level="error",
+            )
 
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
@@ -264,6 +369,11 @@ class ChessGemmaInference:
                     print(f"⚠️  Model validation error: {val_e}")
 
             self.is_loaded = True
+            if self.moe_enabled and self.moe_manager:
+                try:
+                    self.moe_manager.prime_available_experts()
+                except Exception as moe_err:
+                    logger.warning("MoE expert priming failed: %s", moe_err)
             return True
         except Exception as e:
             print(f"❌ Error loading model: {e}")
