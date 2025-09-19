@@ -669,12 +669,24 @@ class MoEInferenceManager:
                 else:  # director
                     question = f"FEN: {fen}\nAnalyze this chess position strategically."
 
-                # Get response from the actual inference system
-                result = self.inference_system.generate_response(
-                    question,
-                    context=f"Current position: {fen}",
-                    mode=expert_name
-                )
+                inference_mode = 'engine' if expert_name == 'uci' else expert_name
+
+                # Prevent recursive MoE dispatch when delegating back to inference
+                depth_attr = '_moe_dispatch_depth'
+                previous_depth = getattr(self.inference_system, depth_attr, None)
+                if previous_depth is not None:
+                    setattr(self.inference_system, depth_attr, previous_depth + 1)
+
+                try:
+                    # Get response from the actual inference system
+                    result = self.inference_system.generate_response(
+                        question,
+                        context=f"Current position: {fen}",
+                        mode=inference_mode
+                    )
+                finally:
+                    if previous_depth is not None:
+                        setattr(self.inference_system, depth_attr, previous_depth)
 
                 return {
                     'response': result.get('response', f'Analysis from {expert_name} expert'),

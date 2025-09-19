@@ -184,6 +184,7 @@ class ChessGemmaInference:
         self.moe_manager: Optional[MoEInferenceManager] = None
         self.moe_enabled = MOE_AVAILABLE and (os.environ.get('CHESSGEMMA_MOE_ENABLED', '1') not in ('0', 'false', 'False'))
         self._expert_paths: Dict[str, str] = {}
+        self._moe_dispatch_depth = 0
 
         # Initialize MoE if available and enabled
         if self.moe_enabled and MOE_AVAILABLE:
@@ -478,6 +479,10 @@ class ChessGemmaInference:
             start_time = time.time()
             self._total_requests += 1
 
+            requested_mode = mode
+            if mode == "uci":
+                mode = "engine"
+
             if not self.is_loaded:
                 return {
                     "error": "Model not loaded",
@@ -485,7 +490,9 @@ class ChessGemmaInference:
                     "confidence": 0.0,
                     "model_loaded": False,
                     "generation_time": time.time() - start_time,
-                    "cached": False
+                    "cached": False,
+                    "mode": mode,
+                    "requested_mode": requested_mode,
                 }
 
             # Apply expert-specific decoding parameters
@@ -497,10 +504,17 @@ class ChessGemmaInference:
             if cached_response:
                 cached_response["cached"] = True
                 cached_response["cache_hit_rate"] = self._cache_hits / self._total_requests
+                if requested_mode != mode:
+                    cached_response.setdefault("requested_mode", requested_mode)
                 return cached_response
 
             # Use MoE routing if available and enabled
-            if self.moe_enabled and self.moe_manager and mode in ['tutor', 'engine', 'director']:
+            if (
+                self.moe_enabled
+                and self.moe_manager
+                and self._moe_dispatch_depth == 0
+                and mode in ['tutor', 'engine', 'director']
+            ):
                 try:
                     # Extract FEN for MoE routing
                     from .uci_utils import extract_fen
@@ -522,7 +536,7 @@ class ChessGemmaInference:
 
                         # Add MoE metadata to response
                         moe_info = moe_result.get('routing_info', {})
-                        return {
+                        payload = {
                             "response": response,
                             "confidence": moe_info.get('confidence_score', 0.5),
                             "model_loaded": True,
@@ -533,6 +547,9 @@ class ChessGemmaInference:
                             "routing_reasoning": moe_info.get('reasoning'),
                             "expert_weights": moe_info.get('expert_weights', {}),
                         }
+                        if requested_mode != mode:
+                            payload["requested_mode"] = requested_mode
+                        return payload
                 except Exception as e:
                     logger.info(f"MoE routing failed, falling back to standard inference: {e}")
                     # Fall through to standard inference
@@ -715,6 +732,9 @@ class ChessGemmaInference:
                 "tokens_per_second": len(answer.split()) / max(generation_time, 0.001)
             }
 
+            if requested_mode != mode:
+                response_dict["requested_mode"] = requested_mode
+
             # Cache the response for future use
             self._cache_response(cache_key, response_dict)
 
@@ -727,6 +747,7 @@ class ChessGemmaInference:
                 "confidence": 0.0,
                 "model_loaded": True,
                 "mode": mode,
+                "requested_mode": requested_mode,
                 "generation_time": generation_time,
                 "cached": False,
                 "cache_hit_rate": self._generation_stats['cache_hit_rate']
@@ -768,7 +789,8 @@ class ChessGemmaInference:
         }
         
         # Get expert defaults
-        expert_defaults = expert_params.get(mode, expert_params["tutor"])
+        normalized_mode = "engine" if mode == "uci" else mode
+        expert_defaults = expert_params.get(normalized_mode, expert_params["tutor"])
         
         # Use provided values or expert defaults
         final_temperature = temperature if temperature is not None else expert_defaults["temperature"]

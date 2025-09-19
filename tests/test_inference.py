@@ -6,12 +6,30 @@ Comprehensive tests for ChessGemma inference functionality.
 import pytest
 import sys
 import logging
+import types
+import importlib.machinery
 from pathlib import Path
 from unittest.mock import Mock, patch
+
+import chess
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+# Provide lightweight stub for optional peft dependency used during imports
+peft_stub = types.ModuleType("peft")
+peft_stub.__spec__ = importlib.machinery.ModuleSpec("peft", loader=None)
+
+
+class _DummyPeftModel:
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs):  # pragma: no cover - simple stub
+        return None
+
+
+peft_stub.PeftModel = _DummyPeftModel
+sys.modules.setdefault("peft", peft_stub)
 
 from src.inference.inference import (
     ChessGemmaInference,
@@ -20,6 +38,7 @@ from src.inference.inference import (
     unload_model,
     get_model_info,
 )
+from src.inference.moe_router import RoutingDecision, MoEInferenceManager
 
 
 class TestChessGemmaInference:
@@ -155,10 +174,82 @@ class TestChessGemmaInference:
         """Test response generation when model not loaded."""
         inference = ChessGemmaInference()
         result = inference.generate_response("Test question")
-        
+
         assert "error" in result
         assert result["confidence"] == 0.0
-    
+
+    def test_moe_uci_route_produces_legal_move(self, monkeypatch):
+        """MoE routing to the UCI expert should yield a legal engine move."""
+
+        # Disable automatic MoE initialization so the test can inject a stub manager
+        monkeypatch.setenv('CHESSGEMMA_MOE_ENABLED', '0')
+
+        inference = ChessGemmaInference()
+        inference.is_loaded = True
+
+        # Provide lightweight model/tokenizer stubs for engine generation
+        class _DummyTensor:
+            shape = (1, 1)
+
+        class _DummyInputs(dict):
+            def __init__(self):
+                super().__init__({'input_ids': _DummyTensor()})
+
+            def to(self, device):
+                return self
+
+        class _DummyTokenizer:
+            eos_token_id = 0
+
+            def __call__(self, *args, **kwargs):  # pragma: no cover - simple stub
+                return _DummyInputs()
+
+        inference.tokenizer = _DummyTokenizer()
+        mock_model = Mock()
+        mock_model.device = 'cpu'
+        inference.model = mock_model
+        inference.set_active_adapter = Mock()
+
+        # Force the engine helper to return a deterministic move
+        inference._generate_engine_move = Mock(return_value='e2e4')
+
+        class _StubRouter:
+            def __init__(self):
+                self.last_query_type = None
+
+            def route_query(self, fen, query_type="auto", complexity_score=None):
+                self.last_query_type = query_type
+                return RoutingDecision(
+                    primary_expert='uci',
+                    expert_weights={'uci': 1.0},
+                    confidence_score=0.9,
+                    reasoning='test route',
+                    ensemble_mode=False,
+                    fallback_used=False,
+                )
+
+        router = _StubRouter()
+        moe_manager = MoEInferenceManager(router, {}, inference)
+        inference.moe_manager = moe_manager
+        inference.moe_enabled = True
+
+        starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        question = f"FEN: {starting_fen}"
+
+        with patch('src.inference.uci_utils.extract_first_legal_move_uci', return_value='e2e4') as mock_extract:
+            result = inference.generate_response(question, mode='engine')
+
+        inference._generate_engine_move.assert_called_once()
+        mock_extract.assert_called()
+        assert result["moe_used"] is True
+        move_str = result["response"]
+        assert len(move_str) in (4, 5)
+
+        board = chess.Board(starting_fen)
+        move = chess.Move.from_uci(move_str)
+        assert move in board.legal_moves
+        assert router.last_query_type == 'engine'
+
     def test_get_model_info(self):
         """Test model info retrieval."""
         inference = ChessGemmaInference()
