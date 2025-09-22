@@ -17,6 +17,11 @@ from contextlib import contextmanager
 import threading
 import psutil
 
+try:
+    import torch
+except Exception:  # pragma: no cover - optional dependency
+    torch = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -296,10 +301,28 @@ class ChessGemmaErrorHandler:
     def _clear_model_cache(self, error_record: ErrorRecord) -> Dict[str, Any]:
         """Clear model cache to free memory."""
         try:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            elif hasattr(torch, 'mps') and torch.backends.mps.is_available():
-                torch.mps.empty_cache()
+            if torch is None:
+                logger.debug("PyTorch not available; skipping GPU/MPS cache cleanup.")
+            else:
+                cuda_available = (
+                    hasattr(torch, 'cuda')
+                    and hasattr(torch.cuda, 'is_available')
+                    and callable(torch.cuda.is_available)
+                    and torch.cuda.is_available()
+                )
+                if cuda_available and hasattr(torch.cuda, 'empty_cache') and callable(torch.cuda.empty_cache):
+                    torch.cuda.empty_cache()
+                else:
+                    mps_available = (
+                        hasattr(torch, 'mps')
+                        and hasattr(torch, 'backends')
+                        and hasattr(torch.backends, 'mps')
+                        and hasattr(torch.backends.mps, 'is_available')
+                        and callable(torch.backends.mps.is_available)
+                        and torch.backends.mps.is_available()
+                    )
+                    if mps_available and hasattr(torch.mps, 'empty_cache') and callable(torch.mps.empty_cache):
+                        torch.mps.empty_cache()
             import gc
             gc.collect()
             return {'success': True, 'message': 'Model cache cleared'}
