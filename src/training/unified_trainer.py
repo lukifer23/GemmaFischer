@@ -53,9 +53,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.training.config_validation import ConfigValidationError, validate_lora_config
 from src.training.mps_optimizer import MPSMemoryOptimizer, optimize_training_for_mps
-from src.training.dataset_mixer import DatasetMixer
+from src.training.dataset_mixer import build_mixture, train_eval_split
 from src.utils.error_handler import ChessGemmaErrorHandler, error_boundary
-from src.utils.model_validator import ModelValidator
+from src.utils.model_validator import get_model_validator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -84,6 +84,8 @@ class ExpertConfig:
     curriculum_phases: List[Dict[str, Any]] = field(default_factory=list)
     validation_threshold: float = 0.8
     timeout_minutes: int = 240
+    dataset_mixture: Optional[List[Dict[str, Any]]] = None
+    eval_split_ratio: float = 0.1
 
 
 @dataclass
@@ -114,13 +116,16 @@ class UnifiedChessTrainer:
         self.config_path = config_path
         self.expert_configs = self._load_expert_configs()
         self.mps_optimizer = MPSMemoryOptimizer()
-        self.model_validator = ModelValidator()
+        self.model_validator = get_model_validator()
         self.training_metrics: Dict[str, TrainingMetrics] = {}
+        self.eval_datasets: Dict[str, Dataset] = {}
         self.timeout_handler = None
         self.training_active = False
         
-        # Initialize error handler
-        error_handler.initialize_recovery_strategies()
+        # Initialize error handler when the public initializer is available
+        initialize_handler = getattr(error_handler, "initialize_recovery_strategies", None)
+        if callable(initialize_handler):
+            initialize_handler()
         
         logger.info("🎓 Unified ChessGemma Trainer initialized")
     
@@ -252,6 +257,8 @@ class UnifiedChessTrainer:
                 metrics.current_loss = training_result.training_loss
                 metrics.checkpoint_path = trainer.state.best_model_checkpoint
                 
+                validation_result = None
+
                 # Validate model if requested
                 if validate:
                     validation_result = self._validate_expert(expert_name, model, tokenizer)
@@ -334,19 +341,53 @@ class UnifiedChessTrainer:
     
     def _load_expert_dataset(self, config: ExpertConfig) -> Dataset:
         """Load and prepare dataset for expert training."""
-        logger.info(f"📚 Loading dataset: {config.dataset_path}")
-        
-        if not Path(config.dataset_path).exists():
-            raise FileNotFoundError(f"Dataset not found: {config.dataset_path}")
-        
-        # Load dataset
-        dataset = load_dataset('json', data_files=config.dataset_path, split='train')
-        
+        dataset_description: str
+
+        if config.dataset_mixture:
+            dataset_description = f"mixture of {len(config.dataset_mixture)} datasets"
+            dataset = build_mixture(config.dataset_mixture)
+        else:
+            dataset_description = config.dataset_path
+            dataset_path = Path(config.dataset_path)
+            if not dataset_path.exists():
+                raise FileNotFoundError(f"Dataset not found: {config.dataset_path}")
+            dataset = load_dataset('json', data_files=str(dataset_path), split='train')
+
+        logger.info(f"📚 Loading dataset: {dataset_description}")
+
         # Apply curriculum learning if configured
         if config.curriculum_phases:
             dataset = self._apply_curriculum_learning(dataset, config)
-        
-        logger.info(f"📊 Loaded {len(dataset)} samples for {config.name} expert")
+
+        eval_ratio = getattr(config, "eval_split_ratio", 0.1)
+        should_create_eval = (
+            eval_ratio is not None
+            and 0 < float(eval_ratio) < 1
+            and hasattr(dataset, "train_test_split")
+        )
+
+        eval_dataset = None
+        if should_create_eval:
+            try:
+                split = train_eval_split(dataset, eval_ratio=float(eval_ratio))
+                eval_dataset = split["test"]
+                dataset = split["train"]
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning(
+                    "⚠️  Failed to create evaluation split for %s: %s", config.name, exc
+                )
+
+        if eval_dataset is not None:
+            self.eval_datasets[config.name] = eval_dataset
+            logger.info(
+                "📊 Dataset split into %d training and %d evaluation samples",
+                len(dataset),
+                len(eval_dataset),
+            )
+        else:
+            self.eval_datasets.pop(config.name, None)
+            logger.info(f"📊 Loaded {len(dataset)} samples for {config.name} expert")
+
         return dataset
     
     def _load_model_and_tokenizer(self) -> Tuple[Any, Any]:
@@ -405,32 +446,42 @@ class UnifiedChessTrainer:
     def _create_training_arguments(self, config: ExpertConfig, expert_name: str) -> TrainingArguments:
         """Create training arguments for expert."""
         output_dir = f"checkpoints/lora_{expert_name}"
-        
-        return TrainingArguments(
-            output_dir=output_dir,
-            per_device_train_batch_size=config.batch_size,
-            gradient_accumulation_steps=4,
-            num_train_epochs=1,
-            max_steps=config.max_steps,
-            learning_rate=config.learning_rate,
-            warmup_steps=config.warmup_steps,
-            weight_decay=0.01,
-            max_grad_norm=1.0,
-            logging_steps=50,
-            save_steps=config.save_steps,
-            evaluation_strategy="steps",
-            eval_steps=config.eval_steps,
-            save_total_limit=3,
-            load_best_model_at_end=True,
-            metric_for_best_model="eval_loss",
-            greater_is_better=False,
-            fp16=True,
-            dataloader_pin_memory=False,
-            dataloader_num_workers=0,
-            report_to=[],
-            logging_first_step=True,
-            remove_unused_columns=False,
-        )
+
+        has_eval_dataset = expert_name in self.eval_datasets
+
+        args_kwargs: Dict[str, Any] = {
+            "output_dir": output_dir,
+            "per_device_train_batch_size": config.batch_size,
+            "gradient_accumulation_steps": 4,
+            "num_train_epochs": 1,
+            "max_steps": config.max_steps,
+            "learning_rate": config.learning_rate,
+            "warmup_steps": config.warmup_steps,
+            "weight_decay": 0.01,
+            "max_grad_norm": 1.0,
+            "logging_steps": 50,
+            "save_steps": config.save_steps,
+            "evaluation_strategy": "steps" if has_eval_dataset else "no",
+            "save_total_limit": 3,
+            "fp16": True,
+            "dataloader_pin_memory": False,
+            "dataloader_num_workers": 0,
+            "report_to": [],
+            "logging_first_step": True,
+            "remove_unused_columns": False,
+        }
+
+        if has_eval_dataset:
+            args_kwargs.update(
+                {
+                    "eval_steps": config.eval_steps,
+                    "load_best_model_at_end": True,
+                    "metric_for_best_model": "eval_loss",
+                    "greater_is_better": False,
+                }
+            )
+
+        return TrainingArguments(**args_kwargs)
     
     def _create_trainer(self, model: Any, tokenizer: Any, training_args: TrainingArguments,
                        dataset: Dataset, data_collator: Any, config: ExpertConfig) -> Trainer:
@@ -441,11 +492,14 @@ class UnifiedChessTrainer:
             TrainingProgressCallback(self.training_metrics.get(config.name)),
             EarlyStoppingCallback(early_stopping_patience=3)
         ]
-        
+
+        eval_dataset = self.eval_datasets.get(config.name)
+
         return Trainer(
             model=model,
             args=training_args,
             train_dataset=dataset,
+            eval_dataset=eval_dataset,
             data_collator=data_collator,
             tokenizer=tokenizer,
             callbacks=callbacks
