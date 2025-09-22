@@ -178,6 +178,59 @@ class TestChessGemmaInference:
         assert "error" in result
         assert result["confidence"] == 0.0
 
+    def test_generate_response_handles_missing_utils_import(self):
+        """generate_response should continue working when utils imports fail."""
+        import importlib
+        import builtins
+
+        import src.inference.inference as inference_module
+
+        real_import = builtins.__import__
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "src.utils.error_handler":
+                raise ImportError("Simulated missing error handler")
+            return real_import(name, globals, locals, fromlist, level)
+
+        try:
+            with patch("builtins.__import__", side_effect=fake_import):
+                inference_module = importlib.reload(inference_module)
+
+                assert callable(inference_module.handle_error)
+
+                class _DummyInputs(dict):
+                    def __init__(self):
+                        super().__init__({"input_ids": Mock()})
+
+                    def to(self, device):  # pragma: no cover - trivial passthrough
+                        return self
+
+                class _DummyTokenizer:
+                    eos_token_id = 0
+
+                    def __call__(self, *args, **kwargs):  # pragma: no cover - simple stub
+                        return _DummyInputs()
+
+                    def decode(self, *args, **kwargs):
+                        return "Test response"
+
+                inference = inference_module.ChessGemmaInference()
+                inference.is_loaded = True
+                inference.model = Mock()
+                inference.model.device = "cpu"
+                inference.model.generate.return_value = [Mock()]
+                inference.tokenizer = _DummyTokenizer()
+
+                with inference_module.error_boundary("inference", "generate_response"):
+                    pass
+
+                result = inference.generate_response("What is the best move?")
+
+                assert result["response"]
+                assert result["model_loaded"] is True
+        finally:
+            importlib.reload(inference_module)
+
     def test_moe_uci_route_produces_legal_move(self, monkeypatch):
         """MoE routing to the UCI expert should yield a legal engine move."""
 

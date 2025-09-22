@@ -14,6 +14,7 @@ import os
 import glob
 from pathlib import Path
 from typing import Optional, Dict, Any, List
+from contextlib import nullcontext
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -63,8 +64,12 @@ try:
 except ImportError:
     # Fallback if error handler not available
     error_handler = None
-    error_boundary = lambda *args, **kwargs: lambda func: func
-    handle_error = lambda *args, **kwargs: None
+
+    def error_boundary(*args, **kwargs):
+        return nullcontext()
+
+    def handle_error(*args, **kwargs):
+        return None
 
 # Import model validation
 try:
