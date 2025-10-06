@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import glob
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from contextlib import nullcontext
 
 import torch
@@ -181,6 +181,7 @@ class ChessGemmaInference:
         # Simple memoization for deterministic engine prompts (FEN -> move)
         self._engine_cache_max = 512
         self._engine_cache: "OrderedDict[str, str]" = OrderedDict()
+        self._cache_lock = threading.RLock()
 
         # Feature flags
         self._engine_rerank_enabled = (os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0', 'false', 'False'))
@@ -408,7 +409,8 @@ class ChessGemmaInference:
             self._adapter_loaded_from.clear()
             self._allowed_token_ids_cache = None
             self._uci_token_info = None
-            self._engine_cache.clear()
+            with self._cache_lock:
+                self._engine_cache.clear()
 
     def _discover_adapter_paths(self) -> None:
         """Populate mapping of expert names to latest adapter checkpoint paths.
@@ -559,22 +561,30 @@ class ChessGemmaInference:
         key_string = "|".join(key_components)
         return hashlib.md5(key_string.encode()).hexdigest()
 
-    def _check_response_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
-        """Check if response is cached."""
-        if cache_key in self._response_cache:
+    def _check_response_cache(self, cache_key: str) -> Tuple[Optional[Dict[str, Any]], Optional[float]]:
+        """Check if response is cached and return a copy with current hit rate."""
+        with self._cache_lock:
+            cached = self._response_cache.get(cache_key)
+            if cached is None:
+                return None, None
             self._cache_hits += 1
-            cached_response = self._response_cache[cache_key]
-            # Update LRU order
             self._response_cache.move_to_end(cache_key)
-            return cached_response
-        return None
+            hit_rate = self._cache_hits / max(self._total_requests, 1)
+            # Return a shallow copy to avoid mutating the cached entry outside the lock
+            return dict(cached), hit_rate
 
     def _cache_response(self, cache_key: str, response: Dict[str, Any]):
         """Cache response for future use."""
-        self._response_cache[cache_key] = response
-        # Maintain cache size
-        while len(self._response_cache) > self._cache_max_size:
-            self._response_cache.popitem(last=False)
+        with self._cache_lock:
+            self._response_cache[cache_key] = dict(response)
+            # Maintain cache size
+            while len(self._response_cache) > self._cache_max_size:
+                self._response_cache.popitem(last=False)
+
+    @property
+    def cache_lock(self) -> threading.RLock:
+        """Expose cache lock for coordinated access in helper interfaces."""
+        return self._cache_lock
 
     def generate_response(
         self,
@@ -592,7 +602,8 @@ class ChessGemmaInference:
         with error_boundary("inference", "generate_response",
                           question=question[:100], mode=mode, max_new_tokens=max_new_tokens):
             start_time = time.time()
-            self._total_requests += 1
+            with self._cache_lock:
+                self._total_requests += 1
 
             requested_mode = mode
             if mode == "uci":
@@ -615,10 +626,13 @@ class ChessGemmaInference:
 
             # Check response cache for identical requests
             cache_key = self._create_cache_key(question, context, mode, max_new_tokens, temperature, top_p)
-            cached_response = self._check_response_cache(cache_key)
+            cached_response, cache_hit_rate = self._check_response_cache(cache_key)
             if cached_response:
                 cached_response["cached"] = True
-                cached_response["cache_hit_rate"] = self._cache_hits / self._total_requests
+                if cache_hit_rate is None:
+                    with self._cache_lock:
+                        cache_hit_rate = self._cache_hits / max(self._total_requests, 1)
+                cached_response["cache_hit_rate"] = cache_hit_rate
                 if requested_mode != mode:
                     cached_response.setdefault("requested_mode", requested_mode)
                 return cached_response
@@ -827,11 +841,17 @@ class ChessGemmaInference:
 
             # Update performance stats
             generation_time = time.time() - start_time
-            self._generation_stats['total_tokens_generated'] += len(answer.split())
-            self._generation_stats['average_generation_time'] = (
-                (self._generation_stats['average_generation_time'] * (self._total_requests - 1)) + generation_time
-            ) / self._total_requests
-            self._generation_stats['cache_hit_rate'] = self._cache_hits / self._total_requests
+            token_count = len(answer.split())
+            with self._cache_lock:
+                self._generation_stats['total_tokens_generated'] += token_count
+                total_requests = max(self._total_requests, 1)
+                prev_requests = max(self._total_requests - 1, 0)
+                prev_avg = self._generation_stats['average_generation_time']
+                self._generation_stats['average_generation_time'] = (
+                    (prev_avg * prev_requests) + generation_time
+                ) / total_requests
+                hit_rate = self._cache_hits / total_requests
+                self._generation_stats['cache_hit_rate'] = hit_rate
 
             response_dict = {
                 "response": answer,
@@ -843,8 +863,8 @@ class ChessGemmaInference:
                 "answer_len_chars": len(answer),
                 "generation_time": generation_time,
                 "cached": False,
-                "cache_hit_rate": self._generation_stats['cache_hit_rate'],
-                "tokens_per_second": len(answer.split()) / max(generation_time, 0.001)
+                "cache_hit_rate": hit_rate,
+                "tokens_per_second": token_count / max(generation_time, 0.001)
             }
 
             if requested_mode != mode:
@@ -921,13 +941,14 @@ class ChessGemmaInference:
         try:
             if not fen:
                 return
-            # simple LRU behavior with OrderedDict
-            if fen in self._engine_cache:
-                self._engine_cache.pop(fen, None)
-            self._engine_cache[fen] = move
-            # evict oldest
-            while len(self._engine_cache) > self._engine_cache_max:
-                self._engine_cache.popitem(last=False)
+            with self._cache_lock:
+                # simple LRU behavior with OrderedDict
+                if fen in self._engine_cache:
+                    self._engine_cache.pop(fen, None)
+                self._engine_cache[fen] = move
+                # evict oldest
+                while len(self._engine_cache) > self._engine_cache_max:
+                    self._engine_cache.popitem(last=False)
         except Exception:
             pass
 
@@ -935,13 +956,14 @@ class ChessGemmaInference:
         try:
             if not fen:
                 return None
-            mv = self._engine_cache.get(fen)
-            if mv is None:
-                return None
-            # refresh LRU order
-            self._engine_cache.pop(fen, None)
-            self._engine_cache[fen] = mv
-            return mv
+            with self._cache_lock:
+                mv = self._engine_cache.get(fen)
+                if mv is None:
+                    return None
+                # refresh LRU order
+                self._engine_cache.pop(fen, None)
+                self._engine_cache[fen] = mv
+                return mv
         except Exception:
             return None
 
@@ -1270,19 +1292,25 @@ class ChessGemmaInference:
 
     def clear_caches(self):
         """Clear all performance caches."""
-        self._response_cache.clear()
+        with self._cache_lock:
+            self._response_cache.clear()
+            self._cache_hits = 0
         self._kv_cache.clear()
-        self._cache_hits = 0
         logger.info("🧹 Inference caches cleared")
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get comprehensive performance statistics."""
+        with self._cache_lock:
+            total_requests = self._total_requests
+            cache_hits = self._cache_hits
+            response_cache_size = len(self._response_cache)
+            engine_cache_size = len(self._engine_cache)
         return {
-            'total_requests': self._total_requests,
-            'cache_hits': self._cache_hits,
-            'cache_hit_rate': self._cache_hits / max(self._total_requests, 1),
-            'response_cache_size': len(self._response_cache),
-            'engine_cache_size': len(self._engine_cache),
+            'total_requests': total_requests,
+            'cache_hits': cache_hits,
+            'cache_hit_rate': cache_hits / max(total_requests, 1),
+            'response_cache_size': response_cache_size,
+            'engine_cache_size': engine_cache_size,
             'generation_stats': self._generation_stats.copy(),
             'cache_max_size': self._cache_max_size,
             'memory_efficiency': self._estimate_cache_memory_usage()
@@ -1291,7 +1319,8 @@ class ChessGemmaInference:
     def _estimate_cache_memory_usage(self) -> float:
         """Estimate memory usage of caches in MB."""
         # Rough estimation: each cached response is ~2KB
-        cache_entries = len(self._response_cache) + len(self._engine_cache)
+        with self._cache_lock:
+            cache_entries = len(self._response_cache) + len(self._engine_cache)
         return cache_entries * 2048 / (1024 * 1024)  # Convert to MB
 
     def optimize_generation_config(self, mode: str) -> Dict[str, Any]:
@@ -1440,4 +1469,7 @@ class ChessModelInterface:
         self._inference = ChessGemmaInference(model_path, adapter_path)
 
     def generate_response(self, prompt: str) -> str:
-        return self._inference.generate_text(prompt)
+        cache_lock = getattr(self._inference, "cache_lock", None)
+        lock_context = cache_lock if cache_lock is not None else nullcontext()
+        with lock_context:
+            return self._inference.generate_text(prompt)
