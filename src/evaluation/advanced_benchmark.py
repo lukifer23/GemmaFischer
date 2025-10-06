@@ -19,6 +19,12 @@ import logging
 from collections import defaultdict
 import scipy.stats as stats
 
+import chess
+import chess.engine
+
+from src.inference.chess_engine import ChessEngineManager
+from src.inference.uci_utils import extract_first_uci
+
 logger = logging.getLogger(__name__)
 
 
@@ -148,10 +154,11 @@ class ChessGemmaBenchmarker:
         # Check for regressions
         regression_analysis = self._analyze_regression(benchmark_result)
         if regression_analysis.is_regression:
-            logger.warning("⚠️  Performance regression detected!"            self._log_regression_alert(benchmark_result, regression_analysis)
+            logger.warning("⚠️  Performance regression detected!")
+            self._log_regression_alert(benchmark_result, regression_analysis)
 
         total_time = time.time() - start_time
-        logger.info(".2f"
+        logger.info(f"Benchmark completed in {total_time:.2f}s")
         return benchmark_result
 
     def _evaluate_result(self, test_case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
@@ -271,9 +278,72 @@ class ChessGemmaBenchmarker:
 
     def _evaluate_move_quality(self, test_case: Dict[str, Any], result: Dict[str, Any]) -> float:
         """Evaluate chess move quality."""
-        # Placeholder for chess engine integration
-        # This would use Stockfish or similar to evaluate move quality
-        return 0.5  # Neutral score for now
+        fen = test_case.get('fen') or test_case.get('FEN')
+        if not fen:
+            return 0.0
+
+        # Extract the candidate move from structured result data or free-form text
+        move = (
+            result.get('move')
+            or result.get('uci')
+            or extract_first_uci(result.get('response', ''))
+        )
+        if not move:
+            return 0.0
+
+        move = move.strip().lower()
+
+        try:
+            board = chess.Board(fen)
+        except Exception:
+            logger.warning("Invalid FEN provided for move quality evaluation")
+            return 0.0
+
+        try:
+            move_obj = chess.Move.from_uci(move)
+        except ValueError:
+            # Fall back to SAN parsing for descriptive moves
+            try:
+                move_obj = board.parse_san(move)
+            except Exception:
+                return 0.0
+
+        if move_obj not in board.legal_moves:
+            return 0.0
+
+        player_to_move = board.turn
+
+        def score_to_cp(score: Optional[chess.engine.PovScore]) -> Optional[float]:
+            if not score:
+                return None
+            try:
+                return float(score.pov(player_to_move).score(mate_score=100000))
+            except Exception:
+                return None
+
+        try:
+            with ChessEngineManager() as engine_manager:
+                analysis_limit = chess.engine.Limit(depth=12, time=0.5)
+
+                best_info = engine_manager.engine.analyse(board, analysis_limit)
+                best_cp = score_to_cp(best_info.get('score'))
+
+                candidate_board = board.copy()
+                candidate_board.push(move_obj)
+                candidate_info = engine_manager.engine.analyse(candidate_board, analysis_limit)
+                candidate_cp = score_to_cp(candidate_info.get('score'))
+        except Exception as exc:
+            logger.warning(f"Move quality evaluation failed: {exc}")
+            return 0.0
+
+        if best_cp is None or candidate_cp is None:
+            return 0.0
+
+        cp_loss = max(0.0, best_cp - candidate_cp)
+        max_loss = 600.0  # Treat any loss >= 6 pawns as a blunder
+        quality = 1.0 - min(cp_loss, max_loss) / max_loss
+
+        return max(0.0, min(1.0, quality))
 
     def _evaluate_reasoning_quality(self, response: str) -> float:
         """Evaluate reasoning quality in CoT responses."""
