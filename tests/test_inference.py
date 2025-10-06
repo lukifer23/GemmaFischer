@@ -411,19 +411,75 @@ class TestErrorHandling:
         mock_model_instance = Mock()
         mock_tokenizer.from_pretrained.return_value = mock_tokenizer_instance
         mock_model.from_pretrained.return_value = mock_model_instance
-        
+
         inference = ChessGemmaInference()
         inference.is_loaded = True
         inference.model = mock_model_instance
         inference.tokenizer = mock_tokenizer_instance
-        
+
         # Mock generation error
         mock_model_instance.generate.side_effect = Exception("Generation failed")
-        
+
         result = inference.generate_response("Test question")
-        
+
         assert "error" in result
         assert result["confidence"] == 0.0
+
+
+def test_parallel_flask_requests(monkeypatch):
+    """Ensure Flask API remains stable under concurrent requests."""
+    import threading
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from src.web import app as web_app
+
+    app = web_app.app
+    chess_model = web_app.chess_model
+    chess_rag = web_app.chess_rag
+
+    app.config["TESTING"] = True
+    chess_model.is_loaded = True
+
+    monkeypatch.setattr(web_app, "log_performance_stats", lambda *args, **kwargs: None)
+    monkeypatch.setattr(chess_rag, "get_relevant_knowledge", lambda *args, **kwargs: "")
+    monkeypatch.setattr(chess_model._inference, "set_active_adapter", lambda *args, **kwargs: None)
+    monkeypatch.setattr(chess_model._inference, "get_model_info", lambda: {})
+
+    call_lock = threading.Lock()
+    call_sequence: list[str] = []
+
+    def fake_generate_response(question, context=None, mode="tutor", max_new_tokens=200):
+        time.sleep(0.01)
+        with call_lock:
+            call_sequence.append(question)
+            idx = len(call_sequence)
+        return {
+            "response": f"stub-{idx}",
+            "confidence": 0.9,
+            "model_loaded": True,
+            "mode": mode,
+        }
+
+    monkeypatch.setattr(chess_model._inference, "generate_response", fake_generate_response)
+
+    payload = {"question": "Parallel test question", "context": "", "expert": "tutor"}
+
+    def make_request(_: int) -> str:
+        with app.test_client() as client:
+            resp = client.post("/api/ask", json=payload)
+            assert resp.status_code == 200
+            data = resp.get_json()
+            assert data["response"].startswith("stub-")
+            return data["response"]
+
+    workers = 5
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        results = list(executor.map(make_request, range(workers)))
+
+    assert len(results) == workers
+    assert len(set(results)) == workers
+    assert len(call_sequence) == workers
 
 
 if __name__ == "__main__":
