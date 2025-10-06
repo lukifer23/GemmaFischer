@@ -148,10 +148,11 @@ class ChessGemmaBenchmarker:
         # Check for regressions
         regression_analysis = self._analyze_regression(benchmark_result)
         if regression_analysis.is_regression:
-            logger.warning("⚠️  Performance regression detected!"            self._log_regression_alert(benchmark_result, regression_analysis)
+            logger.warning("⚠️  Performance regression detected!")
+            self._log_regression_alert(benchmark_result, regression_analysis)
 
         total_time = time.time() - start_time
-        logger.info(".2f"
+        logger.info("✅ Benchmark completed in %.2fs", total_time)
         return benchmark_result
 
     def _evaluate_result(self, test_case: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
@@ -428,18 +429,20 @@ class ChessGemmaBenchmarker:
 
     def _log_regression_alert(self, result: BenchmarkResult, analysis: RegressionAnalysis):
         """Log regression alert with details."""
-        alert_msg = ".1f"".2f"f"""
-⚠️  PERFORMANCE REGRESSION ALERT ⚠️
+        actions_text = "\n".join(f"- {action}" for action in analysis.recommended_actions)
+        if not actions_text:
+            actions_text = "- No specific actions recommended"
 
-Model: {result.model_name}
-Timestamp: {result.timestamp}
-Confidence: {analysis.confidence_level:.1%}
-Magnitude: {analysis.regression_magnitude:.1%}
-Affected Metrics: {', '.join(analysis.affected_metrics)}
-
-Recommended Actions:
-{chr(10).join(f"- {action}" for action in analysis.recommended_actions)}
-"""
+        alert_msg = (
+            "⚠️  PERFORMANCE REGRESSION ALERT ⚠️\n\n"
+            f"Model: {result.model_name}\n"
+            f"Timestamp: {result.timestamp}\n"
+            f"Confidence: {analysis.confidence_level:.1%}\n"
+            f"Magnitude: {analysis.regression_magnitude:.1%}\n"
+            f"Affected Metrics: {', '.join(analysis.affected_metrics) or 'None'}\n\n"
+            "Recommended Actions:\n"
+            f"{actions_text}"
+        )
         logger.warning(alert_msg)
 
         # Save regression report
