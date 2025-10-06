@@ -20,7 +20,7 @@ from pathlib import Path
 import time
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 import json
 from datetime import datetime
 
@@ -68,7 +68,7 @@ class ChessEngineManager:
         self.engine_path = engine_path
         self.debug = debug
         self.engine = None
-        self.executor = ThreadPoolExecutor(max_workers=4)
+        self._engine_lock = threading.RLock()
 
         # Engine configuration
         self.engine_options = {
@@ -88,39 +88,42 @@ class ChessEngineManager:
             try:
                 # Try provided path first; if it fails, try discovery
                 try:
-                    self.engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
+                    engine_instance = chess.engine.SimpleEngine.popen_uci(self.engine_path)
                 except Exception:
                     discovered = self._find_stockfish()
                     if not discovered:
                         raise
-                    self.engine = chess.engine.SimpleEngine.popen_uci(discovered)
+                    engine_instance = chess.engine.SimpleEngine.popen_uci(discovered)
 
-                # Configure engine with supported options only
-                supported_options = self.engine.options
-                valid_options = {}
+                with self._engine_lock:
+                    self.engine = engine_instance
 
-                for option_name, option_value in self.engine_options.items():
-                    if option_name in supported_options:
-                        valid_options[option_name] = option_value
-                    else:
-                        logger.warning(f"Option '{option_name}' not supported by engine, skipping")
+                    # Configure engine with supported options only
+                    supported_options = self.engine.options
+                    valid_options = {}
 
-                if valid_options:
-                    self.engine.configure(valid_options)
-                    logger.info(f"Configured engine with options: {list(valid_options.keys())}")
+                    for option_name, option_value in self.engine_options.items():
+                        if option_name in supported_options:
+                            valid_options[option_name] = option_value
+                        else:
+                            logger.warning(f"Option '{option_name}' not supported by engine, skipping")
 
-                # Verify engine is responsive
-                try:
-                    self.engine.ping()
-                except Exception:
-                    # Fallback: issue a very quick analyse to ensure readiness
-                    _ = self.engine.analyse(chess.Board(), chess.engine.Limit(depth=1, time=0.01))
-                logger.info("Stockfish engine initialized successfully")
+                    if valid_options:
+                        self.engine.configure(valid_options)
+                        logger.info(f"Configured engine with options: {list(valid_options.keys())}")
 
-                # Test with a simple position
-                board = chess.Board()
-                info = self.engine.analyse(board, chess.engine.Limit(depth=10))
-                logger.info(f"Engine test successful, score: {info['score']}")
+                    # Verify engine is responsive
+                    try:
+                        self.engine.ping()
+                    except Exception:
+                        # Fallback: issue a very quick analyse to ensure readiness
+                        _ = self.engine.analyse(chess.Board(), chess.engine.Limit(depth=1, time=0.01))
+                    logger.info("Stockfish engine initialized successfully")
+
+                    # Test with a simple position
+                    board = chess.Board()
+                    info = self.engine.analyse(board, chess.engine.Limit(depth=10))
+                    logger.info(f"Engine test successful, score: {info['score']}")
 
                 return
 
@@ -152,13 +155,15 @@ class ChessEngineManager:
 
     def cleanup(self) -> None:
         """Clean up engine resources."""
-        if self.engine:
-            try:
-                self.engine.quit()
-                logger.info("Chess engine cleaned up successfully")
-            except Exception as e:
-                logger.warning(f"Error during engine cleanup: {e}")
-        self.executor.shutdown(wait=True)
+        with self._engine_lock:
+            if self.engine:
+                try:
+                    self.engine.quit()
+                    logger.info("Chess engine cleaned up successfully")
+                except Exception as e:
+                    logger.warning(f"Error during engine cleanup: {e}")
+                finally:
+                    self.engine = None
 
     def validate_move(self, fen: str, move: str) -> MoveAnalysis:
         """Validate a move and provide comprehensive analysis."""
@@ -182,10 +187,14 @@ class ChessEngineManager:
 
             # Get engine analysis
             limit = chess.engine.Limit(depth=15, time=0.5)
-            info = self.engine.analyse(board, limit)
+            with self._engine_lock:
+                engine = self.engine
+                if engine is None:
+                    raise RuntimeError("Chess engine is not initialized")
+                info = engine.analyse(board, limit)
 
-            # Get the best move for comparison
-            best_move_result = self.engine.play(board, limit)
+                # Get the best move for comparison
+                best_move_result = engine.play(board, limit)
             best_move = best_move_result.move.uci() if best_move_result.move else None
 
             # Analyze move quality
@@ -243,7 +252,11 @@ class ChessEngineManager:
         temp_board.push(best_move)
 
         limit = chess.engine.Limit(depth=10, time=0.2)
-        info = self.engine.analyse(temp_board, limit)
+        with self._engine_lock:
+            engine = self.engine
+            if engine is None:
+                raise RuntimeError("Chess engine is not initialized")
+            info = engine.analyse(temp_board, limit)
         return info['score'].white().score() if info.get('score') else None
 
     def _generate_move_explanation(self, board: chess.Board, move: chess.Move, quality: str) -> str:
@@ -278,10 +291,14 @@ class ChessEngineManager:
 
             # Get main analysis
             limit = chess.engine.Limit(depth=depth, time=time_limit)
-            info = self.engine.analyse(board, limit)
+            with self._engine_lock:
+                engine = self.engine
+                if engine is None:
+                    raise RuntimeError("Chess engine is not initialized")
+                info = engine.analyse(board, limit)
 
-            # Get best move
-            best_move_result = self.engine.play(board, limit)
+                # Get best move
+                best_move_result = engine.play(board, limit)
             best_move = best_move_result.move.uci() if best_move_result.move else None
 
             # Get top 5 moves for variety
@@ -321,7 +338,11 @@ class ChessEngineManager:
             temp_board = board.copy()
             temp_board.push(move)
 
-            info = self.engine.analyse(temp_board, chess.engine.Limit(depth=10, time=0.3))
+            with self._engine_lock:
+                engine = self.engine
+                if engine is None:
+                    raise RuntimeError("Chess engine is not initialized")
+                info = engine.analyse(temp_board, chess.engine.Limit(depth=10, time=0.3))
 
             moves.append(MoveAnalysis(
                 move=move.uci(),
@@ -397,7 +418,11 @@ class ChessEngineManager:
         """
         try:
             limit = chess.engine.Limit(depth=depth, time=max(0.0, float(time_limit_ms) / 1000.0))
-            result = self.engine.play(board, limit)
+            with self._engine_lock:
+                engine = self.engine
+                if engine is None:
+                    raise RuntimeError("Chess engine is not initialized")
+                result = engine.play(board, limit)
             return result.move if result and result.move else None
         except Exception as e:
             logger.error(f"Error getting best move from engine: {e}")
@@ -446,17 +471,12 @@ class ChessEngineManager:
         return validation_result
 
     def batch_validate_moves(self, moves_data: List[Dict[str, str]]) -> List[Dict[str, Any]]:
-        """Validate multiple moves concurrently."""
+        """Validate multiple moves sequentially with thread-safe engine access."""
         results = []
 
-        def validate_single(item):
-            return self.validate_dataset_entry(item['question'], item['answer'])
-
-        futures = [self.executor.submit(validate_single, item) for item in moves_data]
-
-        for future in as_completed(futures):
+        for item in moves_data:
             try:
-                results.append(future.result())
+                results.append(self.validate_dataset_entry(item['question'], item['answer']))
             except Exception as e:
                 logger.error(f"Error in batch validation: {e}")
 
