@@ -1,4 +1,4 @@
-# ChessGemma: Chess LLM Engine + Tutor
+# GemmaFischer: Chess LLM Engine + Tutor
 
 A chess AI system that fine-tunes Google's Gemma-3 270M model to function as both a chess engine (UCI-compatible) and chess tutor using LoRA adaptation on Apple Silicon with MPS acceleration. The system features Mixture of Experts (MoE) routing for intelligent expert selection based on query analysis.
 
