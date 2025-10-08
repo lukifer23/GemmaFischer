@@ -142,7 +142,16 @@ def _resolve_latest_adapter_path(project_root: Path) -> Optional[Path]:
         str(project_root / "checkpoints" / "lora_curriculum" / "checkpoint-*"),
     ]
     latest = _find_latest_dir(patterns)
-    return latest
+    if latest is not None:
+        return latest
+
+    # Fall back to expert-specific directories when global adapters are absent.
+    expert_patterns = [
+        str(project_root / "checkpoints" / "lora_uci" / "checkpoint-*"),
+        str(project_root / "checkpoints" / "lora_tutor" / "checkpoint-*"),
+        str(project_root / "checkpoints" / "lora_director" / "checkpoint-*"),
+    ]
+    return _find_latest_dir(expert_patterns)
 
 
 class ChessGemmaInference:
@@ -401,24 +410,54 @@ class ChessGemmaInference:
                 torch_dtype=torch_dtype,
             )
 
-                # Discover available adapters
-            self.refresh_adapters()
+            # Discover available adapters before wrapping the base model so we can
+            # initialize a PEFT container with at least one expert adapter.
+            self._discover_adapter_paths()
 
-            # Try to apply adapter if available; on failure, fall back to base model
+            initial_adapter_path: Optional[Path] = None
+            initial_adapter_logical: Optional[str] = None
+
+            if self.adapter_path:
+                candidate = Path(self.adapter_path)
+                if candidate.exists():
+                    initial_adapter_path = candidate
+                    for logical_name, path in self._adapter_paths.items():
+                        if path == candidate:
+                            initial_adapter_logical = logical_name
+                            break
+
+            if initial_adapter_path is None:
+                if "uci" in self._adapter_paths:
+                    initial_adapter_path = self._adapter_paths["uci"]
+                    initial_adapter_logical = "uci"
+                elif self._adapter_paths:
+                    # Fall back to whichever adapter we discovered first
+                    initial_adapter_logical, initial_adapter_path = next(iter(self._adapter_paths.items()))
+
             applied_adapter = False
-            try:
-                if self.adapter_path and Path(self.adapter_path).exists():
-                    self.model = PeftModel.from_pretrained(base_model, str(self.adapter_path), is_trainable=False)
+            if initial_adapter_path is not None:
+                try:
+                    self.model = PeftModel.from_pretrained(
+                        base_model,
+                        str(initial_adapter_path),
+                        is_trainable=False,
+                    )
                     applied_adapter = True
-                    self._active_adapter = "default"
-                    self._loaded_adapters["default"] = True
-            except Exception:
-                self.model = base_model
+                    if initial_adapter_logical:
+                        self._active_adapter = initial_adapter_logical
+                    self.adapter_path = str(initial_adapter_path)
+                except Exception as peft_err:
+                    logger.warning(
+                        "Failed to initialize PeftModel from %s: %s", initial_adapter_path, peft_err
+                    )
+                    self.model = base_model
+
             if not applied_adapter:
-                self.model = self.model or base_model
+                self.model = base_model
 
             self.model.eval()
-            # Discover known expert adapters on disk for quick switching
+            # Discover known expert adapters on disk for quick switching now that
+            # the model exposes PEFT adapter management APIs.
             self.refresh_adapters()
             # Skip model validation for now to avoid threading issues
             # TODO: Re-enable after fixing validation threading issues
