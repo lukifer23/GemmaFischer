@@ -2,6 +2,44 @@
 
 A chess AI system that fine-tunes Google's Gemma-3 270M model to function as both a chess engine (UCI-compatible) and chess tutor using LoRA adaptation on Apple Silicon with MPS acceleration. The system features Mixture of Experts (MoE) routing for intelligent expert selection based on query analysis.
 
+## Pre-trained Models
+
+**HuggingFace Collection**: [GemmaFischer: Chess MoE](https://huggingface.co/collections/Dontbeafed69/gemmafischer-chess-engine-and-tutor-with-mixture-of-experts-68e6a915d31285cda968d204)
+
+| Expert | Purpose | Steps | Loss | Size | Link |
+|--------|---------|-------|------|------|------|
+| UCI | Move generation | 1,600 | 0.872 | 5.92 MB | [Model](https://huggingface.co/Dontbeafed69/gemmafischer-uci-lora) |
+| Tutor | Educational analysis | 1,000 | 0.914 | 15.2 MB | [Model](https://huggingface.co/Dontbeafed69/gemmafischer-tutor-lora) |
+| Director | Strategic Q&A | TBD | TBD | TBD | In training |
+
+All models are LoRA adapters fine-tuned on Google's Gemma-3 270M, optimized for Apple Silicon (MPS).
+
+### Quick Usage (From HuggingFace)
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+# Load base model
+base_model = AutoModelForCausalLM.from_pretrained(
+    "google/gemma-3-270m",
+    device_map="mps",  # For Apple Silicon
+    torch_dtype="auto"
+)
+tokenizer = AutoTokenizer.from_pretrained("google/gemma-3-270m")
+
+# Load UCI Expert for move generation
+uci_model = PeftModel.from_pretrained(base_model, "Dontbeafed69/gemmafischer-uci-lora")
+
+# Generate a move
+fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+prompt = f"FEN: {fen}\nGenerate the best move in UCI format only:"
+inputs = tokenizer(prompt, return_tensors="pt").to("mps")
+outputs = uci_model.generate(**inputs, max_new_tokens=5, do_sample=False)
+move = tokenizer.decode(outputs[0], skip_special_tokens=True)
+print(move)  # e.g., "e2e4"
+```
+
 ## Key Features
 
 ### Core Capabilities
