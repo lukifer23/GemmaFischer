@@ -178,6 +178,9 @@ class ChessModelInterface:
         result = self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
         if isinstance(result, dict):
             result.setdefault('active_adapter', getattr(self._inference, '_active_adapter', None))
+            # Debug: Log what we're actually returning
+            print(f"🔍 Web response: confidence={result.get('confidence', 'N/A')}, response_length={len(result.get('response', ''))}")
+            print(f"🔍 Response preview: '{result.get('response', '')[:100]}...'")
         return result
 
     def generate_parallel_responses(self, question: str, context: Optional[str] = None,
@@ -740,10 +743,14 @@ def ask_question():
         # Switch adapter explicitly by expert (only for specific experts, not auto)
         try:
             if expert in ('uci', 'tutor', 'director'):
-                chess_model._inference.set_active_adapter(expert)
+                print(f"🔄 WEB: Setting active adapter to: {expert}")
+                result = chess_model._inference.set_active_adapter(expert)
+                print(f"🔧 WEB: Adapter set result: {result}")
+                active_adapter = getattr(chess_model._inference, '_active_adapter', None)
+                print(f"🔍 WEB: Currently active adapter: {active_adapter}")
             # For auto mode, let MoE routing handle it naturally
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"❌ WEB: Adapter switching failed: {e}")
 
         # Strengthen chess context for all questions
         chess_keywords = ['chess', 'fen', 'position', 'move', 'tactics', 'strategy', 'opening', 'endgame', 'pawn', 'rook', 'knight', 'bishop', 'queen', 'king', 'check', 'mate', 'castl']

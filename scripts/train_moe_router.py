@@ -12,10 +12,12 @@ from pathlib import Path
 from typing import List, Dict, Any
 import random
 
-# Add src to path
-sys.path.append('src')
+import os
 
-from inference.moe_router import ChessMoERouter, RouterTrainingExample
+# Add src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src.inference.moe_router import ChessMoERouter, RouterTrainingExample
 
 def load_evaluation_queries(eval_file: str) -> List[Dict[str, Any]]:
     """Load evaluation queries for training data."""
@@ -67,7 +69,7 @@ def main():
     print("\n🔧 Initializing MoE router...")
     router = ChessMoERouter(
         num_experts=3,
-        feature_dim=30,  # Match our embedding size
+        feature_dim=25,  # Match our embedding size (21 chess terms + 4 length features)
         expert_names=["uci", "tutor", "director"]
     )
 

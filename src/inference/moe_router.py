@@ -24,6 +24,7 @@ import numpy as np
 import logging
 from pathlib import Path
 import json
+import re
 from datetime import datetime
 from dataclasses import dataclass, field
 import hashlib
@@ -714,7 +715,7 @@ class ChessMoERouter(nn.Module):
                 print(f"   Processing query {i+1}/{len(evaluation_queries)}")
 
             question = query["question"]
-            expected_expert = query["expected_expert"]
+            expected_expert = query["expert"]  # Use "expert" key from eval suite
             category = query.get("category", "general")
 
             # Extract FEN if present
@@ -817,13 +818,13 @@ class ChessMoERouter(nn.Module):
             epoch_accuracy = epoch_correct / epoch_total
             epoch_avg_loss = epoch_loss / len(dataloader)
 
-            print("2d"
+            print(f"Epoch {epoch+1:2d}: Loss={epoch_avg_loss:.4f}, Accuracy={epoch_accuracy:.1%}")
             # Save best model
             if epoch_accuracy > best_accuracy:
                 best_accuracy = epoch_accuracy
                 self.save_router("checkpoints/moe_router/best_checkpoint.pth")
 
-        print(".1%"
+        print(f"Best accuracy achieved: {best_accuracy:.1f}")
         # Switch back to eval mode
         self.eval()
 

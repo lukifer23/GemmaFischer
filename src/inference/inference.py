@@ -605,46 +605,30 @@ class ChessGemmaInference:
                 if file_template:
                     self._tutor_template = file_template
                 else:
-                    self._tutor_template = (
-                        "You are a chess tutor. Analyze the position and explain your reasoning. "
-                        "End with: Best move: <uci>"
-                    )
+                    # Simplified fallback template for better model response
+                    self._tutor_template = "Analyze this chess position and explain the best move."
             return self._tutor_template
         else:
             file_template = _load_from_file("director_mode.txt", matcher="Mode: Director")
             if file_template:
                 return file_template
             # Director default - clean Q&A prompt
-            return "You are a chess expert. Answer questions accurately and concisely."
+            return "You are a chess expert. Answer this question:"
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
-        from .uci_utils import extract_fen
-
-        # Extract FEN and determine style
-        fen = extract_fen(question) or extract_fen(context or "") or ""
-        style = "balanced"  # Default style, could be made configurable
-
-        # Fill in template placeholders
-        system_prompt = self._load_prompt_template(mode)
-        system_prompt = system_prompt.replace("{fen}", fen).replace("{style}", style)
-
+        # TEMPORARY: Use ultra-simple prompts to test if model can respond at all
         if mode == "tutor":
-            # For tutor mode, add chess-specific context strengthening
-            chess_context = "You are a chess tutor providing educational analysis. Focus on chess principles, tactics, and strategy."
-            full_question = f"{context}\n\n{question}" if context else question
-            prompt = f"{chess_context}\n\n{system_prompt}\n\n{full_question}"
+            # Simple, direct prompt
+            prompt = f"Question: {question}\n\nYou are a chess tutor. Explain this clearly:"
             return [{"role": "user", "content": prompt}]
         elif mode == "director":
-            # For director mode, add chess expertise context
-            chess_context = "You are a chess grandmaster providing strategic guidance. Answer with deep chess knowledge and expertise."
-            full_question = f"{context}\n\n{question}" if context else question
-            prompt = f"{chess_context}\n\n{system_prompt}\n\n{full_question}"
+            # Simple Q&A format
+            prompt = f"Question: {question}\n\nAnswer as a chess expert:"
             return [{"role": "user", "content": prompt}]
-
-        # Engine mode: clean FEN + minimal instruction with chess context
-        chess_context = "You are a chess engine. Respond only with the best legal move in UCI format."
-        prompt = f"{chess_context}\n\n{system_prompt}"
-        return [{"role": "user", "content": prompt}]
+        else:
+            # Engine mode - keep simple
+            prompt = f"Find the best chess move: {question}"
+            return [{"role": "user", "content": prompt}]
 
     def _create_cache_key(self, question: str, context: Optional[str], mode: str,
                          max_new_tokens: int, temperature: float, top_p: float) -> str:
@@ -872,10 +856,19 @@ class ChessGemmaInference:
                 answer = decoded[len(prompt_text):].strip()
                 if self.debug:
                     logger.debug(f"Stripped prompt prefix, answer length: {len(answer)}")
+                    logger.debug(f"Stripped answer preview: '{answer[:100]}'")
             else:
                 answer = decoded.strip()
                 if self.debug:
                     logger.debug("No prompt prefix found, using full response")
+                    logger.debug(f"Full response preview: '{answer[:100]}'")
+
+            # TEMPORARILY DISABLE PROMPT STRIPPING FOR DEBUGGING
+            # If answer is too short after stripping, use full decoded response
+            if len(answer) < 20 and len(decoded.strip()) > len(answer) + 50:
+                if self.debug:
+                    logger.debug(f"Answer too short after stripping ({len(answer)}), using full response")
+                answer = decoded.strip()
             
             # Clean up common artifacts
             if answer.startswith("Answer:"):
@@ -909,13 +902,14 @@ class ChessGemmaInference:
                     logger.debug("All lines were filtered out!")
             
             # Fallback if we still don't have a good answer
-            if not answer or len(answer) < 10:
+            if not answer or len(answer) < 5:
                 if mode == "tutor":
                     answer = "I'm having trouble generating a response. Please try rephrasing your question or ask about a specific chess position."
                 else:
                     answer = ""  # Defer to engine fallback
                 if self.debug:
-                    logger.info("Using fallback response due to poor model output")
+                    logger.info(f"Using fallback response due to poor model output (answer length: {len(answer) if answer else 0})")
+                    logger.info(f"Final answer before fallback: '{answer[:200] if answer else 'None'}'")
 
             if self.debug:
                 logger.debug(f"Final Answer Preview: {answer[:200]}{'...' if len(answer) > 200 else ''}")
