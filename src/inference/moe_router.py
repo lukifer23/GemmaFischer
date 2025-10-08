@@ -106,7 +106,7 @@ class ChessMoERouter(nn.Module):
     def __init__(
         self,
         num_experts: int = 3,
-        feature_dim: int = 256,
+        feature_dim: Optional[int] = None,
         hidden_dim: int = 128,
         expert_names: Optional[List[str]] = None,
     ):
@@ -125,6 +125,9 @@ class ChessMoERouter(nn.Module):
         self.num_experts = len(self.expert_names)
         if self.num_experts == 0:
             raise ValueError("ChessMoERouter requires at least one expert to operate.")
+
+        if feature_dim is None:
+            feature_dim = self._determine_feature_dim()
 
         self.feature_dim = feature_dim
 
@@ -167,6 +170,16 @@ class ChessMoERouter(nn.Module):
 
         # The router is used purely for inference; ensure dropout layers are disabled
         self.eval()
+
+    def _determine_feature_dim(self) -> int:
+        """Infer the training embedding dimensionality."""
+        sample_embedding = self._embed_question_for_training("dimension probe")
+        feature_dim = int(sample_embedding.shape[0])
+
+        if feature_dim <= 0:
+            raise ValueError("Embedding dimension must be positive")
+
+        return feature_dim
 
     def train(self, mode: bool = False):
         """Override to keep the router in evaluation mode.
@@ -800,9 +813,8 @@ class ChessMoERouter(nn.Module):
 
                 # Forward pass
                 self.optimizer.zero_grad()
-                outputs = self.forward(embeddings)
-                probs = F.softmax(outputs, dim=1)
-                loss = self.criterion(outputs, targets)
+                gate_logits, _ = self.forward(embeddings)
+                loss = self.criterion(gate_logits, targets)
 
                 # Backward pass
                 loss.backward()
@@ -810,7 +822,7 @@ class ChessMoERouter(nn.Module):
 
                 # Statistics
                 epoch_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
+                _, predicted = torch.max(gate_logits.data, 1)
                 epoch_correct += (predicted == targets).sum().item()
                 epoch_total += targets.size(0)
 
@@ -839,8 +851,8 @@ class ChessMoERouter(nn.Module):
         with torch.no_grad():
             for example in test_examples:
                 embedding = torch.tensor(example.question_embedding, dtype=torch.float32).unsqueeze(0)
-                outputs = self.forward(embedding)
-                _, predicted = torch.max(outputs.data, 1)
+                gate_logits, _ = self.forward(embedding)
+                _, predicted = torch.max(gate_logits, 1)
 
                 expert_idx_to_name = {0: "uci", 1: "tutor", 2: "director"}
                 predicted_expert = expert_idx_to_name[predicted.item()]
