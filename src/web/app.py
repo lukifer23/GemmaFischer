@@ -180,6 +180,35 @@ class ChessModelInterface:
             result.setdefault('active_adapter', getattr(self._inference, '_active_adapter', None))
         return result
 
+    def generate_parallel_responses(self, question: str, context: Optional[str] = None,
+                                   experts: List[str] = None, max_length: int = 200) -> Dict[str, Dict[str, Any]]:
+        """Generate responses from multiple experts in parallel."""
+        print(f"🎯 ChessModel.generate_parallel_responses called for experts: {experts or ['uci', 'tutor', 'director']}")
+        # Ensure model is loaded on first request
+        if not self.is_loaded:
+            print("🔄 Loading model on-demand for parallel web request...")
+            if not self.load_model():
+                return {
+                    'uci': {'error': 'Model not loaded', 'response': '', 'confidence': 0.0},
+                    'tutor': {'error': 'Model not loaded', 'response': '', 'confidence': 0.0},
+                    'director': {'error': 'Model not loaded', 'response': '', 'confidence': 0.0}
+                }
+
+        # Use the parallel inference method
+        results = self._inference.generate_parallel_responses(
+            question=question,
+            context=context,
+            experts=experts,
+            max_new_tokens=max_length
+        )
+
+        # Add active adapter info to each result
+        for expert, result in results.items():
+            if isinstance(result, dict):
+                result.setdefault('active_adapter', getattr(self._inference, '_active_adapter', None))
+
+        return results
+
 
 # Initialize the model interface
 chess_model = ChessModelInterface()
@@ -771,6 +800,100 @@ def ask_question():
             'error': str(e),
             'response': 'Sorry, there was an error processing your request.',
             'confidence': 0.0
+        })
+
+
+@app.route('/api/ask_parallel', methods=['POST'])
+def ask_parallel():
+    """API endpoint for parallel queries to all experts simultaneously."""
+    start_time = time.time()
+    question = ""
+    context = ""
+
+    try:
+        data = request.get_json()
+        question = data.get('question', '').strip()
+        context = data.get('context', '').strip()
+        experts = data.get('experts')  # Optional: specify which experts to query
+
+        if not question:
+            return jsonify({
+                'error': 'No question provided',
+                'uci': {'response': 'Please ask a chess-related question.', 'confidence': 0.0},
+                'tutor': {'response': 'Please ask a chess-related question.', 'confidence': 0.0},
+                'director': {'response': 'Please ask a chess-related question.', 'confidence': 0.0}
+            })
+
+        print(f"\n🎯 NEW PARALLEL REQUEST RECEIVED")
+        print(f"📝 Question: {question}")
+        print(f"📋 Context: {context if context else 'None'}")
+        print(f"👥 Experts: {experts or ['uci', 'tutor', 'director']}")
+        print(f"⏰ Start Time: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
+
+        # Get RAG knowledge for the question
+        rag_knowledge = chess_rag.get_relevant_knowledge(question)
+        rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
+        enhanced_context = f"{rag_context}{context}" if context else rag_context
+
+        print(f"🧠 RAG Knowledge: {rag_knowledge}")
+
+        # Generate parallel responses from all experts
+        parallel_results = chess_model.generate_parallel_responses(
+            question=question,
+            context=enhanced_context,
+            experts=experts
+        )
+
+        # Calculate total execution time
+        total_time = time.time() - start_time
+
+        # Log summary statistics
+        expert_times = {}
+        expert_lengths = {}
+        for expert, result in parallel_results.items():
+            if 'generation_time' in result:
+                expert_times[expert] = result['generation_time']
+            if 'response' in result:
+                expert_lengths[expert] = len(result['response'])
+
+        print(f"⏱️  Total Parallel Time: {total_time:.2f}s")
+        print(f"👥 Expert Times: {expert_times}")
+        print(f"📊 Response Lengths: {expert_lengths}")
+
+        # Log performance stats for each expert
+        for expert, result in parallel_results.items():
+            response_text = result.get('response', '')
+            log_performance_stats(question, result.get('generation_time', 0), response_text, len(context))
+
+        # Add metadata to response
+        response_data = {
+            'question': question,
+            'context': context,
+            'experts': list(parallel_results.keys()),
+            'total_time': total_time,
+            'results': parallel_results
+        }
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        total_time = time.time() - start_time
+        print(f"\n❌ PARALLEL API ERROR after {total_time:.3f}s")
+        print(f"Error: {e}")
+        traceback.print_exc()
+
+        # Log error stats
+        log_performance_stats(question, total_time, f"PARALLEL ERROR: {str(e)}", len(context))
+
+        return jsonify({
+            'error': str(e),
+            'question': question,
+            'total_time': total_time,
+            'results': {
+                'uci': {'error': str(e), 'response': '', 'confidence': 0.0},
+                'tutor': {'error': str(e), 'response': '', 'confidence': 0.0},
+                'director': {'error': str(e), 'response': '', 'confidence': 0.0}
+            }
         })
 
 

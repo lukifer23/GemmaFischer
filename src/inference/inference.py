@@ -937,6 +937,111 @@ class ChessGemmaInference:
                 "cache_hit_rate": self._generation_stats['cache_hit_rate']
             }
 
+    def generate_parallel_responses(
+        self,
+        question: str,
+        context: Optional[str] = None,
+        experts: List[str] = None,
+        max_new_tokens: int = 200,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        do_sample: Optional[bool] = None,
+    ) -> Dict[str, Dict[str, Any]]:
+        """Generate responses from multiple experts in parallel.
+
+        Args:
+            question: The chess question to answer
+            context: Additional context (FEN, position description, etc.)
+            experts: List of expert names to query (default: ['uci', 'tutor', 'director'])
+            max_new_tokens: Maximum tokens per response
+            temperature: Generation temperature (expert-specific defaults if None)
+            top_p: Top-p sampling parameter
+            do_sample: Whether to use sampling
+
+        Returns:
+            Dict mapping expert names to their response dictionaries
+        """
+        import time
+        import threading
+
+        if experts is None:
+            experts = ['uci', 'tutor', 'director']
+
+        start_time = time.time()
+        results = {}
+        errors = []
+
+        def run_single_expert(expert_name: str):
+            """Run inference for a single expert in a thread."""
+            try:
+                # Map expert name to mode
+                mode = 'engine' if expert_name == 'uci' else expert_name
+
+                # Generate response for this expert
+                response = self.generate_response(
+                    question=question,
+                    context=context,
+                    mode=mode,
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    do_sample=do_sample
+                )
+
+                # Store result with expert name
+                results[expert_name] = response
+
+            except Exception as e:
+                error_msg = f"Error generating {expert_name} response: {str(e)}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+                # Store error response
+                results[expert_name] = {
+                    "error": str(e),
+                    "response": "",
+                    "confidence": 0.0,
+                    "model_loaded": self.is_loaded,
+                    "mode": expert_name,
+                    "generation_time": 0.0,
+                    "cached": False,
+                    "cache_hit_rate": 0.0
+                }
+
+        # Create and start threads for each expert
+        threads = []
+        for expert in experts:
+            thread = threading.Thread(
+                target=run_single_expert,
+                args=(expert,),
+                name=f"expert-{expert}"
+            )
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join(timeout=30.0)  # 30 second timeout per expert
+
+        total_time = time.time() - start_time
+
+        # Log summary
+        successful_experts = [exp for exp in experts if exp in results and 'error' not in results[exp]]
+        logger.info(
+            f"Parallel inference completed in {total_time:.2f}s: "
+            f"{len(successful_experts)}/{len(experts)} experts successful"
+        )
+
+        if errors:
+            logger.warning(f"Parallel inference errors: {errors}")
+
+        return results
+
+    # ----------------------
+    # Module-level convenience functions
+    # ----------------------
+
+
     # ----------------------
     # Expert-specific decoding parameters
     # ----------------------

@@ -45,26 +45,74 @@ curl -X POST http://localhost:5000/api/ask \
   -d '{"question": "e2e4", "expert": "uci"}'
 ```
 
-#### GET `/api/model_info`
-Get system status and MoE information.
-
-
-### POST `/api/ask`
-Main chess question answering endpoint with MoE routing.
+#### POST `/api/ask_parallel`
+Get responses from all three experts (UCI, Tutor, Director) simultaneously for comprehensive analysis.
 
 **Parameters:**
 - `question` (string): Chess-related question
-- `expert` (string): Expert selection - `"auto"\`, `"uci"\`, `"tutor"\`, `"director"\`
+- `context` (string, optional): Additional context (FEN, position description)
+- `experts` (array, optional): List of experts to query (default: `["uci", "tutor", "director"]`)
 
 **Response:**
 ```json
 {
-  "response": "Analysis and answer...\",
-  "moe_used": true,
-  "primary_expert": "tutor\",
-  "confidence": 0.85
+  "question": "What's the best move for white?",
+  "context": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+  "experts": ["uci", "tutor", "director"],
+  "total_time": 3.45,
+  "results": {
+    "uci": {
+      "response": "e4d5",
+      "confidence": 0.92,
+      "generation_time": 1.2,
+      "mode": "engine",
+      "cached": false
+    },
+    "tutor": {
+      "response": "The best move is exd5, capturing the knight on c6. This develops your bishop while attacking the opponent's knight...",
+      "confidence": 0.88,
+      "generation_time": 2.1,
+      "mode": "tutor",
+      "cached": false
+    },
+    "director": {
+      "response": "This is an open game where White has a strong center. The key tactical opportunity is the discovered attack after exd5...",
+      "confidence": 0.85,
+      "generation_time": 1.8,
+      "mode": "director",
+      "cached": false
+    }
+  }
 }
 ```
+
+**Examples:**
+```bash
+# Get all expert responses simultaneously
+curl -X POST http://localhost:5000/api/ask_parallel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is the best move for white?",
+    "context": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
+  }'
+
+# Query specific experts only
+curl -X POST http://localhost:5000/api/ask_parallel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Explain castling",
+    "experts": ["tutor", "director"]
+  }'
+```
+
+**Benefits:**
+- **Comprehensive Analysis**: See tactical, educational, and strategic perspectives simultaneously
+- **Cross-Validation**: Compare expert responses for consistency
+- **Educational Value**: Learn from multiple teaching approaches
+- **Debugging**: Test all experts on the same query for development
+
+#### GET `/api/model_info`
+Get system status and MoE information.
 
 ### POST `/api/game/ai_move`
 Get AI's recommended chess move.

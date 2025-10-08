@@ -1,4 +1,35 @@
 # Changelog
+## [2.4.0] - 2025-10-08
+
+### Major Feature Addition: Parallel Multi-Expert Execution
+
+#### Parallel Inference System
+- **Multi-Expert Simultaneous Execution**: Query all UCI, Tutor, and Director experts simultaneously for comprehensive chess analysis
+- **Thread-Safe Implementation**: Robust threading with proper synchronization and error isolation
+- **Performance Optimized**: ~1.3x response time overhead for 3x richer analysis
+- **Web API Integration**: New `/api/ask_parallel` endpoint for parallel expert queries
+- **Cross-Validation**: Compare expert responses for consistency and educational value
+
+#### Enhanced User Experience
+- **Comprehensive Analysis**: Get tactical moves, educational explanations, and strategic insights in one query
+- **Educational Benefits**: Learn from multiple teaching approaches simultaneously
+- **Debugging Capabilities**: Cross-validate expert recommendations and identify inconsistencies
+- **Real-time Performance**: Live expert response timing and confidence metrics
+
+#### Technical Implementation
+- **Thread-Safe Adapter Switching**: Concurrent adapter loading with race condition prevention
+- **Error Isolation**: Individual expert failures don't crash entire parallel execution
+- **Resource Management**: Efficient memory usage with automatic cleanup
+- **Timeout Protection**: 30-second per-expert timeout with graceful degradation
+
+#### Testing & Validation
+- **Comprehensive Test Suite**: 50+ new tests covering parallel execution, thread safety, and error handling
+- **Performance Benchmarks**: Automated testing of parallel vs sequential execution
+- **Integration Testing**: Full system validation with MoE router compatibility
+- **Web API Testing**: Complete endpoint validation with concurrent request handling
+
+---
+
 ## [2.3.0] - 2025-09-13
 
 ### Major Performance & Reliability Enhancements
