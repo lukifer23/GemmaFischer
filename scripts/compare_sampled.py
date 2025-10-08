@@ -91,8 +91,8 @@ def main():
     load_target = str(path_obj) if using_local else model_ref
 
     print(f'Loading tokenizer and base model from {load_target} (local={using_local}) ...')
-    tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
-    base = AutoModelForCausalLM.from_pretrained(load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager')
+    tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local, trust_remote_code=True)
+    base = AutoModelForCausalLM.from_pretrained(load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True)
     device = next(base.parameters()).device
 
     sampling_cfg = {'max_new_tokens': 200, 'top_p': 0.9, 'temperature': 0.8}
