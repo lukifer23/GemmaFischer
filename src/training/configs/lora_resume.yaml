@@ -1,5 +1,5 @@
 model:
-  pretrained_model_path: "unsloth/gemma-3-270m-it"
+  pretrained_model_path: "google/gemma-2-2b-it"
 training:
   output_dir: "checkpoints/lora_full_resume"
   per_device_train_batch_size: 1

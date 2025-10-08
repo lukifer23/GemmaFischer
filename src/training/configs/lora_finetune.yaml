@@ -1,6 +1,6 @@
 # LoRA fine-tune config for a small POC
 model:
-  pretrained_model_path: "unsloth/gemma-3-270m-it"
+  pretrained_model_path: "google/gemma-2-2b-it"
 training:
   output_dir: "checkpoints/lora_poc"
   per_device_train_batch_size: 4

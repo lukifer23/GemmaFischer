@@ -1,6 +1,6 @@
 # Enhanced training config with expanded dataset
 model:
-  pretrained_model_path: "unsloth/gemma-3-270m-it"
+  pretrained_model_path: "google/gemma-2-2b-it"
 training:
   output_dir: "checkpoints/lora_expanded"
   per_device_train_batch_size: 4  # Smaller batch for stability
