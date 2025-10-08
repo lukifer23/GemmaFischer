@@ -239,7 +239,7 @@ def main():
     elif env_model_id:
         model_path = env_model_id
     else:
-        local_path = Path(__file__).parent.parent / 'models' / 'google-gemma-2-2b-it'
+        local_path = Path(__file__).parent.parent / 'models' / 'google-gemma-3-270m'
         model_path = str(local_path) if local_path.exists() else "google/gemma-3-270m"
 
     # Try to find latest checkpoint

@@ -6,11 +6,11 @@
 #   pip freeze > requirements.txt
 
 # Core ML dependencies (MPS-optimized)
-transformers==4.45.*
+transformers>=4.47.0
 datasets
 accelerate
 peft
-trl
+trl>=0.23.1
 huggingface_hub
 torch==2.2.*  # With MPS support for M3 Pro
 torchvision==0.17.*  # With MPS support

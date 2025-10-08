@@ -83,7 +83,7 @@ def main():
     elif env_model_id:
         model_ref = env_model_id
     else:
-        local_dir = os.path.join(ROOT, "models", "google-gemma-2-2b-it")
+        local_dir = os.path.join(ROOT, "models", "google-gemma-3-270m")
         model_ref = local_dir if os.path.exists(local_dir) else DEFAULT_MODEL_REF
 
     path_obj = Path(model_ref)
@@ -103,7 +103,7 @@ def main():
     tuned_answers = []
     if adapter_dir:
         print('Applying adapter from', adapter_dir)
-        model = AutoModelForCausalLM.from_pretrained(DEFAULT_MODEL_PATH, local_files_only=True, device_map='auto', attn_implementation='eager')
+        model = AutoModelForCausalLM.from_pretrained(load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True)
         model = PeftModel.from_pretrained(model, adapter_dir, is_trainable=False)
         tuned_answers = generate_with_model(model, tokenizer, qs, device, sampling_cfg)
     else:

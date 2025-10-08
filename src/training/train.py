@@ -21,7 +21,7 @@ def main(do_train: bool, max_steps: int):
     print("Starting smoke training (this will download model weights)...")
     MODEL_NAME = os.environ.get("CHESSGEMMA_MODEL_PATH") or os.environ.get("CHESSGEMMA_MODEL_ID")
     if MODEL_NAME is None:
-        local_snapshot = Path(__file__).resolve().parents[2] / "models" / "google-gemma-2-2b-it"
+        local_snapshot = Path(__file__).resolve().parents[2] / "models" / "google-gemma-3-270m"
         MODEL_NAME = str(local_snapshot) if local_snapshot.exists() else "google/gemma-3-270m"
     # Cap CPU threads to 2 by default if not already constrained
     import os as _os
@@ -34,7 +34,7 @@ def main(do_train: bool, max_steps: int):
     using_local = path_obj.exists()
     load_target = str(path_obj) if using_local else MODEL_NAME
 
-    tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
+    tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local, trust_remote_code=True)
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
@@ -47,7 +47,8 @@ def main(do_train: bool, max_steps: int):
         local_files_only=using_local,
         device_map="auto",
         attn_implementation="eager",
-        torch_dtype=torch_dtype
+        torch_dtype=torch_dtype,
+        trust_remote_code=True
     )
 
     lora_config = LoraConfig(

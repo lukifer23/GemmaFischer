@@ -403,7 +403,7 @@ class UnifiedChessTrainer:
         elif env_model_id:
             model_ref = env_model_id
         else:
-            candidate = self.project_root / "models" / "google-gemma-2-2b-it"
+            candidate = self.project_root / "models" / "google-gemma-3-270m"
             model_ref = str(candidate) if candidate.exists() else default_ref
 
         path_obj = Path(model_ref)

@@ -212,7 +212,7 @@
 
 | Task                     | Tools / Techniques                                  |
 |--------------------------|-----------------------------------------------------|
-| LLM Fine-tuning          | QLoRA / LoRA (270M or 2B) with Unsloth + MPS        |
+| LLM Fine-tuning          | QLoRA / LoRA (270M or 2B) with HF Transformers + MPS |
 | Dataset Creation         | PGN parsers, `python-chess`, Stockfish for evals    |
 | CoT Prompting            | Instruction tuning / FLAN-style prompts             |
 | UCI Interfacing          | `python-chess`, custom subprocess or socket bridge  |

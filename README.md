@@ -1,6 +1,6 @@
 # GemmaFischer: Chess LLM Engine + Tutor
 
-A chess AI system that fine-tunes Google's Gemma-2 2B Instruct checkpoint to function as both a chess engine (UCI-compatible) and chess tutor using LoRA adaptation on Apple Silicon with MPS acceleration. The system features Mixture of Experts (MoE) routing for intelligent expert selection based on query analysis.
+A chess AI system that fine-tunes Google's Gemma-3 270M model to function as both a chess engine (UCI-compatible) and chess tutor using LoRA adaptation on Apple Silicon with MPS acceleration. The system features Mixture of Experts (MoE) routing for intelligent expert selection based on query analysis.
 
 ## Key Features
 
@@ -110,8 +110,8 @@ pip install -r requirements.txt
 # Option 1: keep weights in the Hugging Face cache (recommended)
 export CHESSGEMMA_MODEL_ID="google/gemma-3-270m"
 # Option 2: download to disk and point to the snapshot root
-# huggingface-cli download google/gemma-3-270m --local-dir models/google-gemma-2-2b-it
-# export CHESSGEMMA_MODEL_PATH="$PWD/models/google-gemma-2-2b-it"
+# huggingface-cli download google/gemma-3-270m --local-dir models/google-gemma-3-270m
+# export CHESSGEMMA_MODEL_PATH="$PWD/models/google-gemma-3-270m"
 ```
 
 ### Updating dependency pins
@@ -189,7 +189,7 @@ mode with detailed logging.
 
 - **Mixture of Experts (MoE)**: Intelligent routing between UCI, Tutor, and Director experts
 - **MPS Optimization**: Native Apple Silicon performance with memory-efficient training
-- **LoRA Fine-tuning**: Parameter-efficient adaptation of the Gemma-2 2B Instruct model
+- **LoRA Fine-tuning**: Parameter-efficient adaptation of the Gemma-3 270M model
 - **UCI Bridge**: Full chess engine protocol compatibility
 - **Web Interface**: Real-time expert routing and interactive chess analysis
 

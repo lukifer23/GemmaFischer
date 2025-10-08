@@ -143,7 +143,7 @@ class EnhancedChessInference:
             elif env_model_id:
                 model_ref = env_model_id
             else:
-                model_ref = self.project_root / "models" / "google-gemma-2-2b-it"
+                model_ref = str(self.project_root / "models" / "google-gemma-3-270m")
 
             model_path_obj = Path(model_ref)
             using_local = model_path_obj.exists()
@@ -153,7 +153,7 @@ class EnhancedChessInference:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 load_target,
                 local_files_only=using_local,
-                trust_remote_code=False
+                trust_remote_code=True
             )
 
             logger.info(f"Loading model from {load_target}")
@@ -162,7 +162,8 @@ class EnhancedChessInference:
                 local_files_only=using_local,
                 device_map="auto",
                 attn_implementation="eager",
-                torch_dtype=torch.float16
+                torch_dtype=torch.float16,
+                trust_remote_code=True
             )
 
             # Load adapter if specified
