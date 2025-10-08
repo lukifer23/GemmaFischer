@@ -30,18 +30,18 @@ class ChessEvaluator:
         using_local = path_obj.exists()
         load_target = str(path_obj) if using_local else model_path
 
-        self.tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
+        self.tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local, trust_remote_code=True)
 
         if adapter_path:
             # Load base model then apply adapter
             base_model = AutoModelForCausalLM.from_pretrained(
-                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager'
+                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True
             )
             self.model = PeftModel.from_pretrained(base_model, adapter_path, is_trainable=False)
         else:
             # Load model directly
             self.model = AutoModelForCausalLM.from_pretrained(
-                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager'
+                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True
             )
 
         self.device = next(self.model.parameters()).device

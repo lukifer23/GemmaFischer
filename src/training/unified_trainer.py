@@ -411,7 +411,7 @@ class UnifiedChessTrainer:
         load_target = str(path_obj) if using_local else model_ref
 
         # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
+        tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local, trust_remote_code=True)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
         
@@ -421,7 +421,8 @@ class UnifiedChessTrainer:
             local_files_only=using_local,
             torch_dtype=torch.float16,
             device_map="auto",
-            attn_implementation="eager"
+            attn_implementation="eager",
+            trust_remote_code=True
         )
         
         # Apply MPS optimizations
