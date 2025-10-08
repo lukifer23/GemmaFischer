@@ -172,14 +172,9 @@ class ChessMoERouter(nn.Module):
         self.eval()
 
     def _determine_feature_dim(self) -> int:
-        """Infer the training embedding dimensionality."""
-        sample_embedding = self._embed_question_for_training("dimension probe")
-        feature_dim = int(sample_embedding.shape[0])
-
-        if feature_dim <= 0:
-            raise ValueError("Embedding dimension must be positive")
-
-        return feature_dim
+        """Return the fixed training embedding dimensionality."""
+        # Fixed feature dimension: 20 chess terms + 4 additional features
+        return 24
 
     def train(self, mode: bool = False):
         """Override to keep the router in evaluation mode.

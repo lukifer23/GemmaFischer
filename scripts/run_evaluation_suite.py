@@ -183,7 +183,8 @@ class EvaluationSuiteRunner:
 
     def run_evaluation_suite(self, eval_file_path: str, use_moe: bool = True) -> EvaluationSuiteResults:
         """Run the complete evaluation suite."""
-        print("🎯 Running Evaluation Suite"        print(f"   File: {eval_file_path}")
+        print("🎯 Running Evaluation Suite")
+        print(f"   File: {eval_file_path}")
         print(f"   MoE: {'Enabled' if use_moe else 'Disabled'}")
         print("=" * 60)
 
@@ -266,32 +267,35 @@ class EvaluationSuiteRunner:
         print("📊 EVALUATION SUITE RESULTS")
         print("=" * 80)
 
-        print("
-🎯 Configuration:"        print(f"   MoE Routing: {'Enabled' if use_moe else 'Disabled'}")
+        print("\n🎯 Configuration:")
+        print(f"   MoE Routing: {'Enabled' if use_moe else 'Disabled'}")
         print(f"   Total Tests: {results.total_tests}")
 
-        print("
-⚡ Performance Metrics:"        print(".3f"        print(".3f"        print(".2f"
+        print("\n⚡ Performance Metrics:")
+        print(f"   Average Response Time: {results.avg_response_time:.3f}s")
+        print(f"   Average Confidence: {results.avg_confidence:.3f}")
+        print(f"   Cache Hit Rate: {results.cache_hit_rate:.2f}%")
 
         if use_moe:
-            print(".1f"
+            print(f"   MoE Ensemble Rate: {results.moe_ensemble_rate:.1f}%")
+
         print("\n📈 Category Performance:")
         print("Category".ljust(20) + "Count".ljust(8) + "Format Acc".ljust(12) + "Expert Acc".ljust(12) + "Avg Conf".ljust(10) + "Avg Time")
         print("-" * 90)
 
         for category, metrics in results.categories.items():
-            print("20"                  "8"                  ".1%"                  ".1%"                  ".2f"                  ".3f")
+            print(f"{category:<20}{metrics['count']:<8}{metrics['format_accuracy']:.1%}{metrics['expert_accuracy']:.1%}{metrics['avg_confidence']:.2f}{metrics['avg_time']:.3f}")
 
         print("\n👥 Expert Performance:")
         print("Expert".ljust(12) + "Count".ljust(8) + "Format Acc".ljust(12) + "Avg Conf".ljust(10) + "Avg Time")
         print("-" * 65)
 
         for expert, metrics in results.experts.items():
-            print("12"                  "8"                  ".1%"                  ".2f"                  ".3f")
+            print(f"{expert:<12}{metrics['count']:<8}{metrics['format_accuracy']:.1%}{metrics['avg_confidence']:.2f}{metrics['avg_time']:.3f}")
 
-        print("\n🎖️  Overall Format Accuracy:".ljust(30) + ".1%"
+        print(f"\n🎖️  Overall Format Accuracy:".ljust(30) + f"{results.overall_format_accuracy:.1%}")
         if use_moe:
-            print("🎯 MoE Routing Accuracy:".ljust(30) + ".1%")
+            print(f"🎯 MoE Routing Accuracy:".ljust(30) + f"{results.moe_routing_accuracy:.1%}")
 
 def main():
     parser = argparse.ArgumentParser(description="Run chess evaluation suite")
