@@ -175,7 +175,10 @@ class ChessModelInterface:
                 self._inference.set_active_adapter('director')
         except Exception:
             pass
-        return self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
+        result = self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
+        if isinstance(result, dict):
+            result.setdefault('active_adapter', getattr(self._inference, '_active_adapter', None))
+        return result
 
 
 # Initialize the model interface

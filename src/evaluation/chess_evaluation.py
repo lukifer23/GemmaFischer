@@ -20,6 +20,15 @@ import chess.engine
 from pathlib import Path
 
 
+DEFAULT_EVAL_QUESTIONS = [
+    "Explain the difference between a pin and a skewer.",
+    "What should White play in this position? FEN: rnbqkbnr/pppp2pp/4p3/4p3/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 3",
+    "List the key ideas for Black in the Sicilian Defense.",
+    "How can I improve my endgame technique?",
+    "When should I trade queens in the middlegame?"
+]
+
+
 class ChessEvaluator:
     """Comprehensive chess evaluation suite."""
 
@@ -30,18 +39,43 @@ class ChessEvaluator:
         using_local = path_obj.exists()
         load_target = str(path_obj) if using_local else model_path
 
-        self.tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local, trust_remote_code=True)
+        token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            load_target,
+            local_files_only=using_local,
+            trust_remote_code=True,
+            token=token
+        )
+
+        torch_dtype = torch.float16
+        device_map = 'auto'
+        if torch.backends.mps.is_available():
+            torch_dtype = torch.float32
+            device_map = None
 
         if adapter_path:
             # Load base model then apply adapter
             base_model = AutoModelForCausalLM.from_pretrained(
-                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True
+                load_target,
+                local_files_only=using_local,
+                device_map=device_map,
+                attn_implementation='eager',
+                trust_remote_code=True,
+                torch_dtype=torch_dtype,
+                token=token
             )
             self.model = PeftModel.from_pretrained(base_model, adapter_path, is_trainable=False)
         else:
             # Load model directly
             self.model = AutoModelForCausalLM.from_pretrained(
-                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True
+                load_target,
+                local_files_only=using_local,
+                device_map=device_map,
+                attn_implementation='eager',
+                trust_remote_code=True,
+                torch_dtype=torch_dtype,
+                token=token
             )
 
         self.device = next(self.model.parameters()).device
@@ -208,26 +242,23 @@ def main():
     """Run chess evaluation on test questions."""
     # Load test questions from initial Q&A
     qa_file = Path(__file__).parents[2] / 'archive' / 'initial_chess_q_and_a.md'
-    if not qa_file.exists():
-        print(f"Test file not found: {qa_file}")
-        return
+    questions: List[str] = []
+    if qa_file.exists():
+        with open(qa_file, 'r', encoding='utf-8') as f:
+            content = f.read()
 
-    # Parse questions
-    questions = []
-    with open(qa_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    # Extract questions using regex
-    import re
-    question_pattern = r'##\s+Q\d+:\s*(.+?)(?=\n##|\n---|\Z)'
-    matches = re.findall(question_pattern, content, re.DOTALL)
-
-    for match in matches:
-        questions.append(match.strip())
+        # Extract questions using regex
+        question_pattern = r'##\s+Q\d+:\s*(.+?)(?=\n##|\n---|\Z)'
+        matches = re.findall(question_pattern, content, re.DOTALL)
+        for match in matches:
+            questions.append(match.strip())
+    else:
+        print(f"Test file not found: {qa_file}. Using default evaluation prompts.")
+        questions = DEFAULT_EVAL_QUESTIONS.copy()
 
     if not questions:
-        print("No questions found in test file")
-        return
+        print("No questions found for evaluation. Using defaults.")
+        questions = DEFAULT_EVAL_QUESTIONS.copy()
 
     print(f"Found {len(questions)} test questions")
 
@@ -258,12 +289,15 @@ def main():
 
     try:
         # Run evaluation
-        output_file = Path(__file__).parent.parent / 'chess_evaluation_results.json'
+        report_dir = Path(__file__).resolve().parents[2] / 'reports'
+        report_dir.mkdir(exist_ok=True)
+        output_file = report_dir / 'chess_evaluation_results.json'
         results = evaluator.evaluate_test_set(questions, str(output_file))
 
         print(f"\n🎯 Chess Evaluation Complete!")
         print(f"   Move syntax accuracy: {results['average_move_syntax_accuracy']:.1%}")
         print(f"   Chess relevance: {results['average_chess_relevance']:.1%}")
+        print(f"   Report saved to: {output_file}")
 
     finally:
         evaluator.cleanup()

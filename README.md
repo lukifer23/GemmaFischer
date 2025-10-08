@@ -151,6 +151,21 @@ print(result['response'])
 python -m src.training.train_lora_poc --expert uci --config auto --max_steps_override 1600 --disable_eval
 ```
 
+### Adapter Health & Evaluation
+
+After fine-tuning, you can verify adapters and generate quick evaluation snapshots:
+
+```bash
+# Check which experts have checkpoints (writes reports/moe_health.json)
+python scripts/moe_health_check.py
+
+# Sample base vs tuned answers (writes reports/compare_sampling.md)
+python scripts/compare_sampled.py
+
+# Run the chess evaluation suite (requires HF_TOKEN for gated Gemma access)
+HF_TOKEN="<your_hf_token>" python src/evaluation/chess_evaluation.py
+```
+
 ## Project Structure
 
 ```

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import glob
+import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from contextlib import nullcontext
@@ -537,20 +538,43 @@ class ChessGemmaInference:
 
     def _load_prompt_template(self, mode: str) -> str:
         """Load prompt template from prompts directory, fallback to defaults."""
+        def _load_from_file(filename: str, matcher: Optional[str] = None) -> Optional[str]:
+            try:
+                path = self.project_root / "prompts" / filename
+                if not path.exists():
+                    return None
+                text = path.read_text(encoding='utf-8')
+                code_blocks = re.findall(r"```(?:[^\n]*\n)?(.*?)```", text, re.DOTALL)
+                if matcher and code_blocks:
+                    for block in code_blocks:
+                        if matcher in block:
+                            return block.strip()
+                if code_blocks:
+                    return code_blocks[0].strip()
+                return text.strip()
+            except Exception:
+                return None
+
         if mode == "engine":
             if self._engine_template is None:
-                # Clean, minimal prompt for move generation
-                self._engine_template = "Find the best chess move in UCI format."
+                file_template = _load_from_file("engine_mode.txt", matcher="Mode: Engine")
+                self._engine_template = file_template or "Find the best chess move in UCI format."
             return self._engine_template
         elif mode == "tutor":
             if self._tutor_template is None:
-                # Clean tutor prompt focused on analysis
-                self._tutor_template = (
-                    "You are a chess tutor. Analyze the position and explain your reasoning. "
-                    "End with: Best move: <uci>"
-                )
+                file_template = _load_from_file("tutor_mode.txt", matcher="Mode: Tutor")
+                if file_template:
+                    self._tutor_template = file_template
+                else:
+                    self._tutor_template = (
+                        "You are a chess tutor. Analyze the position and explain your reasoning. "
+                        "End with: Best move: <uci>"
+                    )
             return self._tutor_template
         else:
+            file_template = _load_from_file("director_mode.txt", matcher="Mode: Director")
+            if file_template:
+                return file_template
             # Director default - clean Q&A prompt
             return "You are a chess expert. Answer questions accurately and concisely."
 

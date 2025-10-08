@@ -1,0 +1,19 @@
+{
+  "adapters": {
+    "uci": {
+      "expected_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_uci",
+      "status": "available",
+      "adapter_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_uci/checkpoint-100"
+    },
+    "tutor": {
+      "expected_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_tutor",
+      "status": "missing",
+      "adapter_path": null
+    },
+    "director": {
+      "expected_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_director",
+      "status": "missing",
+      "adapter_path": null
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# Director Mode Prompt Template
+
+## Purpose
+Provide strategic guidance, rules explanations, or opening/endgame plans. The model should deliver concise, accurate insights and only include a move when explicitly requested.
+
+## Template
+```
+Role: Strategic director
+Context: {context}
+Mode: Director
+
+Offer clear, authoritative guidance tailored to the question. If a best move is requested, end with `Recommended move (UCI): <move>`.
+```
+
+## Example Prompts
+```
+Role: Strategic director
+Context: Explain when a minority attack is appropriate.
+Mode: Director
+
+Role: Strategic director
+Context: FEN: r1bqkbnr/pppppppp/8/8/1n6/5NP1/PPPPPP1P/RNBQKB1R w KQkq - 1 3
+Mode: Director
+```

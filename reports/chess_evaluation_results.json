@@ -1,0 +1,54 @@
+{
+  "total_questions": 5,
+  "average_move_syntax_accuracy": 0.0,
+  "average_chess_relevance": 0.04,
+  "total_moves_mentioned": 0,
+  "total_valid_moves": 0,
+  "detailed_results": [
+    {
+      "response": "Explain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference between a pin and a skewer.\n\nExplain the difference",
+      "total_moves_mentioned": 0,
+      "valid_moves": 0,
+      "move_syntax_accuracy": 0,
+      "response_length": 438,
+      "chess_relevance_score": 0.0,
+      "question": "Explain the difference between a pin and a skewer."
+    },
+    {
+      "response": "I was wondering if there was a way to get the same result as the other player?\n\nI am wondering if there is a way to get the same result as the other player?\n\nWhat is the best way to get the same result as the other player?\n\nI am wondering if there is a way to get the same result as the other player?\n\nI am wondering if there is a way to get the same result as the other player?\n\nI am wondering if there is a",
+      "total_moves_mentioned": 0,
+      "valid_moves": 0,
+      "move_syntax_accuracy": 0,
+      "response_length": 408,
+      "chess_relevance_score": 0.0,
+      "question": "What should White play in this position? FEN: rnbqkbnr/pppp2pp/4p3/4p3/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 3"
+    },
+    {
+      "response": "What do these key ideas represent?\n\nWhat are the major concepts of the Sicilian Defense?\n\nIn what ways is the Sicilian Defense different from the Sicilian Defense of the 16th century?\n\nWhat is the Sicilian Defense?\n\nWhat are the 3 main types of Sicilian Defense?\n\nWhat is the Sicilian Defense?\n\nWhat are the 3 main types of Sicilian Defense?\n\nWhat are the 3 main types of Sicilian Defense?\n\nWhat is the Sicilian Defense?\n\nWhat is the",
+      "total_moves_mentioned": 0,
+      "valid_moves": 0,
+      "move_syntax_accuracy": 0,
+      "response_length": 433,
+      "chess_relevance_score": 0.0,
+      "question": "List the key ideas for Black in the Sicilian Defense."
+    },
+    {
+      "response": "I'm not really sure how to do it, but I do want to know how to get the \"best\" and \"best possible\" skill.\n\nI know I've got a lot of stuff going on, but I'm not sure how to get it done.\n\nI'm trying to learn how to get better in my role and I've been doing a lot of reading on this topic, but I'm not sure how to get it done.\n\nI",
+      "total_moves_mentioned": 0,
+      "valid_moves": 0,
+      "move_syntax_accuracy": 0,
+      "response_length": 325,
+      "chess_relevance_score": 0.0,
+      "question": "How can I improve my endgame technique?"
+    },
+    {
+      "response": "[User 0001]\n\nI have 2 queens, I traded one of the queens for the other, I would trade a queen for a queen if I was in a team with the other 2 queens, but I would not trade a queen for a queen in a team if I was in a team with the other 2 queens.\n\nWhat is the best way to trade queens in the middlegame?\n\n[User 0002]\n\nI think",
+      "total_moves_mentioned": 0,
+      "valid_moves": 0,
+      "move_syntax_accuracy": 0,
+      "response_length": 324,
+      "chess_relevance_score": 0.2,
+      "question": "When should I trade queens in the middlegame?"
+    }
+  ]
+}

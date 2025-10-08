@@ -140,6 +140,10 @@ Thumbs.db
 # Model files and checkpoints are now tracked via Git LFS
 # See .gitattributes for LFS configuration
 
+# Optimizer states are too large for GitHub (>2GB limit)
+checkpoints/**/optimizer.pt
+checkpoints/**/optimizer.bin
+
 # Data files (too large for git)
 data/datasets/*.jsonl
 data/raw/*.json

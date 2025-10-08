@@ -17,9 +17,17 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DEFAULT_MODEL_REF = "google/gemma-3-270m"
 ADAPTER_ROOT = os.path.join(ROOT, 'checkpoints', 'lora_full')
 IN_MD = os.path.join(ROOT, 'initial_chess_q_and_a.md')
-OUT_MD = os.path.join(ROOT, 'comparison_sampling_report.md')
+REPORT_DIR = os.path.join(ROOT, 'reports')
+OUT_MD = os.path.join(REPORT_DIR, 'compare_sampling.md')
 
 SECTION_RE = re.compile(r"^##\s+Q\d+:\s*(.+)$", re.MULTILINE)
+DEFAULT_QUESTIONS = [
+    "Explain the rules for castling in chess.",
+    "How should a player handle doubled pawns in the endgame?",
+    "What are the key ideas for White in the Ruy Lopez opening?",
+    "When is it safe to sacrifice material for an attack?",
+    "How do I convert a queen and king versus lone king endgame?"
+]
 
 def parse_questions(md_path):
     with open(md_path, 'r', encoding='utf-8') as f:
@@ -68,10 +76,20 @@ def generate_with_model(model, tokenizer, prompts, device, sampling_cfg):
     return out
 
 def main():
-    qs = parse_questions(IN_MD)
-    if not qs:
-        print('No questions found in', IN_MD)
-        sys.exit(1)
+    qs = []
+    questions_path = Path(IN_MD)
+    if not questions_path.exists():
+        archive_path = Path(ROOT) / 'archive' / 'initial_chess_q_and_a.md'
+        if archive_path.exists():
+            questions_path = archive_path
+        else:
+            print(f'Warning: {IN_MD} not found. Using built-in evaluation prompts.')
+            qs = DEFAULT_QUESTIONS
+    if questions_path.exists():
+        qs = parse_questions(str(questions_path))
+        if not qs:
+            print(f'Warning: no questions parsed from {questions_path}. Falling back to defaults.')
+            qs = DEFAULT_QUESTIONS
 
     adapter_dir = latest_adapter_dir(ADAPTER_ROOT)
     print('Using adapter dir:', adapter_dir)
@@ -92,7 +110,22 @@ def main():
 
     print(f'Loading tokenizer and base model from {load_target} (local={using_local}) ...')
     tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local, trust_remote_code=True)
-    base = AutoModelForCausalLM.from_pretrained(load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True)
+
+    import torch
+    torch_dtype = torch.float16
+    device_map = 'auto'
+    if torch.backends.mps.is_available():
+        torch_dtype = torch.float32
+        device_map = None
+
+    base = AutoModelForCausalLM.from_pretrained(
+        load_target,
+        local_files_only=using_local,
+        device_map=device_map,
+        attn_implementation='eager',
+        trust_remote_code=True,
+        torch_dtype=torch_dtype
+    )
     device = next(base.parameters()).device
 
     sampling_cfg = {'max_new_tokens': 200, 'top_p': 0.9, 'temperature': 0.8}
@@ -103,7 +136,14 @@ def main():
     tuned_answers = []
     if adapter_dir:
         print('Applying adapter from', adapter_dir)
-        model = AutoModelForCausalLM.from_pretrained(load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager', trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            load_target,
+            local_files_only=using_local,
+            device_map=device_map,
+            attn_implementation='eager',
+            trust_remote_code=True,
+            torch_dtype=torch_dtype
+        )
         model = PeftModel.from_pretrained(model, adapter_dir, is_trainable=False)
         tuned_answers = generate_with_model(model, tokenizer, qs, device, sampling_cfg)
     else:
@@ -135,10 +175,12 @@ def main():
     avg_sim = total_similarity / len(qs) if qs else 0.0
     lines.insert(1, f'**Average similarity:** {avg_sim:.3f}\n')
 
-    with open(OUT_MD, 'w', encoding='utf-8') as f:
+    out_path = Path(OUT_MD)
+    out_path.parent.mkdir(exist_ok=True)
+    with out_path.open('w', encoding='utf-8') as f:
         f.writelines([l if l.endswith('\n') else l + '\n' for l in lines])
 
-    print('Wrote', OUT_MD)
+    print('Wrote', out_path)
 
 if __name__ == '__main__':
     main()
