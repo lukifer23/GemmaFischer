@@ -109,7 +109,7 @@
 
 ### Training (MPS-only)
 
-- [ ] Base: `unsloth/gemma-3-270m-it` (local snapshot).
+- [ ] Base: `google/gemma-3-270m` (local snapshot or HF cache).
 - [ ] LoRA per expert: r=16–32, alpha=32–64, dropout ≤0.05, targets `q,k,v,o,(gate,up,down)` as needed.
 - [ ] Seq length: 512–1024 (start 512 for MPS headroom).
 - [ ] Optim: cosine, 10% warmup, LR 1e-4–2e-4, batch 1, grad-accum as required.

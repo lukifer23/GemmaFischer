@@ -393,17 +393,32 @@ class UnifiedChessTrainer:
     def _load_model_and_tokenizer(self) -> Tuple[Any, Any]:
         """Load base model and tokenizer."""
         logger.info("🤖 Loading base model and tokenizer")
-        
-        model_path = "models/unsloth-gemma-3-270m-it"
-        
+
+        default_ref = "google/gemma-3-270m"
+        env_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+        env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+
+        if env_path:
+            model_ref = env_path
+        elif env_model_id:
+            model_ref = env_model_id
+        else:
+            candidate = self.project_root / "models" / "google-gemma-2-2b-it"
+            model_ref = str(candidate) if candidate.exists() else default_ref
+
+        path_obj = Path(model_ref)
+        using_local = path_obj.exists()
+        load_target = str(path_obj) if using_local else model_ref
+
         # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
         
         # Load model with MPS optimization
         model = AutoModelForCausalLM.from_pretrained(
-            model_path,
+            load_target,
+            local_files_only=using_local,
             torch_dtype=torch.float16,
             device_map="auto",
             attn_implementation="eager"

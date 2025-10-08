@@ -1,6 +1,6 @@
 {
   "model": {
-    "base_model": "google/gemma-2-2b-it",
+    "base_model": "google/gemma-3-270m",
     "max_seq_length": 2048,
     "torch_dtype": "float16"
   },

@@ -10,38 +10,54 @@ def main(do_train: bool, max_steps: int):
         return
 
     # Import heavy libraries only when training is requested
-    from unsloth import FastLanguageModel
+    import os
+    from pathlib import Path
     from datasets import load_dataset
     from trl import SFTTrainer, SFTConfig
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from peft import LoraConfig, get_peft_model
 
     print("Starting smoke training (this will download model weights)...")
-    MODEL_NAME = "unsloth/gemma-3-270m-it"
+    MODEL_NAME = os.environ.get("CHESSGEMMA_MODEL_PATH") or os.environ.get("CHESSGEMMA_MODEL_ID")
+    if MODEL_NAME is None:
+        local_snapshot = Path(__file__).resolve().parents[2] / "models" / "google-gemma-2-2b-it"
+        MODEL_NAME = str(local_snapshot) if local_snapshot.exists() else "google/gemma-3-270m"
     # Cap CPU threads to 2 by default if not already constrained
     import os as _os
     _os.environ.setdefault('OMP_NUM_THREADS', '2')
     _os.environ.setdefault('MKL_NUM_THREADS', '2')
     _os.environ.setdefault('NUMEXPR_NUM_THREADS', '2')
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=MODEL_NAME,
-        max_seq_length=2048,
-        dtype=None,
-        load_in_4bit=False,
-        full_finetuning=False,
+    # Load tokenizer/model
+    path_obj = Path(MODEL_NAME)
+    using_local = path_obj.exists()
+    load_target = str(path_obj) if using_local else MODEL_NAME
+
+    tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    torch_dtype = torch.float16
+    if torch.backends.mps.is_available() or not torch.cuda.is_available():
+        torch_dtype = torch.float32
+
+    model = AutoModelForCausalLM.from_pretrained(
+        load_target,
+        local_files_only=using_local,
+        device_map="auto",
+        attn_implementation="eager",
+        torch_dtype=torch_dtype
     )
 
-    # Wrap with LoRA
-    model = FastLanguageModel.get_peft_model(
-        model,
+    lora_config = LoraConfig(
         r=16,
         lora_alpha=16,
         lora_dropout=0.0,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-        bias="none",
-        use_gradient_checkpointing="unsloth",
-        use_rslora=False,
-        random_state=3407,
+        bias="none"
     )
+    model = get_peft_model(model, lora_config)
 
     # Load tiny dataset sample
     dataset = load_dataset("Thytu/ChessInstruct", split="train[:200]")

@@ -26,18 +26,22 @@ class ChessEvaluator:
     def __init__(self, model_path: str, adapter_path: str = None):
         """Initialize evaluator with model and optional adapter."""
         print("Loading model and tokenizer...")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        path_obj = Path(model_path)
+        using_local = path_obj.exists()
+        load_target = str(path_obj) if using_local else model_path
+
+        self.tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
 
         if adapter_path:
             # Load base model then apply adapter
             base_model = AutoModelForCausalLM.from_pretrained(
-                model_path, local_files_only=True, device_map='auto', attn_implementation='eager'
+                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager'
             )
             self.model = PeftModel.from_pretrained(base_model, adapter_path, is_trainable=False)
         else:
             # Load model directly
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_path, local_files_only=True, device_map='auto', attn_implementation='eager'
+                load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager'
             )
 
         self.device = next(self.model.parameters()).device
@@ -227,8 +231,16 @@ def main():
 
     print(f"Found {len(questions)} test questions")
 
-    # Initialize evaluator
-    model_path = Path(__file__).parent.parent / 'models' / 'unsloth-gemma-3-270m-it' / 'models--unsloth--gemma-3-270m-it' / 'snapshots' / '23cf460f6bb16954176b3ddcc8d4f250501458a9'
+    # Resolve model reference
+    env_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+    env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+    if env_path:
+        model_path = env_path
+    elif env_model_id:
+        model_path = env_model_id
+    else:
+        local_path = Path(__file__).parent.parent / 'models' / 'google-gemma-2-2b-it'
+        model_path = str(local_path) if local_path.exists() else "google/gemma-3-270m"
 
     # Try to find latest checkpoint
     checkpoints_dir = Path(__file__).parent.parent / 'checkpoints' / 'lora_full'

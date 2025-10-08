@@ -334,29 +334,30 @@ class ChessExpertTrainer:
             # Load configuration
             config = self._load_training_config()
 
-            # Load tokenizer
-            model_path = config.get('model', {}).get('base_model', 'models/unsloth-gemma-3-270m-it')
-            model_path = self.project_root / model_path
+            default_ref = "google/gemma-3-270m"
+            model_ref = config.get('model', {}).get('base_model', default_ref)
 
-            # Find the actual model snapshot path (handle Hugging Face cache structure)
-            if model_path.exists() and model_path.is_dir():
-                # Check if this is a Hugging Face cache directory with snapshots
-                snapshots_dir = model_path / "models--unsloth--gemma-3-270m-it" / "snapshots"
-                if snapshots_dir.exists():
-                    # Find the latest snapshot (should be only one)
-                    snapshot_dirs = list(snapshots_dir.iterdir())
-                    if snapshot_dirs:
-                        model_path = snapshot_dirs[0]  # Use the first (only) snapshot
+            env_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+            env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+            if env_path:
+                candidate = Path(env_path).expanduser()
+                model_ref = str(candidate) if candidate.exists() else env_path
+            elif env_model_id:
+                model_ref = env_model_id
 
-            logger.info(f"Loading tokenizer from {model_path}")
+            model_path = Path(model_ref)
+            using_local = model_path.exists()
+            load_target = str(model_path) if using_local else model_ref
+
+            logger.info(f"Loading tokenizer from {load_target} (local={using_local})")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                str(model_path),
-                local_files_only=True,
+                load_target,
+                local_files_only=using_local,
                 trust_remote_code=True
             )
 
             # Load base model
-            logger.info(f"Loading base model from {model_path}")
+            logger.info(f"Loading base model from {load_target}")
 
             # Determine appropriate dtype for the device
             if torch.cuda.is_available():
@@ -372,11 +373,12 @@ class ChessExpertTrainer:
             device_map_setting = "auto"
 
             self.base_model = AutoModelForCausalLM.from_pretrained(
-                str(model_path),
-                local_files_only=True,
+                load_target,
+                local_files_only=using_local,
                 device_map=device_map_setting,
                 attn_implementation="eager",
-                torch_dtype=model_dtype
+                torch_dtype=model_dtype,
+                trust_remote_code=True
             )
 
             # Configure model for training
@@ -413,7 +415,7 @@ class ChessExpertTrainer:
             # Default configuration
             config = {
                 'model': {
-                    'base_model': 'models/unsloth-gemma-3-270m-it',
+                    'base_model': 'google/gemma-3-270m',
                     'max_seq_length': 2048,
                     'torch_dtype': 'float16'
                 },

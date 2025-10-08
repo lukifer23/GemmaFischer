@@ -124,10 +124,10 @@ def _resolve_default_model_path(project_root: Path) -> str:
         return env_model_id
 
     # Prefer local snapshots when they exist so we can operate fully offline.
-    base = project_root / "models" / "google-gemma-2-2b-it"
+    base = project_root / "models" / "google-gemma-3-270m"
     if not base.exists():
         # Fall back to the public Hugging Face identifier.
-        return "google/gemma-2-2b-it"
+        return "google/gemma-3-270m"
     return str(base)
 
 
@@ -360,13 +360,14 @@ class ChessGemmaInference:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_ref,
                 local_files_only=using_local_weights,
-                trust_remote_code=False,
+                trust_remote_code=True,
             )
             base_model = AutoModelForCausalLM.from_pretrained(
                 model_ref,
                 local_files_only=using_local_weights,
                 device_map="auto",
                 attn_implementation="eager",
+                trust_remote_code=True,
             )
 
             # Try to apply adapter if available; on failure, fall back to base model

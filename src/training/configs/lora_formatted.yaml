@@ -1,6 +1,6 @@
 # Training config using properly formatted datasets
 model:
-  pretrained_model_path: "google/gemma-2-2b-it"
+  pretrained_model_path: "google/gemma-3-270m"
 training:
   output_dir: "checkpoints/lora_director"
   per_device_train_batch_size: 2  # Conservative for memory

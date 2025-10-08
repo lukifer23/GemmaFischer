@@ -133,30 +133,33 @@ class EnhancedChessInference:
     def load_model(self, model_path: Optional[str] = None, adapter_path: Optional[str] = None) -> bool:
         """Load model with enhanced error handling and optimization."""
         try:
-            # Default paths
-            if not model_path:
-                model_path = self.project_root / "models" / "unsloth-gemma-3-270m-it"
-                # Find the actual model directory
-                if model_path.exists():
-                    snapshots = list(model_path.glob("snapshots/*"))
-                    if snapshots:
-                        model_path = max(snapshots, key=lambda p: p.stat().st_mtime)
+            # Default path resolution with environment overrides
+            env_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+            env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+            if model_path:
+                model_ref = model_path
+            elif env_path:
+                model_ref = env_path
+            elif env_model_id:
+                model_ref = env_model_id
+            else:
+                model_ref = self.project_root / "models" / "google-gemma-2-2b-it"
 
-            if not Path(model_path).exists():
-                logger.error(f"Model path not found: {model_path}")
-                return False
+            model_path_obj = Path(model_ref)
+            using_local = model_path_obj.exists()
+            load_target = str(model_path_obj) if using_local else model_ref
 
-            logger.info(f"Loading tokenizer from {model_path}")
+            logger.info(f"Loading tokenizer from {load_target} (local={using_local})")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                str(model_path),
-                local_files_only=True,
-                trust_remote_code=True
+                load_target,
+                local_files_only=using_local,
+                trust_remote_code=False
             )
 
-            logger.info(f"Loading model from {model_path}")
+            logger.info(f"Loading model from {load_target}")
             self.model = AutoModelForCausalLM.from_pretrained(
-                str(model_path),
-                local_files_only=True,
+                load_target,
+                local_files_only=using_local,
                 device_map="auto",
                 attn_implementation="eager",
                 torch_dtype=torch.float16

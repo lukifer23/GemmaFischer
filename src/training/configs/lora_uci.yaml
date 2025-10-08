@@ -1,5 +1,5 @@
 model:
-  pretrained_model_path: "google/gemma-2-2b-it"
+  pretrained_model_path: "google/gemma-3-270m"
 training:
   output_dir: "checkpoints/lora_uci"
   per_device_train_batch_size: 4  # Increased batch size

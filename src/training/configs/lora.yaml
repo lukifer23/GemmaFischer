@@ -11,6 +11,6 @@ target_modules:
   - up_proj
   - down_proj
 bias: none
-use_gradient_checkpointing: unsloth
+use_gradient_checkpointing: true
 use_rslora: false
 random_state: 3407

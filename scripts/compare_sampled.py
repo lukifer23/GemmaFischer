@@ -8,12 +8,13 @@ import os
 import sys
 from datetime import datetime
 import difflib
+from pathlib import Path
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DEFAULT_MODEL_PATH = os.path.join(ROOT, "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9")
+DEFAULT_MODEL_REF = "google/gemma-3-270m"
 ADAPTER_ROOT = os.path.join(ROOT, 'checkpoints', 'lora_full')
 IN_MD = os.path.join(ROOT, 'initial_chess_q_and_a.md')
 OUT_MD = os.path.join(ROOT, 'comparison_sampling_report.md')
@@ -75,9 +76,23 @@ def main():
     adapter_dir = latest_adapter_dir(ADAPTER_ROOT)
     print('Using adapter dir:', adapter_dir)
 
-    print('Loading tokenizer and base model...')
-    tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL_PATH, local_files_only=True)
-    base = AutoModelForCausalLM.from_pretrained(DEFAULT_MODEL_PATH, local_files_only=True, device_map='auto', attn_implementation='eager')
+    env_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+    env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+    if env_path:
+        model_ref = env_path
+    elif env_model_id:
+        model_ref = env_model_id
+    else:
+        local_dir = os.path.join(ROOT, "models", "google-gemma-2-2b-it")
+        model_ref = local_dir if os.path.exists(local_dir) else DEFAULT_MODEL_REF
+
+    path_obj = Path(model_ref)
+    using_local = path_obj.exists()
+    load_target = str(path_obj) if using_local else model_ref
+
+    print(f'Loading tokenizer and base model from {load_target} (local={using_local}) ...')
+    tokenizer = AutoTokenizer.from_pretrained(load_target, local_files_only=using_local)
+    base = AutoModelForCausalLM.from_pretrained(load_target, local_files_only=using_local, device_map='auto', attn_implementation='eager')
     device = next(base.parameters()).device
 
     sampling_cfg = {'max_new_tokens': 200, 'top_p': 0.9, 'temperature': 0.8}

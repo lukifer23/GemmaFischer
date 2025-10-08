@@ -173,7 +173,7 @@ class ChessCurriculumTrainer:
             # Default configuration
             config = {
                 "model": {
-                    "base_model": "models/unsloth-gemma-3-270m-it",
+                    "base_model": "google/gemma-3-270m",
                     "max_seq_length": 2048,
                     "torch_dtype": "float16"
                 },
@@ -222,27 +222,41 @@ class ChessCurriculumTrainer:
             # Load configuration
             config = self.load_curriculum_config()
 
-            # Load tokenizer
-            model_path = config["model"]["base_model"]
-            if not Path(model_path).exists():
-                # Try relative path
-                model_path = self.project_root / model_path
+            # Resolve model reference
+            default_ref = "google/gemma-3-270m"
+            model_ref = config["model"].get("base_model", default_ref)
 
-            logger.info(f"Loading tokenizer from {model_path}")
+            env_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+            env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+            if env_path:
+                candidate = Path(env_path).expanduser()
+                model_ref = str(candidate) if candidate.exists() else env_path
+            elif env_model_id:
+                model_ref = env_model_id
+
+            model_path = Path(model_ref)
+            using_local = model_path.exists()
+            load_target = str(model_path) if using_local else model_ref
+
+            logger.info(f"Loading tokenizer from {load_target} (local={using_local})")
             self.tokenizer = AutoTokenizer.from_pretrained(
-                str(model_path),
-                local_files_only=True,
+                load_target,
+                local_files_only=using_local,
                 trust_remote_code=True
             )
 
             # Load base model
-            logger.info(f"Loading base model from {model_path}")
+            logger.info(f"Loading base model from {load_target}")
+            dtype = torch.float16 if config["model"].get("torch_dtype") == "float16" else torch.float32
+            if torch.backends.mps.is_available():
+                dtype = torch.float32
             self.model = AutoModelForCausalLM.from_pretrained(
-                str(model_path),
-                local_files_only=True,
+                load_target,
+                local_files_only=using_local,
                 device_map="auto",
                 attn_implementation="eager",
-                torch_dtype=torch.float16 if config["model"]["torch_dtype"] == "float16" else torch.float32
+                torch_dtype=dtype,
+                trust_remote_code=True
             )
 
             # Configure LoRA

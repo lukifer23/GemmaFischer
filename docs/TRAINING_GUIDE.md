@@ -24,8 +24,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Configure base model location (choose one)
-export CHESSGEMMA_MODEL_ID="unsloth/gemma-3-270m-it"   # use Hugging Face cache
-# or export CHESSGEMMA_MODEL_PATH="/absolute/path/to/local/snapshot"
+export CHESSGEMMA_MODEL_ID="google/gemma-3-270m"   # use Hugging Face cache
+# or export CHESSGEMMA_MODEL_PATH="/absolute/path/to/local/snapshot/of/gemma-2-2b-it"
 ```
 
 ## Dataset Preparation

@@ -397,14 +397,27 @@ def main():
 
         tokenizer = AutoTokenizer.from_pretrained(
             model_ref,
-            local_files_only=using_local_weights
+            local_files_only=using_local_weights,
+            trust_remote_code=True
         )
-        # load model with the recommended eager attention implementation for Gemma3
+        # load model with the recommended eager attention implementation
+        device_map = 'auto'
+        torch_dtype = None
+        if torch.backends.mps.is_available():
+            device_map = None
+            torch_dtype = torch.float32
+        elif torch.cuda.is_available():
+            torch_dtype = torch.float16
+        else:
+            torch_dtype = torch.float32
+
         model = AutoModelForCausalLM.from_pretrained(
             model_ref,
             local_files_only=using_local_weights,
-            device_map='auto',
-            attn_implementation='eager'
+            device_map=device_map,
+            attn_implementation='eager',
+            torch_dtype=torch_dtype,
+            trust_remote_code=True
         )
 
         # prepare peft lora
