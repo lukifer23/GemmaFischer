@@ -728,7 +728,43 @@ def ask_question():
         
         print(f"🧠 RAG Knowledge: {rag_knowledge}")
 
-        # Handle expert selection
+        # Handle expert selection with MoE routing support
+        if expert == 'auto' and chess_model._inference.moe_enabled and chess_model._inference.moe_manager:
+            # Use MoE intelligent routing
+            print("🎯 WEB: Using MoE intelligent routing for 'auto' mode")
+            # Extract FEN for MoE routing
+            from src.inference.uci_utils import extract_fen
+            fen = extract_fen(question) or extract_fen(enhanced_context)
+            if fen:
+                try:
+                    moe_result = chess_model._inference.moe_manager.analyze_position(fen, "auto")
+                    response = moe_result.get('response', '')
+                    confidence = moe_result.get('routing_info', {}).get('confidence_score', 0.5)
+                    routing_info = moe_result.get('routing_info', {})
+
+                    # Calculate timing
+                    processing_time = time.time() - start_time
+                    tokens_per_second = len(response.split()) / max(processing_time, 0.001)
+
+                    return jsonify({
+                        'response': response,
+                        'confidence': confidence,
+                        'model_loaded': True,
+                        'processing_time': processing_time,
+                        'tokens_per_second': tokens_per_second,
+                        'moe_used': True,
+                        'routing_info': routing_info,
+                        'question': question,
+                        'context': context
+                    })
+                except Exception as moe_err:
+                    print(f"⚠️ WEB: MoE routing failed, falling back to single expert: {moe_err}")
+                    # Fall through to single expert mode
+            else:
+                print("⚠️ WEB: No FEN found for MoE routing, falling back to single expert")
+                # Fall through to single expert mode
+
+        # Single expert mode (fallback or explicit expert selection)
         mode = 'tutor'
         if expert == 'uci':
             mode = 'engine'
@@ -737,10 +773,10 @@ def ask_question():
         elif expert == 'director':
             mode = 'director'
         elif expert == 'auto':
-            # Auto mode: let MoE router decide, default to tutor
+            # Auto mode fallback: default to tutor
             mode = 'tutor'
 
-        # Switch adapter explicitly by expert (only for specific experts, not auto)
+        # Switch adapter explicitly by expert
         try:
             if expert in ('uci', 'tutor', 'director'):
                 print(f"🔄 WEB: Setting active adapter to: {expert}")
@@ -748,7 +784,6 @@ def ask_question():
                 print(f"🔧 WEB: Adapter set result: {result}")
                 active_adapter = getattr(chess_model._inference, '_active_adapter', None)
                 print(f"🔍 WEB: Currently active adapter: {active_adapter}")
-            # For auto mode, let MoE routing handle it naturally
         except Exception as e:
             print(f"❌ WEB: Adapter switching failed: {e}")
 

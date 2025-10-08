@@ -12,9 +12,9 @@ accelerate
 peft
 trl>=0.23.1
 huggingface_hub
-torch==2.2.*  # With MPS support for M3 Pro
-torchvision==0.17.*  # With MPS support
-torchaudio==2.2.*  # With MPS support
+torch>=2.2.0  # With MPS support for M3 Pro
+torchvision>=0.17.0  # With MPS support
+torchaudio>=2.2.0  # With MPS support
 
 # Chess and UCI support
 python-chess

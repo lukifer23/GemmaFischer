@@ -884,7 +884,7 @@ class MoEInferenceManager:
             except Exception as refresh_err:
                 logger.warning(
                     "Unable to refresh adapters during MoE initialization: %s",
-                    refresh_err,
+                    error=refresh_err,
                 )
 
         for expert_name, model_path in expert_models.items():
@@ -895,7 +895,7 @@ class MoEInferenceManager:
                 logger.info("Registered %s expert adapter at %s", expert_name, path_obj)
             else:
                 logger.warning(
-                    "Expert model not found for %s: %s", expert_name, model_path
+                    "Expert model not found for %s: %s", expert_name=expert_name, model_path=model_path
                 )
 
         self.prime_available_experts()
@@ -966,7 +966,7 @@ class MoEInferenceManager:
                 and expert_name not in self._missing_expert_logged
             ):
                 logger.warning(
-                    "Expert %s is not primed; using fallback behaviour", expert_name
+                    "Expert %s is not primed; using fallback behaviour", expert_name=expert_name
                 )
                 self._missing_expert_logged.add(expert_name)
 

@@ -300,7 +300,7 @@ class ChessGemmaInference:
                 else:
                     logger.warning(
                         "MoE router checkpoint override %s not found; falling back to default search",
-                        router_override,
+                        router_override=router_override,
                     )
 
             if router_checkpoint is None:
@@ -480,7 +480,7 @@ class ChessGemmaInference:
                 try:
                     self.moe_manager.prime_available_experts()
                 except Exception as moe_err:
-                    logger.warning("MoE expert priming failed: %s", moe_err)
+                    logger.warning("MoE expert priming failed: %s", error=moe_err)
             return True
         except Exception as e:
             print(f"❌ Error loading model: {e}")
