@@ -75,7 +75,7 @@ def convert_row(row: Dict[str, str]) -> Dict[str, str]:
     )
     # Ensure last line is the UCI move for strict extraction
     answer = (
-        f"{rationale}\n"
+        f"Analysis: {rationale}\n"
         f"Best move: {best}"
     )
 
