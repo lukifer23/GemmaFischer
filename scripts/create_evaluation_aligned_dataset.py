@@ -77,37 +77,78 @@ def create_pure_move_examples(eval_data: List[Dict[str, Any]], num_examples: int
 
 def create_analysis_examples(eval_data: List[Dict[str, Any]], num_examples: int = 1000) -> List[Dict[str, Any]]:
     """Create examples for analysis with move recommendations."""
-    analysis_eval = [item for item in eval_data if "analysis" in item["expected_format"]]
 
-    examples = []
-    # Tactical positions with clear best moves
-    tactical_positions = [
-        ("r3k2r/Pppp1ppp/1b3nbN/nP6/1BBP1P1q/3P4/Pp1P1PPp/RNBQ1RK1 w kq - 0 1", "a7b8q", "Queen promotion opportunity"),
-        ("r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1", "d3c4", "Win the bishop pair"),
-        ("5rk1/p5p1/3bpr1p/1Pp4q/3pR3/1P1Q1N2/P4PPP/4R1K1 w - - 4 22", "e4e6", "Discovered attack on queen"),
-        ("r1bqk2r/pp1nbNp1/2p1p2p/8/2BP4/1PN3P1/P3QP1P/3R1RK1 b kq - 0 19", "e8f7", "Forced recapture"),
+    analysis_cases = [
+        {
+            "analysis_type": "step_by_step_analysis",
+            "fen": "r3k2r/Pppp1ppp/1b3nbN/nP6/1BBP1P1q/3P4/Pp1P1PPp/RNBQ1RK1 w kq - 0 1",
+            "best_move": "a7b8q",
+            "points": [
+                "White is a move away from queening on b8 and the knight on h6 guards g8",
+                "Trading on b8 converts the passed pawn immediately without allowing counterplay",
+                "After promoting, every recapture leaves White up decisive material"
+            ],
+        },
+        {
+            "analysis_type": "step_by_step_analysis",
+            "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1",
+            "best_move": "d3c4",
+            "points": [
+                "White can remove the active bishop on c5 while developing",
+                "Capturing on c4 wins the bishop pair and opens the d5 square for a knight hop",
+                "The resulting structure favours White's lead in development"
+            ],
+        },
+        {
+            "analysis_type": "tactical_analysis",
+            "fen": "5rk1/p5p1/3bpr1p/1Pp4q/3pR3/1P1Q1N2/P4PPP/4R1K1 w - - 4 22",
+            "best_move": "e4e6",
+            "points": [
+                "The queen on h4 and bishop on d6 coordinate on h7",
+                "Playing e6 opens the e-file and uncovers the attack on the black queen",
+                "If Black captures, Qxg6+ follows with a decisive attack"
+            ],
+        },
+        {
+            "analysis_type": "positional_analysis",
+            "fen": "r1bqk2r/pp1nbNp1/2p1p2p/8/2BP4/1PN3P1/P3QP1P/3R1RK1 b kq - 0 19",
+            "best_move": "e8f7",
+            "points": [
+                "Black is temporarily down material after Nxf7",
+                "Recapturing on f7 restores equality and frees the rook on h8",
+                "After Kxf7 or Rf8, Black consolidates with pressure on d4"
+            ],
+        },
+        {
+            "analysis_type": "tactical_analysis",
+            "fen": "r2q1rk1/pp2ppbp/2n3p1/2Pn4/6b1/2PB1NB1/PP3PPP/RN1QK2R w KQ - 2 11",
+            "best_move": "d1a4",
+            "points": [
+                "White targets the weakened kingside dark squares",
+                "Qa4 pins the c6 knight and renews pressure on g4",
+                "This move prepares h3 without allowing ...Bxf3 tactics"
+            ],
+        },
     ]
 
-    for i in range(num_examples):
-        if random.random() < 0.3 and analysis_eval:
-            # Use evaluation example pattern
-            eval_item = random.choice(analysis_eval)
-            fen = extract_fen_from_question(eval_item["question"])
-            analysis_type = eval_item["expected_format"]
-        else:
-            # Use synthetic tactical position
-            fen, best_move, description = random.choice(tactical_positions)
-            analysis_type = "step_by_step_analysis"
+    prompt_templates = [
+        "FEN: {fen}\nQuestion: Analyze this position step by step.\nStyle: balanced\nMode: Tutor\n\n1. Evaluate the current position\n2. Identify key threats and opportunities\n3. Consider candidate moves\n4. Choose the best move with reasoning\n\nRespond with the best move in UCI format at the end.",
+        "FEN: {fen}\nProvide a tutor-style explanation that leads to the best move.",
+        "FEN: {fen}\nWalk through the critical ideas and finish with the recommended move in UCI notation."
+    ]
 
-        prompt = f"FEN: {fen}\nAnalyze this position and recommend the best move."
+    examples: List[Dict[str, Any]] = []
+    for _ in range(num_examples):
+        case = random.choice(analysis_cases)
+        fen = case["fen"]
+        best_move = case["best_move"]
+        analysis_points = case["points"]
+        analysis_type = case["analysis_type"]
 
-        # Create appropriate response based on analysis type
-        if analysis_type == "step_by_step_analysis":
-            response = f"Analysis: {description}. This is a critical tactical moment requiring precise calculation.\nBest move: {best_move}"
-        elif analysis_type == "tactical_analysis":
-            response = f"Tactical analysis: {description}. The position demands accurate tactical vision.\nBest move: {best_move}"
-        else:
-            response = f"Position evaluation: {description}. Strategic considerations point to this continuation.\nBest move: {best_move}"
+        prompt = random.choice(prompt_templates).format(fen=fen)
+
+        narrative = " ".join(analysis_points)
+        response = f"Analysis: {narrative}\nBest move: {best_move}"
 
         examples.append({
             "task": "tutor_analysis_move",
@@ -117,7 +158,7 @@ def create_analysis_examples(eval_data: List[Dict[str, Any]], num_examples: int 
                 "fen": fen,
                 "source": "evaluation_aligned",
                 "expected_format": analysis_type,
-                "quality_score": 0.9,
+                "quality_score": 0.95,
                 "analysis_type": analysis_type,
                 "best_move": best_move
             }
@@ -126,51 +167,62 @@ def create_analysis_examples(eval_data: List[Dict[str, Any]], num_examples: int 
     print(f"Created {len(examples)} analysis examples")
     return examples
 
-def create_strategy_examples(eval_data: List[Dict[str, Any]], num_examples: int = 500) -> List[Dict[str, Any]]:
-    """Create examples for strategic explanations."""
-    strategy_eval = [item for item in eval_data if "strategic" in item["expected_format"] or "rules" in item["expected_format"]]
+def _craft_strategy_response(question: str) -> str:
+    """Create a narrative style strategic answer for a question."""
 
-    examples = []
-    strategy_qa = [
-        ("What are the main ideas behind the Sicilian Defense?",
-         "The Sicilian Defense is a hypermodern opening that fights for control of the center indirectly. Black allows White to occupy the center with pawns while preparing counterplay on the queenside and in the center. Key ideas include: controlling d4, preparing ...d6 and ...Nc6, and maintaining flexibility for counterattacks."),
-
-        ("What is the purpose of fianchettoing a bishop?",
-         "Fianchettoing develops the bishop to a strong diagonal while keeping it protected by the pawn chain. The bishop on g2 or b2 can influence both sides of the board and is less vulnerable to attacks than centrally posted bishops."),
-
-        ("When should you consider a pawn break in the center?",
-         "Consider a central pawn break when your pieces are developed, king is safe, and you have targets to attack. The break should create weaknesses in the opponent's position or open lines for your pieces while maintaining your own pawn structure integrity."),
-
-        ("What are the key principles for rook and pawn endgames?",
-         "Key principles include: place rooks behind passed pawns, centralize the king, use the rook to attack from behind, avoid passive rook placement, and coordinate king and rook activity."),
-
-        ("How does castling work in chess?",
-         "Castling is a special move involving the king and one rook. The king moves two squares towards the rook, and the rook moves to the square the king crossed. Requirements: neither piece has moved, no pieces between them, king not in check, squares king passes through not attacked, and castling rook's square not attacked."),
-
-        ("What is en passant and when can it be played?",
-         "En passant is a special pawn capture that can occur immediately after an opponent moves a pawn two squares forward from its starting position. The capturing pawn moves diagonally to the square the opponent's pawn passed over, as if capturing normally.")
+    foundations = [
+        "Start with a fresh evaluation of king safety, material balance, and piece activity before committing to a plan.",
+        "Ensure your pieces coordinate toward common goals so that new pawn breaks open lines for the rooks rather than for the opponent.",
+        "Identify the weakest squares in the enemy position and improve your worst-placed piece to pressure them." ,
+        "Convert advantages only after completing development and connecting the rooks; premature attacks often backfire."
     ]
 
-    for i in range(num_examples):
-        if random.random() < 0.4 and strategy_eval:
-            # Use evaluation question but create aligned response
-            eval_item = random.choice(strategy_eval)
-            question = eval_item["question"]
-        else:
-            # Use synthetic strategic question
-            question, response = random.choice(strategy_qa)
+    follow_ups = [
+        "When the center is locked, switch attention to pawn breaks on the flanks that open files for your heavy pieces.",
+        "Use prophylactic moves to restrict the opponent's counterplay while you regroup toward the critical sector.",
+        "Incorporate tactical motifs—pins, forks, and discovered attacks—as the concrete justification for your strategic plan.",
+        "Finish the plan by transitioning into a favourable endgame only when your king is safe and the pawn structure is stable."
+    ]
 
-        prompt = f"Question: {question}\n\nAnswer as a chess expert:"
-        response = response  # Use the strategic explanation directly
+    return (
+        f"In this situation, {question.strip()} "
+        + random.choice(foundations)
+        + " "
+        + random.choice(follow_ups)
+    )
+
+
+def create_strategy_examples(eval_data: List[Dict[str, Any]], num_examples: int = 500) -> List[Dict[str, Any]]:
+    """Create examples for strategic explanations."""
+
+    strategy_eval = [item for item in eval_data if "strategic" in item["expected_format"] or "rules" in item["expected_format"]]
+
+    base_questions = [
+        "What are the main ideas behind the Sicilian Defense?",
+        "What is the purpose of fianchettoing a bishop?",
+        "When should you consider a pawn break in the center?",
+        "What are the key principles for rook and pawn endgames?",
+        "How does castling work in chess?",
+        "What is en passant and when can it be played?",
+    ]
+
+    examples: List[Dict[str, Any]] = []
+    for _ in range(num_examples):
+        if random.random() < 0.5 and strategy_eval:
+            question = random.choice(strategy_eval)["question"]
+        else:
+            question = random.choice(base_questions)
+
+        response = _craft_strategy_response(question)
 
         examples.append({
             "task": "director_strategy",
-            "prompt": prompt,
+            "prompt": f"Question: {question}\n\nAnswer as a chess expert:",
             "response": response,
             "meta": {
                 "source": "evaluation_aligned",
                 "expected_format": "strategic_explanation",
-                "quality_score": 0.95,
+                "quality_score": 0.9,
                 "domain": "strategy"
             }
         })
@@ -233,11 +285,11 @@ def main():
 
     print("\n📊 Evaluation Format Distribution:")
     for fmt, count in format_counts.items():
-        print(".1f")
+        print(f"  - {fmt}: {count}")
 
     print("\n👥 Evaluation Expert Distribution:")
     for expert, count in expert_counts.items():
-        print(".1f")
+        print(f"  - {expert}: {count}")
 
     # Create aligned training data
     print("\n🎯 Creating aligned training examples...")
@@ -252,11 +304,6 @@ def main():
     # Validate examples
     print("\n✅ Validating examples...")
     validated_examples = validate_examples(all_examples)
-
-    # Trim to target size if needed (keep best examples)
-    target_size = 3500
-    if len(validated_examples) > target_size:
-        validated_examples = validated_examples[:target_size]
 
     print(f"\n💾 Final dataset: {len(validated_examples)} validated examples")
 
@@ -278,7 +325,7 @@ def main():
 
     print("\n📈 Task Distribution:")
     for task, count in task_counts.items():
-        print("6")
+        print(f"  - {task}: {count}")
 
     print("\n🎉 Evaluation-aligned training dataset created!")
     print("This dataset directly addresses the evaluation format mismatch.")
