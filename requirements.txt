@@ -12,7 +12,6 @@ accelerate
 peft
 trl
 huggingface_hub
-unsloth  # Optimized for Apple Silicon MPS
 torch==2.2.*  # With MPS support for M3 Pro
 torchvision==0.17.*  # With MPS support
 torchaudio==2.2.*  # With MPS support
@@ -29,7 +28,7 @@ flask-cors
 sentence-transformers  # For embedding generation
 faiss-cpu  # CPU-only vector search (MPS doesn't support FAISS GPU)
 pandas
-numpy
+numpy<2
 
 # PGN processing and chess data
 pgnparser  # For PGN file parsing

@@ -124,16 +124,11 @@ def _resolve_default_model_path(project_root: Path) -> str:
         return env_model_id
 
     # Prefer local snapshots when they exist so we can operate fully offline.
-    base = project_root / "models" / "unsloth-gemma-3-270m-it" / "models--unsloth--gemma-3-270m-it" / "snapshots"
+    base = project_root / "models" / "google-gemma-2-2b-it"
     if not base.exists():
         # Fall back to the public Hugging Face identifier.
-        return "unsloth/gemma-3-270m-it"
-    # Pick latest snapshot directory
-    subdirs = [p for p in base.iterdir() if p.is_dir()]
-    if not subdirs:
-        return "unsloth/gemma-3-270m-it"
-    subdirs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return str(subdirs[0])
+        return "google/gemma-2-2b-it"
+    return str(base)
 
 
 def _resolve_latest_adapter_path(project_root: Path) -> Optional[Path]:

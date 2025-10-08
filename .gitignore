@@ -137,16 +137,8 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Model files (too large for git)
-models/
-*.safetensors
-*.bin
-*.pt
-*.pth
-
-# Checkpoints (too large for git)
-checkpoints/
-*.ckpt
+# Model files and checkpoints are now tracked via Git LFS
+# See .gitattributes for LFS configuration
 
 # Data files (too large for git)
 data/datasets/*.jsonl
