@@ -162,7 +162,6 @@ class EnhancedChessInference:
                 local_files_only=using_local,
                 device_map="auto",
                 attn_implementation="eager",
-                torch_dtype=torch.float16,
                 trust_remote_code=True
             )
 

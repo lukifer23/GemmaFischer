@@ -134,7 +134,8 @@ class TestParallelInference:
         results = instance.generate_parallel_responses("Test question")
 
         # Check that each expert has the correct mode
-        assert results['uci']['mode'] == 'uci'
+        # Note: 'uci' expert maps to 'engine' mode internally
+        assert results['uci']['mode'] == 'engine'
         assert results['tutor']['mode'] == 'tutor'
         assert results['director']['mode'] == 'director'
 
@@ -634,9 +635,9 @@ class TestErrorHandling:
             nonlocal call_count
             call_count += 1
 
-            if mode == 'uci':
+            if mode == 'engine':  # uci expert maps to engine mode
                 return {'response': 'e2e4', 'confidence': 0.9, 'generation_time': 1.0,
-                       'model_loaded': True, 'mode': 'uci', 'cached': False, 'cache_hit_rate': 0.0}
+                       'model_loaded': True, 'mode': 'engine', 'cached': False, 'cache_hit_rate': 0.0}
             elif mode == 'tutor':
                 raise RuntimeError("Tutor network error")
             elif mode == 'director':

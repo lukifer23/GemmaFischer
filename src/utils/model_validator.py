@@ -356,14 +356,32 @@ class ChessGemmaModelValidator:
         errors = []
 
         try:
-            # Check for NaN values in adapter files
-            for bin_file in adapter_path.glob('*.bin'):
-                state_dict = torch.load(bin_file, map_location='cpu')
-                for name, tensor in state_dict.items():
-                    if torch.isnan(tensor).any():
-                        errors.append(f"NaN values found in {bin_file.name}:{name}")
-                    if torch.isinf(tensor).any():
-                        errors.append(f"Inf values found in {bin_file.name}:{name}")
+            # Only check actual model weight files, not training metadata
+            weight_files = ['adapter_model.safetensors', 'adapter_model.bin']
+            for weight_file in weight_files:
+                bin_file = adapter_path / weight_file
+                if bin_file.exists():
+                    try:
+                        # For safetensors files, we need different handling
+                        if weight_file.endswith('.safetensors'):
+                            from safetensors import safe_open
+                            with safe_open(bin_file, framework="pt", device="cpu") as f:
+                                for key in f.keys():
+                                    tensor = f.get_tensor(key)
+                                    if torch.isnan(tensor).any():
+                                        errors.append(f"NaN values found in {weight_file}:{key}")
+                                    if torch.isinf(tensor).any():
+                                        errors.append(f"Inf values found in {weight_file}:{key}")
+                        else:
+                            # Legacy .bin files
+                            state_dict = torch.load(bin_file, map_location='cpu')
+                            for name, tensor in state_dict.items():
+                                if torch.isnan(tensor).any():
+                                    errors.append(f"NaN values found in {weight_file}:{name}")
+                                if torch.isinf(tensor).any():
+                                    errors.append(f"Inf values found in {weight_file}:{name}")
+                    except Exception as e:
+                        errors.append(f"Failed to check {weight_file}: {str(e)}")
 
         except Exception as e:
             errors.append(f"Corruption check failed: {str(e)}")

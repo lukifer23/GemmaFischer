@@ -51,14 +51,30 @@ def _load_single_jsonl(
     def _normalize(example: Dict[str, Any]) -> Dict[str, Any]:
         prompt = example.get("prompt")
         response = example.get("response")
+        task = example.get("task", "")
+
+        # Strengthen chess context in prompts
+        if prompt and not prompt.startswith("You are") and not prompt.startswith("FEN:"):
+            if "tutor" in task:
+                chess_prefix = "You are a chess tutor. "
+            elif "director" in task:
+                chess_prefix = "You are a chess grandmaster. "
+            elif "engine" in task:
+                chess_prefix = "You are a chess engine. "
+            else:
+                chess_prefix = "This is about chess. "
+
+            prompt = chess_prefix + prompt
+
         text = example.get("text")
         if text is None and prompt is not None and response is not None:
             text = f"{prompt}{response}"
+
         return {
             "text": text,
             "prompt": prompt,
             "response": response,
-            "task": example.get("task"),
+            "task": task,
             "meta": example.get("meta"),
         }
 

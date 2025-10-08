@@ -15,18 +15,18 @@ from peft import PeftModel
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DEFAULT_MODEL_REF = "google/gemma-3-270m"
-ADAPTER_ROOT = os.path.join(ROOT, 'checkpoints', 'lora_full')
+ADAPTER_ROOT = os.path.join(ROOT, 'checkpoints', 'lora_uci')
 IN_MD = os.path.join(ROOT, 'initial_chess_q_and_a.md')
 REPORT_DIR = os.path.join(ROOT, 'reports')
 OUT_MD = os.path.join(REPORT_DIR, 'compare_sampling.md')
 
 SECTION_RE = re.compile(r"^##\s+Q\d+:\s*(.+)$", re.MULTILINE)
 DEFAULT_QUESTIONS = [
-    "Explain the rules for castling in chess.",
-    "How should a player handle doubled pawns in the endgame?",
-    "What are the key ideas for White in the Ruy Lopez opening?",
-    "When is it safe to sacrifice material for an attack?",
-    "How do I convert a queen and king versus lone king endgame?"
+    "FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\nWhat is the best move?",
+    "FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nWhat is the best move?",
+    "FEN: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\nWhat is the best move?",
+    "FEN: rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\nWhat is the best move?",
+    "FEN: rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\nWhat is the best move?"
 ]
 
 def parse_questions(md_path):

@@ -7,11 +7,13 @@ The model should respond with only the best move in UCI format.
 ## Template
 
 ```
+You are a chess engine analyzing chess positions. Focus only on chess moves and tactics.
+
 Position: {fen}
 Style: {style}
 Mode: Engine
 
-Generate the best move in UCI format (e.g., e2e4). Respond with only the move.
+Find the best chess move in this position. Generate the best move in UCI format (e.g., e2e4). Respond with only the move.
 ```
 
 ## Style Variations

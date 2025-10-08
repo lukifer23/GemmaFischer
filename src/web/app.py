@@ -188,11 +188,9 @@ class ChessModelInterface:
         if not self.is_loaded:
             print("🔄 Loading model on-demand for parallel web request...")
             if not self.load_model():
-                return {
-                    'uci': {'error': 'Model not loaded', 'response': '', 'confidence': 0.0},
-                    'tutor': {'error': 'Model not loaded', 'response': '', 'confidence': 0.0},
-                    'director': {'error': 'Model not loaded', 'response': '', 'confidence': 0.0}
-                }
+                # Return error responses only for requested experts
+                error_response = {'error': 'Model not loaded', 'response': '', 'confidence': 0.0, 'generation_time': 0.0, 'cached': False, 'cache_hit_rate': 0.0, 'model_loaded': False, 'mode': None}
+                return {expert: error_response.copy() for expert in (experts or ['uci', 'tutor', 'director'])}
 
         # Use the parallel inference method
         results = self._inference.generate_parallel_responses(
@@ -542,6 +540,8 @@ def api_adapters_list():
         inf = get_inference_instance()
         if not inf.load_model():
             return jsonify({'error': 'Model not loaded'}), 500
+        # Refresh adapters to ensure discovery
+        inf.refresh_adapters()
         info = inf.get_model_info()
         return jsonify({
             'active': info.get('active_adapter'),
@@ -734,8 +734,8 @@ def ask_question():
         elif expert == 'director':
             mode = 'director'
         elif expert == 'auto':
-            # Auto mode: let MoE router decide
-            mode = 'auto'
+            # Auto mode: let MoE router decide, default to tutor
+            mode = 'tutor'
 
         # Switch adapter explicitly by expert (only for specific experts, not auto)
         try:
@@ -745,13 +745,20 @@ def ask_question():
         except Exception:
             pass
 
+        # Strengthen chess context for all questions
+        chess_keywords = ['chess', 'fen', 'position', 'move', 'tactics', 'strategy', 'opening', 'endgame', 'pawn', 'rook', 'knight', 'bishop', 'queen', 'king', 'check', 'mate', 'castl']
+        has_chess_context = any(keyword.lower() in question.lower() for keyword in chess_keywords)
+
+        if not has_chess_context and not enhanced_context:
+            enhanced_context = "This is a question about chess strategy, tactics, or analysis."
+
         # If question contains a FEN, include it explicitly in context so tutor has state
         try:
             import re
             m = re.search(r"FEN:\s*([^\n]+)", question, flags=re.IGNORECASE)
             fen_from_q = m.group(1).strip() if m else None
             if fen_from_q:
-                enhanced_context = f"Current position: {fen_from_q}\n\n{enhanced_context}" if enhanced_context else f"Current position: {fen_from_q}"
+                enhanced_context = f"Current chess position: {fen_from_q}\n\n{enhanced_context}" if enhanced_context else f"Current chess position: {fen_from_q}"
         except Exception:
             pass
 
@@ -816,12 +823,16 @@ def ask_parallel():
         context = data.get('context', '').strip()
         experts = data.get('experts')  # Optional: specify which experts to query
 
+        # Handle experts parameter - default to all if not specified or empty
+        if experts is None or (isinstance(experts, list) and len(experts) == 0):
+            experts = ['uci', 'tutor', 'director']
+
         if not question:
             return jsonify({
                 'error': 'No question provided',
-                'uci': {'response': 'Please ask a chess-related question.', 'confidence': 0.0},
-                'tutor': {'response': 'Please ask a chess-related question.', 'confidence': 0.0},
-                'director': {'response': 'Please ask a chess-related question.', 'confidence': 0.0}
+                'uci': {'response': 'Please ask a chess-related question.', 'confidence': 0.0, 'generation_time': 0.0, 'cached': False, 'cache_hit_rate': 0.0, 'model_loaded': False, 'mode': 'uci'},
+                'tutor': {'response': 'Please ask a chess-related question.', 'confidence': 0.0, 'generation_time': 0.0, 'cached': False, 'cache_hit_rate': 0.0, 'model_loaded': False, 'mode': 'tutor'},
+                'director': {'response': 'Please ask a chess-related question.', 'confidence': 0.0, 'generation_time': 0.0, 'cached': False, 'cache_hit_rate': 0.0, 'model_loaded': False, 'mode': 'director'}
             })
 
         print(f"\n🎯 NEW PARALLEL REQUEST RECEIVED")
@@ -991,7 +1002,12 @@ def get_model_info():
     try:
         inf = chess_model._inference
         loaded = inf.is_loaded
-        model_info = inf.get_model_info() if loaded else {}
+        if loaded:
+            # Ensure adapters are discovered
+            inf.refresh_adapters()
+            model_info = inf.get_model_info()
+        else:
+            model_info = {}
     except Exception:
         loaded = False
         model_info = {}

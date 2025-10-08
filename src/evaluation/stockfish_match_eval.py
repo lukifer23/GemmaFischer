@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Evaluate model move agreement with Stockfish on a set of FEN positions.
 
-Inputs: JSONL with objects containing { "fen": <FEN> }
-Outputs: prints summary and optional JSON report when --out is provided.
+Inputs: JSONL or JSON containing either a ``fen`` field or a question string
+with ``FEN: ...`` embedded. Outputs a console summary and (optionally) a JSON
+report when ``--out`` is provided.
 """
 
 import argparse
 import json
+import re
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -28,19 +30,52 @@ def parse_uci_from_text(text: str, board: chess.Board) -> Optional[chess.Move]:
     return extract_first_legal_move(text, board)
 
 
+FEN_PATTERN = re.compile(r"FEN:\s*([^\s]+)", re.IGNORECASE)
+
+
+def extract_fen(record: Dict[str, Any]) -> Optional[str]:
+    fen = record.get("fen") or record.get("FEN")
+    if fen:
+        return fen
+    for key in ("question", "prompt", "text", "context"):
+        value = record.get(key)
+        if isinstance(value, str):
+            match = FEN_PATTERN.search(value)
+            if match:
+                return match.group(1)
+    return None
+
+
 def load_fens(path: Path, limit: Optional[int]) -> List[str]:
     fens: List[str] = []
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                obj = json.loads(line)
-                fen = obj.get("fen") or obj.get("FEN")
+    if path.suffix.lower() == ".jsonl":
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                fen = extract_fen(obj)
                 if fen:
                     fens.append(fen)
                     if limit and len(fens) >= limit:
                         break
-            except json.JSONDecodeError:
+    else:
+        payload = json.load(path.open("r", encoding="utf-8"))
+        if isinstance(payload, dict) and "queries" in payload:
+            records = payload["queries"]
+        elif isinstance(payload, list):
+            records = payload
+        else:
+            raise ValueError("Unsupported JSON structure; expected list or {\"queries\": ...}")
+        for obj in records:
+            if not isinstance(obj, dict):
                 continue
+            fen = extract_fen(obj)
+            if fen:
+                fens.append(fen)
+                if limit and len(fens) >= limit:
+                    break
     return fens
 
 

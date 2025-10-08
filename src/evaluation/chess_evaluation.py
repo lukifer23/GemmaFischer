@@ -8,10 +8,12 @@ This script provides comprehensive evaluation of chess understanding including:
 - Opening and endgame knowledge
 """
 
+import argparse
 import os
 import json
+import re
 import torch
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 import re
@@ -21,10 +23,10 @@ from pathlib import Path
 
 
 DEFAULT_EVAL_QUESTIONS = [
+    "FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nFind the best move for Black in UCI format. End with `Recommended move (UCI): <move>`.",
+    "FEN: r1bq1rk1/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQ1RK1 w - - 0 6\nSuggest the best move for White in UCI format. End with `Recommended move (UCI): <move>`.",
     "Explain the difference between a pin and a skewer.",
-    "What should White play in this position? FEN: rnbqkbnr/pppp2pp/4p3/4p3/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 3",
     "List the key ideas for Black in the Sicilian Defense.",
-    "How can I improve my endgame technique?",
     "When should I trade queens in the middlegame?"
 ]
 
@@ -131,9 +133,33 @@ class ChessEvaluator:
         except:
             return False
 
-    def evaluate_position(self, prompt: str, max_tokens: int = 100) -> Dict[str, Any]:
-        """Evaluate a single chess position/question."""
-        inputs = self.tokenizer(prompt, return_tensors='pt').to(self.device)
+    def evaluate_position(self, prompt: str, max_tokens: int = 200) -> Dict[str, Any]:
+        """Evaluate a single chess position/question using strengthened chess context."""
+        # Use strengthened chess context like the inference system
+        chess_context = "You are a chess tutor providing educational analysis. Focus on chess principles, tactics, and strategy."
+
+        # Extract FEN if present
+        import re
+        fen_match = re.search(r'FEN:\s*([^\s]+)', prompt)
+        fen = fen_match.group(1) if fen_match else ""
+
+        # Build tutor-style template
+        system_prompt = f"""You are a chess tutor providing educational analysis of chess positions. Focus exclusively on chess principles, tactics, and strategy.
+
+Position: {fen}
+Style: balanced
+Mode: Tutor
+
+Analyze this chess position step by step:
+1. Evaluate the current chess position
+2. Identify key threats and opportunities in this chess game
+3. Consider candidate moves following chess principles
+4. Choose the best move with chess reasoning
+
+Respond with the best move in UCI format at the end."""
+
+        full_prompt = f"{chess_context}\n\n{system_prompt}\n\nQuestion: {prompt}\n\nAnalysis:"
+        inputs = self.tokenizer(full_prompt, return_tensors='pt').to(self.device)
 
         with torch.no_grad():
             outputs = self.model.generate(
@@ -142,11 +168,18 @@ class ChessEvaluator:
                 do_sample=True,
                 top_p=0.9,
                 temperature=0.7,
-                pad_token_id=self.tokenizer.eos_token_id
+                pad_token_id=self.tokenizer.eos_token_id,
+                repetition_penalty=1.1
             )
 
         response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = response[len(prompt):].strip() if response.startswith(prompt) else response.strip()
+        # Remove the prompt from the response
+        if response.startswith(full_prompt):
+            response = response[len(full_prompt):].strip()
+        elif response.startswith(prompt):
+            response = response[len(prompt):].strip()
+        else:
+            response = response.strip()
 
         # Extract and analyze moves
         moves = self.extract_moves_from_response(response)
@@ -239,6 +272,11 @@ class ChessEvaluator:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Evaluate chess responses for the fine-tuned adapters.")
+    parser.add_argument("--file", type=str, default=None, help="Optional JSON/JSONL file containing questions/prompts.")
+    args = parser.parse_args()
+
+    input_file = args.file
     """Run chess evaluation on test questions."""
     # Load test questions from initial Q&A
     qa_file = Path(__file__).parents[2] / 'archive' / 'initial_chess_q_and_a.md'
@@ -256,6 +294,61 @@ def main():
         print(f"Test file not found: {qa_file}. Using default evaluation prompts.")
         questions = DEFAULT_EVAL_QUESTIONS.copy()
 
+    fen_pattern = re.compile(r"FEN:\s*([^\s]+)", re.IGNORECASE)
+
+    if input_file:
+        data_path = Path(input_file)
+        if not data_path.exists():
+            raise FileNotFoundError(f"Input file {data_path} not found")
+
+        if data_path.suffix.lower() in {'.json', '.jsonl'}:
+            with open(data_path, 'r', encoding='utf-8') as f:
+                if data_path.suffix.lower() == '.jsonl':
+                    records = [json.loads(line) for line in f if line.strip()]
+                else:
+                    payload = json.load(f)
+                    if isinstance(payload, dict) and 'queries' in payload:
+                        records = payload['queries']
+                    elif isinstance(payload, list):
+                        records = payload
+                    else:
+                        raise ValueError("Unsupported JSON structure for evaluation inputs")
+
+            questions.clear()
+            for idx, rec in enumerate(records):
+                question_text = rec.get('question') or rec.get('prompt') or rec.get('text') or ""
+                context = rec.get('context') if isinstance(rec.get('context'), str) else ""
+                fen = rec.get('fen')
+                if not fen:
+                    match = fen_pattern.search(question_text) or fen_pattern.search(context)
+                    if match:
+                        fen = match.group(1)
+                expected = (rec.get('expected_expert') or '').lower()
+
+                if fen:
+                    if expected == 'uci':
+                        prompt = (
+                            f"FEN: {fen}\n"
+                            "Generate the best move in UCI format (e.g., e2e4). Respond with only the move."
+                        )
+                    elif expected == 'tutor':
+                        prompt = (
+                            f"FEN: {fen}\n"
+                            "Provide a step-by-step tutor-style explanation and finish with `Best move: <uci>`."
+                        )
+                    else:
+                        prompt = (
+                            f"FEN: {fen}\n"
+                            "Offer strategic guidance for this position. If a move is recommended, end with `Recommended move (UCI): <move>`."
+                        )
+                else:
+                    prompt = question_text or "Explain the key ideas in this position."
+
+                questions.append(prompt)
+
+        else:
+            raise ValueError("Unsupported input file format. Use JSON or JSONL.")
+
     if not questions:
         print("No questions found for evaluation. Using defaults.")
         questions = DEFAULT_EVAL_QUESTIONS.copy()
@@ -270,20 +363,36 @@ def main():
     elif env_model_id:
         model_path = env_model_id
     else:
-        local_path = Path(__file__).parent.parent / 'models' / 'google-gemma-3-270m'
+        local_path = Path(__file__).resolve().parents[2] / 'models' / 'google-gemma-3-270m'
         model_path = str(local_path) if local_path.exists() else "google/gemma-3-270m"
 
-    # Try to find latest checkpoint
-    checkpoints_dir = Path(__file__).parent.parent / 'checkpoints' / 'lora_full'
+    # Try to find expert-specific checkpoints for evaluation
+    # For comprehensive evaluation, we'll evaluate each expert separately
+    checkpoints_root = Path(__file__).resolve().parents[2] / 'checkpoints'
+
+    # Use tutor adapter for general chess evaluation (most comprehensive)
+    tutor_dir = checkpoints_root / 'lora_tutor'
     adapter_path = None
 
-    if checkpoints_dir.exists():
-        checkpoint_dirs = [d for d in checkpoints_dir.iterdir() if d.is_dir() and d.name.startswith('checkpoint-')]
+    if tutor_dir.exists():
+        checkpoint_dirs = [d for d in tutor_dir.iterdir() if d.is_dir() and d.name.startswith('checkpoint-')]
         if checkpoint_dirs:
-            # Get latest checkpoint
+            # Get latest tutor checkpoint
             latest_checkpoint = max(checkpoint_dirs, key=lambda x: int(x.name.split('-')[-1]))
             adapter_path = str(latest_checkpoint)
-            print(f"Using latest checkpoint: {latest_checkpoint.name}")
+            print(f"Using tutor checkpoint: {latest_checkpoint.name}")
+    else:
+        # Fallback to any available checkpoint
+        print("Tutor checkpoint not found, looking for alternatives...")
+        for fallback_dir in ['lora_full', 'lora_poc', 'lora_curriculum']:
+            checkpoints_dir = checkpoints_root / fallback_dir
+            if checkpoints_dir.exists():
+                checkpoint_dirs = [d for d in checkpoints_dir.iterdir() if d.is_dir() and d.name.startswith('checkpoint-')]
+                if checkpoint_dirs:
+                    latest_checkpoint = max(checkpoint_dirs, key=lambda x: int(x.name.split('-')[-1]))
+                    adapter_path = str(latest_checkpoint)
+                    print(f"Using fallback checkpoint from {fallback_dir}: {latest_checkpoint.name}")
+                    break
 
     evaluator = ChessEvaluator(str(model_path), adapter_path)
 

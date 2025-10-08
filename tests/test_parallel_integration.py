@@ -113,8 +113,8 @@ class TestParallelIntegration:
         assert len(results) == 2
         assert len(adapter_calls) == 2
 
-        # Verify each expert got called
-        assert 'uci' in adapter_calls
+        # Verify each expert got called (uci maps to engine mode)
+        assert 'engine' in adapter_calls  # uci expert maps to engine mode
         assert 'tutor' in adapter_calls
 
     def test_cache_integration_parallel(self):
@@ -165,14 +165,14 @@ class TestParallelIntegration:
             nonlocal call_count
             call_count += 1
 
-            if mode == 'uci':
+            if mode == 'engine':  # uci expert maps to engine mode
                 # Normal response
                 return {
                     'response': 'e2e4',
                     'confidence': 0.9,
                     'generation_time': 1.0,
                     'model_loaded': True,
-                    'mode': 'uci',
+                    'mode': 'engine',
                     'cached': False,
                     'cache_hit_rate': 0.0
                 }
@@ -221,7 +221,7 @@ class TestParallelIntegration:
         # Mock generate_response with timing
         def mock_generate_response(question, context=None, mode=None, **kwargs):
             # Simulate different response times per expert
-            if mode == 'uci':
+            if mode == 'engine':  # uci expert maps to engine mode
                 time.sleep(0.1)
                 generation_time = 0.1
             elif mode == 'tutor':
@@ -336,8 +336,10 @@ class TestParallelIntegration:
     def test_mixed_expert_configurations(self):
         """Test parallel inference with various expert configurations."""
         def mock_generate_response(question, context=None, mode=None, **kwargs):
+            # Map mode back to expert name for response
+            expert_name = 'uci' if mode == 'engine' else mode
             return {
-                'response': f'{mode} response',
+                'response': f'{expert_name} response',
                 'confidence': 0.8,
                 'generation_time': 0.1,
                 'model_loaded': True,

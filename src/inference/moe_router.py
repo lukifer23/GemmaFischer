@@ -30,6 +30,8 @@ import hashlib
 from functools import lru_cache
 from collections import OrderedDict
 import threading
+import random
+from torch.utils.data import Dataset, DataLoader
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,6 +39,37 @@ logger = logging.getLogger(__name__)
 
 # Thread-local storage for caching
 _thread_local = threading.local()
+
+@dataclass
+class RouterTrainingExample:
+    """Training example for MoE router."""
+    question: str
+    question_embedding: np.ndarray
+    expected_expert: str
+    fen: Optional[str] = None
+    category: str = "general"
+
+class RouterTrainingDataset(Dataset):
+    """Dataset for training the MoE router."""
+
+    def __init__(self, examples: List[RouterTrainingExample]):
+        self.examples = examples
+
+    def __len__(self):
+        return len(self.examples)
+
+    def __getitem__(self, idx):
+        example = self.examples[idx]
+
+        # Convert expert name to index
+        expert_to_idx = {"uci": 0, "tutor": 1, "director": 2}
+        target_idx = expert_to_idx.get(example.expected_expert, 1)  # Default to tutor
+
+        return {
+            "embedding": torch.tensor(example.question_embedding, dtype=torch.float32),
+            "target": torch.tensor(target_idx, dtype=torch.long),
+            "expert_name": example.expected_expert
+        }
 
 
 @dataclass
@@ -668,6 +701,154 @@ class ChessMoERouter(nn.Module):
         self.expert_performance = save_dict.get('expert_performance', self.expert_performance)
 
         logger.info(f"📂 Router loaded from {path}")
+
+    def prepare_training_data(self, evaluation_queries: List[Dict[str, Any]],
+                            inference_system) -> List[RouterTrainingExample]:
+        """Prepare training data from evaluation queries and expert responses."""
+        training_examples = []
+
+        print("🎯 Preparing MoE router training data...")
+
+        for i, query in enumerate(evaluation_queries):
+            if i % 50 == 0:
+                print(f"   Processing query {i+1}/{len(evaluation_queries)}")
+
+            question = query["question"]
+            expected_expert = query["expected_expert"]
+            category = query.get("category", "general")
+
+            # Extract FEN if present
+            fen_match = re.search(r'FEN:\s*([^\s\n]+)', question)
+            fen = fen_match.group(1) if fen_match else None
+
+            # Generate question embedding (simplified - use basic features)
+            question_embedding = self._embed_question_for_training(question)
+
+            training_examples.append(RouterTrainingExample(
+                question=question,
+                question_embedding=question_embedding,
+                expected_expert=expected_expert,
+                fen=fen,
+                category=category
+            ))
+
+        print(f"✅ Prepared {len(training_examples)} training examples")
+        return training_examples
+
+    def _embed_question_for_training(self, question: str) -> np.ndarray:
+        """Create a simple embedding for training (can be replaced with better embedding)."""
+        # Simple bag-of-words style features for chess terms
+        chess_terms = {
+            'fen': 1.0, 'position': 0.8, 'move': 0.9, 'best': 0.7,
+            'analyze': 0.9, 'tactics': 0.8, 'strategy': 0.8,
+            'opening': 0.6, 'endgame': 0.6, 'middlegame': 0.6,
+            'pawn': 0.4, 'rook': 0.4, 'knight': 0.4, 'bishop': 0.4, 'queen': 0.4, 'king': 0.4,
+            'check': 0.5, 'mate': 0.5, 'castl': 0.5, 'attack': 0.6, 'defense': 0.6
+        }
+
+        # Create feature vector
+        features = []
+        question_lower = question.lower()
+
+        for term, weight in chess_terms.items():
+            if term in question_lower:
+                features.append(weight)
+            else:
+                features.append(0.0)
+
+        # Add question length features
+        features.extend([
+            len(question) / 500.0,  # Normalized length
+            len(re.findall(r'\b\w+\b', question)) / 50.0,  # Word count
+            1.0 if '?' in question else 0.0,  # Question mark
+            1.0 if 'FEN:' in question.upper() else 0.0,  # Has FEN
+        ])
+
+        return np.array(features, dtype=np.float32)
+
+    def train_router(self, training_examples: List[RouterTrainingExample],
+                    num_epochs: int = 10, batch_size: int = 32, learning_rate: float = 1e-3):
+        """Train the MoE router on routing decisions."""
+
+        print("🚀 Starting MoE router training...")
+        print(f"   Examples: {len(training_examples)}")
+        print(f"   Epochs: {num_epochs}")
+        print(f"   Batch size: {batch_size}")
+        print(f"   Learning rate: {learning_rate}")
+
+        # Create dataset and dataloader
+        dataset = RouterTrainingDataset(training_examples)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        # Set up optimizer
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+        self.criterion = nn.CrossEntropyLoss()
+
+        # Training loop
+        self.train()
+        best_accuracy = 0.0
+
+        for epoch in range(num_epochs):
+            epoch_loss = 0.0
+            epoch_correct = 0
+            epoch_total = 0
+
+            for batch in dataloader:
+                embeddings = batch["embedding"]
+                targets = batch["target"]
+
+                # Forward pass
+                self.optimizer.zero_grad()
+                outputs = self.forward(embeddings)
+                probs = F.softmax(outputs, dim=1)
+                loss = self.criterion(outputs, targets)
+
+                # Backward pass
+                loss.backward()
+                self.optimizer.step()
+
+                # Statistics
+                epoch_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                epoch_correct += (predicted == targets).sum().item()
+                epoch_total += targets.size(0)
+
+            # Calculate epoch metrics
+            epoch_accuracy = epoch_correct / epoch_total
+            epoch_avg_loss = epoch_loss / len(dataloader)
+
+            print("2d"
+            # Save best model
+            if epoch_accuracy > best_accuracy:
+                best_accuracy = epoch_accuracy
+                self.save_router("checkpoints/moe_router/best_checkpoint.pth")
+
+        print(".1%"
+        # Switch back to eval mode
+        self.eval()
+
+        return best_accuracy
+
+    def evaluate_routing_accuracy(self, test_examples: List[RouterTrainingExample]) -> float:
+        """Evaluate routing accuracy on test data."""
+        self.eval()
+        correct = 0
+        total = 0
+
+        with torch.no_grad():
+            for example in test_examples:
+                embedding = torch.tensor(example.question_embedding, dtype=torch.float32).unsqueeze(0)
+                outputs = self.forward(embedding)
+                _, predicted = torch.max(outputs.data, 1)
+
+                expert_idx_to_name = {0: "uci", 1: "tutor", 2: "director"}
+                predicted_expert = expert_idx_to_name[predicted.item()]
+
+                if predicted_expert == example.expected_expert:
+                    correct += 1
+                total += 1
+
+        return correct / total if total > 0 else 0.0
 
 
 class MoEInferenceManager:

@@ -424,7 +424,7 @@ class UCIBridge:
             result = self.chess_engine.get_best_move(
                 board,
                 depth=min(depth, 15),  # Limit depth for UCI compatibility
-                time_limit=time_limit
+                time_limit_ms=int(time_limit * 1000)  # Convert seconds to milliseconds
             )
             return result
         except Exception as e:

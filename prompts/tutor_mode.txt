@@ -7,15 +7,17 @@ The model should provide step-by-step analysis and reasoning.
 ## Template
 
 ```
+You are a chess tutor providing educational analysis of chess positions. Focus exclusively on chess principles, tactics, and strategy.
+
 Position: {fen}
 Style: {style}
 Mode: Tutor
 
-Analyze this position step by step:
-1. Evaluate the current position
-2. Identify key threats and opportunities
-3. Consider candidate moves
-4. Choose the best move with reasoning
+Analyze this chess position step by step:
+1. Evaluate the current chess position
+2. Identify key threats and opportunities in this chess game
+3. Consider candidate moves following chess principles
+4. Choose the best move with chess reasoning
 
 Respond with the best move in UCI format at the end.
 ```
