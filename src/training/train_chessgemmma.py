@@ -394,8 +394,17 @@ class ChessGemmaTrainingOrchestrator:
             )
 
             result.training_time = time.time() - start_time
-            result.success = training_result.success
-            result.final_metrics = training_result.__dict__ if hasattr(training_result, '__dict__') else {}
+            result.success = bool(getattr(training_result, "success", False))
+            result.final_metrics = getattr(training_result, "final_metrics", {})
+            result.checkpoint_created = getattr(training_result, "adapter_path", None) or result.checkpoint_created
+            if hasattr(training_result, "validation_results"):
+                result.final_metrics.setdefault(
+                    "validation_results", getattr(training_result, "validation_results")
+                )
+            result.error_message = None
+            if not result.success:
+                recs = getattr(training_result, "recommendations", []) or []
+                result.error_message = "; ".join(recs) if recs else "Expert training reported failure"
 
             # Get latest checkpoint info
             if self.checkpoint_manager:
@@ -404,7 +413,10 @@ class ChessGemmaTrainingOrchestrator:
                     checkpoint_dir, metadata = latest
                     result.checkpoint_created = str(checkpoint_dir)
 
-            logger.info(f"✅ {expert_name} expert training completed successfully in {result.training_time:.1f}s")
+            if result.success:
+                logger.info(f"✅ {expert_name} expert training completed successfully in {result.training_time:.1f}s")
+            else:
+                logger.error(f"❌ {expert_name} training reported failure after {result.training_time:.1f}s: {result.error_message}")
 
         except Exception as e:
             result.training_time = time.time() - start_time

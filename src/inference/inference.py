@@ -112,17 +112,28 @@ def _find_latest_file(patterns: List[str]) -> Optional[Path]:
     return candidates[0]
 
 
-def _resolve_default_model_path(project_root: Path) -> Optional[Path]:
-    """Resolve the local base model snapshot directory under models/."""
+def _resolve_default_model_path(project_root: Path) -> str:
+    """Resolve the default model identifier or local snapshot directory."""
+    env_override = os.environ.get("CHESSGEMMA_MODEL_PATH")
+    if env_override:
+        override_path = Path(env_override).expanduser()
+        return str(override_path) if override_path.exists() else env_override
+
+    env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+    if env_model_id:
+        return env_model_id
+
+    # Prefer local snapshots when they exist so we can operate fully offline.
     base = project_root / "models" / "unsloth-gemma-3-270m-it" / "models--unsloth--gemma-3-270m-it" / "snapshots"
     if not base.exists():
-        return None
+        # Fall back to the public Hugging Face identifier.
+        return "unsloth/gemma-3-270m-it"
     # Pick latest snapshot directory
     subdirs = [p for p in base.iterdir() if p.is_dir()]
     if not subdirs:
-        return None
+        return "unsloth/gemma-3-270m-it"
     subdirs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return subdirs[0]
+    return str(subdirs[0])
 
 
 def _resolve_latest_adapter_path(project_root: Path) -> Optional[Path]:
@@ -146,6 +157,8 @@ class ChessGemmaInference:
         # Preserve provided strings for tests; otherwise resolve defaults
         self.model_path = model_path if model_path else _resolve_default_model_path(self.project_root)
         self.adapter_path = adapter_path if adapter_path else _resolve_latest_adapter_path(self.project_root)
+        if isinstance(self.model_path, Path):
+            self.model_path = str(self.model_path)
 
         self.tokenizer = None
         self.model = None
@@ -304,7 +317,10 @@ class ChessGemmaInference:
                 )
                 return
 
-            self.moe_router = ChessMoERouter(num_experts=len(self._expert_paths))
+            self.moe_router = ChessMoERouter(
+                num_experts=len(self._expert_paths),
+                expert_names=list(self._expert_paths.keys())
+            )
             try:
                 self.moe_router.load_router(str(router_checkpoint))
             except Exception as exc:
@@ -333,14 +349,27 @@ class ChessGemmaInference:
             return True
 
         try:
-            if not self.model_path or not Path(self.model_path).exists():
-                print("Model snapshot not found under models/. Ensure weights are downloaded locally.")
+            if not self.model_path:
+                print("Model path not configured. Set CHESSGEMMA_MODEL_ID or CHESSGEMMA_MODEL_PATH.")
                 return False
 
-            self.tokenizer = AutoTokenizer.from_pretrained(str(self.model_path), local_files_only=True)
+            model_path_obj = Path(self.model_path)
+            using_local_weights = model_path_obj.exists()
+            model_ref = str(model_path_obj) if using_local_weights else self.model_path
+
+            if using_local_weights:
+                logger.info("Loading Gemma weights from local snapshot at %s", model_ref)
+            else:
+                logger.info("Loading Gemma weights from Hugging Face repo %s", model_ref)
+
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_ref,
+                local_files_only=using_local_weights,
+                trust_remote_code=False,
+            )
             base_model = AutoModelForCausalLM.from_pretrained(
-                str(self.model_path),
-                local_files_only=True,
+                model_ref,
+                local_files_only=using_local_weights,
                 device_map="auto",
                 attn_implementation="eager",
             )

@@ -22,6 +22,10 @@ This guide covers the training process for ChessGemma's Mixture of Experts (MoE)
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# Configure base model location (choose one)
+export CHESSGEMMA_MODEL_ID="unsloth/gemma-3-270m-it"   # use Hugging Face cache
+# or export CHESSGEMMA_MODEL_PATH="/absolute/path/to/local/snapshot"
 ```
 
 ## Dataset Preparation
@@ -33,7 +37,7 @@ ChessGemma uses standardized training data across three expert domains:
 # Current dataset sizes (validated and processed)
 data/standardized/standardized_uci_expert.jsonl:         50,000 samples (UCI move generation)
 data/standardized/standardized_tutor_expert.jsonl:       50,000 samples (Chess explanations)
-data/standardized/standardized_director_expert.jsonl:     5,133 samples (Q&A reasoning)
+data/standardized/standardized_director_expert_v2.jsonl:  50,000 samples (Strategic reasoning)
 data/standardized/standardized_cot_reasoning_repaired.jsonl: 2,000 samples (CoT reasoning)
 ```
 

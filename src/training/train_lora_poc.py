@@ -311,6 +311,22 @@ def main():
         os.environ.setdefault('NUMEXPR_NUM_THREADS', '2')
 
         model_path = cfg['model']['pretrained_model_path']
+        env_model_path = os.environ.get("CHESSGEMMA_MODEL_PATH")
+        env_model_id = os.environ.get("CHESSGEMMA_MODEL_ID")
+        if env_model_path:
+            candidate = Path(env_model_path).expanduser()
+            if candidate.exists():
+                model_path = str(candidate)
+            else:
+                # Fall back to raw string so HF hub can resolve it.
+                model_path = env_model_path
+        elif env_model_id:
+            model_path = env_model_id
+
+        model_path_obj = Path(model_path)
+        using_local_weights = model_path_obj.exists()
+        model_ref = str(model_path_obj) if using_local_weights else model_path
+
         out_dir = Path(cfg['training']['output_dir'])
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -379,11 +395,14 @@ def main():
                 except Exception as e:
                     print(f"Warning: task filter failed ({e}); proceeding without filtering")
 
-        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_ref,
+            local_files_only=using_local_weights
+        )
         # load model with the recommended eager attention implementation for Gemma3
         model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            local_files_only=True,
+            model_ref,
+            local_files_only=using_local_weights,
             device_map='auto',
             attn_implementation='eager'
         )

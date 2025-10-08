@@ -6,7 +6,7 @@
 #   pip freeze > requirements.txt
 
 # Core ML dependencies (MPS-optimized)
-transformers==4.38.*
+transformers==4.45.*
 datasets
 accelerate
 peft

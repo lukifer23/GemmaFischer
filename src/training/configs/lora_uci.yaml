@@ -1,5 +1,5 @@
 model:
-  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+  pretrained_model_path: "unsloth/gemma-3-270m-it"
 training:
   output_dir: "checkpoints/lora_uci"
   per_device_train_batch_size: 4  # Increased batch size
@@ -28,4 +28,3 @@ lora:
   dropout: 0.05
 dataset:
   path: "data/standardized/standardized_uci_expert.jsonl"
-

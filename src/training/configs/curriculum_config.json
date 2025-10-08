@@ -1,6 +1,6 @@
 {
   "model": {
-    "base_model": "models/unsloth-gemma-3-270m-it",
+    "base_model": "unsloth/gemma-3-270m-it",
     "max_seq_length": 2048,
     "torch_dtype": "float16"
   },

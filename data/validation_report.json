@@ -26,12 +26,12 @@
         "validation_method": "Stockfish legality check"
       },
       "standardized_director_expert": {
-        "samples": 5133,
+        "samples": 50000,
         "format_validation": "PASS",
         "task_consistency": "PASS (director_qa)",
         "metadata_completeness": "PASS", 
         "quality_score": 0.8,
-        "validation_method": "Quality filtering"
+        "validation_method": "Transformed from tutor dataset with structural validation"
       }
     },
     "data_quality_metrics": {

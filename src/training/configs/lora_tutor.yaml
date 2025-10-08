@@ -1,5 +1,5 @@
 model:
-  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+  pretrained_model_path: "unsloth/gemma-3-270m-it"
 training:
   output_dir: "checkpoints/lora_tutor"
   per_device_train_batch_size: 2  # Slightly larger batch
@@ -27,5 +27,4 @@ lora:
   target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "down_proj", "up_proj"]
   dropout: 0.05
 dataset:
-  path: "data/formatted/tutor_expert.jsonl"
-
+  path: "data/standardized/standardized_tutor_expert.jsonl"

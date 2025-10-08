@@ -69,13 +69,30 @@ class ChessMoERouter(nn.Module):
     Features advanced caching and performance optimizations.
     """
 
-    def __init__(self, num_experts: int = 3, feature_dim: int = 256, hidden_dim: int = 128):
+    def __init__(
+        self,
+        num_experts: int = 3,
+        feature_dim: int = 256,
+        hidden_dim: int = 128,
+        expert_names: Optional[List[str]] = None,
+    ):
         super().__init__()
-        self.num_experts = num_experts
-        self.feature_dim = feature_dim
+        default_names = ['uci', 'tutor', 'director']
 
-        # Expert mapping
-        self.expert_names = ['uci', 'tutor', 'director']
+        if expert_names:
+            self.expert_names = expert_names
+        else:
+            if num_experts <= len(default_names):
+                self.expert_names = default_names[:num_experts]
+            else:
+                extra = [f"expert_{i}" for i in range(len(default_names), num_experts)]
+                self.expert_names = default_names + extra
+
+        self.num_experts = len(self.expert_names)
+        if self.num_experts == 0:
+            raise ValueError("ChessMoERouter requires at least one expert to operate.")
+
+        self.feature_dim = feature_dim
 
         # Feature extraction layers
         self.position_encoder = nn.Sequential(
@@ -89,7 +106,7 @@ class ChessMoERouter(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(hidden_dim, num_experts)
+            nn.Linear(hidden_dim, self.num_experts)
         )
 
         # Confidence estimation
@@ -496,16 +513,25 @@ class ChessMoERouter(nn.Module):
 
     def _apply_performance_weighting(self, gate_probs: torch.Tensor) -> torch.Tensor:
         """Apply expert performance weighting to routing probabilities."""
-        weights = torch.tensor([self.expert_performance[name]['accuracy']
-                               for name in self.expert_names], dtype=torch.float32)
+        weights = torch.tensor(
+            [self.expert_performance.get(name, {}).get('accuracy', 1.0)
+             for name in self.expert_names],
+            dtype=torch.float32
+        )
 
         # Weight the probabilities by expert performance
         weighted_probs = gate_probs * weights
-        return weighted_probs / weighted_probs.sum()
+        total = weighted_probs.sum()
+        if total.item() == 0:
+            return torch.full_like(weighted_probs, 1.0 / self.num_experts)
+        return weighted_probs / total
 
     def _make_routing_decision(self, probs: torch.Tensor, confidence: float,
                               fen: str, query_type: str) -> RoutingDecision:
         """Make the final routing decision."""
+
+        if not self.expert_names:
+            raise RuntimeError("MoE router has no experts configured")
 
         # Get expert probabilities
         expert_probs = {name: prob.item() for name, prob in zip(self.expert_names, probs)}
@@ -964,4 +990,3 @@ if __name__ == "__main__":
     print("   1. Train router on chess position data")
     print("   2. Integrate with expert models")
     print("   3. Use MoEInferenceManager for automatic routing")
-

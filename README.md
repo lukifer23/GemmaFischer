@@ -105,6 +105,13 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure Gemma base weights (once)
+# Option 1: keep weights in the Hugging Face cache (recommended)
+export CHESSGEMMA_MODEL_ID="unsloth/gemma-3-270m-it"
+# Option 2: download to disk and point to the snapshot root
+# huggingface-cli download unsloth/gemma-3-270m-it --local-dir models/gemma3
+# export CHESSGEMMA_MODEL_PATH="$PWD/models/gemma3"
 ```
 
 ### Updating dependency pins
@@ -158,6 +165,8 @@ ChessGemma/
 │   └── validation/    # Quality assessment reports
 ├── checkpoints/       # LoRA adapter checkpoints
 └── docs/             # Documentation
+
+The director expert now trains on `data/standardized/standardized_director_expert_v2.jsonl`, a strategic dataset distilled from the tutor corpus with explicit best-move annotations.
 ```
 
 ## MoE Checkpoint Layout

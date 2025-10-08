@@ -1,6 +1,6 @@
 # LoRA fine-tune config for a small POC
 model:
-  pretrained_model_path: "models/unsloth-gemma-3-270m-it/models--unsloth--gemma-3-270m-it/snapshots/23cf460f6bb16954176b3ddcc8d4f250501458a9"
+  pretrained_model_path: "unsloth/gemma-3-270m-it"
 training:
   output_dir: "checkpoints/lora_poc"
   per_device_train_batch_size: 4
@@ -18,7 +18,9 @@ lora:
   dropout: 0.05
 # You can either set a single dataset.path or a weighted list under datasets.
 datasets:
-  - path: "data/finetune/chess_finetune_refined.jsonl"
-    weight: 0.3
-  - path: "data/datasets/lichess_puzzles_1000_2000.jsonl"
-    weight: 0.7
+  - path: "data/standardized/standardized_uci_expert.jsonl"
+    weight: 0.34
+  - path: "data/standardized/standardized_tutor_expert.jsonl"
+    weight: 0.33
+  - path: "data/standardized/standardized_director_expert_v2.jsonl"
+    weight: 0.33

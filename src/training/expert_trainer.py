@@ -825,6 +825,7 @@ class ChessExpertTrainer:
 
             train_completed = [False]
             train_result = [None]
+            train_error = [None]
 
             def train_with_timeout():
                 try:
@@ -832,6 +833,7 @@ class ChessExpertTrainer:
                     train_completed[0] = True
                 except Exception as e:
                     logger.error(f"Training failed with error: {e}")
+                    train_error[0] = e
                     train_completed[0] = True
 
             train_thread = threading.Thread(target=train_with_timeout)
@@ -841,6 +843,12 @@ class ChessExpertTrainer:
             if not train_completed[0]:
                 logger.error("🚨 Training timed out after 5 minutes!")
                 raise TimeoutError("Training exceeded 5-minute timeout")
+
+            if train_error[0] is not None:
+                raise train_error[0]
+
+            if train_result[0] is None:
+                raise RuntimeError("Training thread completed without returning a result")
 
             training_end_time = time.time()
             logger.info(f"✅ Training completed in {training_end_time - training_start_time:.1f}s")
