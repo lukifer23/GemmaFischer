@@ -24,20 +24,36 @@ def test_router_basic():
 
     # Initialize router
     router = ChessMoERouter()
+    # Try to load the trained checkpoint
+    checkpoint_path = Path(__file__).parent.parent / "checkpoints" / "moe_router" / "final_checkpoint.pth"
+    if checkpoint_path.exists():
+        router.load_router(str(checkpoint_path))
+        print(f"✅ Router loaded from checkpoint: {checkpoint_path}")
+    else:
+        print("⚠️  No checkpoint found, using untrained router")
     print(f"✅ Router initialized with {router.num_experts} experts: {router.expert_names}")
 
-    # Test routing decisions
+    # Test routing decisions with actual query examples from dataset
     test_cases = [
-        ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "engine", "uci"),
-        ("r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1", "tutor", "tutor"),
-        ("What are the main ideas behind the Sicilian Defense?", "director", "director"),
+        ("FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nWhat is the best move?", "uci"),
+        ("FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nAnalyze this position.", "tutor"),
+        ("What are the main ideas behind the Sicilian Defense?", "director"),
     ]
 
     print("\n🎯 Testing routing decisions:")
-    for fen, query_type, expected in test_cases:
-        decision = router.route_query(fen, query_type)
+    for query, expected in test_cases:
+        # Extract FEN if present, otherwise use empty string
+        if query.startswith("FEN:"):
+            lines = query.split("\n")
+            fen = lines[0].replace("FEN: ", "")
+            query_text = lines[1] if len(lines) > 1 else ""
+        else:
+            fen = ""
+            query_text = query
+
+        decision = router.route_query(fen, query_text)
         status = "✅" if decision.primary_expert == expected else "❌"
-        print(f"  {status} {query_type} -> {decision.primary_expert} (expected: {expected})")
+        print(f"  {status} {query_text[:30]}... -> {decision.primary_expert} (expected: {expected})")
 
     print("\n📊 Router cache stats:")
     cache_stats = router.get_cache_stats()
@@ -57,7 +73,7 @@ def test_moe_inference():
         print("✅ Inference system initialized")
 
         # Test expert loading
-        expert_info = inference.expert_manager.get_expert_info()
+        expert_info = inference._expert_manager.get_expert_info()
         print(f"✅ Available experts: {expert_info['available_experts']}")
         print(f"✅ Active expert: {expert_info['active_adapter']}")
 
@@ -97,16 +113,49 @@ def test_moe_inference():
 
     return True
 
+def test_feature_extraction():
+    """Test feature extraction to see what features look like."""
+    print("\n🔍 Testing Feature Extraction")
+    print("=" * 50)
+
+    try:
+        from src.inference.moe_router import ChessMoERouter
+        router = ChessMoERouter()
+
+        # Test different types of queries
+        test_cases = [
+            ("uci", "FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nWhat is the best move?"),
+            ("tutor", "FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nAnalyze this position."),
+            ("director", "What are the main ideas behind the Sicilian Defense?"),
+        ]
+
+        for expected_expert, query in test_cases:
+            features = router._extract_position_features("", query)  # No FEN for simplicity
+            question_features = router._extract_question_features(query)
+            print(f"\n{expected_expert.upper()}: {query[:50]}...")
+            print(f"Full features: {features.tolist()}")
+            print(f"Question features: {question_features}")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Feature extraction test failed: {e}")
+        return False
+
 def test_expert_routing_accuracy():
     """Test routing accuracy against known good examples."""
     print("\n📊 Testing Expert Routing Accuracy")
     print("=" * 50)
 
     try:
-        from data.validation.eval_suite import load_evaluation_queries
-
-        # Load test queries
-        queries = load_evaluation_queries("data/validation/eval_suite.jsonl")
+        # Load evaluation queries directly from JSONL file
+        import json
+        queries = []
+        eval_file = Path(__file__).parent.parent / "data" / "validation" / "expanded_eval_suite.jsonl"
+        with open(eval_file, 'r') as f:
+            for line in f:
+                if line.strip():
+                    queries.append(json.loads(line))
         if not queries:
             print("❌ No evaluation queries found")
             return False
@@ -117,6 +166,13 @@ def test_expert_routing_accuracy():
         # Initialize systems
         inference = ChessGemmaInference()
         router = ChessMoERouter()
+        # Try to load the trained checkpoint
+        checkpoint_path = Path(__file__).parent.parent / "checkpoints" / "moe_router" / "final_checkpoint.pth"
+        if checkpoint_path.exists():
+            router.load_router(str(checkpoint_path))
+            print(f"✅ Router loaded from checkpoint: {checkpoint_path}")
+        else:
+            print("⚠️  No checkpoint found, using untrained router")
 
         correct_predictions = 0
         total_predictions = 0
@@ -167,7 +223,10 @@ def main():
     # Test 1: Basic router functionality
     results.append(("Basic Router", test_router_basic()))
 
-    # Test 2: Full MoE inference pipeline
+    # Test 2: Feature extraction
+    results.append(("Feature Extraction", test_feature_extraction()))
+
+    # Test 3: Full MoE inference pipeline
     results.append(("MoE Inference", test_moe_inference()))
 
     # Test 3: Routing accuracy

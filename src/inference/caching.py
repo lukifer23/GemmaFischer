@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import hashlib
 import threading
+import json
+import os
+from pathlib import Path
 from collections import OrderedDict
 from typing import Dict, Any, Optional, Tuple
 
@@ -40,18 +43,158 @@ class ChessInferenceCache:
             self.max_cache_size = max_cache_size or 512
             self._engine_cache_max = 1024
 
-        self._response_cache = OrderedDict()
-        self._engine_cache = OrderedDict()
-        self._kv_cache = {}
+        self._response_cache = OrderedDict()  # L1 cache for responses
+        self._engine_cache = OrderedDict()    # L1 cache for engine moves
+        self._kv_cache = {}                    # L1 cache for KV states
+
+        # L2 (persistent) caches
+        self._l2_cache_enabled = os.environ.get('CHESSGEMMA_L2_CACHE_ENABLED', '1') not in ('0', 'false', 'False')
+        self._l2_cache_dir = Path(os.environ.get('CHESSGEMMA_L2_CACHE_DIR', 'cache/l2'))
+        self._l2_response_cache: Optional[Dict[str, Any]] = None
+        self._l2_engine_cache: Optional[Dict[str, Any]] = None
+
+        # L2 cache size limits (smaller than L1 since disk I/O is slower)
+        self._l2_max_response_cache = min(self.max_cache_size // 4, 256)
+        self._l2_max_engine_cache = min(self._engine_cache_max // 4, 512)
 
         # Performance tracking with reduced overhead
         self._cache_hits = 0
+        self._l2_cache_hits = 0
         self._total_requests = 0
+
+        # Initialize L2 caches if enabled
+        if self._l2_cache_enabled:
+            self._initialize_l2_caches()
 
         # Thread safety - use faster Lock instead of RLock for better performance
         self._cache_lock = threading.Lock()
 
-        logger.info(f"Chess Inference Cache initialized (max_size: {self.max_cache_size})")
+        logger.info(f"Chess Inference Cache initialized (max_size: {self.max_cache_size}, L2: {self._l2_cache_enabled})")
+
+    def _initialize_l2_caches(self):
+        """Initialize L2 (persistent) caches."""
+        try:
+            self._l2_cache_dir.mkdir(parents=True, exist_ok=True)
+
+            # Initialize response cache
+            response_cache_file = self._l2_cache_dir / "response_cache.json"
+            if response_cache_file.exists():
+                try:
+                    with open(response_cache_file, 'r') as f:
+                        self._l2_response_cache = json.load(f)
+                    logger.debug(f"Loaded L2 response cache with {len(self._l2_response_cache)} entries")
+                except Exception as e:
+                    logger.warning(f"Failed to load L2 response cache: {e}")
+                    self._l2_response_cache = {}
+            else:
+                self._l2_response_cache = {}
+
+            # Initialize engine cache
+            engine_cache_file = self._l2_cache_dir / "engine_cache.json"
+            if engine_cache_file.exists():
+                try:
+                    with open(engine_cache_file, 'r') as f:
+                        self._l2_engine_cache = json.load(f)
+                    logger.debug(f"Loaded L2 engine cache with {len(self._l2_engine_cache)} entries")
+                except Exception as e:
+                    logger.warning(f"Failed to load L2 engine cache: {e}")
+                    self._l2_engine_cache = {}
+            else:
+                self._l2_engine_cache = {}
+
+        except Exception as e:
+            logger.error(f"Failed to initialize L2 caches: {e}")
+            self._l2_cache_enabled = False
+
+    def _save_l2_cache(self, cache_type: str):
+        """Save L2 cache to disk."""
+        if not self._l2_cache_enabled:
+            return
+
+        try:
+            if cache_type == "response" and self._l2_response_cache:
+                cache_file = self._l2_cache_dir / "response_cache.json"
+                with open(cache_file, 'w') as f:
+                    json.dump(self._l2_response_cache, f, indent=None)  # Compact JSON for speed
+            elif cache_type == "engine" and self._l2_engine_cache:
+                cache_file = self._l2_cache_dir / "engine_cache.json"
+                with open(cache_file, 'w') as f:
+                    json.dump(self._l2_engine_cache, f, indent=None)
+        except Exception as e:
+            logger.debug(f"Failed to save L2 {cache_type} cache: {e}")
+
+    def _get_l2_response(self, cache_key: str) -> Optional[Any]:
+        """Get response from L2 cache."""
+        if not self._l2_cache_enabled or not self._l2_response_cache:
+            return None
+
+        entry = self._l2_response_cache.get(cache_key)
+        if entry:
+            # Check TTL if present
+            if 'expires' in entry:
+                import time
+                if time.time() > entry['expires']:
+                    # Entry expired, remove it
+                    del self._l2_response_cache[cache_key]
+                    return None
+            self._l2_cache_hits += 1
+            return entry['data']
+        return None
+
+    def _put_l2_response(self, cache_key: str, data: Any, ttl_seconds: Optional[int] = None):
+        """Store response in L2 cache."""
+        if not self._l2_cache_enabled or not self._l2_response_cache:
+            return
+
+        entry = {'data': data}
+        if ttl_seconds:
+            import time
+            entry['expires'] = time.time() + ttl_seconds
+
+        self._l2_response_cache[cache_key] = entry
+
+        # Maintain cache size limit
+        if len(self._l2_response_cache) > self._l2_max_response_cache:
+            # Remove oldest entries (simple FIFO eviction)
+            excess = len(self._l2_response_cache) - self._l2_max_response_cache
+            keys_to_remove = list(self._l2_response_cache.keys())[:excess]
+            for key in keys_to_remove:
+                del self._l2_response_cache[key]
+
+    def _get_l2_engine_move(self, fen: str) -> Optional[str]:
+        """Get engine move from L2 cache."""
+        if not self._l2_cache_enabled or not self._l2_engine_cache:
+            return None
+
+        entry = self._l2_engine_cache.get(fen)
+        if entry:
+            if 'expires' in entry:
+                import time
+                if time.time() > entry['expires']:
+                    del self._l2_engine_cache[fen]
+                    return None
+            self._l2_cache_hits += 1
+            return entry['move']
+        return None
+
+    def _put_l2_engine_move(self, fen: str, move: str, ttl_seconds: Optional[int] = None):
+        """Store engine move in L2 cache."""
+        if not self._l2_cache_enabled or not self._l2_engine_cache:
+            return
+
+        entry = {'move': move}
+        if ttl_seconds:
+            import time
+            entry['expires'] = time.time() + ttl_seconds
+
+        self._l2_engine_cache[fen] = entry
+
+        # Maintain cache size limit
+        if len(self._l2_engine_cache) > self._l2_max_engine_cache:
+            excess = len(self._l2_engine_cache) - self._l2_max_engine_cache
+            keys_to_remove = list(self._l2_engine_cache.keys())[:excess]
+            for key in keys_to_remove:
+                del self._l2_engine_cache[key]
 
     def _create_cache_key(self, question: str, context: Optional[str], mode: str,
                          max_new_tokens: int, temperature: float, top_p: float) -> str:
@@ -69,57 +212,129 @@ class ChessInferenceCache:
         return hash(key_string) % (10**8)  # Simple hash for speed
 
     def _check_response_cache(self, cache_key: str) -> Tuple[Optional[Dict[str, Any]], Optional[float]]:
-        """Check if response is cached and return a copy with current hit rate - optimized."""
+        """Check if response is cached - hierarchical caching with L1/L2 fallback."""
+        # First check L1 cache
         cached = self._response_cache.get(cache_key)
-        if cached is None:
-            return None, None
+        if cached is not None:
+            # Update hit statistics
+            self._cache_hits += 1
+            self._response_cache.move_to_end(cache_key)
 
-        # Update hit statistics outside the critical path for better performance
-        self._cache_hits += 1
-        self._response_cache.move_to_end(cache_key)
+            # Calculate hit rate
+            hit_rate = self._cache_hits / max(self._total_requests, 1)
+            return cached.copy(), hit_rate
 
-        # Calculate hit rate only when needed
-        hit_rate = self._cache_hits / max(self._total_requests, 1)
+        # L1 miss - check L2 cache
+        l2_cached = self._get_l2_response(cache_key)
+        if l2_cached is not None:
+            # Promote to L1 cache for faster future access
+            self._cache_response(cache_key, l2_cached)
 
-        # Return cached response directly (shallow copy is still needed for safety)
-        return cached.copy(), hit_rate
+            # Calculate hit rate (including L2 hits)
+            total_hits = self._cache_hits + self._l2_cache_hits
+            hit_rate = total_hits / max(self._total_requests, 1)
+            return l2_cached.copy(), hit_rate
+
+        return None, None
 
     def _cache_response(self, cache_key: str, response: Dict[str, Any]):
-        """Cache response for future use - optimized."""
+        """Cache response for future use - hierarchical caching."""
+        # Store in L1 cache
         self._response_cache[cache_key] = response.copy()
 
-        # Maintain cache size - optimized eviction
+        # Maintain L1 cache size
         if len(self._response_cache) > self.max_cache_size:
-            # Remove oldest item more efficiently
             self._response_cache.popitem(last=False)
 
+        # Also store in L2 cache for persistence (with TTL)
+        if self._l2_cache_enabled:
+            # Use default TTL from cache config or 1 hour
+            ttl = getattr(self, '_cache_ttl_seconds', 3600)
+            self._put_l2_response(cache_key, response, ttl)
+
     def _engine_cache_store(self, fen: Optional[str], move: str) -> None:
-        """Store engine move in cache - optimized."""
+        """Store engine move in hierarchical cache."""
         if not fen:
             return
 
-        # Optimized LRU implementation
+        # Store in L1 cache
         if fen in self._engine_cache:
             self._engine_cache.pop(fen, None)
         self._engine_cache[fen] = move
 
-        # Efficient eviction
+        # Maintain L1 cache size
         if len(self._engine_cache) > self._engine_cache_max:
             self._engine_cache.popitem(last=False)
 
+        # Store in L2 cache for persistence
+        if self._l2_cache_enabled:
+            ttl = getattr(self, '_cache_ttl_seconds', 3600)
+            self._put_l2_engine_move(fen, move, ttl)
+
     def _engine_cache_lookup(self, fen: Optional[str]) -> Optional[str]:
-        """Lookup engine move from cache - optimized."""
+        """Lookup engine move from hierarchical cache."""
         if not fen:
             return None
 
+        # Check L1 cache first
         mv = self._engine_cache.get(fen)
-        if mv is None:
-            return None
+        if mv is not None:
+            # Refresh LRU order
+            self._engine_cache.pop(fen, None)
+            self._engine_cache[fen] = mv
+            return mv
 
-        # Refresh LRU order efficiently
-        self._engine_cache.pop(fen, None)
-        self._engine_cache[fen] = mv
-        return mv
+        # L1 miss - check L2 cache
+        l2_move = self._get_l2_engine_move(fen)
+        if l2_move is not None:
+            # Promote to L1 cache for faster future access
+            self._engine_cache_store(fen, l2_move)
+            return l2_move
+
+        return None
+
+    def save_l2_caches(self):
+        """Save L2 caches to disk."""
+        if not self._l2_cache_enabled:
+            return
+
+        try:
+            self._save_l2_cache("response")
+            self._save_l2_cache("engine")
+            logger.debug("L2 caches saved to disk")
+        except Exception as e:
+            logger.debug(f"Failed to save L2 caches: {e}")
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get comprehensive performance statistics including hierarchical caching."""
+        with self._cache_lock:
+            total_requests = self._total_requests
+            l1_hits = self._cache_hits
+            l2_hits = self._l2_cache_hits
+            total_hits = l1_hits + l2_hits
+
+            l1_cache_size = len(self._response_cache)
+            l1_engine_cache_size = len(self._engine_cache)
+
+            l2_cache_size = len(self._l2_response_cache) if self._l2_response_cache else 0
+            l2_engine_cache_size = len(self._l2_engine_cache) if self._l2_engine_cache else 0
+
+            return {
+                'total_requests': total_requests,
+                'l1_cache_hits': l1_hits,
+                'l2_cache_hits': l2_hits,
+                'total_cache_hits': total_hits,
+                'l1_hit_rate': l1_hits / max(total_requests, 1),
+                'l2_hit_rate': l2_hits / max(total_requests, 1),
+                'total_hit_rate': total_hits / max(total_requests, 1),
+                'l1_response_cache_size': l1_cache_size,
+                'l1_engine_cache_size': l1_engine_cache_size,
+                'l2_response_cache_size': l2_cache_size,
+                'l2_engine_cache_size': l2_engine_cache_size,
+                'l2_cache_enabled': self._l2_cache_enabled,
+                'max_l1_cache_size': self.max_cache_size,
+                'max_l2_cache_size': self._l2_max_response_cache
+            }
 
     def generate_response(
         self,

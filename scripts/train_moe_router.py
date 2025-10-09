@@ -126,18 +126,38 @@ class ExpertEvaluator:
         return max(0.0, min(1.0, score))
 
     def select_best_expert(self, expert_responses: Dict[str, Dict[str, Any]], expected_category: str) -> str:
-        """Select the best expert based on scored responses."""
-        scored_responses = {}
-        for expert, response in expert_responses.items():
-            score = self.score_expert_response(response, expected_category)
-            scored_responses[expert] = score
+        """Select the best expert based on query category rather than response quality.
 
-        # Return expert with highest score
-        best_expert = max(scored_responses.keys(), key=lambda x: scored_responses[x])
+        This approach is more reliable than trying to score actual model responses,
+        since all responses might look similar quality-wise.
+        """
+        # Rule-based expert selection based on query category
+        category_to_expert = {
+            # UCI expert for move generation
+            'pure_move': 'uci',
+            'tactical_move': 'uci',
+            'standard_move': 'uci',
+            'complex_tactical': 'uci',
 
-        # Debug output
-        scores_str = ", ".join(".2f" for e, s in scored_responses.items())
-        print(f"      Best: {best_expert} ({scores_str})")
+            # Tutor expert for analysis and teaching
+            'position_analysis': 'tutor',
+            'candidate_evaluation': 'tutor',
+            'tactical_patterns': 'tutor',
+            'mixed_analysis': 'tutor',
+            'endgame_principles': 'tutor',
+
+            # Director expert for strategy and concepts
+            'opening_strategy': 'director',
+            'strategic_explanation': 'director',
+            'endgame_principles': 'director',
+            'rules_explanation': 'director',
+            'middlegame_strategy': 'director',
+        }
+
+        # Default to tutor if category not recognized
+        best_expert = category_to_expert.get(expected_category, 'tutor')
+
+        print(f"      Best: {best_expert} (category: {expected_category})")
 
         return best_expert
 
@@ -192,11 +212,11 @@ def prepare_training_data_with_inference(queries: List[Dict[str, Any]],
         print(f"   Query: {question[:60]}...")
         print(f"      Category: {expected_category}, FEN: {fen}")
 
-        # Test all experts on this query
-        expert_responses = evaluator.evaluate_expert_responses(question, context=fen)
+        # Use the labeled expert from the dataset for training
+        # This is more reliable than trying to evaluate actual responses
+        best_expert = query.get("expert", "tutor")  # Default to tutor if not specified
 
-        # Select best performing expert
-        best_expert = evaluator.select_best_expert(expert_responses, expected_category)
+        print(f"      Labeled expert: {best_expert}")
 
         # Extract features from position and question
         features = router._extract_position_features(fen or "", question)
@@ -266,8 +286,7 @@ def main():
     # Load checkpoint if resuming
     checkpoint_loaded = load_router_checkpoint(router, args.resume_from)
     if checkpoint_loaded:
-        print("📋 Resuming from checkpoint, skipping data preparation...")
-        args.skip_data_prep = True
+        print("📋 Resuming from checkpoint - will regenerate training data...")
 
     # Prepare training data with actual expert evaluation (unless skipping)
     if not args.skip_data_prep:

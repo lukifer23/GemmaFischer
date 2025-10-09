@@ -170,6 +170,36 @@ system:
   timeout_minutes: 300
   memory_limit_gb: 16.0
 
+# MoE Configuration
+moe:
+  enabled: true
+  router_checkpoint_path: null
+  router_learning_rate: 1.0e-3
+  router_hidden_dim: 128
+  router_training_steps: 1000
+  ensemble_weight_threshold: 0.3
+  adaptive_routing_enabled: true
+  performance_tracking_enabled: true
+  retraining_threshold: 0.1
+  context_aware_routing: true
+  feedback_learning_rate: 0.01
+  min_expert_confidence: 0.6
+  max_expert_response_time: 2.0
+  ensemble_size: 2
+
+# Performance Configuration
+performance:
+  enable_performance_monitoring: true
+  metrics_collection_interval: 60
+  slow_query_threshold: 1.0
+  memory_monitoring_enabled: true
+  cache_performance_tracking: true
+  model_loading_optimization: true
+  batch_processing_enabled: true
+  parallel_inference_enabled: true
+  tokenizer_batch_size: 8
+  inference_queue_size: 100
+
 # Dataset Configuration
 datasets: []
 

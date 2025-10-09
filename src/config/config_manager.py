@@ -11,8 +11,10 @@ from __future__ import annotations
 import os
 import json
 import yaml
+import time
+import threading
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, Callable
 from dataclasses import dataclass, field
 
 # Add project root to path for imports
@@ -165,6 +167,42 @@ class SystemConfig:
 
 
 @dataclass
+class MoEConfig:
+    """Mixture of Experts configuration settings."""
+    enabled: bool = True
+    router_checkpoint_path: Optional[str] = None
+    router_learning_rate: float = 1e-3
+    router_hidden_dim: int = 128
+    router_training_steps: int = 1000
+    ensemble_weight_threshold: float = 0.3
+    adaptive_routing_enabled: bool = True
+    performance_tracking_enabled: bool = True
+    retraining_threshold: float = 0.1  # Retrain if accuracy drops by 10%
+    context_aware_routing: bool = True
+    feedback_learning_rate: float = 0.01
+
+    # Expert performance thresholds
+    min_expert_confidence: float = 0.6
+    max_expert_response_time: float = 2.0  # seconds
+    ensemble_size: int = 2  # Number of experts to combine
+
+
+@dataclass
+class PerformanceConfig:
+    """Performance monitoring and optimization settings."""
+    enable_performance_monitoring: bool = True
+    metrics_collection_interval: int = 60  # seconds
+    slow_query_threshold: float = 1.0  # seconds
+    memory_monitoring_enabled: bool = True
+    cache_performance_tracking: bool = True
+    model_loading_optimization: bool = True
+    batch_processing_enabled: bool = True
+    parallel_inference_enabled: bool = True
+    tokenizer_batch_size: int = 8
+    inference_queue_size: int = 100
+
+
+@dataclass
 class ChessGemmaConfig:
     """Unified configuration for ChessGemma."""
 
@@ -177,6 +215,10 @@ class ChessGemmaConfig:
     inference: InferenceConfig = field(default_factory=InferenceConfig)
     cache: CacheConfig = field(default_factory=CacheConfig)
     system: SystemConfig = field(default_factory=SystemConfig)
+
+    # Advanced features
+    moe: MoEConfig = field(default_factory=MoEConfig)
+    performance: PerformanceConfig = field(default_factory=PerformanceConfig)
 
     # Dataset configuration
     datasets: list = field(default_factory=list)
@@ -395,6 +437,20 @@ class ChessGemmaConfig:
             if 'phases' in curriculum_data:
                 config.curriculum.phases = curriculum_data['phases']
 
+        # Set MoE config
+        if 'moe' in config_dict:
+            moe_data = config_dict['moe']
+            for field_name in config.moe.__dataclass_fields__:
+                if field_name in moe_data:
+                    setattr(config.moe, field_name, moe_data[field_name])
+
+        # Set performance config
+        if 'performance' in config_dict:
+            perf_data = config_dict['performance']
+            for field_name in config.performance.__dataclass_fields__:
+                if field_name in perf_data:
+                    setattr(config.performance, field_name, perf_data[field_name])
+
         return config
 
     @classmethod
@@ -454,7 +510,7 @@ class ChessGemmaConfig:
 
 
 class ConfigManager:
-    """Manager for loading and managing ChessGemma configurations."""
+    """Manager for loading and managing ChessGemma configurations with hot-reloading support."""
 
     def __init__(self):
         self.config_dir = project_root / "configs"
@@ -465,6 +521,13 @@ class ConfigManager:
 
         # Loaded configurations cache
         self._config_cache: Dict[str, ChessGemmaConfig] = {}
+
+        # Hot-reloading support
+        self._file_watchers: Dict[str, Dict[str, Any]] = {}
+        self._reload_callbacks: Dict[str, list] = {}
+        self._watcher_thread: Optional[threading.Thread] = None
+        self._watcher_running = False
+        self._reload_interval = 5.0  # Check for changes every 5 seconds
 
     def get_config(self, name: str = "default") -> ChessGemmaConfig:
         """Get a configuration by name."""
@@ -534,6 +597,109 @@ class ConfigManager:
 
         return config
 
+    def enable_hot_reload(self, config_name: str = "default", callback: Optional[Callable[[ChessGemmaConfig], None]] = None):
+        """Enable hot-reloading for a specific configuration file.
+
+        Args:
+            config_name: Name of the configuration to watch
+            callback: Function to call when configuration is reloaded
+        """
+        config_file = self.config_dir / f"{config_name}.yaml"
+        if not config_file.exists():
+            logger.warning(f"Cannot enable hot reload for {config_name}: config file does not exist")
+            return
+
+        # Store file modification time
+        self._file_watchers[config_name] = {
+            'path': config_file,
+            'last_modified': config_file.stat().st_mtime,
+            'enabled': True
+        }
+
+        if callback:
+            if config_name not in self._reload_callbacks:
+                self._reload_callbacks[config_name] = []
+            self._reload_callbacks[config_name].append(callback)
+
+        # Start watcher thread if not already running
+        if not self._watcher_running:
+            self._start_watcher_thread()
+
+        logger.info(f"Hot-reloading enabled for configuration: {config_name}")
+
+    def disable_hot_reload(self, config_name: str = "default"):
+        """Disable hot-reloading for a specific configuration."""
+        if config_name in self._file_watchers:
+            self._file_watchers[config_name]['enabled'] = False
+            logger.info(f"Hot-reloading disabled for configuration: {config_name}")
+
+    def _start_watcher_thread(self):
+        """Start the file watcher thread."""
+        self._watcher_running = True
+        self._watcher_thread = threading.Thread(target=self._watch_files, daemon=True)
+        self._watcher_thread.start()
+        logger.debug("Configuration hot-reload watcher thread started")
+
+    def _watch_files(self):
+        """Watch configuration files for changes and reload when modified."""
+        while self._watcher_running:
+            try:
+                for config_name, watcher in list(self._file_watchers.items()):
+                    if not watcher['enabled']:
+                        continue
+
+                    config_file = watcher['path']
+                    if not config_file.exists():
+                        continue
+
+                    current_mtime = config_file.stat().st_mtime
+                    if current_mtime > watcher['last_modified']:
+                        logger.info(f"Configuration file {config_name} changed, reloading...")
+
+                        # Reload configuration
+                        try:
+                            new_config = ChessGemmaConfig.load_from_file(config_file)
+                            self._config_cache[config_name] = new_config
+                            watcher['last_modified'] = current_mtime
+
+                            # Call reload callbacks
+                            if config_name in self._reload_callbacks:
+                                for callback in self._reload_callbacks[config_name]:
+                                    try:
+                                        callback(new_config)
+                                    except Exception as e:
+                                        logger.error(f"Error in reload callback for {config_name}: {e}")
+
+                            logger.info(f"Configuration {config_name} reloaded successfully")
+
+                        except Exception as e:
+                            logger.error(f"Failed to reload configuration {config_name}: {e}")
+
+                time.sleep(self._reload_interval)
+
+            except Exception as e:
+                logger.error(f"Error in configuration watcher: {e}")
+                time.sleep(self._reload_interval)
+
+    def get_hot_reload_status(self) -> Dict[str, Dict[str, Any]]:
+        """Get the status of hot-reloading for all configurations."""
+        status = {}
+        for config_name, watcher in self._file_watchers.items():
+            status[config_name] = {
+                'enabled': watcher['enabled'],
+                'file_path': str(watcher['path']),
+                'last_modified': watcher['last_modified'],
+                'has_callbacks': config_name in self._reload_callbacks and len(self._reload_callbacks[config_name]) > 0
+            }
+        return status
+
+    def shutdown(self):
+        """Shutdown the configuration manager and stop hot-reloading."""
+        self._watcher_running = False
+        if self._watcher_thread and self._watcher_thread.is_alive():
+            self._watcher_thread.join(timeout=1.0)
+        logger.debug("Configuration manager shutdown complete")
+
 
 # Global configuration manager instance
 _config_manager = ConfigManager()
@@ -558,3 +724,23 @@ def save_config_to_file(config: ChessGemmaConfig, filepath: Union[str, Path], na
     """Save configuration to a specific file."""
     _config_manager.save_config(config, name)
     config.save_to_file(filepath)
+
+
+def enable_hot_reload(config_name: str = "default", callback: Optional[Callable[[ChessGemmaConfig], None]] = None):
+    """Enable hot-reloading for a configuration file."""
+    _config_manager.enable_hot_reload(config_name, callback)
+
+
+def disable_hot_reload(config_name: str = "default"):
+    """Disable hot-reloading for a configuration file."""
+    _config_manager.disable_hot_reload(config_name)
+
+
+def get_hot_reload_status() -> Dict[str, Dict[str, Any]]:
+    """Get the status of hot-reloading for all configurations."""
+    return _config_manager.get_hot_reload_status()
+
+
+def shutdown_config_manager():
+    """Shutdown the configuration manager."""
+    _config_manager.shutdown()

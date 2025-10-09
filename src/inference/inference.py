@@ -244,6 +244,20 @@ class ChessGemmaInference:
         self._model_load_lock = threading.RLock()
         self._model_loading = False
 
+        # Pre-warming and lazy initialization
+        self._prewarm_enabled = os.environ.get('CHESSGEMMA_PREWARM_ENABLED', '1') not in ('0', 'false', 'False')
+        self._prewarm_thread: Optional[threading.Thread] = None
+        self._prewarm_complete = False
+        self._lazy_loading = True  # Enable lazy loading by default
+
+        # Batch processing optimization
+        self._batch_processing_enabled = os.environ.get('CHESSGEMMA_BATCH_PROCESSING', '1') not in ('0', 'false', 'False')
+        self._max_batch_size = int(os.environ.get('CHESSGEMMA_MAX_BATCH_SIZE', '8'))
+        self._batch_queue: List[Dict[str, Any]] = []
+        self._batch_lock = threading.Lock()
+        self._batch_processor_thread: Optional[threading.Thread] = None
+        self._batch_shutdown = False
+
         # Enable debug logging to troubleshoot empty responses
         self.debug = True
 
@@ -257,6 +271,10 @@ class ChessGemmaInference:
         # Initialize MoE if available and enabled
         if self.moe_enabled and MOE_AVAILABLE:
             self._initialize_moe_system()
+
+        # Start pre-warming if enabled
+        if self._prewarm_enabled and not self._lazy_loading:
+            self._start_prewarm()
 
     def _initialize_moe_system(self) -> None:
         """Initialize the Mixture of Experts system.
@@ -375,6 +393,283 @@ class ChessGemmaInference:
                 f"Unexpected error while initializing MoE system: {e}",
                 level="error",
             )
+
+    def _start_prewarm(self):
+        """Start background model pre-warming."""
+        if self._prewarm_thread and self._prewarm_thread.is_alive():
+            logger.debug("Pre-warm already in progress")
+            return
+
+        self._prewarm_thread = threading.Thread(
+            target=self._prewarm_models,
+            name="model-prewarm",
+            daemon=True
+        )
+        self._prewarm_thread.start()
+        logger.info("🚀 Started model pre-warming in background")
+
+    def _prewarm_models(self):
+        """Pre-warm models in the background to reduce first-request latency."""
+        try:
+            logger.debug("🔄 Pre-warming models...")
+
+            # Load the base model first
+            if not self.is_loaded:
+                self.load_model()
+
+            # Pre-warm tokenization with common chess prompts
+            if self.is_loaded and self.tokenizer:
+                prewarm_prompts = [
+                    "FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\nWhat is the best move?",
+                    "FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\nAnalyze this position.",
+                    "What are the main principles of chess openings?",
+                ]
+
+                # Tokenize prompts to warm up tokenizer cache
+                for prompt in prewarm_prompts:
+                    try:
+                        self.tokenizer(prompt, return_tensors="pt")
+                    except Exception as e:
+                        logger.debug(f"Pre-warm tokenization failed for prompt: {e}")
+
+            # Pre-warm MoE router if available
+            if self.moe_enabled and self.moe_router:
+                try:
+                    # Pre-compute features for common positions
+                    common_fens = [
+                        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",  # Starting position
+                        "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",  # Italian game
+                    ]
+
+                    for fen in common_fens:
+                        try:
+                            self.moe_router._extract_position_features_cached(fen, "auto")
+                        except Exception as e:
+                            logger.debug(f"MoE pre-warm failed for FEN {fen}: {e}")
+                except Exception as e:
+                    logger.debug(f"MoE router pre-warm failed: {e}")
+
+            self._prewarm_complete = True
+            logger.info("✅ Model pre-warming completed")
+
+        except Exception as e:
+            logger.error(f"❌ Model pre-warming failed: {e}")
+            self._prewarm_complete = False
+
+    def wait_for_prewarm(self, timeout: float = 30.0) -> bool:
+        """Wait for pre-warming to complete.
+
+        Args:
+            timeout: Maximum time to wait in seconds
+
+        Returns:
+            True if pre-warming completed, False if timed out
+        """
+        if not self._prewarm_enabled or self._lazy_loading:
+            return True  # No pre-warming needed
+
+        if self._prewarm_complete:
+            return True
+
+        if self._prewarm_thread and self._prewarm_thread.is_alive():
+            self._prewarm_thread.join(timeout=timeout)
+            return self._prewarm_complete
+
+        return False
+
+    def ensure_model_ready(self) -> bool:
+        """Ensure model is loaded and pre-warmed before use.
+
+        Returns:
+            True if model is ready, False otherwise
+        """
+        # Load model if using lazy loading
+        if self._lazy_loading and not self.is_loaded:
+            if not self.load_model():
+                return False
+
+        # Wait for pre-warming if enabled
+        if self._prewarm_enabled and not self._prewarm_complete:
+            return self.wait_for_prewarm(timeout=10.0)
+
+        return self.is_loaded
+
+    def batch_tokenize(self, texts: List[str], **kwargs) -> Dict[str, Any]:
+        """Batch tokenize multiple texts efficiently.
+
+        Args:
+            texts: List of texts to tokenize
+            **kwargs: Additional tokenization arguments
+
+        Returns:
+            Tokenized batch
+        """
+        if not self.ensure_model_ready():
+            return {}
+
+        if not texts:
+            return {}
+
+        try:
+            # Use the tokenizer's batch processing capabilities
+            batch_result = self.tokenizer(
+                texts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                **kwargs
+            )
+
+            # Move to device if needed
+            if hasattr(batch_result, 'to') and hasattr(self.model, 'device'):
+                batch_result = {k: v.to(self.model.device) for k, v in batch_result.items()}
+
+            return batch_result
+
+        except Exception as e:
+            logger.warning(f"Batch tokenization failed: {e}")
+            # Fallback to individual tokenization
+            return self._fallback_batch_tokenize(texts, **kwargs)
+
+    def _fallback_batch_tokenize(self, texts: List[str], **kwargs) -> Dict[str, Any]:
+        """Fallback batch tokenization for when standard batching fails."""
+        individual_results = []
+        max_length = 0
+
+        # Tokenize individually first
+        for text in texts:
+            try:
+                result = self.tokenizer(text, return_tensors="pt", **kwargs)
+                individual_results.append(result)
+                max_length = max(max_length, result['input_ids'].shape[1])
+            except Exception as e:
+                logger.debug(f"Individual tokenization failed for text: {e}")
+                # Add empty tensor as placeholder
+                empty_tensor = torch.zeros((1, 1), dtype=torch.long)
+                individual_results.append({'input_ids': empty_tensor, 'attention_mask': empty_tensor})
+
+        if not individual_results:
+            return {}
+
+        # Pad to max length
+        batch_input_ids = []
+        batch_attention_masks = []
+
+        for result in individual_results:
+            input_ids = result['input_ids'].squeeze(0)
+            attention_mask = result['attention_mask'].squeeze(0)
+
+            # Pad if necessary
+            if input_ids.shape[0] < max_length:
+                padding_length = max_length - input_ids.shape[0]
+                input_ids = torch.cat([input_ids, torch.zeros(padding_length, dtype=input_ids.dtype)])
+                attention_mask = torch.cat([attention_mask, torch.zeros(padding_length, dtype=attention_mask.dtype)])
+
+            batch_input_ids.append(input_ids)
+            batch_attention_masks.append(attention_mask)
+
+        # Stack into batch
+        batch_result = {
+            'input_ids': torch.stack(batch_input_ids),
+            'attention_mask': torch.stack(batch_attention_masks)
+        }
+
+        # Move to device
+        if hasattr(self.model, 'device'):
+            batch_result = {k: v.to(self.model.device) for k, v in batch_result.items()}
+
+        return batch_result
+
+    def batch_generate(self, prompts: List[str], **generation_kwargs) -> List[str]:
+        """Generate responses for multiple prompts in batch.
+
+        Args:
+            prompts: List of prompts to generate for
+            **generation_kwargs: Generation parameters
+
+        Returns:
+            List of generated responses
+        """
+        if not self.ensure_model_ready() or not prompts:
+            return [""] * len(prompts)
+
+        try:
+            # Batch tokenize
+            batch_inputs = self.batch_tokenize(prompts)
+
+            if not batch_inputs:
+                return [""] * len(prompts)
+
+            # Generate batch
+            with torch.no_grad():
+                batch_outputs = self.model.generate(
+                    **batch_inputs,
+                    **generation_kwargs
+                )
+
+            # Decode batch results
+            results = []
+            for i in range(len(prompts)):
+                try:
+                    # Extract individual sequence (handling padding)
+                    output_ids = batch_outputs[i]
+                    # Remove padding tokens if present
+                    eos_token_id = generation_kwargs.get('eos_token_id', self.tokenizer.eos_token_id)
+                    if eos_token_id is not None:
+                        eos_positions = (output_ids == eos_token_id).nonzero(as_tuple=True)[0]
+                        if len(eos_positions) > 0:
+                            output_ids = output_ids[:eos_positions[0] + 1]
+
+                    # Decode
+                    response = self.tokenizer.decode(output_ids, skip_special_tokens=True)
+
+                    # Remove original prompt if echoed
+                    original_prompt = prompts[i]
+                    if response.startswith(original_prompt):
+                        response = response[len(original_prompt):].strip()
+
+                    results.append(response)
+
+                except Exception as e:
+                    logger.debug(f"Batch decode failed for prompt {i}: {e}")
+                    results.append("")
+
+            return results
+
+        except Exception as e:
+            logger.warning(f"Batch generation failed: {e}")
+            # Fallback to individual generation
+            return self._fallback_batch_generate(prompts, **generation_kwargs)
+
+    def _fallback_batch_generate(self, prompts: List[str], **generation_kwargs) -> List[str]:
+        """Fallback to individual generation when batch processing fails."""
+        results = []
+        for prompt in prompts:
+            try:
+                result = self.generate_text(prompt, **generation_kwargs)
+                results.append(result)
+            except Exception as e:
+                logger.debug(f"Individual generation failed: {e}")
+                results.append("")
+        return results
+
+    def shutdown(self):
+        """Shutdown the inference system and clean up resources."""
+        self._batch_shutdown = True
+
+        # Shutdown pre-warm thread
+        if self._prewarm_thread and self._prewarm_thread.is_alive():
+            self._prewarm_thread.join(timeout=5.0)
+
+        # Shutdown MoE manager
+        if self.moe_manager:
+            self.moe_manager.shutdown()
+
+        logger.debug("Inference system shutdown complete")
+
+    def __del__(self):
+        """Cleanup on deletion."""
+        self.shutdown()
 
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
@@ -763,9 +1058,10 @@ class ChessGemmaInference:
             if mode == "uci":
                 mode = "engine"
 
-            if not self.is_loaded:
+            # Ensure model is ready (lazy loading + pre-warming)
+            if not self.ensure_model_ready():
                 return {
-                    "error": "Model not loaded",
+                    "error": "Model not ready",
                     "response": "",
                     "confidence": 0.0,
                     "model_loaded": False,

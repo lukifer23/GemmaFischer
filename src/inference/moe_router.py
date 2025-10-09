@@ -33,6 +33,8 @@ from collections import OrderedDict
 import threading
 import random
 from torch.utils.data import Dataset, DataLoader
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -85,6 +87,55 @@ class RoutingDecision:
 
 
 @dataclass
+class UserFeedback:
+    """User feedback for adaptive routing."""
+    query_hash: str
+    expert_used: str
+    rating: float  # 0.0 to 1.0 (user satisfaction)
+    response_quality: float  # 0.0 to 1.0 (objective quality metric)
+    timestamp: float
+    query_type: str
+    game_phase: Optional[List[float]] = None
+
+
+@dataclass
+class ExpertPerformanceMetrics:
+    """Performance metrics for individual experts."""
+    accuracy: float = 0.0
+    response_time: float = 0.0
+    user_satisfaction: float = 0.0
+    response_quality: float = 0.0
+    last_updated: float = 0.0
+    sample_count: int = 0
+    retraining_triggered: bool = False
+    baseline_performance: float = 0.7
+
+
+@dataclass
+class RetrainingTrigger:
+    """Trigger conditions for expert retraining."""
+    expert_name: str
+    trigger_reason: str
+    current_performance: float
+    threshold: float
+    timestamp: float
+    recommended_action: str
+
+
+@dataclass
+class AdaptiveRoutingState:
+    """State for adaptive routing learning."""
+    expert_performance_scores: Dict[str, float] = field(default_factory=lambda: {'uci': 0.7, 'tutor': 0.75, 'director': 0.65})
+    expert_metrics: Dict[str, ExpertPerformanceMetrics] = field(default_factory=dict)
+    phase_expert_preferences: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    feedback_history: List[UserFeedback] = field(default_factory=list)
+    retraining_triggers: List[RetrainingTrigger] = field(default_factory=list)
+    learning_rate: float = 0.01
+    max_feedback_history: int = 1000
+    performance_monitoring_enabled: bool = True
+
+
+@dataclass
 class MoERoutingMetrics:
     """Metrics for MoE routing performance."""
     total_requests: int = 0
@@ -93,6 +144,8 @@ class MoERoutingMetrics:
     ensemble_usage_rate: float = 0.0
     fallback_rate: float = 0.0
     expert_usage_stats: Dict[str, int] = field(default_factory=dict)
+    user_satisfaction_score: float = 0.0
+    adaptive_improvement_rate: float = 0.0
 
 
 class ChessMoERouter(nn.Module):
@@ -160,6 +213,16 @@ class ChessMoERouter(nn.Module):
         # Expert performance tracking
         self.expert_performance = {name: {'accuracy': 0.7, 'speed': 0.8, 'quality': 0.75}
                                   for name in self.expert_names}
+
+        # Adaptive routing state
+        self.adaptive_state = AdaptiveRoutingState()
+
+        # Initialize expert performance metrics
+        for expert_name in self.expert_names:
+            if expert_name not in self.adaptive_state.expert_metrics:
+                self.adaptive_state.expert_metrics[expert_name] = ExpertPerformanceMetrics(
+                    baseline_performance=self.expert_performance[expert_name]['quality']
+                )
 
         # Performance optimization caches
         self._position_cache = OrderedDict()  # LRU cache for position features
@@ -237,8 +300,17 @@ class ChessMoERouter(nn.Module):
         # Apply expert performance weighting
         weighted_probs = self._apply_performance_weighting(gate_probs)
 
-        # Make routing decision
-        decision = self._make_routing_decision(weighted_probs, confidence.item(), position_fen, query_type)
+        # Extract game phase information for context-aware routing
+        game_phase = None
+        if position_fen:
+            try:
+                board = self._fen_to_board(position_fen)
+                game_phase = self._detect_game_phase(board)
+            except Exception:
+                game_phase = [0.33, 0.34, 0.33]  # Default equal distribution
+
+        # Make routing decision with context awareness
+        decision = self._make_routing_decision(weighted_probs, confidence.item(), position_fen, query_type, game_phase)
 
         # Cache the decision
         self._cache_routing_decision(cache_key, decision)
@@ -329,7 +401,439 @@ class ChessMoERouter(nn.Module):
         doubled_pawns = self._count_doubled_pawns(board)
         features.append(min(doubled_pawns / 8, 1.0))  # Max 8 doubled pawn files
 
+        # Game phase detection (3 features)
+        game_phase = self._detect_game_phase(board)
+        features.extend(game_phase)  # [opening_score, middlegame_score, endgame_score]
+
         return features
+
+    def _detect_game_phase(self, board: List[List[str]]) -> List[float]:
+        """Detect the game phase (opening/middlegame/endgame) and return normalized scores.
+
+        Returns [opening_score, middlegame_score, endgame_score] where scores sum to 1.
+        """
+        # Calculate total material (excluding kings)
+        total_material = sum(self._count_pieces(board, color) for color in ['white', 'black'])
+
+        # Phase detection based on material and piece development
+        developed_pieces = self._count_developed_pieces(board)
+        castling_possible = self._check_castling_potential(board)
+
+        # Opening characteristics: High material, low development, castling available
+        opening_score = 0.0
+        if total_material >= 60:  # Most pieces still on board
+            opening_score = 0.8
+            if developed_pieces < 8:  # Few pieces developed
+                opening_score += 0.2
+        opening_score = min(opening_score, 1.0)
+
+        # Middlegame characteristics: Moderate material, good development, kings safer
+        middlegame_score = 0.0
+        if 25 <= total_material <= 60:  # Some pieces traded
+            middlegame_score = 0.6
+            if 6 <= developed_pieces <= 12:  # Moderate development
+                middlegame_score += 0.3
+            if not castling_possible:  # Castling likely completed or not possible
+                middlegame_score += 0.1
+        middlegame_score = min(middlegame_score, 1.0)
+
+        # Endgame characteristics: Low material, high development, simplified position
+        endgame_score = 0.0
+        if total_material <= 25:  # Few pieces remaining
+            endgame_score = 0.7
+            if developed_pieces >= 10:  # Most pieces highly active
+                endgame_score += 0.3
+        endgame_score = min(endgame_score, 1.0)
+
+        # Normalize to ensure they sum to approximately 1
+        total_score = opening_score + middlegame_score + endgame_score
+        if total_score > 0:
+            opening_score /= total_score
+            middlegame_score /= total_score
+            endgame_score /= total_score
+
+        return [opening_score, middlegame_score, endgame_score]
+
+    def _apply_game_phase_routing(self, expert_probs: Dict[str, float],
+                                game_phase: List[float], query_type: str) -> Dict[str, float]:
+        """Apply context-aware routing adjustments based on game phase.
+
+        Args:
+            expert_probs: Base expert probabilities from the model
+            game_phase: [opening_score, middlegame_score, endgame_score]
+            query_type: Type of query being made
+
+        Returns:
+            Adjusted expert probabilities
+        """
+        opening_score, middlegame_score, endgame_score = game_phase
+        adjusted_probs = expert_probs.copy()
+
+        # Phase-specific expert preferences
+        phase_preferences = {
+            'opening': {
+                'uci': 1.0,      # Openings benefit from precise move generation
+                'tutor': 1.2,    # Educational analysis helps with development principles
+                'director': 1.1  # Strategic understanding of opening plans
+            },
+            'middlegame': {
+                'uci': 1.1,      # Tactical moves are crucial in middlegame
+                'tutor': 1.3,    # Complex analysis needed for middlegame positions
+                'director': 1.0  # Strategic planning is key
+            },
+            'endgame': {
+                'uci': 1.2,      # Precise endgame moves are critical
+                'tutor': 1.1,    # Technical endgame analysis
+                'director': 1.0  # Endgame principles and techniques
+            }
+        }
+
+        # Determine dominant phase
+        if opening_score > 0.5:
+            phase = 'opening'
+        elif endgame_score > 0.5:
+            phase = 'endgame'
+        else:
+            phase = 'middlegame'
+
+        # Apply phase-specific adjustments
+        preferences = phase_preferences[phase]
+        for expert, preference in preferences.items():
+            if expert in adjusted_probs:
+                # Apply preference multiplier (subtle adjustment to not override model completely)
+                adjustment_factor = 0.1 * (preference - 1.0)  # Scale down for subtle influence
+                adjusted_probs[expert] *= (1.0 + adjustment_factor)
+
+        # Normalize probabilities
+        total = sum(adjusted_probs.values())
+        if total > 0:
+            adjusted_probs = {expert: prob / total for expert, prob in adjusted_probs.items()}
+
+        logger.debug(f"Phase-aware routing: {phase} phase -> {adjusted_probs}")
+        return adjusted_probs
+
+    def track_expert_performance(self, expert_name: str, response_time: float,
+                               response_quality: float, user_satisfaction: Optional[float] = None):
+        """Track performance metrics for an expert.
+
+        Args:
+            expert_name: Name of the expert
+            response_time: Time taken to generate response (seconds)
+            response_quality: Objective quality score (0.0 to 1.0)
+            user_satisfaction: User satisfaction rating (0.0 to 1.0), uses response_quality if None
+        """
+        if not self.adaptive_state.performance_monitoring_enabled:
+            return
+
+        if user_satisfaction is None:
+            user_satisfaction = response_quality
+
+        metrics = self.adaptive_state.expert_metrics.get(expert_name)
+        if not metrics:
+            metrics = ExpertPerformanceMetrics()
+            self.adaptive_state.expert_metrics[expert_name] = metrics
+
+        # Update metrics using exponential moving average
+        alpha = 0.1  # Smoothing factor
+        metrics.response_time = metrics.response_time * (1 - alpha) + response_time * alpha
+        metrics.response_quality = metrics.response_quality * (1 - alpha) + response_quality * alpha
+        metrics.user_satisfaction = metrics.user_satisfaction * (1 - alpha) + user_satisfaction * alpha
+        metrics.last_updated = time.time()
+        metrics.sample_count += 1
+
+        # Calculate overall performance score
+        # Weight: 40% quality, 30% satisfaction, 30% speed (inverse normalized)
+        speed_score = max(0, 1.0 - (response_time / 5.0))  # Penalize responses > 5 seconds
+        overall_score = (response_quality * 0.4 + user_satisfaction * 0.3 + speed_score * 0.3)
+        metrics.accuracy = overall_score
+
+        # Check for retraining triggers
+        self._check_retraining_triggers(expert_name, metrics)
+
+        logger.debug(f"Tracked performance for {expert_name}: quality={response_quality:.2f}, satisfaction={user_satisfaction:.2f}, time={response_time:.2f}s")
+
+    def _check_retraining_triggers(self, expert_name: str, metrics: ExpertPerformanceMetrics):
+        """Check if retraining should be triggered for an expert."""
+        current_performance = metrics.accuracy
+        baseline = metrics.baseline_performance
+        threshold = self.moe_config.retraining_threshold if hasattr(self, 'moe_config') else 0.1
+
+        # Trigger conditions
+        triggers = []
+
+        # Performance degradation
+        if current_performance < baseline - threshold:
+            triggers.append(RetrainingTrigger(
+                expert_name=expert_name,
+                trigger_reason="performance_degradation",
+                current_performance=current_performance,
+                threshold=baseline - threshold,
+                timestamp=time.time(),
+                recommended_action=f"Retrain {expert_name} expert due to {threshold:.0%} performance drop"
+            ))
+
+        # Low response quality
+        if metrics.response_quality < 0.6:
+            triggers.append(RetrainingTrigger(
+                expert_name=expert_name,
+                trigger_reason="low_quality",
+                current_performance=metrics.response_quality,
+                threshold=0.6,
+                timestamp=time.time(),
+                recommended_action=f"Retrain {expert_name} expert due to consistently low response quality"
+            ))
+
+        # High response time
+        if metrics.response_time > 3.0:  # More than 3 seconds average
+            triggers.append(RetrainingTrigger(
+                expert_name=expert_name,
+                trigger_reason="slow_responses",
+                current_performance=metrics.response_time,
+                threshold=3.0,
+                timestamp=time.time(),
+                recommended_action=f"Retrain {expert_name} expert due to slow response times"
+            ))
+
+        # Add triggers to the list
+        for trigger in triggers:
+            self.adaptive_state.retraining_triggers.append(trigger)
+            metrics.retraining_triggered = True
+            logger.warning(f"🚨 Retraining trigger for {expert_name}: {trigger.trigger_reason} "
+                          f"(current: {trigger.current_performance:.2f}, threshold: {trigger.threshold:.2f})")
+
+    def get_expert_performance_report(self) -> Dict[str, Any]:
+        """Get comprehensive expert performance report."""
+        report = {
+            'performance_monitoring_enabled': self.adaptive_state.performance_monitoring_enabled,
+            'expert_metrics': {},
+            'retraining_triggers': [],
+            'overall_health_score': 0.0
+        }
+
+        total_score = 0.0
+        expert_count = 0
+
+        for expert_name, metrics in self.adaptive_state.expert_metrics.items():
+            report['expert_metrics'][expert_name] = {
+                'accuracy': metrics.accuracy,
+                'response_time': metrics.response_time,
+                'response_quality': metrics.response_quality,
+                'user_satisfaction': metrics.user_satisfaction,
+                'sample_count': metrics.sample_count,
+                'last_updated': metrics.last_updated,
+                'baseline_performance': metrics.baseline_performance,
+                'performance_trend': metrics.accuracy - metrics.baseline_performance,
+                'retraining_needed': metrics.retraining_triggered
+            }
+            total_score += metrics.accuracy
+            expert_count += 1
+
+        if expert_count > 0:
+            report['overall_health_score'] = total_score / expert_count
+
+        # Add retraining triggers
+        for trigger in self.adaptive_state.retraining_triggers[-10:]:  # Last 10 triggers
+            report['retraining_triggers'].append({
+                'expert': trigger.expert_name,
+                'reason': trigger.trigger_reason,
+                'current_performance': trigger.current_performance,
+                'threshold': trigger.threshold,
+                'timestamp': trigger.timestamp,
+                'recommended_action': trigger.recommended_action
+            })
+
+        return report
+
+    def reset_retraining_triggers(self, expert_name: Optional[str] = None):
+        """Reset retraining triggers for an expert or all experts.
+
+        Args:
+            expert_name: Specific expert to reset, or None for all experts
+        """
+        if expert_name:
+            # Remove triggers for specific expert
+            self.adaptive_state.retraining_triggers = [
+                t for t in self.adaptive_state.retraining_triggers
+                if t.expert_name != expert_name
+            ]
+            # Reset expert's retraining flag
+            if expert_name in self.adaptive_state.expert_metrics:
+                self.adaptive_state.expert_metrics[expert_name].retraining_triggered = False
+        else:
+            # Reset all triggers
+            self.adaptive_state.retraining_triggers.clear()
+            for metrics in self.adaptive_state.expert_metrics.values():
+                metrics.retraining_triggered = False
+
+        logger.info(f"Reset retraining triggers for {expert_name or 'all experts'}")
+
+    def collect_user_feedback(self, query_hash: str, expert_used: str,
+                            user_rating: float, response_quality: float = None,
+                            query_type: str = "unknown", game_phase: List[float] = None):
+        """Collect user feedback to improve routing decisions.
+
+        Args:
+            query_hash: Unique identifier for the query
+            expert_used: Which expert was used to generate the response
+            user_rating: User satisfaction rating (0.0 to 1.0)
+            response_quality: Objective quality metric (0.0 to 1.0), uses user_rating if None
+            query_type: Type of query that was made
+            game_phase: Game phase scores [opening, middlegame, endgame]
+        """
+        if response_quality is None:
+            response_quality = user_rating
+
+        feedback = UserFeedback(
+            query_hash=query_hash,
+            expert_used=expert_used,
+            rating=user_rating,
+            response_quality=response_quality,
+            timestamp=time.time(),
+            query_type=query_type,
+            game_phase=game_phase
+        )
+
+        # Add to feedback history
+        self.adaptive_state.feedback_history.append(feedback)
+
+        # Maintain history size limit
+        if len(self.adaptive_state.feedback_history) > self.adaptive_state.max_feedback_history:
+            self.adaptive_state.feedback_history.pop(0)
+
+        # Update adaptive routing based on feedback
+        self._update_adaptive_routing(feedback)
+
+        # Track expert performance metrics
+        # Note: response_time would need to be passed from the calling context
+        # For now, we'll use a placeholder response time
+        self.track_expert_performance(
+            expert_name=expert_used,
+            response_time=1.0,  # Placeholder - should be passed from inference system
+            response_quality=response_quality,
+            user_satisfaction=user_rating
+        )
+
+        logger.debug(f"Collected feedback for {expert_used}: rating={user_rating:.2f}, quality={response_quality:.2f}")
+
+    def _update_adaptive_routing(self, feedback: UserFeedback):
+        """Update adaptive routing state based on user feedback."""
+        expert = feedback.expert_used
+        combined_score = (feedback.rating + feedback.response_quality) / 2.0
+
+        # Update expert performance scores using exponential moving average
+        learning_rate = self.adaptive_state.learning_rate
+        current_score = self.adaptive_state.expert_performance_scores.get(expert, 0.7)
+        new_score = current_score * (1 - learning_rate) + combined_score * learning_rate
+        self.adaptive_state.expert_performance_scores[expert] = new_score
+
+        # Update phase-specific preferences if game phase is available
+        if feedback.game_phase:
+            opening_score, middlegame_score, endgame_score = feedback.game_phase
+
+            # Determine dominant phase
+            if opening_score > 0.5:
+                phase = 'opening'
+            elif endgame_score > 0.5:
+                phase = 'endgame'
+            else:
+                phase = 'middlegame'
+
+            # Update phase-specific expert preferences
+            if phase not in self.adaptive_state.phase_expert_preferences:
+                self.adaptive_state.phase_expert_preferences[phase] = {}
+
+            phase_prefs = self.adaptive_state.phase_expert_preferences[phase]
+            current_pref = phase_prefs.get(expert, 1.0)
+            # Adjust preference based on feedback
+            adjustment = (combined_score - 0.5) * learning_rate * 0.5  # Smaller adjustment for preferences
+            phase_prefs[expert] = current_pref + adjustment
+
+        logger.debug(f"Updated adaptive routing: {expert} score -> {new_score:.3f}")
+
+    def _apply_adaptive_routing(self, expert_probs: Dict[str, float],
+                               game_phase: Optional[List[float]] = None) -> Dict[str, float]:
+        """Apply adaptive routing adjustments based on learned performance."""
+        adjusted_probs = expert_probs.copy()
+
+        # Apply expert performance scores
+        for expert, score in self.adaptive_state.expert_performance_scores.items():
+            if expert in adjusted_probs:
+                # Boost probability for high-performing experts
+                performance_boost = (score - 0.7) * 0.2  # Scale performance difference
+                adjusted_probs[expert] *= (1.0 + performance_boost)
+
+        # Apply phase-specific preferences
+        if game_phase:
+            opening_score, middlegame_score, endgame_score = game_phase
+
+            if opening_score > 0.5:
+                phase = 'opening'
+            elif endgame_score > 0.5:
+                phase = 'endgame'
+            else:
+                phase = 'middlegame'
+
+            phase_prefs = self.adaptive_state.phase_expert_preferences.get(phase, {})
+            for expert, preference in phase_prefs.items():
+                if expert in adjusted_probs:
+                    # Apply learned preference adjustment
+                    pref_adjustment = (preference - 1.0) * 0.1  # Scale down learned preferences
+                    adjusted_probs[expert] *= (1.0 + pref_adjustment)
+
+        # Normalize probabilities
+        total = sum(adjusted_probs.values())
+        if total > 0:
+            adjusted_probs = {expert: prob / total for expert, prob in adjusted_probs.items()}
+
+        return adjusted_probs
+
+    def get_adaptive_routing_stats(self) -> Dict[str, Any]:
+        """Get statistics about adaptive routing performance."""
+        feedback_count = len(self.adaptive_state.feedback_history)
+
+        if feedback_count == 0:
+            return {
+                'feedback_collected': 0,
+                'expert_performance_scores': self.adaptive_state.expert_performance_scores.copy(),
+                'phase_preferences': self.adaptive_state.phase_expert_preferences.copy(),
+                'adaptive_learning_active': False
+            }
+
+        # Calculate average satisfaction
+        avg_rating = sum(f.rating for f in self.adaptive_state.feedback_history) / feedback_count
+        avg_quality = sum(f.response_quality for f in self.adaptive_state.feedback_history) / feedback_count
+
+        # Calculate expert-specific stats
+        expert_stats = {}
+        for expert in self.expert_names:
+            expert_feedback = [f for f in self.adaptive_state.feedback_history if f.expert_used == expert]
+            if expert_feedback:
+                expert_stats[expert] = {
+                    'feedback_count': len(expert_feedback),
+                    'avg_rating': sum(f.rating for f in expert_feedback) / len(expert_feedback),
+                    'avg_quality': sum(f.response_quality for f in expert_feedback) / len(expert_feedback)
+                }
+
+        return {
+            'feedback_collected': feedback_count,
+            'average_user_rating': avg_rating,
+            'average_response_quality': avg_quality,
+            'expert_performance_scores': self.adaptive_state.expert_performance_scores.copy(),
+            'phase_preferences': self.adaptive_state.phase_expert_preferences.copy(),
+            'expert_feedback_stats': expert_stats,
+            'adaptive_learning_active': True
+        }
+
+    def _check_castling_potential(self, board: List[List[str]]) -> bool:
+        """Check if castling is still possible or likely."""
+        # Simplified check: look for kings and rooks in starting positions
+        # This is a basic heuristic since we don't have full FEN parsing
+        white_king_home = any('K' in row for row in board[7:8])  # Bottom rows
+        black_king_home = any('k' in row for row in board[0:2])  # Top rows
+        white_rooks_home = any('R' in board[7])  # White rooks on back rank
+        black_rooks_home = any('r' in board[0])  # Black rooks on back rank
+
+        return (white_king_home and white_rooks_home) or (black_king_home and black_rooks_home)
 
     def _extract_question_features(self, question: str) -> List[float]:
         """Extract features from question text."""
@@ -358,11 +862,23 @@ class ChessMoERouter(nn.Module):
         features.append(1.0 if 'fen:' in question_lower else 0.0)  # Has FEN
         features.append(len(question) / 200.0)  # Normalized length
 
-        # Question type indicators
-        features.append(1.0 if any(word in question_lower for word in ['best', 'good', 'should', 'recommend']) else 0.0)
-        features.append(1.0 if any(word in question_lower for word in ['why', 'how', 'explain', 'what']) else 0.0)
+        # Expert-specific indicators (strong signals for routing)
+        # UCI indicators - move generation
+        uci_indicators = ['best move', 'strongest move', 'what is the', 'move', 'play']
+        features.append(1.0 if any(indicator in question_lower for indicator in uci_indicators) else 0.0)
+
+        # Tutor indicators - analysis and teaching
+        tutor_indicators = ['analyze', 'step by step', 'candidate', 'evaluate', 'strengths', 'weaknesses', 'consider']
+        features.append(1.0 if any(indicator in question_lower for indicator in tutor_indicators) else 0.0)
+
+        # Director indicators - strategy and concepts
+        director_indicators = ['strategy', 'principle', 'concept', 'idea', 'main', 'behind', 'explain the']
+        features.append(1.0 if any(indicator in question_lower for indicator in director_indicators) else 0.0)
+
+        # Question structure (weaker signals)
+        features.append(1.0 if any(word in question_lower for word in ['why', 'how', 'what is']) else 0.0)
         features.append(1.0 if any(word in question_lower for word in ['better', 'worse', 'advantage']) else 0.0)
-        features.append(1.0 if any(word in question_lower for word in ['rule', 'legal', 'can', 'may']) else 0.0)
+        features.append(1.0 if any(word in question_lower for word in ['rule', 'legal', 'can']) else 0.0)
 
         return features
 
@@ -759,7 +1275,7 @@ class ChessMoERouter(nn.Module):
         return weighted_probs / total
 
     def _make_routing_decision(self, probs: torch.Tensor, confidence: float,
-                              fen: str, query_type: str) -> RoutingDecision:
+                              fen: str, query_type: str, game_phase: Optional[List[float]] = None) -> RoutingDecision:
         """Make the final routing decision."""
 
         if not self.expert_names:
@@ -767,6 +1283,13 @@ class ChessMoERouter(nn.Module):
 
         # Get expert probabilities
         expert_probs = {name: prob.item() for name, prob in zip(self.expert_names, probs)}
+
+        # Apply context-aware routing adjustments based on game phase
+        if game_phase:
+            expert_probs = self._apply_game_phase_routing(expert_probs, game_phase, query_type)
+
+        # Apply adaptive routing based on learned user feedback
+        expert_probs = self._apply_adaptive_routing(expert_probs, game_phase)
 
         # Determine primary expert
         primary_expert = max(expert_probs.keys(), key=lambda x: expert_probs[x])
@@ -1099,13 +1622,18 @@ class MoEInferenceManager:
             if path_obj and path_obj.exists():
                 self._expert_adapter_paths[expert_name] = path_obj
                 self._expert_ready[expert_name] = False
-                logger.info("Registered %s expert adapter at %s", expert_name, path_obj)
+                logger.info(f"Registered {expert_name} expert adapter at {path_obj}")
             else:
                 logger.warning(
                     "Expert model not found for %s: %s", expert_name=expert_name, model_path=model_path
                 )
 
         self.prime_available_experts()
+
+        # Parallel processing configuration
+        self._parallel_enabled = os.environ.get('CHESSGEMMA_PARALLEL_INFERENCE', '1') not in ('0', 'false', 'False')
+        self._max_parallel_experts = min(len(self.expert_models), int(os.environ.get('CHESSGEMMA_MAX_PARALLEL_EXPERTS', '3')))
+        self._parallel_executor = ThreadPoolExecutor(max_workers=self._max_parallel_experts, thread_name_prefix="moe-expert")
 
     def prime_available_experts(self) -> None:
         """Ensure all known experts are loaded into the shared inference model."""
@@ -1186,7 +1714,11 @@ class MoEInferenceManager:
 
         # Execute routing decision
         if routing_decision.ensemble_mode:
-            response = self._execute_ensemble_inference(fen, routing_decision)
+            # Use parallel processing if enabled and beneficial
+            if self._parallel_enabled and len(routing_decision.expert_weights) > 1:
+                response = self._execute_parallel_ensemble_inference(fen, routing_decision)
+            else:
+                response = self._execute_ensemble_inference(fen, routing_decision)
         else:
             response = self._execute_single_expert_inference(fen, routing_decision.primary_expert)
 
@@ -1203,6 +1735,143 @@ class MoEInferenceManager:
         }
 
         return response
+
+    def shutdown(self):
+        """Shutdown the MoE inference manager and clean up resources."""
+        if hasattr(self, '_parallel_executor') and self._parallel_executor:
+            self._parallel_executor.shutdown(wait=True)
+            logger.debug("MoE parallel executor shutdown")
+
+    def __del__(self):
+        """Cleanup on deletion."""
+        self.shutdown()
+
+    def _execute_parallel_ensemble_inference(self, fen: str, routing_decision: RoutingDecision) -> Dict[str, Any]:
+        """Execute ensemble inference with parallel expert processing."""
+        if not self._parallel_enabled or len(routing_decision.expert_weights) <= 1:
+            # Fall back to sequential processing
+            return self._execute_ensemble_inference(fen, routing_decision)
+
+        expert_results = []
+        confidence_weights = []
+
+        # Submit parallel inference tasks
+        future_to_expert = {}
+        for expert_name in routing_decision.expert_weights.keys():
+            future = self._parallel_executor.submit(self._execute_single_expert_inference, fen, expert_name)
+            future_to_expert[future] = expert_name
+
+        # Collect results as they complete
+        for future in as_completed(future_to_expert, timeout=30.0):  # 30 second timeout
+            expert_name = future_to_expert[future]
+            try:
+                base_weight = routing_decision.expert_weights[expert_name]
+                expert_response = future.result()
+
+                # Extract confidence
+                confidence = expert_response.get('confidence', 0.5)
+                confidence_weight = base_weight * confidence
+
+                expert_results.append({
+                    'expert': expert_name,
+                    'response': expert_response,
+                    'base_weight': base_weight,
+                    'confidence': confidence,
+                    'confidence_weight': confidence_weight
+                })
+                confidence_weights.append(confidence_weight)
+
+            except Exception as exc:
+                logger.warning(f"Parallel inference failed for {expert_name}: {exc}")
+                # Add fallback result
+                base_weight = routing_decision.expert_weights[expert_name]
+                expert_results.append({
+                    'expert': expert_name,
+                    'response': {'response': f'Analysis from {expert_name} expert', 'confidence': 0.1},
+                    'base_weight': base_weight,
+                    'confidence': 0.1,
+                    'confidence_weight': base_weight * 0.1
+                })
+                confidence_weights.append(base_weight * 0.1)
+
+        # Normalize confidence weights
+        total_weight = sum(confidence_weights)
+        if total_weight > 0:
+            normalized_weights = [w / total_weight for w in confidence_weights]
+        else:
+            normalized_weights = [1.0 / len(confidence_weights)] * len(confidence_weights)
+
+        # Reassign normalized weights
+        for result, norm_weight in zip(expert_results, normalized_weights):
+            result['normalized_weight'] = norm_weight
+
+        # Combine responses using confidence-weighted ensemble
+        combined_response = self.router._combine_confidence_weighted_responses(expert_results)
+
+        # Calculate ensemble confidence
+        ensemble_confidence = sum(r['confidence'] * r['normalized_weight'] for r in expert_results)
+
+        return {
+            'response': combined_response,
+            'ensemble_used': [r['expert'] for r in expert_results],
+            'weights': {r['expert']: r['normalized_weight'] for r in expert_results},
+            'base_weights': {r['expert']: r['base_weight'] for r in expert_results},
+            'confidences': {r['expert']: r['confidence'] for r in expert_results},
+            'analysis_type': 'parallel_confidence_weighted_ensemble',
+            'ensemble_confidence': ensemble_confidence,
+            'expert_details': expert_results,
+            'parallel_processing': True
+        }
+
+    def _execute_ensemble_inference(self, fen: str, routing_decision: RoutingDecision) -> Dict[str, Any]:
+        """Execute inference with expert ensemble (sequential fallback)."""
+        expert_results = []
+        confidence_weights = []
+
+        for expert_name, base_weight in routing_decision.expert_weights.items():
+            expert_response = self._execute_single_expert_inference(fen, expert_name)
+
+            # Extract confidence
+            confidence = expert_response.get('confidence', 0.5)
+            confidence_weight = base_weight * confidence
+
+            expert_results.append({
+                'expert': expert_name,
+                'response': expert_response,
+                'base_weight': base_weight,
+                'confidence': confidence,
+                'confidence_weight': confidence_weight
+            })
+            confidence_weights.append(confidence_weight)
+
+        # Normalize confidence weights
+        total_weight = sum(confidence_weights)
+        if total_weight > 0:
+            normalized_weights = [w / total_weight for w in confidence_weights]
+        else:
+            normalized_weights = [1.0 / len(confidence_weights)] * len(confidence_weights)
+
+        # Reassign normalized weights
+        for result, norm_weight in zip(expert_results, normalized_weights):
+            result['normalized_weight'] = norm_weight
+
+        # Combine responses using confidence-weighted ensemble
+        combined_response = self.router._combine_confidence_weighted_responses(expert_results)
+
+        # Calculate ensemble confidence
+        ensemble_confidence = sum(r['confidence'] * r['normalized_weight'] for r in expert_results)
+
+        return {
+            'response': combined_response,
+            'ensemble_used': [r['expert'] for r in expert_results],
+            'weights': {r['expert']: r['normalized_weight'] for r in expert_results},
+            'base_weights': {r['expert']: r['base_weight'] for r in expert_results},
+            'confidences': {r['expert']: r['confidence'] for r in expert_results},
+            'analysis_type': 'confidence_weighted_ensemble',
+            'ensemble_confidence': ensemble_confidence,
+            'expert_details': expert_results,
+            'parallel_processing': False
+        }
 
     def _execute_single_expert_inference(self, fen: str, expert_name: str) -> Dict[str, Any]:
         """Execute inference with a single expert."""
@@ -1256,29 +1925,127 @@ class MoEInferenceManager:
         }
 
     def _execute_ensemble_inference(self, fen: str, routing_decision: RoutingDecision) -> Dict[str, Any]:
-        """Execute inference with expert ensemble."""
-        responses = []
-        weights = []
+        """Execute inference with confidence-weighted expert ensemble."""
+        expert_results = []
+        confidence_weights = []
 
-        for expert_name, weight in routing_decision.expert_weights.items():
+        # Execute inference for each expert
+        for expert_name, base_weight in routing_decision.expert_weights.items():
             expert_response = self._execute_single_expert_inference(fen, expert_name)
-            responses.append(expert_response)
-            weights.append(weight)
 
-        # Combine responses (simplified ensemble logic)
-        combined_response = self._combine_expert_responses(responses, weights)
+            # Extract confidence from response (default to 0.5 if not available)
+            confidence = expert_response.get('confidence', 0.5)
+
+            # Apply confidence weighting: combine base routing weight with response confidence
+            # This creates a more nuanced weighting that considers both routing decision and response quality
+            confidence_weight = base_weight * confidence
+
+            expert_results.append({
+                'expert': expert_name,
+                'response': expert_response,
+                'base_weight': base_weight,
+                'confidence': confidence,
+                'confidence_weight': confidence_weight
+            })
+            confidence_weights.append(confidence_weight)
+
+        # Normalize confidence weights
+        total_weight = sum(confidence_weights)
+        if total_weight > 0:
+            normalized_weights = [w / total_weight for w in confidence_weights]
+        else:
+            # Fallback to equal weights if all confidences are 0
+            normalized_weights = [1.0 / len(confidence_weights)] * len(confidence_weights)
+
+        # Reassign normalized weights to results
+        for result, norm_weight in zip(expert_results, normalized_weights):
+            result['normalized_weight'] = norm_weight
+
+        # Combine responses using confidence-weighted ensemble
+        combined_response = self._combine_confidence_weighted_responses(expert_results)
+
+        # Calculate ensemble confidence as weighted average of individual confidences
+        ensemble_confidence = sum(r['confidence'] * r['normalized_weight'] for r in expert_results)
 
         return {
             'response': combined_response,
-            'ensemble_used': list(routing_decision.expert_weights.keys()),
-            'weights': routing_decision.expert_weights,
-            'analysis_type': 'ensemble'
+            'ensemble_used': [r['expert'] for r in expert_results],
+            'weights': {r['expert']: r['normalized_weight'] for r in expert_results},
+            'base_weights': {r['expert']: r['base_weight'] for r in expert_results},
+            'confidences': {r['expert']: r['confidence'] for r in expert_results},
+            'analysis_type': 'confidence_weighted_ensemble',
+            'ensemble_confidence': ensemble_confidence,
+            'expert_details': expert_results
         }
+
+    def _combine_confidence_weighted_responses(self, expert_results: List[Dict[str, Any]]) -> str:
+        """Combine responses using confidence-weighted ensemble logic."""
+        if not expert_results:
+            return "No expert responses available for ensemble."
+
+        # Separate UCI moves from textual analysis
+        uci_moves = []
+        analysis_parts = []
+
+        for result in expert_results:
+            expert_name = result['expert']
+            response_data = result['response']
+            weight = result['normalized_weight']
+            confidence = result['confidence']
+
+            response_text = response_data.get('response', '')
+
+            # Extract UCI moves from UCI expert if present
+            if expert_name == 'uci' and weight > 0.2:  # Only consider significant UCI contributions
+                # Try to extract UCI move from response
+                import re
+                uci_pattern = r'\b[a-h][1-8][a-h][1-8][qrbn]?\b'
+                matches = re.findall(uci_pattern, response_text.lower())
+                if matches:
+                    uci_moves.append((matches[0], weight, confidence))
+
+            # Collect analysis parts for non-UCI experts or low-confidence UCI
+            if expert_name != 'uci' or weight <= 0.2:
+                if weight > 0.15:  # Only include reasonably weighted analyses
+                    analysis_parts.append({
+                        'expert': expert_name,
+                        'text': response_text,
+                        'weight': weight,
+                        'confidence': confidence
+                    })
+
+        # Build combined response
+        response_parts = []
+
+        # Add UCI move recommendation if available
+        if uci_moves:
+            # Select the highest confidence UCI move
+            best_move = max(uci_moves, key=lambda x: x[2])  # Sort by confidence
+            move, weight, confidence = best_move
+            response_parts.append(f"**Recommended Move:** {move} (confidence: {confidence:.2f})")
+
+        # Add expert analyses
+        if analysis_parts:
+            response_parts.append("\n**Expert Analysis:**")
+            for analysis in sorted(analysis_parts, key=lambda x: x['weight'], reverse=True):
+                expert_title = analysis['expert'].title()
+                weight_indicator = f"[{analysis['weight']:.2f}]"
+                response_parts.append(f"\n**{expert_title} Expert** {weight_indicator}:")
+                response_parts.append(analysis['text'])
+
+        # Add ensemble metadata
+        ensemble_info = []
+        for result in expert_results:
+            ensemble_info.append(f"{result['expert']}: weight={result['normalized_weight']:.2f}, confidence={result['confidence']:.2f}")
+
+        response_parts.append(f"\n**Ensemble Details:** {' | '.join(ensemble_info)}")
+
+        return "\n".join(response_parts)
 
     def _combine_expert_responses(self, responses: List[Dict[str, Any]],
                                 weights: List[float]) -> str:
-        """Combine responses from multiple experts."""
-        # Simplified response combination
+        """Legacy method for backward compatibility - combines responses from multiple experts."""
+        # Simplified response combination for legacy usage
         combined_parts = []
 
         for response, weight in zip(responses, weights):
