@@ -29,6 +29,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 from peft import PeftModel
 import chess
 
+from src.inference.uci_utils import extract_fen, extract_first_uci
+
 # Add project root to path
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
@@ -268,14 +270,20 @@ class EnhancedChessInference:
             logger.error(f"❌ Failed to switch expert: {e}")
             return False
 
-    def _generate_cache_key(self, prompt: str, config: InferenceConfig, expert: str) -> str:
+    def _generate_cache_key(self, prompt: str, config: InferenceConfig, expert: str,
+                             fen: Optional[str] = None, move_uci: Optional[str] = None) -> str:
         """Generate a unique cache key for the request."""
         config_str = f"{config.temperature}_{config.top_p}_{config.top_k}_{config.max_new_tokens}"
         key_components = [prompt, config_str, expert]
+        if fen:
+            key_components.append(f"fen:{fen}")
+        if move_uci:
+            key_components.append(f"move:{move_uci}")
         key_string = "|".join(key_components)
         return hashlib.md5(key_string.encode()).hexdigest()
 
-    def _get_cached_response(self, cache_key: str, fen: Optional[str] = None) -> Optional[str]:
+    def _get_cached_response(self, cache_key: str, fen: Optional[str] = None,
+                             move_uci: Optional[str] = None) -> Optional[str]:
         """Get cached response with position awareness."""
         if not self.config.cache_enabled:
             return None
@@ -343,19 +351,8 @@ class EnhancedChessInference:
 
     def _extract_chess_info(self, prompt: str) -> Tuple[Optional[str], Optional[str]]:
         """Extract FEN and move information from prompt."""
-        fen = None
-        move_uci = None
-
-        # Look for FEN in prompt
-        fen_match = None
-        import re
-        fen_pattern = r'FEN:\s*([rnbqkbnrpnRNBQKBNRP12345678/]+)'
-        match = re.search(fen_pattern, prompt)
-        if match:
-            fen_candidate = match.group(1)
-            # Basic FEN validation
-            if len(fen_candidate.split('/')) == 8:
-                fen = fen_candidate
+        fen = extract_fen(prompt)
+        move_uci = extract_first_uci(prompt)
 
         return fen, move_uci
 
@@ -380,14 +377,20 @@ class EnhancedChessInference:
             self.metrics.total_requests += 1
 
         try:
-            # Generate cache key
-            cache_key = self._generate_cache_key(prompt, gen_config, self.current_expert)
-
             # Extract chess information
             fen, move_uci = self._extract_chess_info(prompt)
 
+            # Generate cache key
+            cache_key = self._generate_cache_key(
+                prompt,
+                gen_config,
+                self.current_expert,
+                fen,
+                move_uci,
+            )
+
             # Check cache first
-            cached_response = self._get_cached_response(cache_key, fen)
+            cached_response = self._get_cached_response(cache_key, fen, move_uci)
             if cached_response:
                 response_time = time.time() - start_time
                 with self.metrics_lock:

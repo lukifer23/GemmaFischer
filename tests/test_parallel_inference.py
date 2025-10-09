@@ -17,6 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.inference.inference import ChessGemmaInference, get_inference_instance
+from src.inference.enhanced_inference import EnhancedChessInference
 from src.web.app import app as flask_app
 
 
@@ -138,6 +139,52 @@ class TestParallelInference:
         assert results['uci']['mode'] == 'engine'
         assert results['tutor']['mode'] == 'tutor'
         assert results['director']['mode'] == 'director'
+
+    def test_position_cache_respects_side_to_move(self, monkeypatch):
+        """Ensure caching differentiates positions by full FEN including side to move."""
+        engine = EnhancedChessInference()
+        engine.is_loaded = True
+        engine.current_expert = "uci"
+
+        call_count = {"count": 0}
+
+        def fake_generate(prompt, config):
+            call_count["count"] += 1
+            return f"resp_{call_count['count']}"
+
+        monkeypatch.setattr(engine, "_generate_optimized", fake_generate)
+
+        fen_white = "8/8/8/8/8/8/8/K6k w - - 0 1"
+        fen_black = "8/8/8/8/8/8/8/K6k b - - 0 1"
+        prompt_template = "FEN: {fen}\nMove: e2e4\nAnalyze."
+
+        # First request populates cache with white to move FEN
+        response_white_1 = engine.generate_response(prompt_template.format(fen=fen_white))
+        assert call_count["count"] == 1
+        assert response_white_1["cached"] is False
+
+        cache_entries = list(engine.response_cache.values())
+        assert len(cache_entries) == 1
+        assert cache_entries[0].fen == fen_white
+        assert cache_entries[0].move_uci == "e2e4"
+
+        # Second request with identical prompt should hit cache
+        response_white_2 = engine.generate_response(prompt_template.format(fen=fen_white))
+        assert call_count["count"] == 1
+        assert response_white_2["cached"] is True
+
+        # Third request with different side to move should trigger new generation
+        response_black = engine.generate_response(prompt_template.format(fen=fen_black))
+        assert call_count["count"] == 2
+        assert response_black["cached"] is False
+
+        cached_fens = {entry.fen for entry in engine.response_cache.values()}
+        assert fen_white in cached_fens
+        assert fen_black in cached_fens
+
+        # Position cache keyed by full FEN should track both entries separately
+        assert fen_white in engine.position_cache
+        assert fen_black in engine.position_cache
 
 
 class TestThreadSafety:
