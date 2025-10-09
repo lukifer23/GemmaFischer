@@ -8,6 +8,9 @@ Advanced inference system with:
 - Robust expert mode switching
 - Real-time performance monitoring
 - Chess-specific optimizations
+- Chess-aware decoding that can restrict token logits to legal UCI move
+  characters when a mode/expert expects engine-style output. Tutors and
+  directors can opt out through configuration toggles.
 
 Addresses the core inference issues identified in the audit.
 """
@@ -18,14 +21,20 @@ import time
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple, Union, Iterable
 from dataclasses import dataclass, field
 from collections import OrderedDict, defaultdict
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    GenerationConfig,
+    LogitsProcessor,
+    LogitsProcessorList,
+)
 from peft import PeftModel
 import chess
 
@@ -52,6 +61,9 @@ class InferenceConfig:
     cache_enabled: bool = True
     cache_max_size: int = 1000
     chess_aware_decoding: bool = True
+    engine_chess_aware_decoding: bool = True
+    tutor_chess_aware_decoding: bool = True
+    director_chess_aware_decoding: bool = True
     expert_switching_enabled: bool = True
     performance_monitoring: bool = True
 
@@ -93,6 +105,23 @@ class PerformanceMetrics:
     gpu_memory_usage: float = 0.0
     expert_switches: int = 0
     last_reset: float = field(default_factory=time.time)
+
+
+class ChessWhitelistLogitsProcessor(LogitsProcessor):
+    """Restrict logits to a predefined whitelist of chess tokens."""
+
+    def __init__(self, allowed_token_ids: Iterable[int]):
+        allowed = {int(token_id) for token_id in allowed_token_ids}
+        if not allowed:
+            raise ValueError("allowed_token_ids must not be empty")
+        self._allowed_ids = sorted(allowed)
+        self._allowed_tensor = torch.tensor(self._allowed_ids, dtype=torch.long)
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        allowed_tensor = self._allowed_tensor.to(scores.device)
+        disallowed_mask = torch.ones(scores.size(-1), dtype=torch.bool, device=scores.device)
+        disallowed_mask[allowed_tensor] = False
+        return scores.masked_fill(disallowed_mask.unsqueeze(0), float('-inf'))
 
 
 class EnhancedChessInference:
@@ -238,6 +267,52 @@ class EnhancedChessInference:
 
         except Exception as e:
             logger.warning(f"Could not build chess token whitelist: {e}")
+
+    def _should_enforce_chess_whitelist(self, mode: Optional[str]) -> bool:
+        """Determine if chess-aware decoding whitelist should be applied."""
+        if not self.config.chess_aware_decoding or not self.chess_token_whitelist:
+            return False
+
+        mode_key = (mode or "").lower()
+        expert_key = (self.current_expert or "").lower()
+        expects_uci = expert_key in {"uci", "engine"} or mode_key in {"uci", "engine"}
+        if not expects_uci:
+            return False
+
+        if mode_key == "engine":
+            return getattr(self.config, "engine_chess_aware_decoding", True)
+        if mode_key == "tutor":
+            return getattr(self.config, "tutor_chess_aware_decoding", True)
+        if mode_key == "director":
+            return getattr(self.config, "director_chess_aware_decoding", True)
+
+        return True
+
+    def _create_chess_logits_processor(
+        self,
+        config: InferenceConfig,
+        mode: Optional[str],
+    ) -> Optional[LogitsProcessorList]:
+        """Create logits processor enforcing chess whitelist when required."""
+        if not self._should_enforce_chess_whitelist(mode):
+            return None
+
+        allowed_ids = set(self.chess_token_whitelist or set())
+
+        eos_token_id = config.eos_token_id or (self.tokenizer.eos_token_id if self.tokenizer else None)
+        pad_token_id = config.pad_token_id or (self.tokenizer.pad_token_id if self.tokenizer else None)
+
+        if eos_token_id is not None:
+            allowed_ids.add(int(eos_token_id))
+        if pad_token_id is not None:
+            allowed_ids.add(int(pad_token_id))
+
+        try:
+            processor = ChessWhitelistLogitsProcessor(allowed_ids)
+        except ValueError:
+            return None
+
+        return LogitsProcessorList([processor])
 
     def switch_expert(self, expert_name: str) -> bool:
         """Switch to a different expert adapter."""
@@ -406,7 +481,7 @@ class EnhancedChessInference:
 
             # Generate new response
             with self.model_lock:
-                response = self._generate_optimized(prompt, gen_config)
+                response = self._generate_optimized(prompt, gen_config, mode=mode)
 
             # Cache the response
             self._cache_response(cache_key, response, fen, move_uci)
@@ -439,7 +514,7 @@ class EnhancedChessInference:
                 "expert": self.current_expert
             }
 
-    def _generate_optimized(self, prompt: str, config: InferenceConfig) -> str:
+    def _generate_optimized(self, prompt: str, config: InferenceConfig, mode: Optional[str] = None) -> str:
         """Optimized generation with chess-specific enhancements."""
         try:
             # Tokenize input
@@ -463,12 +538,18 @@ class EnhancedChessInference:
                 use_cache=True
             )
 
+            logits_processor = self._create_chess_logits_processor(config, mode)
+
+            generate_kwargs: Dict[str, Any] = {
+                **inputs,
+                "generation_config": generation_config,
+            }
+            if logits_processor is not None:
+                generate_kwargs["logits_processor"] = logits_processor
+
             # Generate response
             with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    generation_config=generation_config
-                )
+                outputs = self.model.generate(**generate_kwargs)
 
             # Decode response
             full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)

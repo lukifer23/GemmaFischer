@@ -10,6 +10,9 @@ import types
 import importlib.machinery
 from pathlib import Path
 from unittest.mock import Mock, patch
+import re
+
+import torch
 
 import chess
 
@@ -39,6 +42,11 @@ from src.inference.inference import (
     get_model_info,
 )
 from src.inference.moe_router import RoutingDecision, MoEInferenceManager
+from src.inference.enhanced_inference import (
+    EnhancedChessInference,
+    InferenceConfig,
+    ChessWhitelistLogitsProcessor,
+)
 
 
 class TestChessGemmaInference:
@@ -367,7 +375,7 @@ class TestConvenienceFunctions:
 
 class TestChessEngineIntegration:
     """Test cases for chess engine integration."""
-    
+
     @patch('src.inference.chess_engine.ChessEngineManager')
     def test_chess_engine_validation(self, mock_engine_manager):
         """Test chess engine move validation."""
@@ -387,6 +395,136 @@ class TestChessEngineIntegration:
         assert result.move == "e2e4"
         assert result.is_legal is True
         assert result.move_quality == "good"
+
+
+class TestEnhancedChessInferenceWhitelist:
+    """Targeted tests for enhanced inference chess-aware decoding."""
+
+    class _DummyEncoding(dict):
+        def to(self, device):  # pragma: no cover - simple helper
+            for key, value in list(self.items()):
+                if hasattr(value, "to"):
+                    self[key] = value.to(device)
+            return self
+
+    class _FakeTokenizer:
+        def __init__(self):
+            self.token_to_id = {
+                "<pad>": 0,
+                "<eos>": 1,
+                "e": 2,
+                "2": 3,
+                "4": 4,
+                "bad": 5,
+            }
+            self.id_to_token = {v: k for k, v in self.token_to_id.items()}
+            self.pad_token_id = self.token_to_id["<pad>"]
+            self.eos_token_id = self.token_to_id["<eos>"]
+
+        def __call__(self, *args, **kwargs):  # pragma: no cover - simple helper
+            return TestEnhancedChessInferenceWhitelist._DummyEncoding({
+                "input_ids": torch.tensor([[self.pad_token_id]], dtype=torch.long)
+            })
+
+        def get_vocab(self):  # pragma: no cover - simple helper
+            return dict(self.token_to_id)
+
+        def decode(self, token_ids, skip_special_tokens=True):
+            pieces = []
+            for token_id in token_ids:
+                tid = int(token_id)
+                if skip_special_tokens and tid in {self.pad_token_id, self.eos_token_id}:
+                    continue
+                pieces.append(self.id_to_token.get(tid, ""))
+            return "".join(pieces)
+
+    class _FakeModel:
+        def __init__(self, tokenizer: '_FakeTokenizer'):
+            self.device = torch.device("cpu")
+            self._tokenizer = tokenizer
+
+        def generate(self, input_ids, generation_config=None, logits_processor=None, **_):
+            vocab = self._tokenizer.get_vocab()
+            vocab_size = len(vocab)
+            generated = input_ids
+            valid_sequence = [
+                self._tokenizer.token_to_id["e"],
+                self._tokenizer.token_to_id["2"],
+                self._tokenizer.token_to_id["e"],
+                self._tokenizer.token_to_id["4"],
+            ]
+            invalid_id = self._tokenizer.token_to_id["bad"]
+
+            for step, valid_id in enumerate(valid_sequence):
+                scores = torch.full((1, vocab_size), -float('inf'))
+                # Without masking, the invalid token would dominate the distribution.
+                scores[0, invalid_id] = 10.0
+                scores[0, valid_id] = 5.0 + step
+                if logits_processor is not None:
+                    scores = logits_processor(generated, scores)
+                probs = torch.nn.functional.softmax(scores, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+                generated = torch.cat([generated, next_token], dim=-1)
+
+            return generated
+
+    def test_engine_mode_sampling_returns_uci_move(self):
+        """Engine mode should emit legal UCI tokens even when sampling."""
+        torch.manual_seed(0)
+        tokenizer = self._FakeTokenizer()
+        config = InferenceConfig(chess_aware_decoding=True)
+        config.pad_token_id = tokenizer.pad_token_id
+        config.eos_token_id = tokenizer.eos_token_id
+        engine = EnhancedChessInference(config)
+        engine.is_loaded = True
+        engine.tokenizer = tokenizer
+        engine.model = self._FakeModel(tokenizer)
+        engine.chess_token_whitelist = {
+            tokenizer.token_to_id["e"],
+            tokenizer.token_to_id["2"],
+            tokenizer.token_to_id["4"],
+        }
+
+        result = engine.generate_response("Prompt", mode="engine")
+
+        assert "error" not in result
+        move = result["response"]
+        assert re.match(r"^[a-h][1-8][a-h][1-8][qrbn]?$", move)
+
+    def test_tutor_mode_can_disable_chess_filter(self):
+        """Tutor mode may opt out of whitelist enforcement via config."""
+        tokenizer = self._FakeTokenizer()
+        config = InferenceConfig(
+            chess_aware_decoding=True,
+            tutor_chess_aware_decoding=False,
+        )
+        config.pad_token_id = tokenizer.pad_token_id
+        config.eos_token_id = tokenizer.eos_token_id
+        engine = EnhancedChessInference(config)
+        engine.is_loaded = True
+        engine.tokenizer = tokenizer
+        engine.model = Mock()
+        engine.model.device = torch.device("cpu")
+        engine.model.generate.return_value = torch.tensor([[0, 2, 3, 4]])
+        engine.chess_token_whitelist = {
+            tokenizer.token_to_id["e"],
+            tokenizer.token_to_id["2"],
+            tokenizer.token_to_id["4"],
+        }
+
+        response = engine._generate_optimized("Prompt", config, mode="tutor")
+
+        assert response
+        _, kwargs = engine.model.generate.call_args
+        assert "logits_processor" not in kwargs
+
+    def test_chess_logits_processor_masks_invalid_tokens(self):
+        """Whitelist processor should set invalid logits to -inf."""
+        processor = ChessWhitelistLogitsProcessor({1, 2, 3})
+        scores = torch.zeros((1, 5))
+        filtered = processor(torch.zeros((1, 1), dtype=torch.long), scores)
+        assert torch.isinf(filtered[0, 4]) and filtered[0, 4] < 0
+        assert filtered[0, 1] == 0
 
 
 class TestErrorHandling:
