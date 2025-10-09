@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import glob
 import re
+import traceback
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from contextlib import nullcontext
@@ -75,7 +76,7 @@ except ImportError:
 # Import model validation
 try:
     from ..utils.model_validator import get_model_validator, validate_model
-    model_validator = get_model_validator()
+    model_validator = get_model_validator("models", "checkpoints")
 except ImportError:
     # Fallback if model validator not available
     model_validator = None
@@ -346,19 +347,21 @@ class ChessGemmaInference:
 
             if router_checkpoint is None:
                 router_dir = checkpoints_root / "moe_router"
-                router_patterns = [
-                    str(router_dir / "router*.pt"),
-                    str(router_dir / "router*.bin"),
-                    str(router_dir / "router*.safetensors"),
-                    str(router_dir / "checkpoint-*" / "router*.pt"),
-                    str(router_dir / "checkpoint-*" / "*.pt"),
-                    str(router_dir / "checkpoint-*" / "*.bin"),
-                    str(router_dir / "checkpoint-*" / "*.safetensors"),
-                    str(router_dir / "*.pt"),
-                    str(router_dir / "*.bin"),
-                    str(router_dir / "*.safetensors"),
-                ]
-                router_checkpoint = _find_latest_file(router_patterns)
+            router_patterns = [
+                str(router_dir / "router*.pt"),
+                str(router_dir / "router*.bin"),
+                str(router_dir / "router*.safetensors"),
+                str(router_dir / "checkpoint-*" / "router*.pt"),
+                str(router_dir / "checkpoint-*" / "*.pt"),
+                str(router_dir / "checkpoint-*" / "*.bin"),
+                str(router_dir / "checkpoint-*" / "*.safetensors"),
+                str(router_dir / "final_checkpoint.pth"),
+                str(router_dir / "best_checkpoint.pth"),
+                str(router_dir / "*.pt"),
+                str(router_dir / "*.bin"),
+                str(router_dir / "*.safetensors"),
+            ]
+            router_checkpoint = _find_latest_file(router_patterns)
 
             if router_checkpoint is None:
                 _disable_moe(
@@ -680,6 +683,9 @@ class ChessGemmaInference:
             self.tokenizer = self._core_engine.tokenizer
             self.model = self._core_engine.model
             self.is_loaded = self._core_engine.is_loaded
+            # Set up adapter management for backward compatibility
+            if result:
+                self.refresh_adapters()
             return result
 
         if self.is_loaded and self.model is not None and self.tokenizer is not None:
@@ -786,20 +792,36 @@ class ChessGemmaInference:
             # Discover known expert adapters on disk for quick switching now that
             # the model exposes PEFT adapter management APIs.
             self.refresh_adapters()
-            # Skip model validation for now to avoid threading issues
-            # TODO: Re-enable after fixing validation threading issues
-            # if model_validator:
-            #     try:
-            #         validation_result = model_validator.validate_model_integrity(
-            #             str(self.model_path), str(self.adapter_path) if self.adapter_path else None
-            #         )
-            #         if not validation_result.is_valid:
-            #             print(f"⚠️  Model validation failed: {', '.join(validation_result.errors)}")
-            #             # Continue anyway but log warnings
-            #             for warning in validation_result.warnings:
-            #                 print(f"⚠️  {warning}")
-            #     except Exception as val_e:
-            #         print(f"⚠️  Model validation error: {val_e}")
+            # Model validation - use resolved local model path if available
+            if model_validator:
+                try:
+                    # Use the resolved local path for validation
+                    model_path_for_validation = str(self.model_path)
+                    logger.debug(f"Model validation: initial model_path = {model_path_for_validation}")
+                    if model_path_for_validation == "google/gemma-3-270m":
+                        # If using HF identifier, try to find local model
+                        local_model_path = self.project_root / "models" / "google-gemma-3-270m"
+                        logger.debug(f"Model validation: checking local path {local_model_path} exists = {local_model_path.exists()}")
+                        if local_model_path.exists():
+                            model_path_for_validation = str(local_model_path)
+                            logger.debug(f"Model validation: using local path {model_path_for_validation}")
+
+                    adapter_path_for_validation = str(self.adapter_path) if self.adapter_path else None
+                    logger.debug(f"Model validation: validating model_path={model_path_for_validation}, adapter_path={adapter_path_for_validation}")
+
+                    validation_result = model_validator.validate_model_integrity(
+                        model_path_for_validation, adapter_path_for_validation
+                    )
+                    if not validation_result.is_valid:
+                        logger.warning(f"Model validation failed: {', '.join(validation_result.errors)}")
+                        # Continue anyway but log warnings
+                        for warning in validation_result.warnings:
+                            logger.warning(f"Model validation warning: {warning}")
+                    else:
+                        logger.info("✅ Model validation passed")
+                except Exception as val_e:
+                    logger.error(f"Model validation error: {val_e}")
+                    logger.error(f"Model validation traceback: {traceback.format_exc()}")
 
             self.is_loaded = True
             self._model_loading = False  # Reset loading flag

@@ -49,6 +49,7 @@ class EvaluationSuiteResults:
     total_time: float = 0.0
     avg_generation_time: float = 0.0
     avg_confidence: float = 0.0
+    moe_ensemble_rate: float = 0.0
 
 class EvaluationSuiteRunner:
     """Comprehensive evaluation suite runner with MoE support."""
@@ -170,6 +171,10 @@ class EvaluationSuiteRunner:
             # Validate response format
             result.format_score = self.validate_response_format(result.response, expected_format)
 
+            # Debug: print responses for pure_move category
+            if category == "pure_move":
+                print(f"DEBUG: Pure move response: {repr(result.response)} -> format_score: {result.format_score}")
+
             # Check expert routing accuracy
             result.expert_score = 1.0 if result.routed_expert == expected_expert else 0.0
 
@@ -272,9 +277,9 @@ class EvaluationSuiteRunner:
         print(f"   Total Tests: {results.total_tests}")
 
         print("\n⚡ Performance Metrics:")
-        print(f"   Average Response Time: {results.avg_response_time:.3f}s")
+        print(f"   Average Generation Time: {results.avg_generation_time:.3f}s")
         print(f"   Average Confidence: {results.avg_confidence:.3f}")
-        print(f"   Cache Hit Rate: {results.cache_hit_rate:.2f}%")
+        print(f"   Total Evaluation Time: {results.total_time:.1f}s")
 
         if use_moe:
             print(f"   MoE Ensemble Rate: {results.moe_ensemble_rate:.1f}%")
@@ -293,9 +298,9 @@ class EvaluationSuiteRunner:
         for expert, metrics in results.experts.items():
             print(f"{expert:<12}{metrics['count']:<8}{metrics['format_accuracy']:.1%}{metrics['avg_confidence']:.2f}{metrics['avg_time']:.3f}")
 
-        print(f"\n🎖️  Overall Format Accuracy:".ljust(30) + f"{results.overall_format_accuracy:.1%}")
+        print(f"\n🎖️  Overall Format Accuracy:".ljust(30) + f"{results.format_accuracy.get('overall', 0.0):.1%}")
         if use_moe:
-            print(f"🎯 MoE Routing Accuracy:".ljust(30) + f"{results.moe_routing_accuracy:.1%}")
+            print(f"🎯 MoE Routing Accuracy:".ljust(30) + f"{results.routing_accuracy:.1%}")
 
 def main():
     parser = argparse.ArgumentParser(description="Run chess evaluation suite")

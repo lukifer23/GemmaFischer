@@ -4,6 +4,8 @@ Complete UCI Expert Training Script
 
 Advanced training script for completing UCI expert training to 1600+ steps
 with enhanced data quality validation, progress monitoring, and stability improvements.
+
+Uses instruction tuning (--use_instruction_collator) for proper chess move generation.
 """
 
 import os
@@ -19,7 +21,7 @@ import argparse
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
-def run_uci_training(max_steps=1600, timeout_minutes=240):
+def run_uci_training(max_steps=1600, timeout_minutes=240, force_restart=False):
     """Run UCI expert training with enhanced stability and monitoring."""
 
     print("=" * 60)
@@ -37,8 +39,13 @@ def run_uci_training(max_steps=1600, timeout_minutes=240):
         "--config", "auto",
         "--max_steps_override", str(max_steps),
         "--timeout_minutes", str(timeout_minutes),
-        "--disable_eval"  # Disable eval for speed during main training
+        "--disable_eval",  # Disable eval for speed during main training
+        "--use_instruction_collator"  # CRITICAL: Use instruction tuning format
     ]
+
+    # Add force restart flag if requested
+    if force_restart:
+        cmd.append("--force_restart")
 
     print(f"🚀 Executing: {' '.join(cmd)}")
     print("-" * 60)
@@ -134,9 +141,23 @@ def validate_uci_data():
                         continue
 
                     board = chess.Board(fen)
-                    move = sample['response'].strip()
+                    response = sample['response'].strip()
 
-                    if not chess.Move.from_uci(move) in board.legal_moves:
+                    # For UCI expert, response should be a valid UCI move
+                    # Check if it's 4-5 characters (UCI move format)
+                    if not (4 <= len(response) <= 5 and all(c in 'abcdefgh12345678' for c in response)):
+                        if line_num <= 5:  # Show first few errors
+                            print(f"   Sample {line_num} error: expected uci string to be of length 4 or 5: {repr(response[:100])}")
+                        invalid_samples += 1
+                        continue
+
+                    # Validate it's a legal move on the board
+                    try:
+                        move_obj = chess.Move.from_uci(response)
+                        if move_obj not in board.legal_moves:
+                            invalid_samples += 1
+                            continue
+                    except ValueError:
                         invalid_samples += 1
                         continue
 
@@ -246,12 +267,15 @@ def main():
         if response not in ['y', 'yes']:
             print("❌ Training cancelled by user")
             sys.exit(0)
-    except KeyboardInterrupt:
-        print("\n❌ Training cancelled by user")
-        sys.exit(0)
+    except (KeyboardInterrupt, EOFError):
+        if isinstance(__import__('sys').exc_info()[1], EOFError):
+            print("🔄 Non-interactive mode - auto-confirming training start...")
+        else:
+            print("\n❌ Training cancelled by user")
+            sys.exit(0)
 
     # Run training
-    success = run_uci_training(args.max_steps, args.timeout_minutes)
+    success = run_uci_training(args.max_steps, args.timeout_minutes, args.force_restart)
 
     if success:
         print("\n🎉 UCI Expert training completed successfully!")

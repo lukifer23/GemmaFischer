@@ -76,6 +76,8 @@ class ChessGemmaCoreEngine:
 
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device) - optimized."""
+        from pathlib import Path
+
         if self.is_loaded and self.model is not None and self.tokenizer is not None:
             return True
 
@@ -156,16 +158,27 @@ class ChessGemmaCoreEngine:
             if self.model is not None:
                 self.model.eval()
 
-            # Skip model validation for now to avoid threading issues
+            # Model validation - use resolved local model path if available
             if model_validator:
                 try:
+                    # Use the resolved local path for validation
+                    model_path_for_validation = str(self.model_path)
+                    if model_path_for_validation == "google/gemma-3-270m":
+                        # If using HF identifier, try to find local model
+                        project_root = Path(__file__).resolve().parents[2]
+                        local_model_path = project_root / "models" / "google-gemma-3-270m"
+                        if local_model_path.exists():
+                            model_path_for_validation = str(local_model_path)
+
                     validation_result = model_validator.validate_model_integrity(
-                        str(self.model_path), str(self.adapter_path) if self.adapter_path else None
+                        model_path_for_validation, str(self.adapter_path) if self.adapter_path else None
                     )
                     if not validation_result.is_valid:
                         print(f"⚠️  Model validation failed: {', '.join(validation_result.errors)}")
                         for warning in validation_result.warnings:
                             print(f"⚠️  {warning}")
+                    else:
+                        print("✅ Model validation passed")
                 except Exception as val_e:
                     print(f"⚠️  Model validation error: {val_e}")
 

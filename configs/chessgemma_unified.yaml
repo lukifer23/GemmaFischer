@@ -201,7 +201,13 @@ performance:
   inference_queue_size: 100
 
 # Dataset Configuration
-datasets: []
+datasets:
+  - path: "data/standardized/standardized_uci_expert.jsonl"
+    weight: 1.0
+  - path: "data/standardized/standardized_tutor_expert.jsonl"
+    weight: 1.0
+  - path: "data/standardized/standardized_director_expert_v2.jsonl"
+    weight: 1.0
 
 # Curriculum Example (uncomment and modify as needed):
 # curriculum:

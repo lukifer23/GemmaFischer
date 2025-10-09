@@ -192,11 +192,18 @@ class ChessGemmaModelValidator:
         if not model_path.exists():
             return False
 
-        # Check for essential model files
-        required_files = ['config.json', 'pytorch_model.bin']
-        for file in required_files:
-            if not (model_path / file).exists():
-                return False
+        # Check for essential model files - support both pytorch and safetensors formats
+        if not (model_path / 'config.json').exists():
+            return False
+
+        # Check for model weights (either pytorch or safetensors format)
+        has_model_weights = (
+            (model_path / 'pytorch_model.bin').exists() or
+            (model_path / 'model.safetensors').exists() or
+            any((model_path / f).exists() for f in ['pytorch_model-00001-of-00002.bin', 'model-00001-of-00002.safetensors'])
+        )
+        if not has_model_weights:
+            return False
 
         # Validate config file
         try:
@@ -221,8 +228,8 @@ class ChessGemmaModelValidator:
         if not config_file.exists():
             return False
 
-        # Check for adapter model files
-        model_files = list(adapter_path.glob('*.bin'))
+        # Check for adapter model files (support both pytorch and safetensors formats)
+        model_files = list(adapter_path.glob('*.bin')) + list(adapter_path.glob('*.safetensors'))
         if not model_files:
             return False
 

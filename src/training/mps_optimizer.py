@@ -245,7 +245,7 @@ class MPSMemoryOptimizer:
             batch_config = {}
             if model and tokenizer:
                 try:
-                    batch_recommendations = optimizer.calculate_optimal_batch_size(
+                    batch_recommendations = self.calculate_optimal_batch_size(
                         model, tokenizer, sequence_length=base_config.get('max_seq_length', 2048)
                     )
                     batch_config = {
@@ -466,9 +466,8 @@ class MPSTrainingMonitor:
             return {'status': 'ok', 'device': 'cpu'}
 
         try:
-            memory_stats = torch.mps.memory_stats()
-            current_memory = memory_stats.get('allocated_bytes.all.current', 0) / (1024**3)
-            peak_memory = memory_stats.get('allocated_bytes.all.peak', 0) / (1024**3)
+            current_memory = torch.mps.current_allocated_memory() / (1024**3)
+            peak_memory = torch.mps.driver_allocated_memory() / (1024**3)
 
             # Check for memory issues
             warnings = []
@@ -506,8 +505,7 @@ class MPSTrainingMonitor:
             return False
 
         try:
-            memory_stats = torch.mps.memory_stats()
-            current_memory = memory_stats.get('allocated_bytes.all.current', 0) / (1024**3)
+            current_memory = torch.mps.current_allocated_memory() / (1024**3)
             return current_memory > 13.0  # Clear cache if over 13GB
         except:
             return False
@@ -578,15 +576,14 @@ def get_mps_memory_stats() -> Dict[str, Any]:
         return {'error': 'MPS not available'}
 
     try:
-        stats = torch.mps.memory_stats()
         current = torch.mps.current_allocated_memory()
-        peak = torch.mps.peak_allocated_memory()
+        peak = torch.mps.driver_allocated_memory()  # Use driver_allocated as peak estimate
 
         return {
             'current_allocated': current,
             'peak_allocated': peak,
-            'memory_stats': stats,
-            'utilization': current / torch.mps.get_memory_info()[0] if torch.mps.get_memory_info()[0] > 0 else 0
+            'memory_stats': {'current_gb': current / (1024**3), 'peak_gb': peak / (1024**3)},
+            'utilization': current / torch.mps.recommended_max_memory() if torch.mps.recommended_max_memory() > 0 else 0
         }
     except Exception as e:
         return {'error': str(e)}

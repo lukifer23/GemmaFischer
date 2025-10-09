@@ -35,6 +35,7 @@ import random
 from torch.utils.data import Dataset, DataLoader
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -364,8 +365,8 @@ class ChessMoERouter(nn.Module):
         features.append(black_material / max(total_material, 1))  # Black material ratio
 
         # King safety and positioning (4 features)
-        king_safety_white = self._assess_king_safety(board, 'white')
-        king_safety_black = self._assess_king_safety(board, 'black')
+        king_safety_white = self._assess_king_safety(board)
+        king_safety_black = self._assess_king_safety(board)
         features.append(king_safety_white)
         features.append(king_safety_black)
 
@@ -828,10 +829,10 @@ class ChessMoERouter(nn.Module):
         """Check if castling is still possible or likely."""
         # Simplified check: look for kings and rooks in starting positions
         # This is a basic heuristic since we don't have full FEN parsing
-        white_king_home = any('K' in row for row in board[7:8])  # Bottom rows
-        black_king_home = any('k' in row for row in board[0:2])  # Top rows
-        white_rooks_home = any('R' in board[7])  # White rooks on back rank
-        black_rooks_home = any('r' in board[0])  # Black rooks on back rank
+        white_king_home = 'K' in board[7]  # White king on back rank
+        black_king_home = 'k' in board[0]  # Black king on back rank
+        white_rooks_home = 'R' in board[7]  # White rooks on back rank
+        black_rooks_home = 'r' in board[0]  # Black rooks on back rank
 
         return (white_king_home and white_rooks_home) or (black_king_home and black_rooks_home)
 
@@ -1806,7 +1807,7 @@ class MoEInferenceManager:
             result['normalized_weight'] = norm_weight
 
         # Combine responses using confidence-weighted ensemble
-        combined_response = self.router._combine_confidence_weighted_responses(expert_results)
+        combined_response = self._combine_confidence_weighted_responses(expert_results)
 
         # Calculate ensemble confidence
         ensemble_confidence = sum(r['confidence'] * r['normalized_weight'] for r in expert_results)
@@ -1856,7 +1857,7 @@ class MoEInferenceManager:
             result['normalized_weight'] = norm_weight
 
         # Combine responses using confidence-weighted ensemble
-        combined_response = self.router._combine_confidence_weighted_responses(expert_results)
+        combined_response = self._combine_confidence_weighted_responses(expert_results)
 
         # Calculate ensemble confidence
         ensemble_confidence = sum(r['confidence'] * r['normalized_weight'] for r in expert_results)

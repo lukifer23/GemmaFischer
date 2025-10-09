@@ -315,6 +315,7 @@ def main():
     parser.add_argument('--max_steps_override', type=int, default=0, help='Override max_steps from config for quick smoke runs')
     parser.add_argument('--timeout_minutes', type=int, default=300, help='Training timeout in minutes (0 to disable)')
     parser.add_argument('--resume_from_checkpoint', type=str, default=None, help='Resume training from specific checkpoint')
+    parser.add_argument('--force_restart', action='store_true', help='Force restart training from step 0, ignore existing checkpoints')
     args = parser.parse_args()
 
     # Setup training timeout
@@ -341,8 +342,12 @@ def main():
 
                 # Get expert-specific training configuration
                 if args.expert in ['uci', 'tutor', 'director']:
-                    cfg = config.get_training_config(args.expert)
-                    cfg['lora'] = config.get_lora_config()
+                    training_cfg = config.get_training_config(args.expert)
+                    cfg = {
+                        'training': training_cfg,
+                        'model': config.model.__dict__,
+                        'lora': config.get_lora_config()
+                    }
                 else:
                     cfg = config.get_training_config("default")
                     cfg['lora'] = config.get_lora_config()
@@ -437,13 +442,15 @@ def main():
 
         # Handle checkpoint resumption
         resume_from_checkpoint = args.resume_from_checkpoint
-        if resume_from_checkpoint is None and out_dir.exists():
-            # Auto-resume from latest checkpoint
+        if resume_from_checkpoint is None and not args.force_restart and out_dir.exists():
+            # Auto-resume from latest checkpoint (unless force restart requested)
             checkpoints = list(out_dir.glob("checkpoint-*"))
             if checkpoints:
                 latest_checkpoint = max(checkpoints, key=lambda x: int(x.name.split("-")[1]))
                 resume_from_checkpoint = str(latest_checkpoint)
                 print(f"📂 Auto-resuming from latest checkpoint: {resume_from_checkpoint}")
+        elif args.force_restart:
+            print(f"🔄 Force restart requested - skipping checkpoint resumption")
 
         if resume_from_checkpoint:
             print(f"🔄 Resuming training from checkpoint: {resume_from_checkpoint}")
@@ -734,8 +741,7 @@ def main():
 
                             # Check memory usage before training step
                             if torch.backends.mps.is_available():
-                                memory_info = torch.mps.memory_stats()
-                                current_memory = memory_info.get('allocated_bytes.all.current', 0) / (1024**3)
+                                current_memory = torch.mps.current_allocated_memory() / (1024**3)
                                 if current_memory > 12.0:  # If using more than 12GB
                                     print(f"⚠️  High memory usage detected: {current_memory:.1f}GB")
                                     torch.mps.empty_cache()
@@ -748,7 +754,6 @@ def main():
                                 break
 
                             # Brief pause to check timeout
-                            import time
                             time.sleep(0.1)
 
                         except KeyboardInterrupt:
@@ -812,8 +817,7 @@ def main():
 
                         # Check memory usage before training step
                         if torch.backends.mps.is_available():
-                            memory_info = torch.mps.memory_stats()
-                            current_memory = memory_info.get('allocated_bytes.all.current', 0) / (1024**3)
+                            current_memory = torch.mps.current_allocated_memory() / (1024**3)
                             if current_memory > 12.0:  # If using more than 12GB
                                 print(f"⚠️  High memory usage detected: {current_memory:.1f}GB")
                                 torch.mps.empty_cache()
@@ -826,7 +830,6 @@ def main():
                             break
 
                         # Brief pause to check timeout
-                        import time
                         time.sleep(0.1)
 
                     except KeyboardInterrupt:
