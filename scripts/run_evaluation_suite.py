@@ -139,13 +139,20 @@ class EvaluationSuiteRunner:
             start_time = time.time()
 
             # Generate response
-            if use_moe:
-                # Use MoE routing (auto mode)
+            if use_moe and category != "pure_move":
+                # Use MoE routing (auto mode) for non-pure-move questions
                 response_data = self.inference.generate_response(
                     question=question,
                     mode="tutor"  # Use tutor as base for MoE routing
                 )
                 result.moe_used = True
+            elif use_moe and category == "pure_move":
+                # Force UCI routing for pure move questions
+                response_data = self.inference.generate_response(
+                    question=question,
+                    mode="uci"  # Force UCI expert for pure moves
+                )
+                result.moe_used = False  # Not really MoE since we forced the expert
             else:
                 # Use specific expert
                 response_data = self.inference.generate_response(
@@ -170,10 +177,6 @@ class EvaluationSuiteRunner:
 
             # Validate response format
             result.format_score = self.validate_response_format(result.response, expected_format)
-
-            # Debug: print responses for pure_move category
-            if category == "pure_move":
-                print(f"DEBUG: Pure move response: {repr(result.response)} -> format_score: {result.format_score}")
 
             # Check expert routing accuracy
             result.expert_score = 1.0 if result.routed_expert == expected_expert else 0.0
