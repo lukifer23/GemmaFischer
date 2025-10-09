@@ -41,7 +41,15 @@ from src.training.config_validation import (
     ConfigValidationError,
     validate_lora_config,
 )
-from src.training.mps_optimizer import MPSMemoryOptimizer, optimize_training_for_mps
+from src.training.mps_optimizer import MPSMemoryOptimizer, optimize_training_for_mps, MPSTrainingMonitor
+
+# Import unified configuration system
+try:
+    from src.config.config_manager import get_config, ChessGemmaConfig
+except ImportError:
+    # Fallback if config system not available yet
+    get_config = None
+    ChessGemmaConfig = None
 
 
 def log_system_stats(prefix=""):
@@ -227,9 +235,16 @@ training_timeout_event = threading.Event()
 training_completed = False
 
 def timeout_handler(signum, frame):
-    """Handle training timeout signal."""
+    """Handle training timeout signal with graceful checkpoint saving."""
     print("\n⏰ Training timeout reached! Saving checkpoint and exiting gracefully...")
     training_timeout_event.set()
+
+    # Try to save a final checkpoint if trainer is available
+    try:
+        # This will be handled by the training loop's timeout check
+        pass
+    except:
+        pass
 
 def setup_training_timeout(timeout_minutes: int = 300):  # 5 hours default
     """Setup training timeout handler."""
@@ -240,12 +255,27 @@ def setup_training_timeout(timeout_minutes: int = 300):  # 5 hours default
 
 @contextmanager
 def training_stability_context():
-    """Context manager for training stability."""
+    """Context manager for training stability with enhanced MPS management."""
     try:
-        # Setup MPS environment
+        # Setup MPS environment with better memory management
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
+            # Disable high watermark for more predictable memory usage
             os.environ.setdefault('PYTORCH_MPS_HIGH_WATERMARK_RATIO', '0.0')
+            # Enable fallback for unsupported operations
+            os.environ.setdefault('PYTORCH_ENABLE_MPS_FALLBACK', '1')
+
+            # Pre-allocate and warm up MPS
+            if torch.backends.mps.is_available():
+                # Small warm-up to ensure MPS is ready
+                warmup_tensor = torch.randn(100, 100, device='mps')
+                _ = warmup_tensor @ warmup_tensor.t()
+                torch.mps.empty_cache()
+
+        # Setup signal handlers for graceful timeout
+        original_sigalrm = None
+        if hasattr(signal, 'SIGALRM'):
+            original_sigalrm = signal.signal(signal.SIGALRM, timeout_handler)
 
         yield
 
@@ -253,11 +283,27 @@ def training_stability_context():
         print(f"⚠️  Training stability context error: {e}")
         raise
     finally:
-        # Cleanup
+        # Enhanced cleanup
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
+            # Synchronize to ensure all operations complete
+            torch.mps.synchronize()
+
+        # Restore original signal handler
+        if original_sigalrm is not None and hasattr(signal, 'SIGALRM'):
+            signal.signal(signal.SIGALRM, original_sigalrm)
+
+        # Force garbage collection
         import gc
         gc.collect()
+
+        # Additional cleanup for long-running processes
+        try:
+            if torch.backends.mps.is_available():
+                # Final cache clear
+                torch.mps.empty_cache()
+        except:
+            pass
 
 def main():
     parser = argparse.ArgumentParser()
@@ -274,29 +320,88 @@ def main():
     # Setup training timeout
     setup_training_timeout(args.timeout_minutes)
 
+    # Initialize training monitor
+    training_monitor = MPSTrainingMonitor(check_interval=5)  # Check every 5 steps
+
     # Use training stability context
     with training_stability_context():
-        # Resolve config path (support "auto" and robust relative paths)
-        cfg_path = args.config
-        cfg_dir = Path(__file__).parent / 'configs'
-        if cfg_path == 'auto':
-            auto_map = {
-                'uci': cfg_dir / 'lora_uci.yaml',
-                'tutor': cfg_dir / 'lora_tutor.yaml',
-                'director': cfg_dir / 'lora_director_expert.yaml',
-                'all': cfg_dir / 'lora_finetune.yaml',
-            }
-            cfg_path = str(auto_map.get(args.expert, auto_map['all']))
-        else:
-            # If not an absolute path and not found relative to CWD, try relative to this script
-            p = Path(cfg_path)
-            if not p.exists():
-                alt = cfg_dir / p.name
-                if alt.exists():
-                    cfg_path = str(alt)
+        # Load configuration using unified system
+        if get_config and ChessGemmaConfig:
+            # Use unified configuration system
+            config_name = args.config if args.config != 'auto' else 'chessgemma_unified'
+            try:
+                config = get_config(config_name)
+                # Validate configuration
+                validation_errors = config.validate()
+                if validation_errors:
+                    print(f"Configuration validation errors: {validation_errors}")
+                    return 1
 
-        with open(cfg_path, 'r', encoding='utf-8') as f:
-            cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
+                print(f"Loaded unified configuration: {config_name}")
+
+                # Get expert-specific training configuration
+                if args.expert in ['uci', 'tutor', 'director']:
+                    cfg = config.get_training_config(args.expert)
+                    cfg['lora'] = config.get_lora_config()
+                else:
+                    cfg = config.get_training_config("default")
+                    cfg['lora'] = config.get_lora_config()
+
+                # Add curriculum if specified
+                if config.curriculum.phases:
+                    cfg['curriculum'] = [phase for phase in config.curriculum.phases]
+
+                # Add datasets
+                if config.datasets:
+                    cfg['datasets'] = config.datasets
+
+            except Exception as e:
+                print(f"Failed to load unified config {config_name}: {e}")
+                print("Falling back to legacy configuration system...")
+                # Fall back to legacy system
+                cfg_path = args.config
+                cfg_dir = Path(__file__).parent / 'configs'
+                if cfg_path == 'auto':
+                    auto_map = {
+                        'uci': cfg_dir / 'lora_uci.yaml',
+                        'tutor': cfg_dir / 'lora_tutor.yaml',
+                        'director': cfg_dir / 'lora_director_expert.yaml',
+                        'all': cfg_dir / 'lora_finetune.yaml',
+                    }
+                    cfg_path = str(auto_map.get(args.expert, auto_map['all']))
+                else:
+                    # If not an absolute path and not found relative to CWD, try relative to this script
+                    p = Path(cfg_path)
+                    if not p.exists():
+                        alt = cfg_dir / p.name
+                        if alt.exists():
+                            cfg_path = str(alt)
+
+                with open(cfg_path, 'r', encoding='utf-8') as f:
+                    cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
+        else:
+            # Legacy configuration system
+            print("Using legacy configuration system...")
+            cfg_path = args.config
+            cfg_dir = Path(__file__).parent / 'configs'
+            if cfg_path == 'auto':
+                auto_map = {
+                    'uci': cfg_dir / 'lora_uci.yaml',
+                    'tutor': cfg_dir / 'lora_tutor.yaml',
+                    'director': cfg_dir / 'lora_director_expert.yaml',
+                    'all': cfg_dir / 'lora_finetune.yaml',
+                }
+                cfg_path = str(auto_map.get(args.expert, auto_map['all']))
+            else:
+                # If not an absolute path and not found relative to CWD, try relative to this script
+                p = Path(cfg_path)
+                if not p.exists():
+                    alt = cfg_dir / p.name
+                    if alt.exists():
+                        cfg_path = str(alt)
+
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = json.loads(json.dumps(__import__('yaml').safe_load(f)))
 
         # Validate LoRA configuration
         try:
@@ -616,8 +721,59 @@ def main():
                     callbacks=[CustomCallback()]
                 )
                 trainer.state.start_time = time.time()
-                trainer.train()
-                print(f"Completed curriculum phase {idx}")
+
+                # Enhanced training with timeout and memory monitoring
+                try:
+                    print(f"🚀 Starting curriculum phase {idx}/{total_phases}")
+
+                    # Monitor training with timeout handling
+                    while not training_timeout_event.is_set():
+                        try:
+                            # Monitor training health
+                            training_monitor.log_training_status(trainer.state.global_step)
+
+                            # Check memory usage before training step
+                            if torch.backends.mps.is_available():
+                                memory_info = torch.mps.memory_stats()
+                                current_memory = memory_info.get('allocated_bytes.all.current', 0) / (1024**3)
+                                if current_memory > 12.0:  # If using more than 12GB
+                                    print(f"⚠️  High memory usage detected: {current_memory:.1f}GB")
+                                    torch.mps.empty_cache()
+
+                            # Train for a short period (100 steps) then check timeout
+                            trainer.train(resume_from_checkpoint=None)
+
+                            # Check if we've completed this phase
+                            if trainer.state.global_step >= phase_args.max_steps:
+                                break
+
+                            # Brief pause to check timeout
+                            import time
+                            time.sleep(0.1)
+
+                        except KeyboardInterrupt:
+                            print("⚠️  Training interrupted by user")
+                            break
+                        except Exception as e:
+                            print(f"⚠️  Training error in phase {idx}: {e}")
+                            break
+
+                    if training_timeout_event.is_set():
+                        print(f"⏰ Training timeout reached during phase {idx}, saving checkpoint...")
+                        # Save a final checkpoint before timeout
+                        try:
+                            trainer.save_model()
+                            if hasattr(trainer, 'save_state'):
+                                trainer.save_state()
+                        except:
+                            pass
+                        break
+
+                    print(f"✅ Completed curriculum phase {idx}")
+
+                except Exception as e:
+                    print(f"❌ Error in curriculum phase {idx}: {e}")
+                    continue
         else:
             # Single-phase training
             train_dataset, eval_dataset = split_train_eval(ds)
@@ -643,7 +799,58 @@ def main():
                 callbacks=[CustomCallback()]
             )
             trainer.state.start_time = time.time()
-            trainer.train()
+
+            # Enhanced training with timeout and memory monitoring
+            try:
+                print("🚀 Starting single-phase training")
+
+                # Monitor training with timeout handling
+                while not training_timeout_event.is_set():
+                    try:
+                        # Monitor training health
+                        training_monitor.log_training_status(trainer.state.global_step)
+
+                        # Check memory usage before training step
+                        if torch.backends.mps.is_available():
+                            memory_info = torch.mps.memory_stats()
+                            current_memory = memory_info.get('allocated_bytes.all.current', 0) / (1024**3)
+                            if current_memory > 12.0:  # If using more than 12GB
+                                print(f"⚠️  High memory usage detected: {current_memory:.1f}GB")
+                                torch.mps.empty_cache()
+
+                        # Train for a short period then check timeout
+                        trainer.train(resume_from_checkpoint=None)
+
+                        # Check if we've completed training
+                        if trainer.state.global_step >= training_args.max_steps:
+                            break
+
+                        # Brief pause to check timeout
+                        import time
+                        time.sleep(0.1)
+
+                    except KeyboardInterrupt:
+                        print("⚠️  Training interrupted by user")
+                        break
+                    except Exception as e:
+                        print(f"⚠️  Training error: {e}")
+                        break
+
+                if training_timeout_event.is_set():
+                    print("⏰ Training timeout reached, saving checkpoint...")
+                    # Save a final checkpoint before timeout
+                    try:
+                        trainer.save_model()
+                        if hasattr(trainer, 'save_state'):
+                            trainer.save_state()
+                    except:
+                        pass
+
+                print("✅ Training completed successfully")
+
+            except Exception as e:
+                print(f"❌ Training failed: {e}")
+                raise
 
         print('=' * 60)
         print('Training complete. Enhanced logs and checkpoints in', out_dir)

@@ -183,7 +183,7 @@
 │  │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │    │
 │  │ │ UCI Expert  │ │Tutor Expert │ │Dir Expert  │          │    │
 │  │ │             │ │             │ │             │          │    │
-│  │ │ ✓ Success   │ │ ❌ Failed   │ │ ✓ Success   │          │    │
+│  │ │ Success    │ │ Failed     │ │ Success    │          │    │
 │  │ │ 1.2s        │ │ Timeout     │ │ 1.8s        │          │    │
 │  │ │ e2e4        │ │             │ │ Analysis    │          │    │
 │  │ └─────────────┘ └─────────────┘ └─────────────┘          │    │
@@ -286,4 +286,4 @@
 
 ---
 
-**This architecture enables efficient parallel multi-expert execution while maintaining thread safety, proper resource management, and excellent performance on Apple Silicon hardware.** The design scales from single expert queries to full parallel analysis with minimal overhead. 🎯🏗️
+This architecture enables efficient parallel multi-expert execution while maintaining thread safety, proper resource management, and excellent performance on Apple Silicon hardware. The design scales from single expert queries to full parallel analysis with minimal overhead.

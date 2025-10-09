@@ -155,25 +155,48 @@ def _resolve_latest_adapter_path(project_root: Path) -> Optional[Path]:
 
 
 class ChessGemmaInference:
-    """Unified inference with optional adapter and dual-mode prompting."""
+    """Unified inference with optional adapter and dual-mode prompting.
+
+    This class now uses the new modular architecture internally for better maintainability.
+    """
 
     def __init__(self, model_path: Optional[str] = None, adapter_path: Optional[str] = None):
         self.project_root = Path(__file__).resolve().parents[2]
-        # Preserve provided strings for tests; otherwise resolve defaults
-        self.model_path = model_path if model_path else _resolve_default_model_path(self.project_root)
-        self.adapter_path = adapter_path if adapter_path else _resolve_latest_adapter_path(self.project_root)
-        if isinstance(self.model_path, Path):
-            self.model_path = str(self.model_path)
 
-        self.tokenizer = None
-        self.model = None
-        self.is_loaded = False
-        self.debug = os.environ.get('CHESSGEMMA_DEBUG', '0') not in ('0', 'false', 'False')
-        if self.debug:
-            try:
-                logger.logger.setLevel(logging.DEBUG)
-            except AttributeError:
-                logger.setLevel(logging.DEBUG)
+        # Use new modular architecture internally
+        try:
+            from .core_engine import ChessGemmaCoreEngine
+            from .caching import ChessInferenceCache
+            from .expert_manager import ChessExpertManager
+
+            self._core_engine = ChessGemmaCoreEngine(model_path, adapter_path)
+            self._cache = ChessInferenceCache()
+            self._expert_manager = ChessExpertManager(self._core_engine)
+
+            # Maintain backward compatibility
+            self.model_path = self._core_engine.model_path
+            self.adapter_path = self._core_engine.adapter_path
+            self.tokenizer = self._core_engine.tokenizer
+            self.model = self._core_engine.model
+            self.is_loaded = self._core_engine.is_loaded
+            self.debug = self._core_engine.debug
+
+        except ImportError:
+            # Fallback to legacy implementation if new modules aren't available
+            self.model_path = model_path if model_path else _resolve_default_model_path(self.project_root)
+            self.adapter_path = adapter_path if adapter_path else _resolve_latest_adapter_path(self.project_root)
+            if isinstance(self.model_path, Path):
+                self.model_path = str(self.model_path)
+
+            self.tokenizer = None
+            self.model = None
+            self.is_loaded = False
+            self.debug = os.environ.get('CHESSGEMMA_DEBUG', '0') not in ('0', 'false', 'False')
+            if self.debug:
+                try:
+                    logger.logger.setLevel(logging.DEBUG)
+                except AttributeError:
+                    logger.setLevel(logging.DEBUG)
 
         # Prompt templates cache
         self._engine_template: Optional[str] = None
@@ -355,6 +378,15 @@ class ChessGemmaInference:
 
     def load_model(self) -> bool:
         """Lazily load tokenizer and model (MPS/Auto device)."""
+        # Try to use new modular architecture first
+        if hasattr(self, '_core_engine'):
+            result = self._core_engine.load_model()
+            # Update backward compatibility attributes
+            self.tokenizer = self._core_engine.tokenizer
+            self.model = self._core_engine.model
+            self.is_loaded = self._core_engine.is_loaded
+            return result
+
         if self.is_loaded and self.model is not None and self.tokenizer is not None:
             return True
 
@@ -1038,6 +1070,68 @@ class ChessGemmaInference:
                 "cache_hit_rate": self._generation_stats['cache_hit_rate']
             }
 
+    def generate_expert_response(
+        self,
+        question: str,
+        context: Optional[str] = None,
+        expert_mode: str = "tutor",
+        max_new_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        do_sample: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """Generate response using a specific expert mode.
+
+        This is a convenience method that maps expert modes to the appropriate
+        inference parameters and calls generate_response.
+        """
+        # Map expert mode to inference mode
+        mode_mapping = {
+            'uci': 'engine',
+            'tutor': 'tutor',
+            'director': 'director'
+        }
+
+        mode = mode_mapping.get(expert_mode, 'tutor')
+
+        # Use expert-specific defaults if not provided
+        if max_new_tokens is None:
+            if expert_mode == 'uci':
+                max_new_tokens = 8
+            elif expert_mode == 'tutor':
+                max_new_tokens = 150
+            elif expert_mode == 'director':
+                max_new_tokens = 200
+            else:
+                max_new_tokens = 150
+
+        if temperature is None:
+            if expert_mode == 'uci':
+                temperature = 0.0
+            elif expert_mode == 'tutor':
+                temperature = 0.7
+            elif expert_mode == 'director':
+                temperature = 0.6
+            else:
+                temperature = 0.7
+
+        if top_p is None:
+            top_p = 0.9
+
+        if do_sample is None:
+            do_sample = temperature > 0.0
+
+        # Call the main generate_response method
+        return self.generate_response(
+            question=question,
+            context=context,
+            mode=mode,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=do_sample
+        )
+
     def generate_parallel_responses(
         self,
         question: str,
@@ -1505,6 +1599,17 @@ class ChessGemmaInference:
 
         Decoding parameters are explicitly configurable for expert-specific needs.
         """
+        # Try to use new modular architecture first
+        if hasattr(self, '_core_engine'):
+            return self._core_engine.generate_text(
+                prompt=prompt,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty
+            )
+
         if not self.load_model():
             return ""
         try:

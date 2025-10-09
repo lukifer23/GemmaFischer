@@ -47,6 +47,27 @@ class ErrorCategory(Enum):
     UNKNOWN = "unknown"
 
 
+# Performance-optimized error classification lookup tables
+ERROR_KEYWORDS = {
+    ErrorCategory.MEMORY: ['cuda out of memory', 'mps out of memory', 'memory', 'allocation', 'out of memory'],
+    ErrorCategory.MODEL_LOADING: ['model', 'loading', 'checkpoint', 'adapter', 'pretrained', 'peft'],
+    ErrorCategory.INFERENCE: ['inference', 'generation', 'tokenizer', 'decode', 'encode'],
+    ErrorCategory.TRAINING: ['training', 'optimizer', 'gradient', 'loss', 'epoch', 'batch'],
+    ErrorCategory.DATA_LOADING: ['dataset', 'data', 'jsonl', 'file not found', 'encoding'],
+    ErrorCategory.NETWORK: ['connection', 'network', 'timeout', 'http', 'url'],
+    ErrorCategory.CONFIGURATION: ['config', 'yaml', 'json', 'setting', 'parameter'],
+    ErrorCategory.VALIDATION: ['validation', 'format', 'schema'],
+    ErrorCategory.HARDWARE: ['gpu', 'cuda', 'mps', 'device', 'hardware'],
+}
+
+SEVERITY_PATTERNS = {
+    ErrorSeverity.CRITICAL: ['segmentation fault', 'kernel died', 'system error'],
+    ErrorSeverity.HIGH: ['out of memory', 'cuda error', 'exception', 'timeout', 'deadlock', 'model loading failed'],
+    ErrorSeverity.MEDIUM: ['failed', 'warning', 'deprecated', 'missing', 'not found', 'inference error', 'training failed', 'config invalid'],
+    ErrorSeverity.LOW: ['info', 'debug', 'trace'],
+}
+
+
 @dataclass
 class ErrorContext:
     """Context information for errors."""
@@ -80,13 +101,17 @@ class ChessGemmaErrorHandler:
         self.recovery_strategies: Dict[ErrorCategory, List[Callable]] = {}
         self.fallback_handlers: Dict[str, Callable] = {}
         self.error_counts: Dict[ErrorCategory, int] = {}
-        self.max_history_size = 1000
+        self.max_history_size = 500  # Reduced from 1000 for better memory usage
         self.lock = threading.Lock()
+
+        # Performance optimization: cache for system state
+        self._cached_memory_state = {}
+        self._last_memory_check = 0
 
         # Initialize default recovery strategies
         self._initialize_recovery_strategies()
 
-        logger.info("🛡️ ChessGemma Error Handler initialized")
+        logger.info("ChessGemma Error Handler initialized")
 
     def _initialize_recovery_strategies(self):
         """Initialize default recovery strategies for different error categories."""
@@ -120,12 +145,15 @@ class ChessGemmaErrorHandler:
 
     @contextmanager
     def error_boundary(self, component: str, operation: str, **context_params):
-        """Context manager for error boundaries with automatic recovery."""
+        """Context manager for error boundaries with automatic recovery - optimized."""
+        # Only capture system state for critical operations to reduce overhead
+        capture_state = operation in ['model_loading', 'training', 'inference']
+
         error_context = ErrorContext(
             component=component,
             operation=operation,
             parameters=context_params,
-            system_state=self._capture_system_state()
+            system_state=self._capture_system_state() if capture_state else {}
         )
 
         try:
@@ -151,14 +179,15 @@ class ChessGemmaErrorHandler:
         # Classify the error
         severity, category = self._classify_error(exception, context)
 
-        # Create error record
+        # Create error record - optimized for memory usage
         error_record = ErrorRecord(
             error_id=f"{int(time.time() * 1000)}_{context.component}_{context.operation}",
             exception=exception,
             severity=severity,
             category=category,
             context=context,
-            traceback=traceback.format_exc()
+            # Only store full traceback for critical/high severity errors
+            traceback=traceback.format_exc() if severity in [ErrorSeverity.CRITICAL, ErrorSeverity.HIGH] else str(exception)
         )
 
         # Log the error
@@ -171,8 +200,14 @@ class ChessGemmaErrorHandler:
         # Attempt recovery
         recovery_result = self._attempt_recovery(error_record)
 
-        # Store error record
+        # Store error record - optimized storage
         with self.lock:
+            # For high-frequency operations, limit storage to reduce memory usage
+            if (error_record.severity == ErrorSeverity.LOW and
+                len(self.error_history) > self.max_history_size // 2):
+                # Skip storing low-severity errors if we're getting too many
+                return
+
             self.error_history.append(error_record)
             if len(self.error_history) > self.max_history_size:
                 self.error_history.pop(0)
@@ -186,38 +221,45 @@ class ChessGemmaErrorHandler:
             raise exception
 
     def _classify_error(self, exception: Exception, context: ErrorContext) -> tuple[ErrorSeverity, ErrorCategory]:
-        """Classify error by type and severity."""
+        """Classify error by type and severity - optimized for performance."""
         error_type = type(exception).__name__
         error_message = str(exception).lower()
 
-        # Memory-related errors
-        if any(keyword in error_message for keyword in ['cuda out of memory', 'mps out of memory', 'memory', 'allocation']):
-            return ErrorSeverity.HIGH, ErrorCategory.MEMORY
+        # Fast lookup-based classification for better performance
+        category = self._classify_by_keywords(error_message)
+        severity = self._classify_severity(error_message, error_type)
 
-        # Model loading errors
-        if any(keyword in error_message for keyword in ['model', 'loading', 'checkpoint', 'adapter']):
-            return ErrorSeverity.HIGH, ErrorCategory.MODEL_LOADING
+        return severity, category
 
-        # Training errors
-        if context.operation in ['train', 'training', 'fit']:
-            if 'nan' in error_message or 'inf' in error_message:
-                return ErrorSeverity.MEDIUM, ErrorCategory.TRAINING
-            return ErrorSeverity.MEDIUM, ErrorCategory.TRAINING
+    def _classify_by_keywords(self, error_message: str) -> ErrorCategory:
+        """Classify error category using optimized keyword lookup."""
+        # Check each category's keywords for matches
+        for category, keywords in ERROR_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in error_message:
+                    return category
 
-        # Inference errors
-        if context.operation in ['generate', 'inference', 'predict']:
-            return ErrorSeverity.MEDIUM, ErrorCategory.INFERENCE
+        return ErrorCategory.UNKNOWN
 
-        # Data loading errors
-        if any(keyword in error_message for keyword in ['data', 'dataset', 'file', 'path']):
-            return ErrorSeverity.MEDIUM, ErrorCategory.DATA_LOADING
+    def _classify_severity(self, error_message: str, error_type: str) -> ErrorSeverity:
+        """Classify error severity using optimized pattern matching."""
+        # Check severity patterns
+        for severity, patterns in SEVERITY_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in error_message:
+                    return severity
 
-        # Network errors
-        if any(keyword in error_message for keyword in ['connection', 'timeout', 'network', 'http']):
-            return ErrorSeverity.LOW, ErrorCategory.NETWORK
-
-        # Default classification
-        return ErrorSeverity.MEDIUM, ErrorCategory.UNKNOWN
+        # Fallback based on error type
+        if error_type in ['KeyboardInterrupt', 'SystemExit']:
+            return ErrorSeverity.CRITICAL
+        elif error_type in ['MemoryError', 'OSError']:
+            return ErrorSeverity.HIGH
+        elif error_type in ['TypeError', 'AttributeError']:
+            return ErrorSeverity.MEDIUM
+        elif error_type in ['RuntimeError', 'ImportError']:
+            return ErrorSeverity.MEDIUM
+        else:
+            return ErrorSeverity.LOW
 
     def _attempt_recovery(self, error_record: ErrorRecord) -> Dict[str, Any]:
         """Attempt recovery using appropriate strategies."""
@@ -268,20 +310,32 @@ class ChessGemmaErrorHandler:
             logger.info(log_message)
 
     def _capture_system_state(self) -> Dict[str, Any]:
-        """Capture current system state for error context."""
-        try:
-            process = psutil.Process()
-            memory_info = process.memory_info()
+        """Capture current system state for error context - optimized."""
+        # Only capture essential system state to reduce overhead
+        state = {'timestamp': time.time()}
 
-            return {
-                'cpu_percent': psutil.cpu_percent(interval=0.1),
-                'memory_rss_mb': memory_info.rss / (1024 * 1024),
-                'memory_vms_mb': memory_info.vms / (1024 * 1024),
-                'system_memory_percent': psutil.virtual_memory().percent,
-                'timestamp': time.time()
-            }
+        try:
+            # Only capture memory if it's critical for debugging
+            if hasattr(self, '_last_memory_check') and time.time() - self._last_memory_check < 10:
+                # Reuse recent memory info to avoid overhead
+                state.update(self._cached_memory_state)
+            else:
+                # Capture fresh memory info only when needed
+                memory = psutil.virtual_memory()
+                state['memory_percent'] = memory.percent
+
+                if torch and torch.backends.mps.is_available():
+                    try:
+                        state['mps_memory'] = torch.mps.current_allocated_memory()
+                    except:
+                        pass
+
+                self._cached_memory_state = state.copy()
+                self._last_memory_check = time.time()
         except Exception:
-            return {'error': 'Could not capture system state'}
+            state['memory_error'] = 'Failed to capture memory state'
+
+        return state
 
     # Recovery Strategies
     def _retry_with_backoff(self, error_record: ErrorRecord) -> Dict[str, Any]:
@@ -407,6 +461,38 @@ class ChessGemmaErrorHandler:
             self.error_history.clear()
             self.error_counts.clear()
         logger.info("Error history cleared")
+
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get error handling performance statistics."""
+        with self.lock:
+            total_errors = len(self.error_history)
+            errors_by_category = dict(self.error_counts)
+            errors_by_severity = {}
+
+            for record in self.error_history:
+                severity = record.severity.value
+                errors_by_severity[severity] = errors_by_severity.get(severity, 0) + 1
+
+        return {
+            'total_errors_handled': total_errors,
+            'errors_by_category': errors_by_category,
+            'errors_by_severity': errors_by_severity,
+            'recovery_success_rate': self._calculate_recovery_success_rate(),
+            'memory_usage_mb': self._estimate_memory_usage(),
+        }
+
+    def _calculate_recovery_success_rate(self) -> float:
+        """Calculate the success rate of error recovery attempts."""
+        resolved_errors = sum(1 for record in self.error_history if record.resolved)
+        total_errors = len(self.error_history)
+        return resolved_errors / max(total_errors, 1)
+
+    def _estimate_memory_usage(self) -> float:
+        """Estimate memory usage of error handling system."""
+        # Rough estimate: each error record is ~1-2KB
+        avg_record_size = 1500  # bytes
+        return len(self.error_history) * avg_record_size / (1024 * 1024)  # MB
 
 
 # Global error handler instance

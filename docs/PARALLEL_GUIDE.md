@@ -295,4 +295,4 @@ class EnhancedUCIBridge:
 
 ---
 
-**Ready to try parallel multi-expert analysis?** Start with the web interface at `http://localhost:5000` and use `/api/ask_parallel` for comprehensive chess insights! 🎯♟️
+Ready to try parallel multi-expert analysis? Start with the web interface at http://localhost:5000 and use /api/ask_parallel for comprehensive chess insights!

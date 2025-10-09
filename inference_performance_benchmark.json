@@ -1,0 +1,35 @@
+{
+  "timestamp": 1759972183.516632,
+  "benchmark_version": "1.0",
+  "results": {
+    "module_imports": {
+      "src.inference.core_engine": {
+        "import_time": 1.5733981132507324,
+        "success": false,
+        "error": "No module named 'peft'"
+      },
+      "src.inference.caching": {
+        "import_time": 0.004538059234619141,
+        "success": true,
+        "error": null
+      },
+      "src.inference.expert_manager": {
+        "import_time": 0.0007660388946533203,
+        "success": true,
+        "error": null
+      }
+    },
+    "cache_operations": {
+      "key_creation_avg_time": 8.101463317871094e-07,
+      "storage_avg_time": 3.6883354187011717e-07,
+      "lookup_avg_time": 2.5010108947753905e-07,
+      "cache_size": 1000,
+      "success": true
+    },
+    "text_generation": {
+      "success": false,
+      "error": "No module named 'peft'"
+    }
+  },
+  "total_benchmark_time": 1.5805549621582031
+}

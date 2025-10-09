@@ -131,6 +131,9 @@ class ChessMoERouter(nn.Module):
 
         self.feature_dim = feature_dim
 
+        # FEN pattern for position extraction
+        self._fen_pattern = re.compile(r'FEN:\s*([^\s\n]+)')
+
         # Feature extraction layers
         self.position_encoder = nn.Sequential(
             nn.Linear(feature_dim, hidden_dim),
@@ -173,8 +176,8 @@ class ChessMoERouter(nn.Module):
 
     def _determine_feature_dim(self) -> int:
         """Return the fixed training embedding dimensionality."""
-        # Fixed feature dimension: 20 chess terms + 4 additional features
-        return 24
+        # Fixed feature dimension: 16 position features + 16 question features
+        return 32
 
     def train(self, mode: bool = False):
         """Override to keep the router in evaluation mode.
@@ -243,44 +246,125 @@ class ChessMoERouter(nn.Module):
         logger.info(f"🎯 Computed routing: {decision.primary_expert} (confidence: {decision.confidence_score:.3f})")
         return decision
 
-    def _extract_position_features(self, fen: str, query_type: str) -> torch.Tensor:
-        """Extract features from chess position for routing."""
+    def _extract_position_features(self, fen: str, question: str) -> torch.Tensor:
+        """Extract comprehensive features from chess position and question for routing."""
         features = []
 
-        # Basic position features
-        board = self._fen_to_board(fen)
+        # Position-based features (16 features)
+        if fen:
+            try:
+                board = self._fen_to_board(fen)
+                features.extend(self._extract_position_features_only(board))
+            except Exception:
+                # Fallback for invalid FEN
+                features.extend([0.0] * 16)
+        else:
+            features.extend([0.0] * 16)
 
-        # Material balance (-1 to 1)
+        # Question-based features (16 features)
+        features.extend(self._extract_question_features(question))
+
+        # Ensure we have exactly feature_dim features
+        feature_tensor = torch.tensor(features, dtype=torch.float32)
+        if len(feature_tensor) != self.feature_dim:
+            if len(feature_tensor) < self.feature_dim:
+                padding = torch.zeros(self.feature_dim - len(feature_tensor))
+                feature_tensor = torch.cat([feature_tensor, padding])
+            else:
+                feature_tensor = feature_tensor[:self.feature_dim]
+
+        return feature_tensor
+
+    def _extract_position_features_only(self, board: List[List[str]]) -> List[float]:
+        """Extract features from chess position only."""
+        features = []
+
+        # Material analysis (4 features)
         material_balance = self._calculate_material_balance(board)
-        features.append(material_balance)
+        features.append(material_balance)  # -1 to 1
 
-        # King safety (0 to 1)
-        king_safety = self._assess_king_safety(board)
-        features.append(king_safety)
+        total_material = sum(self._count_pieces(board, color) for color in ['white', 'black'])
+        features.append(min(total_material / 78, 1.0))  # Normalized total material 0-1
 
-        # Piece activity (0 to 1)
+        white_material = self._count_pieces(board, 'white')
+        black_material = self._count_pieces(board, 'black')
+        features.append(white_material / max(total_material, 1))  # White material ratio
+        features.append(black_material / max(total_material, 1))  # Black material ratio
+
+        # King safety and positioning (4 features)
+        king_safety_white = self._assess_king_safety(board, 'white')
+        king_safety_black = self._assess_king_safety(board, 'black')
+        features.append(king_safety_white)
+        features.append(king_safety_black)
+
+        king_distance = self._calculate_king_distance(board)
+        features.append(min(king_distance / 14, 1.0))  # Normalized king distance
+
+        # Check for castling rights (simplified from FEN)
+        features.append(1.0)  # Placeholder for castling rights
+
+        # Piece activity and development (4 features)
         piece_activity = self._calculate_piece_activity(board)
         features.append(piece_activity)
 
-        # Pawn structure complexity (0 to 1)
+        developed_pieces = self._count_developed_pieces(board)
+        features.append(developed_pieces / 16)  # Max 16 developed pieces
+
+        central_control = self._assess_central_control(board)
+        features.append(central_control)
+
+        mobility_ratio = self._calculate_mobility_ratio(board)
+        features.append(mobility_ratio)
+
+        # Pawn structure and tactics (4 features)
         pawn_complexity = self._assess_pawn_structure(board)
         features.append(pawn_complexity)
 
-        # Tactical opportunities (0 to 1)
         tactical_potential = self._detect_tactical_motifs(board)
         features.append(tactical_potential)
 
-        # Query type encoding
-        query_features = self._encode_query_type(query_type)
-        features.extend(query_features)
+        open_files = self._count_open_files(board)
+        features.append(open_files / 8)  # Max 8 open files
 
-        # Convert to tensor and pad to feature_dim
-        feature_tensor = torch.tensor(features, dtype=torch.float32)
-        if len(feature_tensor) < self.feature_dim:
-            padding = torch.zeros(self.feature_dim - len(feature_tensor))
-            feature_tensor = torch.cat([feature_tensor, padding])
+        doubled_pawns = self._count_doubled_pawns(board)
+        features.append(min(doubled_pawns / 8, 1.0))  # Max 8 doubled pawn files
 
-        return feature_tensor[:self.feature_dim]
+        return features
+
+    def _extract_question_features(self, question: str) -> List[float]:
+        """Extract features from question text."""
+        features = []
+        question_lower = question.lower()
+
+        # Chess concept detection (8 features)
+        chess_concepts = {
+            'move': ['move', 'play', 'best', 'good', 'bad'],
+            'tactics': ['tactic', 'combination', 'fork', 'pin', 'checkmate', 'mate'],
+            'strategy': ['strategy', 'plan', 'advantage', 'control', 'position'],
+            'endgame': ['endgame', 'pawn', 'promotion', 'rook', 'queen'],
+            'opening': ['opening', 'development', 'center', 'castle', 'castling'],
+            'analysis': ['analyze', 'evaluate', 'assess', 'explain', 'why'],
+            'rules': ['rule', 'legal', 'allowed', 'capture', 'en passant'],
+            'general': ['chess', 'game', 'position', 'board', 'square']
+        }
+
+        for concept, keywords in chess_concepts.items():
+            score = sum(1 for keyword in keywords if keyword in question_lower)
+            features.append(min(score / 3, 1.0))  # Normalize to 0-1
+
+        # Question structure features (8 features)
+        features.append(1.0 if '?' in question else 0.0)  # Has question mark
+        features.append(len(question.split()) / 50.0)  # Normalized word count
+        features.append(1.0 if 'fen:' in question_lower else 0.0)  # Has FEN
+        features.append(len(question) / 200.0)  # Normalized length
+
+        # Question type indicators
+        features.append(1.0 if any(word in question_lower for word in ['best', 'good', 'should', 'recommend']) else 0.0)
+        features.append(1.0 if any(word in question_lower for word in ['why', 'how', 'explain', 'what']) else 0.0)
+        features.append(1.0 if any(word in question_lower for word in ['better', 'worse', 'advantage']) else 0.0)
+        features.append(1.0 if any(word in question_lower for word in ['rule', 'legal', 'can', 'may']) else 0.0)
+
+        return features
 
     def _create_cache_key(self, fen: str, query_type: str, complexity_score: Optional[float]) -> str:
         """Create a unique cache key for position and query combination."""
@@ -528,6 +612,112 @@ class ChessMoERouter(nn.Module):
 
         return min(motifs / 16, 1.0)  # Normalize by board size
 
+    def _count_pieces(self, board: List[List[str]], color: str) -> int:
+        """Count total material value for a color."""
+        piece_values = {'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0}
+        total = 0
+
+        for row in board:
+            for piece in row:
+                if piece and piece != '':
+                    if color == 'white' and piece.isupper():
+                        total += piece_values.get(piece.lower(), 0)
+                    elif color == 'black' and piece.islower():
+                        total += piece_values.get(piece.lower(), 0)
+
+        return total
+
+    def _calculate_king_distance(self, board: List[List[str]]) -> float:
+        """Calculate distance between kings."""
+        kings = self._find_kings(board)
+        if not kings['white'] or not kings['black']:
+            return 7.0  # Default distance
+
+        w_i, w_j = kings['white']
+        b_i, b_j = kings['black']
+        return ((w_i - b_i) ** 2 + (w_j - b_j) ** 2) ** 0.5
+
+    def _count_developed_pieces(self, board: List[List[str]]) -> int:
+        """Count pieces that have moved from starting squares."""
+        developed = 0
+
+        # Check knights
+        knight_squares = [(0, 1), (0, 6), (7, 1), (7, 6)]
+        for i, j in knight_squares:
+            if i < len(board) and j < len(board[i]):
+                piece = board[i][j]
+                if piece != 'N' and piece != 'n':  # Knight has moved
+                    developed += 1
+
+        # Check bishops
+        bishop_squares = [(0, 2), (0, 5), (7, 2), (7, 5)]
+        for i, j in bishop_squares:
+            if i < len(board) and j < len(board[i]):
+                piece = board[i][j]
+                if piece != 'B' and piece != 'b':  # Bishop has moved
+                    developed += 1
+
+        # Check center pawns (simple development indicator)
+        center_pawn_squares = [(1, 3), (1, 4), (6, 3), (6, 4)]
+        for i, j in center_pawn_squares:
+            if i < len(board) and j < len(board[i]):
+                piece = board[i][j]
+                if piece != 'P' and piece != 'p':  # Pawn has moved
+                    developed += 1
+
+        return developed
+
+    def _assess_central_control(self, board: List[List[str]]) -> float:
+        """Assess control of central squares."""
+        center_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
+        controlled = 0
+
+        for i, j in center_squares:
+            if i < len(board) and j < len(board[i]):
+                piece = board[i][j]
+                if piece and piece != '':
+                    controlled += 1
+
+        return controlled / 4  # Max 4 central squares
+
+    def _calculate_mobility_ratio(self, board: List[List[str]]) -> float:
+        """Calculate piece mobility ratio between sides."""
+        # Simplified mobility calculation
+        white_pieces = sum(1 for row in board for piece in row if piece and piece.isupper())
+        black_pieces = sum(1 for row in board for piece in row if piece and piece.islower())
+
+        if black_pieces == 0:
+            return 1.0
+        return white_pieces / black_pieces
+
+    def _count_open_files(self, board: List[List[str]]) -> int:
+        """Count open files (no pawns)."""
+        open_files = 0
+
+        for j in range(8):
+            has_white_pawn = any(board[i][j] == 'P' for i in range(8))
+            has_black_pawn = any(board[i][j] == 'p' for i in range(8))
+
+            if not has_white_pawn and not has_black_pawn:
+                open_files += 1
+
+        return open_files
+
+    def _count_doubled_pawns(self, board: List[List[str]]) -> int:
+        """Count files with doubled pawns."""
+        doubled = 0
+
+        for j in range(8):
+            white_pawns = sum(1 for i in range(8) if board[i][j] == 'P')
+            black_pawns = sum(1 for i in range(8) if board[i][j] == 'p')
+
+            if white_pawns > 1:
+                doubled += 1
+            if black_pawns > 1:
+                doubled += 1
+
+        return doubled
+
     def _has_attackers(self, board: List[List[str]], i: int, j: int) -> bool:
         """Check if a square has attackers."""
         # Simplified attack detection
@@ -688,6 +878,9 @@ class ChessMoERouter(nn.Module):
 
     def save_router(self, path: str):
         """Save the router model and configuration."""
+        # Ensure the directory exists
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+
         save_dict = {
             'model_state_dict': self.state_dict(),
             'expert_performance': self.expert_performance,
@@ -776,14 +969,17 @@ class ChessMoERouter(nn.Module):
         return np.array(features, dtype=np.float32)
 
     def train_router(self, training_examples: List[RouterTrainingExample],
-                    num_epochs: int = 10, batch_size: int = 32, learning_rate: float = 1e-3):
-        """Train the MoE router on routing decisions."""
+                    num_epochs: int = 10, batch_size: int = 32, learning_rate: float = 1e-3,
+                    validate_every: int = 5, validation_examples: Optional[List[RouterTrainingExample]] = None):
+        """Train the MoE router on routing decisions with validation."""
 
         print("🚀 Starting MoE router training...")
         print(f"   Examples: {len(training_examples)}")
         print(f"   Epochs: {num_epochs}")
         print(f"   Batch size: {batch_size}")
         print(f"   Learning rate: {learning_rate}")
+        if validation_examples:
+            print(f"   Validation examples: {len(validation_examples)}")
 
         # Create dataset and dataloader
         dataset = RouterTrainingDataset(training_examples)
@@ -796,6 +992,7 @@ class ChessMoERouter(nn.Module):
         # Training loop
         self.train()
         best_accuracy = 0.0
+        best_val_accuracy = 0.0
 
         for epoch in range(num_epochs):
             epoch_loss = 0.0
@@ -825,13 +1022,28 @@ class ChessMoERouter(nn.Module):
             epoch_accuracy = epoch_correct / epoch_total
             epoch_avg_loss = epoch_loss / len(dataloader)
 
-            print(f"Epoch {epoch+1:2d}: Loss={epoch_avg_loss:.4f}, Accuracy={epoch_accuracy:.1%}")
+            # Validation
+            val_accuracy = None
+            if validation_examples and (epoch + 1) % validate_every == 0:
+                val_accuracy = self.evaluate_routing_accuracy(validation_examples)
+
+            # Print metrics
+            if val_accuracy is not None:
+                print(f"Epoch {epoch+1:2d}: Loss={epoch_avg_loss:.4f}, TrainAcc={epoch_accuracy:.1%}, ValAcc={val_accuracy:.1%}")
+            else:
+                print(f"Epoch {epoch+1:2d}: Loss={epoch_avg_loss:.4f}, TrainAcc={epoch_accuracy:.1%}")
+
             # Save best model
             if epoch_accuracy > best_accuracy:
                 best_accuracy = epoch_accuracy
                 self.save_router("checkpoints/moe_router/best_checkpoint.pth")
 
-        print(f"Best accuracy achieved: {best_accuracy:.1f}")
+            if val_accuracy and val_accuracy > best_val_accuracy:
+                best_val_accuracy = val_accuracy
+
+        print(".1f")
+        if validation_examples:
+            print(".1f")
         # Switch back to eval mode
         self.eval()
 

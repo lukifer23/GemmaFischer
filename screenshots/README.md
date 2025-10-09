@@ -47,4 +47,4 @@ When training completes, capture screenshots of:
 
 ---
 
-**Screenshots will be added after training completion and system testing.** 📸🎯
+Screenshots will be added after training completion and system testing.
