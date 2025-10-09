@@ -23,9 +23,29 @@ peft_stub.__spec__ = importlib.machinery.ModuleSpec("peft", loader=None)
 
 
 class _DummyPeftModel:
+    def __init__(self, base_model):
+        self._base_model = base_model
+        self.loaded_adapters = {}
+        self.peft_config = {}
+        self.active_adapter = None
+
     @classmethod
-    def from_pretrained(cls, *args, **kwargs):  # pragma: no cover - simple stub
-        return None
+    def from_pretrained(cls, base_model, adapter_path, adapter_name="default", **kwargs):  # pragma: no cover - simple stub
+        instance = cls(base_model)
+        instance.load_adapter(adapter_path, adapter_name=adapter_name)
+        instance.set_adapter(adapter_name)
+        return instance
+
+    def load_adapter(self, adapter_path, adapter_name=None):  # pragma: no cover - simple stub
+        name = adapter_name or "default"
+        self.loaded_adapters[name] = adapter_path
+        self.peft_config[name] = {"path": adapter_path}
+
+    def set_adapter(self, adapter_name):  # pragma: no cover - simple stub
+        self.active_adapter = adapter_name
+
+    def __getattr__(self, item):  # pragma: no cover - simple stub
+        return getattr(self._base_model, item)
 
 
 peft_stub.PeftModel = _DummyPeftModel
@@ -39,6 +59,7 @@ from src.inference.inference import (
     get_model_info,
 )
 from src.inference.moe_router import RoutingDecision, MoEInferenceManager
+from src.inference.enhanced_inference import EnhancedChessInference
 
 
 class TestChessGemmaInference:
@@ -219,6 +240,7 @@ class TestChessGemmaInference:
                 inference.model = Mock()
                 inference.model.device = "cpu"
                 inference.model.generate.return_value = [Mock()]
+                inference.debug = False
                 inference.tokenizer = _DummyTokenizer()
 
                 with inference_module.error_boundary("inference", "generate_response"):
@@ -239,6 +261,7 @@ class TestChessGemmaInference:
 
         inference = ChessGemmaInference()
         inference.is_loaded = True
+        inference.debug = False
 
         # Provide lightweight model/tokenizer stubs for engine generation
         class _DummyTensor:
@@ -363,6 +386,47 @@ class TestConvenienceFunctions:
         
         assert result["test"] == "info"
         mock_inference.get_model_info.assert_called_once()
+
+
+class TestEnhancedChessInference:
+    """Tests for enhanced inference behaviors."""
+
+    @patch('src.inference.enhanced_inference.AutoTokenizer')
+    @patch('src.inference.enhanced_inference.AutoModelForCausalLM')
+    def test_switch_expert_after_discovery(
+        self,
+        mock_auto_model,
+        mock_auto_tokenizer,
+        tmp_path,
+        monkeypatch,
+    ):
+        """Default adapter wrapping should allow switching to discovered experts."""
+
+        import src.inference.enhanced_inference as enhanced_module
+
+        monkeypatch.setattr(enhanced_module, "project_root", tmp_path)
+
+        checkpoints_dir = tmp_path / "checkpoints"
+        uci_checkpoint = checkpoints_dir / "lora_uci" / "checkpoint-0001"
+        tutor_checkpoint = checkpoints_dir / "lora_tutor" / "checkpoint-0002"
+        uci_checkpoint.mkdir(parents=True)
+        tutor_checkpoint.mkdir(parents=True)
+
+        mock_tokenizer_instance = Mock()
+        mock_model_instance = Mock()
+        mock_auto_tokenizer.from_pretrained.return_value = mock_tokenizer_instance
+        mock_auto_model.from_pretrained.return_value = mock_model_instance
+
+        inference = EnhancedChessInference()
+        inference.project_root = tmp_path
+
+        assert inference.load_model() is True
+        assert inference.current_expert == "uci"
+        assert "tutor" in inference.expert_adapters
+
+        assert inference.switch_expert("tutor") is True
+        assert inference.current_expert == "tutor"
+        assert "tutor" in getattr(inference.model, "loaded_adapters", {})
 
 
 class TestChessEngineIntegration:

@@ -165,17 +165,39 @@ class EnhancedChessInference:
                 trust_remote_code=True
             )
 
-            # Load adapter if specified
-            if adapter_path and Path(adapter_path).exists():
-                logger.info(f"Loading adapter from {adapter_path}")
-                self.model = PeftModel.from_pretrained(
-                    self.model,
-                    str(adapter_path),
-                    is_trainable=False
-                )
-
             # Discover and load expert adapters
             self._discover_expert_adapters()
+
+            selected_adapter_name: Optional[str] = None
+            selected_adapter_path: Optional[str] = None
+
+            if adapter_path:
+                adapter_path_obj = Path(adapter_path)
+                selected_adapter_path = str(adapter_path_obj if adapter_path_obj.exists() else adapter_path)
+                selected_adapter_name = adapter_path_obj.name or "default"
+            elif self.expert_adapters:
+                if "uci" in self.expert_adapters:
+                    selected_adapter_name = "uci"
+                else:
+                    selected_adapter_name = next(iter(self.expert_adapters.keys()))
+                selected_adapter_path = self.expert_adapters[selected_adapter_name]
+
+            if selected_adapter_name and selected_adapter_path:
+                logger.info(
+                    f"Loading default adapter '{selected_adapter_name}' from {selected_adapter_path}"
+                )
+                self.model = PeftModel.from_pretrained(
+                    self.model,
+                    selected_adapter_path,
+                    adapter_name=selected_adapter_name,
+                    is_trainable=False
+                )
+                self.expert_adapters[selected_adapter_name] = selected_adapter_path
+                self.current_expert = selected_adapter_name
+                try:
+                    self.model.set_adapter(selected_adapter_name)
+                except AttributeError:
+                    logger.warning("Loaded model does not support set_adapter")
 
             # Configure pad/eos tokens
             if self.config.pad_token_id is None:
@@ -523,7 +545,19 @@ class EnhancedChessInference:
         """Preload all available expert adapters."""
         logger.info("🔄 Preloading expert adapters...")
 
+        if not self.model or not hasattr(self.model, "load_adapter"):
+            logger.warning("Model does not support adapter loading; skipping preload")
+            return
+
+        existing_adapters = set()
+        if hasattr(self.model, "peft_config") and isinstance(self.model.peft_config, dict):
+            existing_adapters = set(self.model.peft_config.keys())
+
         for expert_name, adapter_path in self.expert_adapters.items():
+            if expert_name in existing_adapters:
+                logger.info(f"Adapter '{expert_name}' already loaded; skipping")
+                continue
+
             try:
                 logger.info(f"Loading {expert_name} adapter...")
                 self.model.load_adapter(adapter_path, adapter_name=expert_name)
