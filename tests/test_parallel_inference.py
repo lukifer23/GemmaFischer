@@ -17,6 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.inference.inference import ChessGemmaInference, get_inference_instance
+from src.inference.enhanced_inference import EnhancedChessInference
 from src.web.app import app as flask_app
 
 
@@ -138,6 +139,33 @@ class TestParallelInference:
         assert results['uci']['mode'] == 'engine'
         assert results['tutor']['mode'] == 'tutor'
         assert results['director']['mode'] == 'director'
+
+    def test_enhanced_inference_mode_adapter_routing(self):
+        """Ensure enhanced inference routes different modes to distinct experts."""
+        inference = EnhancedChessInference()
+        inference.is_loaded = True
+        inference.tokenizer = MagicMock()
+        inference.model = MagicMock()
+        inference.model.load_adapter = MagicMock(return_value=None)
+        inference.model.set_adapter = MagicMock(return_value=None)
+        inference.model.device = "cpu"
+        inference.expert_adapters = {
+            'uci': 'adapter_uci_path',
+            'tutor': 'adapter_tutor_path',
+        }
+
+        prompt = "FEN: 8/8/8/8/8/8/8/8 w - - 0 1"
+
+        with patch.object(inference, '_generate_optimized', side_effect=["e2e4", "d2d4"]):
+            engine_response = inference.generate_response(prompt, mode="engine")
+            tutor_response = inference.generate_response(prompt, mode="tutor")
+
+        assert engine_response['expert'] == 'uci'
+        assert tutor_response['expert'] == 'tutor'
+        assert engine_response['expert'] != tutor_response['expert']
+        assert not engine_response['cached']
+        assert not tutor_response['cached']
+        assert {entry.expert_type for entry in inference.response_cache.values()} == {'uci', 'tutor'}
 
 
 class TestThreadSafety:

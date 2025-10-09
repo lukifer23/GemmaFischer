@@ -350,7 +350,12 @@ class EnhancedChessInference:
         key_string = "|".join(key_components)
         return hashlib.md5(key_string.encode()).hexdigest()
 
-    def _get_cached_response(self, cache_key: str, fen: Optional[str] = None) -> Optional[str]:
+    def _get_cached_response(
+        self,
+        cache_key: str,
+        fen: Optional[str] = None,
+        expert: Optional[str] = None
+    ) -> Optional[CacheEntry]:
         """Get cached response with position awareness."""
         if not self.config.cache_enabled:
             return None
@@ -368,19 +373,19 @@ class EnhancedChessInference:
                 with self.metrics_lock:
                     self.metrics.cache_hits += 1
 
-                return entry.response
+                return entry
 
             # Check position-specific cache
             if fen:
                 for entry in self.position_cache.get(fen, []):
-                    if entry.expert_type == self.current_expert:
+                    if expert is None or entry.expert_type == expert:
                         entry.access_count += 1
                         entry.timestamp = time.time()
 
                         with self.metrics_lock:
                             self.metrics.cache_hits += 1
 
-                        return entry.response
+                        return entry
 
             with self.metrics_lock:
                 self.metrics.cache_misses += 1
@@ -388,7 +393,8 @@ class EnhancedChessInference:
             return None
 
     def _cache_response(self, cache_key: str, response: str, fen: Optional[str] = None,
-                       move_uci: Optional[str] = None, confidence: float = 0.0):
+                       move_uci: Optional[str] = None, confidence: float = 0.0,
+                       expert: Optional[str] = None):
         """Cache response with metadata."""
         if not self.config.cache_enabled:
             return
@@ -399,7 +405,7 @@ class EnhancedChessInference:
                 response=response,
                 fen=fen,
                 move_uci=move_uci,
-                expert_type=self.current_expert,
+                expert_type=expert or self.current_expert,
                 confidence_score=confidence
             )
 
@@ -438,13 +444,15 @@ class EnhancedChessInference:
                          config: Optional[InferenceConfig] = None) -> Dict[str, Any]:
         """Generate enhanced response with full optimization."""
         start_time = time.time()
+        selected_expert = self.current_expert
 
         if not self.is_loaded:
             return {
                 "error": "Model not loaded",
                 "response": "",
                 "confidence": 0.0,
-                "model_loaded": False
+                "model_loaded": False,
+                "expert": selected_expert
             }
 
         # Use provided config or default
@@ -455,15 +463,18 @@ class EnhancedChessInference:
             self.metrics.total_requests += 1
 
         try:
+            # Route to appropriate expert for the requested mode
+            selected_expert = self._select_expert_for_mode(mode)
+
             # Generate cache key
-            cache_key = self._generate_cache_key(prompt, gen_config, self.current_expert)
+            cache_key = self._generate_cache_key(prompt, gen_config, selected_expert)
 
             # Extract chess information
             fen, move_uci = self._extract_chess_info(prompt)
 
             # Check cache first
-            cached_response = self._get_cached_response(cache_key, fen)
-            if cached_response:
+            cached_entry = self._get_cached_response(cache_key, fen, selected_expert)
+            if cached_entry:
                 response_time = time.time() - start_time
                 with self.metrics_lock:
                     self.metrics.total_response_time += response_time
@@ -472,10 +483,10 @@ class EnhancedChessInference:
                     )
 
                 return {
-                    "response": cached_response,
+                    "response": cached_entry.response,
                     "confidence": 0.9,  # High confidence for cached responses
                     "cached": True,
-                    "expert": self.current_expert,
+                    "expert": cached_entry.expert_type,
                     "response_time": response_time
                 }
 
@@ -484,7 +495,7 @@ class EnhancedChessInference:
                 response = self._generate_optimized(prompt, gen_config, mode=mode)
 
             # Cache the response
-            self._cache_response(cache_key, response, fen, move_uci)
+            self._cache_response(cache_key, response, fen, move_uci, expert=selected_expert)
 
             # Calculate response time
             response_time = time.time() - start_time
@@ -500,7 +511,7 @@ class EnhancedChessInference:
                 "response": response,
                 "confidence": 0.8,  # Default confidence
                 "cached": False,
-                "expert": self.current_expert,
+                "expert": selected_expert,
                 "response_time": response_time
             }
 
@@ -511,7 +522,7 @@ class EnhancedChessInference:
                 "response": "",
                 "confidence": 0.0,
                 "cached": False,
-                "expert": self.current_expert
+                "expert": selected_expert
             }
 
     def _generate_optimized(self, prompt: str, config: InferenceConfig, mode: Optional[str] = None) -> str:
@@ -614,6 +625,49 @@ class EnhancedChessInference:
 
         logger.info("✅ Expert preloading complete")
 
+    def _select_expert_for_mode(self, mode: Optional[str]) -> str:
+        """Map a requested mode to an expert adapter and activate it."""
+        normalized_mode = (mode or "").lower()
+        mode_to_expert = {
+            "engine": "uci",
+            "tutor": "tutor",
+            "director": "director",
+        }
+
+        target_expert = mode_to_expert.get(normalized_mode)
+
+        # If switching is disabled or there's nothing to switch to, keep current expert
+        if not self.config.expert_switching_enabled or not target_expert:
+            return self.current_expert
+
+        # Avoid unnecessary switches
+        if target_expert == self.current_expert:
+            return self.current_expert
+
+        # Ensure model supports adapter loading
+        if not self.is_loaded or not hasattr(self.model, "load_adapter"):
+            return self.current_expert
+
+        if target_expert not in self.expert_adapters:
+            logger.warning(
+                "Expert adapter '%s' missing for mode '%s'. Using current expert '%s' instead.",
+                target_expert,
+                normalized_mode or "default",
+                self.current_expert,
+            )
+            return self.current_expert
+
+        switched = self.switch_expert(target_expert)
+        if not switched:
+            logger.warning(
+                "Failed to activate expert '%s' for mode '%s'. Continuing with '%s'.",
+                target_expert,
+                normalized_mode or "default",
+                self.current_expert,
+            )
+
+        return self.current_expert
+
 
 class ChessInferenceManager:
     """High-level manager for chess inference operations."""
@@ -628,13 +682,17 @@ class ChessInferenceManager:
 
     def analyze_position(self, fen: str, mode: str = "tutor") -> Dict[str, Any]:
         """Analyze a chess position."""
-        prompt = self._build_analysis_prompt(fen, mode)
-        return self.inference_engine.generate_response(prompt, mode)
+        normalized_mode = (mode or "tutor").lower()
+        prompt = self._build_analysis_prompt(fen, normalized_mode)
+        return self.inference_engine.generate_response(prompt, normalized_mode)
 
-    def get_best_move(self, fen: str) -> Dict[str, Any]:
+    def get_best_move(self, fen: str, mode: str = "engine") -> Dict[str, Any]:
         """Get the best move for a position."""
-        prompt = f"FEN: {fen}\nMove:\nStyle: balanced\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
-        return self.inference_engine.generate_response(prompt, "engine")
+        normalized_mode = (mode or "engine").lower()
+        prompt = (
+            f"FEN: {fen}\nMove:\nStyle: balanced\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+        )
+        return self.inference_engine.generate_response(prompt, normalized_mode)
 
     def _build_analysis_prompt(self, fen: str, mode: str) -> str:
         """Build analysis prompt based on mode."""
