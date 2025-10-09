@@ -10,9 +10,9 @@ This document provides comprehensive performance metrics for GemmaFischer, inclu
 
 | Expert | Steps | Duration | Peak Memory | Final Loss | Status |
 |--------|-------|----------|-------------|------------|--------|
-| **UCI** | 1600 | ~45 min | 4-6GB | ~0.75 | ✅ Complete |
-| **Tutor** | 1000 | ~30 min | 4-6GB | ~1.0 | 🔄 In Progress |
-| **Director** | 1000 | ~30 min | 4-6GB | ~1.2 | ⏳ Pending |
+| **UCI** | 1600 | ~45 min | 4-6GB | ~0.75 | Complete |
+| **Tutor** | 1000 | ~30 min | 4-6GB | ~1.0 | In Progress |
+| **Director** | 1000 | ~30 min | 4-6GB | ~1.2 | Pending |
 
 ### Training Characteristics
 - **Steps/Second**: 2.5-3.0 (stable with MPS optimization)
@@ -170,16 +170,16 @@ print(f"Overhead: {parallel_results['avg_time']/sequential_results['avg_time']:.
 ## Optimization Opportunities
 
 ### Current Performance
-- ✅ **MPS Acceleration**: Native Apple Silicon optimization
-- ✅ **Memory Management**: Gradient checkpointing, efficient caching
-- ✅ **Thread Safety**: Proper synchronization for parallel execution
-- ✅ **Error Handling**: Graceful degradation and recovery
+- **MPS Acceleration**: Native Apple Silicon optimization
+- **Memory Management**: Gradient checkpointing, efficient caching
+- **Thread Safety**: Proper synchronization for parallel execution
+- **Error Handling**: Graceful degradation and recovery
 
 ### Potential Improvements
-- 🔄 **Quantization**: 4-bit quantization for reduced memory usage
-- 🔄 **Model Distillation**: Smaller model variants for faster inference
-- 🔄 **Advanced Caching**: Persistent caching across sessions
-- 🔄 **Batch Processing**: Multi-request batching for efficiency
+- **Quantization**: 4-bit quantization for reduced memory usage
+- **Model Distillation**: Smaller model variants for faster inference
+- **Advanced Caching**: Persistent caching across sessions
+- **Batch Processing**: Multi-request batching for efficiency
 
 ## Hardware Recommendations
 
