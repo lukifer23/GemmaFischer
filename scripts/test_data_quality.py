@@ -24,7 +24,7 @@ def test_expert_data_quality():
     print("=" * 50)
 
     expert_files = {
-        'uci': 'data/standardized/standardized_uci_expert.jsonl',
+        'uci': 'data/standardized/standardized_uci_expert_v2.jsonl',
         'tutor': 'data/standardized/standardized_tutor_expert_v2.jsonl',
         'director': 'data/standardized/standardized_director_expert_v3.jsonl'
     }

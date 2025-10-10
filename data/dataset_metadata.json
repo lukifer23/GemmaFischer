@@ -3,15 +3,15 @@
   "last_updated": "2025-10-10",
   "total_samples": 149998,
   "datasets": {
-    "standardized_uci_expert": {
-      "path": "data/standardized/standardized_uci_expert.jsonl",
+    "standardized_uci_expert_v2": {
+      "path": "data/standardized/standardized_uci_expert_v2.jsonl",
       "samples": 50000,
       "task": "engine_uci",
       "format": "JSONL with metadata",
       "purpose": "UCI move generation training",
       "quality_score": 0.8,
-      "validation_status": "Stockfish verified",
-      "created_date": "2024-09-12"
+      "validation_status": "Stockfish depth-14 refresh",
+      "created_date": "2025-10-10"
     },
     "standardized_tutor_expert_v2": {
       "path": "data/standardized/standardized_tutor_expert_v2.jsonl", 

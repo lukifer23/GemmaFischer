@@ -172,7 +172,7 @@ class CustomCallback(TrainerCallback):
         # Save final summary
         summary_file = Path(args.output_dir) / 'training_summary.json'
         with open(summary_file, 'w', encoding='utf-8') as f:
-        json.dump(final_stats, f, indent=2)
+            json.dump(final_stats, f, indent=2)
 
 
 def ensure_no_placeholder_responses(dataset, sample_limit: int = 1000):

@@ -9,13 +9,13 @@
       "format_consistency": "High"
     },
     "dataset_validation": {
-      "standardized_uci_expert": {
+      "standardized_uci_expert_v2": {
         "samples": 50000,
         "format_validation": "PASS",
         "task_consistency": "PASS (engine_uci)",
         "metadata_completeness": "PASS",
         "quality_score": 0.8,
-        "validation_method": "Stockfish legality check"
+        "validation_method": "Stockfish depth-14 evaluation"
       },
       "standardized_tutor_expert_v2": {
         "samples": 49999,

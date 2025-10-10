@@ -26,7 +26,7 @@ if str(PROJECT_ROOT) not in sys.path:
 STANDARDIZED_DIR = PROJECT_ROOT / "data" / "standardized"
 VALIDATION_DIR = PROJECT_ROOT / "data" / "validation"
 
-UCI_SOURCE = STANDARDIZED_DIR / "standardized_uci_expert.jsonl"
+UCI_SOURCE = STANDARDIZED_DIR / "standardized_uci_expert_v2.jsonl"
 TUTOR_SOURCE = STANDARDIZED_DIR / "standardized_tutor_expert_v2.jsonl"
 DIRECTOR_SOURCE = STANDARDIZED_DIR / "standardized_director_expert_v3.jsonl"
 
@@ -86,7 +86,7 @@ def pick_uci_positions(limit: int = 200) -> None:
             "difficulty": difficulty_from_rating(rating),
             "rating": rating,
             "category": meta.get("topic", "mixed"),
-            "source": meta.get("source", "standardized_uci_expert"),
+            "source": meta.get("source", "standardized_uci_expert_v2"),
         }
         samples.append(entry)
         seen_fens.add(fen)

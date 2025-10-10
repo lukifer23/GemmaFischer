@@ -109,7 +109,7 @@ def validate_uci_data():
     """Validate UCI training data quality."""
     print("\n🔍 Validating UCI Training Data...")
 
-    data_path = project_root / "data" / "standardized" / "standardized_uci_expert.jsonl"
+    data_path = project_root / "data" / "standardized" / "standardized_uci_expert_v2.jsonl"
 
     if not data_path.exists():
         print(f"❌ UCI data file not found: {data_path}")

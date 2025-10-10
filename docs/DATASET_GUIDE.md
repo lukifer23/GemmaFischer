@@ -12,12 +12,13 @@ ChessGemma uses standardized training datasets for fine-tuning specialized exper
 
 | Dataset | Location | Size | Purpose |
 |---------|----------|------|---------|
-| UCI Expert | `data/standardized/standardized_uci_expert.jsonl` | 50,000 samples | Chess move generation |
+| UCI Expert | `data/standardized/standardized_uci_expert_v2.jsonl` | 50,000 samples | Chess move generation (depth-14 Stockfish labels) |
 | Tutor Expert | `data/standardized/standardized_tutor_expert_v2.jsonl` | 49,999 samples | Chess explanations |
 | Director Expert | `data/standardized/standardized_director_expert_v3.jsonl` | 49,999 samples | Strategic Q&A reasoning |
 
 ### Dataset Quality
 - **Validation**: 100% move legality verification with Stockfish
+- **Stockfish**: Depth-14 best move plus depth-6 “top-3” alternatives captured in metadata
 - **Format**: Standardized JSONL schema
 - **Quality**: All samples validated for correctness
 - **Metadata**: Includes FEN positions, ratings, and quality scores
@@ -49,7 +50,28 @@ Generate the best move in UCI format only:",
   "meta": {
     "fen": "[position]",
     "rating": 1500,
-    "quality_score": 0.8
+    "quality_score": 0.8,
+    "stockfish_depth": 14,
+    "stockfish_time_limit_ms": 1500,
+    "top_moves_depth6": ["e2e4", "d2d4", "g1f3"],
+    "stockfish_analysis": {
+      "best_move": {
+        "uci": "e2e4",
+        "score_cp": 34,
+        "depth": 14,
+        "seldepth": 22,
+        "pv": ["e2e4", "c7c5", "g1f3"]
+      },
+      "top_moves": {
+        "depth": 6,
+        "time_limit_ms": 500,
+        "entries": [
+          {"uci": "e2e4", "score_cp": 34},
+          {"uci": "d2d4", "score_cp": 28},
+          {"uci": "g1f3", "score_cp": 21}
+        ]
+      }
+    }
   }
 }
 ```

@@ -454,6 +454,75 @@ class ChessEngineManager:
             logger.error(f"Error getting top moves from engine: {e}")
             return []
 
+    def get_top_moves_info(
+        self,
+        board: chess.Board,
+        depth: int = 8,
+        top_k: int = 3,
+        time_limit_ms: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return detailed information about the top Stockfish moves.
+
+        Includes UCI move, centipawn score (relative to side to move), mate score, and principal variation.
+        """
+        try:
+            limit_kwargs: Dict[str, Any] = {}
+            if depth is not None:
+                limit_kwargs["depth"] = depth
+            if time_limit_ms is not None:
+                limit_kwargs["time"] = max(0.0, float(time_limit_ms) / 1000.0)
+            if not limit_kwargs:
+                # Fallback to a lightweight depth restriction
+                limit_kwargs["depth"] = 6
+
+            limit = chess.engine.Limit(**limit_kwargs)
+            with self._engine_lock:
+                engine = self.engine
+                if engine is None:
+                    raise RuntimeError("Chess engine is not initialized")
+                info = engine.analyse(board, limit, multipv=max(1, top_k))
+
+            info_list = info if isinstance(info, list) else [info]
+            entries: List[Dict[str, Any]] = []
+            for entry in info_list:
+                pv = entry.get("pv") or []
+                move_obj = pv[0] if pv else entry.get("move")
+                if move_obj is None:
+                    continue
+                move_str = move_obj.uci() if isinstance(move_obj, chess.Move) else str(move_obj)
+
+                cp_score: Optional[int] = None
+                mate_score: Optional[int] = None
+                raw_score = entry.get("score")
+                if raw_score is not None:
+                    try:
+                        pov = raw_score.pov(board.turn)
+                        mate_score = pov.mate()
+                        if mate_score is None:
+                            cp_score = pov.score(mate_score=100000)
+                    except Exception:
+                        cp_score = None
+                        mate_score = None
+
+                entries.append({
+                    "move": move_str,
+                    "score_cp": int(cp_score) if cp_score is not None else None,
+                    "mate": mate_score,
+                    "depth": entry.get("depth"),
+                    "seldepth": entry.get("seldepth"),
+                    "nodes": entry.get("nodes"),
+                    "nps": entry.get("nps"),
+                    "multipv": entry.get("multipv"),
+                    "pv": [mv.uci() for mv in pv if isinstance(mv, chess.Move)],
+                })
+
+            # Sort by multipv index to preserve engine ordering
+            entries.sort(key=lambda item: item.get("multipv") or 0)
+            return entries[:top_k]
+        except Exception as e:
+            logger.error(f"Error getting detailed top moves from engine: {e}")
+            return []
+
     def validate_dataset_entry(self, question: str, answer: str) -> Dict[str, Any]:
         """Validate a dataset entry using chess engine analysis."""
         validation_result = {
