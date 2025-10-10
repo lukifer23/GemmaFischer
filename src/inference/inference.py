@@ -1133,8 +1133,9 @@ class ChessGemmaInference:
                             query_type = "director"
 
                         # Use MoE for intelligent routing
-                        moe_result = self.moe_manager.analyze_position(fen, query_type)
+                        moe_result = self.moe_manager.analyze_position(fen, query_type, question_text=question)
                         response = moe_result.get('response', '')
+
 
                         # Add MoE metadata to response
                         moe_info = moe_result.get('routing_info', {})

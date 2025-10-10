@@ -270,28 +270,37 @@ class ChessMoERouter(nn.Module):
         return gate_logits, confidence
 
     def _keyword_based_routing(self, query_text: str) -> Optional[str]:
-        """Simple keyword-based routing as fallback for ML router."""
+        """Enhanced keyword-based routing as fallback for ML router."""
         query_lower = query_text.lower()
 
-        # Pure move keywords
-        move_keywords = ["what is the best move", "what move", "best move", "what should", "play"]
-        if any(keyword in query_lower for keyword in move_keywords) and "analyze" not in query_lower:
-            return "uci"
+        # UCI expert: Pure move questions (highest priority)
+        move_keywords = ["what is the best move", "what move", "best move", "what should", "play", "move"]
+        if any(keyword in query_lower for keyword in move_keywords):
+            # Only route to UCI if it's clearly a move question and not analysis
+            if not any(word in query_lower for word in ["analyze", "analysis", "evaluate", "explain", "step by step", "why", "how"]):
+                return "uci"
 
-        # Analysis keywords
-        analysis_keywords = ["analyze", "analysis", "evaluate", "assessment", "position", "step by step"]
-        if any(keyword in query_lower for keyword in analysis_keywords):
-            return "tutor"
-
-        # Strategy keywords
-        strategy_keywords = ["strategy", "opening", "endgame", "principle", "rules", "explain", "tactical"]
-        if any(keyword in query_lower for keyword in strategy_keywords):
+        # Director expert: Strategy, principles, rules, explanations (high priority)
+        director_keywords = [
+            "strategy", "opening", "endgame", "principle", "rules", "explain",
+            "tactical", "concept", "idea", "theory", "understanding",
+            "how to", "what is", "why", "chess rules", "castling", "pawn structure"
+        ]
+        if any(keyword in query_lower for keyword in director_keywords):
             return "director"
+
+        # Tutor expert: Analysis and evaluation (medium priority)
+        tutor_keywords = [
+            "analyze", "analysis", "evaluate", "assessment", "position",
+            "step by step", "examine", "review", "look at", "consider"
+        ]
+        if any(keyword in query_lower for keyword in tutor_keywords):
+            return "tutor"
 
         return None  # No clear keyword match
 
     def route_query(self, position_fen: str, query_type: str = "auto",
-                   complexity_score: Optional[float] = None) -> RoutingDecision:
+                   complexity_score: Optional[float] = None, question_text: str = "") -> RoutingDecision:
         """Optimized routing with advanced caching and performance improvements."""
 
         self._total_requests += 1
@@ -335,19 +344,19 @@ class ChessMoERouter(nn.Module):
         decision = self._make_routing_decision(weighted_probs, confidence.item(), position_fen, query_type, game_phase)
 
         # Keyword-based routing fallback for low confidence decisions
-        if decision.confidence_score < 0.6:  # Low confidence threshold
-            # Try keyword-based routing
-            keyword_expert = self._keyword_based_routing(query_type if query_type != "auto" else "")
+        if decision.confidence_score < 0.7:  # Lower threshold to be more aggressive
+            # Try keyword-based routing on question text if available, otherwise query_type
+            routing_text = question_text if question_text else (query_type if query_type != "auto" else "")
+            keyword_expert = self._keyword_based_routing(routing_text)
             if keyword_expert:
                 # Override with keyword-based decision
-                expert_idx = {"uci": 0, "tutor": 1, "director": 2}[keyword_expert]
                 decision.primary_expert = keyword_expert
-                decision.confidence_score = 0.8  # Higher confidence for keyword matches
-                decision.expert_weights = [0.1, 0.1, 0.1]  # Reset weights
-                decision.expert_weights[expert_idx] = 0.7   # Boost primary expert
+                decision.confidence_score = 0.9  # Higher confidence for keyword matches
+                decision.expert_weights = {"uci": 0.1, "tutor": 0.1, "director": 0.1}  # Reset weights as dict
+                decision.expert_weights[keyword_expert] = 0.8   # Boost primary expert
                 decision.ensemble_mode = False
-                decision.reasoning = f"Keyword-based routing override (low ML confidence {decision.confidence_score:.2f})"
-                logger.info(f"🔄 Keyword routing override: {keyword_expert}")
+                decision.reasoning = f"Keyword-based routing override (ML confidence {decision.confidence_score:.2f})"
+                logger.info(f"🔄 Keyword routing override: {keyword_expert} (original confidence: {decision.confidence_score:.3f})")
 
         # Cache the decision
         self._cache_routing_decision(cache_key, decision)
@@ -1743,11 +1752,11 @@ class MoEInferenceManager:
                 self._missing_expert_logged.add(expert_name)
 
     def analyze_position(self, fen: str, query_type: str = "auto",
-                        complexity_score: Optional[float] = None) -> Dict[str, Any]:
+                        complexity_score: Optional[float] = None, question_text: str = "") -> Dict[str, Any]:
         """Analyze a chess position using optimized MoE routing with caching."""
 
         # Get routing decision (with caching)
-        routing_decision = self.router.route_query(fen, query_type, complexity_score)
+        routing_decision = self.router.route_query(fen, query_type, complexity_score, question_text=question_text)
 
         # Execute routing decision
         if routing_decision.ensemble_mode:

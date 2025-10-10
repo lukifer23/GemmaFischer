@@ -165,15 +165,21 @@ class EvaluationSuiteRunner:
             result.confidence = response_data.get("confidence", 0.0)
             result.generation_time = time.time() - start_time
 
+
             # Check which expert was actually used
-            active_adapter = response_data.get("active_adapter")
-            if active_adapter:
-                if "uci" in active_adapter:
-                    result.routed_expert = "uci"
-                elif "tutor" in active_adapter:
-                    result.routed_expert = "tutor"
-                elif "director" in active_adapter:
-                    result.routed_expert = "director"
+            # For MoE routing, use the primary_expert field
+            if result.moe_used and "primary_expert" in response_data:
+                result.routed_expert = response_data["primary_expert"]
+            else:
+                # Fallback to active_adapter for non-MoE routing
+                active_adapter = response_data.get("active_adapter")
+                if active_adapter:
+                    if "uci" in active_adapter:
+                        result.routed_expert = "uci"
+                    elif "tutor" in active_adapter:
+                        result.routed_expert = "tutor"
+                    elif "director" in active_adapter:
+                        result.routed_expert = "director"
 
             # Validate response format
             result.format_score = self.validate_response_format(result.response, expected_format)
