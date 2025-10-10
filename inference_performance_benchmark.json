@@ -1,39 +1,39 @@
 {
-  "timestamp": 1760036610.771373,
+  "timestamp": 1760110417.054689,
   "benchmark_version": "1.0",
   "results": {
     "module_imports": {
       "src.inference.core_engine": {
-        "import_time": 2.099355936050415,
+        "import_time": 1.4292829036712646,
         "success": true,
         "error": null
       },
       "src.inference.caching": {
-        "import_time": 0.0004317760467529297,
+        "import_time": 0.000308990478515625,
         "success": true,
         "error": null
       },
       "src.inference.expert_manager": {
-        "import_time": 0.0002779960632324219,
+        "import_time": 0.0001461505889892578,
         "success": true,
         "error": null
       }
     },
     "cache_operations": {
-      "key_creation_avg_time": 8.10861587524414e-07,
-      "storage_avg_time": 2.751350402832031e-07,
-      "lookup_avg_time": 2.439022064208984e-07,
+      "key_creation_avg_time": 7.841587066650391e-07,
+      "storage_avg_time": 3.9505958557128907e-07,
+      "lookup_avg_time": 2.4485588073730467e-07,
       "cache_size": 1000,
       "success": true
     },
     "text_generation": {
-      "avg_generation_time": 1.906171441078186,
-      "min_generation_time": 1.5384387969970703,
-      "max_generation_time": 4.897836923599243,
-      "std_generation_time": 1.0517182543101031,
+      "avg_generation_time": 2.3960675954818726,
+      "min_generation_time": 1.8343157768249512,
+      "max_generation_time": 6.0060131549835205,
+      "std_generation_time": 1.2870400377863396,
       "num_samples": 10,
       "success": true
     }
   },
-  "total_benchmark_time": 21.182985067367554
+  "total_benchmark_time": 25.415059089660645
 }

@@ -26,18 +26,18 @@ This document provides comprehensive performance metrics for GemmaFischer, inclu
 
 | Metric | UCI Expert | Tutor Expert | Director Expert |
 |--------|------------|---------------|-----------------|
-| **Response Time** | 2.0-2.5s | 2.2-2.8s | 2.3-2.9s |
+| **Response Time** | **2.3s** avg (post warm-up) | ~4.4s avg | ~5.5s avg |
 | **Memory Usage** | 6-7GB | 6-7GB | 6-7GB |
 | **Cache Hit Rate** | 75-85% | 70-80% | 65-75% |
-| **Token/Second** | 180-220 | 160-200 | 150-190 |
+| **Token/Second** | ~210 | ~150 | ~140 |
 
 ### Parallel Multi-Expert Execution
 
-| Configuration | Response Time | Memory Peak | Overhead |
-|---------------|---------------|-------------|----------|
-| **Sequential (1 expert)** | 2.3s | 6GB | 1.0x |
-| **Parallel (2 experts)** | 2.8s | 7GB | 1.2x |
-| **Parallel (3 experts)** | 3.2s | 8GB | 1.4x |
+| Configuration | Response Time | Memory Peak | Notes |
+|---------------|---------------|-------------|-------|
+| **Sequential (1 expert)** | 2.3s | 6GB | Baseline UCI move |
+| **MoE auto-routing** | 4.0s | 7GB | Router accuracy 37% on eval suite |
+| **Parallel ensemble** | 6.0s | 8GB | Disabled by default after router retrain |
 
 **Performance Insights:**
 - **Scalability**: Sub-linear time scaling (3 experts ≠ 3x time)
@@ -79,11 +79,10 @@ cache_metrics = {
 ```
 
 **Performance Improvements Applied:**
-- **40% faster cache operations** (key generation, storage, lookup)
-- **Reduced memory overhead** (optimized thread synchronization)
-- **Improved cache hit rates** (better key generation, larger cache sizes)
-- **Faster module imports** (<5ms for all inference modules)
-- **Optimized model loading** (better MPS cache management)
+- **Router retraining** anchored on curated evaluation data (balanced 422-sample train set)
+- **MPS-native model placement** (`model.to("mps")`) eliminates CPU-only fallbacks
+- **Log-prob engine policy** replaces stochastic rerank (5× fewer decode passes)
+- **Warm-up flow** primes adapters at startup to avoid first-hit latency spikes
 
 **Configuration System Improvements:**
 - **Unified configuration** (single config file replaces multiple config files)
@@ -91,11 +90,11 @@ cache_metrics = {
 - **Environment overrides** (CHESSGEMMA_* environment variables)
 - **Expert-specific configs** (uci, tutor, director with different hyperparameters)
 
-**Inference Performance Gains:**
-- Average response time: 2.0-2.5s (improved from 2.3-2.8s)
-- Memory usage: 6-7GB (reduced from 6-8GB)
-- Cache operation overhead: <1ms per request
-- Module loading time: <10ms for complete system
+**Inference Performance Snapshot (Oct 2025):**
+- Average UCI move latency: **2.28 s** (20-position parity run, depth 6)
+- Legal move rate: **100 %**; Stockfish top-1 agreement: **15 %** (needs further LoRA tuning)
+- MoE routing accuracy: **37 %** (format compliance 82.9 %)
+- Cache operations remain sub-microsecond (see benchmark JSON)
 
 ## System Resource Usage
 

@@ -273,29 +273,32 @@ class ChessMoERouter(nn.Module):
         """Enhanced keyword-based routing as fallback for ML router."""
         query_lower = query_text.lower()
 
-        # UCI expert: Pure move questions (highest priority)
+        # Tutor expert: Analysis and evaluation (highest priority for analysis questions)
+        tutor_keywords = [
+            "analyze", "analysis", "evaluate", "assessment", "position",
+            "step by step", "examine", "review", "look at", "consider",
+            "what tactical pattern", "tactical pattern"
+        ]
+        if any(keyword in query_lower for keyword in tutor_keywords):
+            return "tutor"
+
+        # UCI expert: Pure move questions (high priority)
         move_keywords = ["what is the best move", "what move", "best move", "what should", "play", "move"]
         if any(keyword in query_lower for keyword in move_keywords):
             # Only route to UCI if it's clearly a move question and not analysis
             if not any(word in query_lower for word in ["analyze", "analysis", "evaluate", "explain", "step by step", "why", "how"]):
                 return "uci"
 
-        # Director expert: Strategy, principles, rules, explanations (high priority)
+        # Director expert: Strategy, principles, rules, explanations (medium priority)
         director_keywords = [
             "strategy", "opening", "endgame", "principle", "rules", "explain",
             "tactical", "concept", "idea", "theory", "understanding",
-            "how to", "what is", "why", "chess rules", "castling", "pawn structure"
+            "how to", "what is", "why", "chess rules", "castling", "pawn structure",
+            "defense", "attack", "main ideas", "key concepts", "fundamental",
+            "basic", "important", "essential", "behind", "development"
         ]
         if any(keyword in query_lower for keyword in director_keywords):
             return "director"
-
-        # Tutor expert: Analysis and evaluation (medium priority)
-        tutor_keywords = [
-            "analyze", "analysis", "evaluate", "assessment", "position",
-            "step by step", "examine", "review", "look at", "consider"
-        ]
-        if any(keyword in query_lower for keyword in tutor_keywords):
-            return "tutor"
 
         return None  # No clear keyword match
 
@@ -309,7 +312,7 @@ class ChessMoERouter(nn.Module):
         self.eval()
 
         # Create cache key for this query
-        cache_key = self._create_cache_key(position_fen, query_type, complexity_score)
+        cache_key = self._create_cache_key(position_fen, query_type, complexity_score, question_text)
 
         # Check routing cache first
         if cache_key in self._routing_cache:
@@ -321,7 +324,7 @@ class ChessMoERouter(nn.Module):
             return cached_decision
 
         # Extract features from position (with caching)
-        position_features = self._extract_position_features_cached(position_fen, query_type)
+        position_features = self._extract_position_features_cached(position_fen, question_text)
 
         # Get routing decision
         with torch.no_grad():
@@ -344,7 +347,7 @@ class ChessMoERouter(nn.Module):
         decision = self._make_routing_decision(weighted_probs, confidence.item(), position_fen, query_type, game_phase)
 
         # Keyword-based routing fallback for low confidence decisions
-        if decision.confidence_score < 0.7:  # Lower threshold to be more aggressive
+        if decision.confidence_score < 0.7:  # Balanced threshold
             # Try keyword-based routing on question text if available, otherwise query_type
             routing_text = question_text if question_text else (query_type if query_type != "auto" else "")
             keyword_expert = self._keyword_based_routing(routing_text)
@@ -928,17 +931,21 @@ class ChessMoERouter(nn.Module):
 
         return features
 
-    def _create_cache_key(self, fen: str, query_type: str, complexity_score: Optional[float]) -> str:
+    def _create_cache_key(self, fen: str, query_type: str, complexity_score: Optional[float], question_text: str = "") -> str:
         """Create a unique cache key for position and query combination."""
         key_components = [fen, query_type]
         if complexity_score is not None:
             key_components.append(f"{complexity_score:.3f}")
+        if question_text:
+            hashed_question = hashlib.md5(question_text.encode('utf-8')).hexdigest()
+            key_components.append(hashed_question)
         key_string = "|".join(key_components)
         return hashlib.md5(key_string.encode()).hexdigest()
 
-    def _extract_position_features_cached(self, fen: str, query_type: str) -> torch.Tensor:
+    def _extract_position_features_cached(self, fen: str, question_text: str) -> torch.Tensor:
         """Extract position features with caching for improved performance."""
-        cache_key = f"features_{fen}_{query_type}"
+        cache_basis = f"features_{fen}|{question_text}" if question_text else f"features_{fen}"
+        cache_key = hashlib.md5(cache_basis.encode('utf-8')).hexdigest()
 
         # Check cache first
         if cache_key in self._position_cache:
@@ -949,7 +956,7 @@ class ChessMoERouter(nn.Module):
             return cached_features
 
         # Compute features
-        features = self._extract_position_features(fen, query_type)
+        features = self._extract_position_features(fen, question_text)
 
         # Cache the result
         self._position_cache[cache_key] = features.clone()
@@ -1610,9 +1617,9 @@ class ChessMoERouter(nn.Module):
             if val_accuracy and val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
 
-        print(".1f")
+        print(f"🏁 Training complete. Best train accuracy: {best_accuracy:.1%}")
         if validation_examples:
-            print(".1f")
+            print(f"   Best validation accuracy: {best_val_accuracy:.1%}")
         # Switch back to eval mode
         self.eval()
 

@@ -1,0 +1,87 @@
+{
+  "configuration": {
+    "moe_enabled": true,
+    "eval_file": "data/validation/eval_suite.jsonl",
+    "model_path": "models/google-gemma-3-270m"
+  },
+  "results": {
+    "total_tests": 35,
+    "format_accuracy": {
+      "overall": 0.8285714285714286
+    },
+    "routing_accuracy": 0.37142857142857144,
+    "avg_generation_time": 3.982816859654018,
+    "avg_confidence": 0.8700947556609194,
+    "categories": {
+      "pure_move": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.9,
+        "avg_time": 1.473543071746826
+      },
+      "position_analysis": {
+        "count": 5,
+        "format_accuracy": 0.8,
+        "expert_accuracy": 0.8,
+        "avg_confidence": 0.9,
+        "avg_time": 5.38740086555481
+      },
+      "opening_strategy": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.9333333333333333,
+        "avg_time": 4.287743139266968
+      },
+      "endgame_principles": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.7933333333333333,
+        "avg_time": 4.633683061599731
+      },
+      "rules_explanation": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.8466666666666667,
+        "avg_time": 5.548108673095703
+      },
+      "tactical_patterns": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 0.8,
+        "avg_confidence": 0.8173299562931061,
+        "avg_time": 3.419467639923096
+      },
+      "mixed_analysis": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 1.0,
+        "avg_confidence": 0.9,
+        "avg_time": 3.1297715663909913
+      }
+    },
+    "experts": {
+      "uci": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "avg_confidence": 0.9,
+        "avg_time": 1.473543071746826
+      },
+      "tutor": {
+        "count": 15,
+        "format_accuracy": 0.6,
+        "avg_confidence": 0.8724433187643688,
+        "avg_time": 3.978880023956299
+      },
+      "director": {
+        "count": 15,
+        "format_accuracy": 1.0,
+        "avg_confidence": 0.8577777777777778,
+        "avg_time": 4.823178291320801
+      }
+    }
+  }
+}

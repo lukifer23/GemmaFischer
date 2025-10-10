@@ -109,7 +109,7 @@ def validate_tutor_data():
     """Validate Tutor training data quality."""
     print("\n🔍 Validating Tutor Training Data...")
 
-    data_path = project_root / "data" / "standardized" / "standardized_tutor_expert.jsonl"
+    data_path = project_root / "data" / "standardized" / "standardized_tutor_expert_v2.jsonl"
 
     if not data_path.exists():
         print(f"❌ Tutor data file not found: {data_path}")

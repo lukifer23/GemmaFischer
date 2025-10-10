@@ -135,7 +135,7 @@ class UnifiedChessTrainer:
             "uci": ExpertConfig(
                 name="uci",
                 description="Chess move generation expert",
-                dataset_path="data/standardized/standardized_uci_expert.jsonl",
+                dataset_path="data/standardized/standardized_uci_expert_v2.jsonl",
                 max_steps=1600,
                 batch_size=1,
                 learning_rate=2e-4,
@@ -151,7 +151,7 @@ class UnifiedChessTrainer:
             "tutor": ExpertConfig(
                 name="tutor",
                 description="Chess explanation expert",
-                dataset_path="data/standardized/standardized_tutor_expert.jsonl",
+                dataset_path="data/standardized/standardized_tutor_expert_v2.jsonl",
                 max_steps=1000,
                 batch_size=1,
                 learning_rate=2e-4,
@@ -167,7 +167,7 @@ class UnifiedChessTrainer:
             "director": ExpertConfig(
                 name="director",
                 description="Strategic Q&A expert",
-                dataset_path="data/standardized/standardized_director_expert.jsonl",
+                dataset_path="data/standardized/standardized_director_expert_v3.jsonl",
                 max_steps=1000,
                 batch_size=1,
                 learning_rate=2e-4,

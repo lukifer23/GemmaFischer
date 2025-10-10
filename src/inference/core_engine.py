@@ -9,6 +9,7 @@ This module handles the core interaction with the underlying language model.
 from __future__ import annotations
 
 import os
+import torch
 import re
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
@@ -58,6 +59,7 @@ class ChessGemmaCoreEngine:
         self.tokenizer = None
         self.model = None
         self.is_loaded = False
+        self._device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
 
         # Performance-optimized debug mode - only enable when explicitly requested
         self.debug = os.environ.get('CHESSGEMMA_DEBUG', '0') not in ('0', 'false', 'False')
@@ -115,13 +117,13 @@ class ChessGemmaCoreEngine:
                 trust_remote_code=True,
             )
 
-            import torch
-
             torch_dtype = torch.float16
             device_map = "auto"
             if torch.backends.mps.is_available():
                 torch_dtype = torch.float32
                 device_map = None
+            elif not torch.cuda.is_available():
+                torch_dtype = torch.float32
 
             base_model = AutoModelForCausalLM.from_pretrained(
                 model_ref,
@@ -153,6 +155,17 @@ class ChessGemmaCoreEngine:
 
             if not applied_adapter:
                 self.model = base_model
+
+            # Move model to the configured device
+            if self.model is not None:
+                try:
+                    self.model.to(self._device)
+                    try:
+                        self._device = next(self.model.parameters()).device
+                    except StopIteration:
+                        pass
+                except Exception as move_err:
+                    logger.warning(f"Failed to move model to {self._device}: {move_err}")
 
             # Set model to eval mode only if model exists
             if self.model is not None:

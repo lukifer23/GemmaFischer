@@ -47,7 +47,7 @@ def patch_tutor_response(response: str, fen: str) -> str:
 
 def main():
     """Patch tutor data to be more educational."""
-    input_file = Path("data/standardized/standardized_tutor_expert.jsonl")
+    input_file = Path("data/standardized/standardized_tutor_expert_v2.jsonl")
     output_file = Path("data/standardized/enhanced_tutor_expert.jsonl")
 
     print("🎓 Patching tutor data for better educational value...")

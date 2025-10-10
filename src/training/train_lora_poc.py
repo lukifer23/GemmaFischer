@@ -13,6 +13,7 @@ import threading
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
+from itertools import islice
 
 import torch
 from transformers import (
@@ -50,6 +51,14 @@ except ImportError:
     # Fallback if config system not available yet
     get_config = None
     ChessGemmaConfig = None
+
+PLACEHOLDER_TOKENS = (
+    "[tactical_move]",
+    "[discovered_attack]",
+    "[double_attack]",
+    "[skewer]",
+    "[fork]",
+)
 
 
 def log_system_stats(prefix=""):
@@ -163,7 +172,21 @@ class CustomCallback(TrainerCallback):
         # Save final summary
         summary_file = Path(args.output_dir) / 'training_summary.json'
         with open(summary_file, 'w', encoding='utf-8') as f:
-            json.dump(final_stats, f, indent=2)
+        json.dump(final_stats, f, indent=2)
+
+
+def ensure_no_placeholder_responses(dataset, sample_limit: int = 1000):
+    """Fail fast if the dataset still contains template placeholders."""
+    if dataset is None:
+        return
+
+    for idx, sample in enumerate(islice(dataset, sample_limit), start=1):
+        response = sample.get("response") or sample.get("text") or ""
+        if any(token in response for token in PLACEHOLDER_TOKENS):
+            preview = response.strip().splitlines()[0][:80]
+            raise ValueError(
+                f"Placeholder token detected in training data (example #{idx}): {preview}"
+            )
 
 
 class InstructionDataCollator:
@@ -506,6 +529,9 @@ def main():
                         return
                 except Exception as e:
                     print(f"Warning: task filter failed ({e}); proceeding without filtering")
+
+        if ds is not None:
+            ensure_no_placeholder_responses(ds)
 
         tokenizer = AutoTokenizer.from_pretrained(
             model_ref,

@@ -10,7 +10,7 @@ A chess AI system that fine-tunes Google's Gemma-3 270M model to function as bot
 |--------|---------|-------|------|------|------|
 | UCI | Move generation | 1,600 | 0.872 | 5.92 MB | [Model](https://huggingface.co/Dontbeafed69/gemmafischer-uci-lora) |
 | Tutor | Educational analysis | 1,000 | 0.914 | 15.2 MB | [Model](https://huggingface.co/Dontbeafed69/gemmafischer-tutor-lora) |
-| Director | Strategic Q&A | TBD | TBD | TBD | In training |
+| Director | Strategic Q&A | Dataset ready | — | — | Training scheduled (adapter pending release) |
 
 All models are LoRA adapters fine-tuned on Google's Gemma-3 270M, optimized for Apple Silicon (MPS).
 
@@ -52,14 +52,14 @@ print(move)  # e.g., "e2e4"
 - **Web Interface**: Real-time MoE routing display and expert switching controls
 
 ### Current Status
-- **Training Data**: 107K+ standardized samples including 2K high-quality CoT reasoning examples
+- **Training Data**: 150K standardized samples (no placeholders) including 2K high-quality CoT reasoning examples
 - **Model Checkpoints**: Multiple specialized LoRA adapters with automatic integrity validation
 - **Parallel Execution**: Simultaneous multi-expert analysis with thread-safe adapter switching
 - **Data Quality**: 100% valid samples with automated validation and repair pipelines
-- **MoE Routing**: Intelligent expert selection with advanced caching and performance optimization
+- **MoE Routing**: Intelligent expert selection backed by a retrained router (37% accuracy on the core eval suite — needs continued work for director/opening prompts)
 - **Web Interface**: Enhanced interface at http://localhost:5000 with real-time MoE routing
 - **Training Speed**: Optimized ~2-3 steps/second on M3 Pro with robust memory management
-- **Performance**: 40% faster inference with optimized caching and reduced memory overhead
+- **Inference Latency**: 2.3s average per move generation on M3 Pro (post warm-up, depth-6 Stockfish parity run)
 
 ### Recent Improvements (v2.0)
 - **Training Stability**: Enhanced MPS memory management eliminates timeouts and interruptions
@@ -80,10 +80,16 @@ print(move)  # e.g., "e2e4"
 ### Recent Improvements
 - **Training Stability**: Enhanced MPS optimization with gradient checkpointing and memory management
 - **CoT Dataset**: Generated 2K high-quality chain-of-thought reasoning examples
-- **MoE Optimization**: Advanced caching system reducing feature extraction overhead by 70%
-- **Inference Speed**: 2-3x performance improvement with intelligent response caching
+- **MoE Optimization**: Router retrained on curated evaluation data (router checkpoints live in `checkpoints/moe_router/`)
+- **Latency Reduction**: Engine policy switched to log-prob scoring and rerank disabled by default (steady-state queries now ~2.3s on M3 Pro)
 - **Error Handling**: Comprehensive error classification and recovery strategies
 - **Model Validation**: Automatic integrity checks with adapter corruption detection
+
+### Latest Evaluation Snapshot *(Oct 2025 refresh)*
+- **Stockfish parity** (20 mixed positions, depth 6): 15% top-1 agreement, 100% legal moves, average latency 2.28 s.
+- **MoE routing** (35-case eval suite): 80% format compliance, 37% routing accuracy — tutor/tactical prompts route correctly, opening/endgame questions still drift to UCI.
+- **Expert scorecards (smoke tests)**: UCI syntax/legality 100%; tutor and director evaluations highlight near-zero first-move accuracy and thin explanations → prioritize dataset/LoRA retraining.
+- **Data health**: `python scripts/test_data_quality.py` passes, ensuring no placeholder responses or schema drift.
 
 
 ## Quick Start
@@ -264,13 +270,14 @@ ChessGemma/
 │   ├── web/           # Flask web interface
 │   └── evaluation/    # Testing and benchmarking
 ├── data/
-│   ├── standardized/  # 105K+ validated training samples
+│   ├── standardized/  # 150K placeholder-free training samples
 │   └── validation/    # Quality assessment reports
 ├── checkpoints/       # LoRA adapter checkpoints
 └── docs/             # Documentation
 
-The director expert now trains on `data/standardized/standardized_director_expert_v2.jsonl`, a strategic dataset distilled from the tutor corpus with explicit best-move annotations.
 ```
+
+The director expert now trains on `data/standardized/standardized_director_expert_v3.jsonl`, a strategic dataset distilled from the tutor corpus with explicit best-move annotations.
 
 ## MoE Checkpoint Layout
 
@@ -287,6 +294,17 @@ Set the `CHESSGEMMA_MOE_ROUTER_CKPT` environment variable to point at a custom
 router file if it lives outside the default directory. When any of the expected
 checkpoints are missing the system automatically falls back to single-expert
 mode with detailed logging.
+
+### Official Evaluation Settings (Oct 2025)
+- **Stockfish parity:** `python -m src.evaluation.stockfish_match_eval --file data/validation/eval_suite.jsonl --depth 6 --limit 20 --out reports/stockfish_match_latest.json`
+- **MoE routing suite:** `python scripts/run_evaluation_suite.py --eval-file data/validation/eval_suite.jsonl --output reports/eval_suite_moe.json`
+- **Expert scorecards (smoke):**
+  - `python -m src.evaluation.expert_scorecard_eval --expert uci --max-positions 20 --output reports/expert_scorecard_uci.json`
+  - `python -m src.evaluation.expert_scorecard_eval --expert tutor --max-positions 10 --output reports/expert_scorecard_tutor.json`
+  - `python -m src.evaluation.expert_scorecard_eval --expert director --max-positions 10 --output reports/expert_scorecard_director.json`
+- **MoE router retrain:** `python scripts/train_moe_router.py --epochs 40 --batch-size 64 --learning-rate 0.002`
+
+All latency numbers reported below assume the model has been warmed up once (first request excluded).
 
 ## Architecture Overview
 

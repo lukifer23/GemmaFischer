@@ -1,0 +1,729 @@
+{
+  "metadata": {
+    "generated_from": "/Users/admin/Downloads/VSCode/GemmaFischer/data/standardized/standardized_director_expert_v3.jsonl",
+    "sample_size": 80,
+    "seed": 3407
+  },
+  "questions": [
+    {
+      "id": "director-0001",
+      "question": "FEN: r5nk/1b3q1p/2Q1p1p1/p3P3/P4PP1/1B2b3/1PP5/1K1R3R w - - 3 29\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1302.\n- Forcing sequence to calculate: c6d7 f7d7 d1d7 b7h1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c6d7 to execute the plan.\nFinal move (UCI): c6d7",
+      "category": "tactics",
+      "rating": 1302,
+      "best_move": "c6d7",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0002",
+      "question": "FEN: r2q1rk1/pp1nbppp/2p5/3p2B1/3Pn3/2NQPN2/PP3PPP/R4RK1 w - - 2 12\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1455.\n- Forcing sequence to calculate: c3e4 d5e4 d3e4 e7g5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c3e4 to execute the plan.\nFinal move (UCI): c3e4",
+      "category": "tactics",
+      "rating": 1455,
+      "best_move": "c3e4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0003",
+      "question": "FEN: 5rk1/1b2nr1p/p5p1/1p1pR3/1B6/1B6/P1P2qPP/1R4QK b - - 5 24\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1714.\n- Forcing sequence to calculate: f2f4 e5e7 f7e7 b4e7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f2f4 to execute the plan.\nFinal move (UCI): f2f4",
+      "category": "tactics",
+      "rating": 1714,
+      "best_move": "f2f4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0004",
+      "question": "FEN: 8/1p1k2pp/2p5/1p4r1/1PbPB3/P3R1P1/6KP/8 b - - 0 33\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1636.\n- Forcing sequence to calculate: h7h5 h2h4 g5d5 e4d5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h7h5 to execute the plan.\nFinal move (UCI): h7h5",
+      "category": "tactics",
+      "rating": 1636,
+      "best_move": "h7h5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0005",
+      "question": "FEN: r3k1nr/pppq1ppp/2n1p3/2PpP2b/8/3B1N2/PPP2PPP/R1BQ1RK1 b kq - 0 10\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1046.\n- Forcing sequence to calculate: c6e5 f3e5 h5d1 e5d7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c6e5 to execute the plan.\nFinal move (UCI): c6e5",
+      "category": "tactics",
+      "rating": 1046,
+      "best_move": "c6e5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0006",
+      "question": "FEN: 8/4k3/4p3/p2pP3/2pPb3/2K1P1RB/PP2r3/4N3 w - - 3 54\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1291.\n- Forcing sequence to calculate: g3g1 e2e3 c3d2 e3h3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g3g1 to execute the plan.\nFinal move (UCI): g3g1",
+      "category": "tactics",
+      "rating": 1291,
+      "best_move": "g3g1",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0007",
+      "question": "FEN: rnbqkbnr/pp3ppp/4p3/3pN3/2pP4/2N1P3/PPP2PPP/R1BQKB1R b KQkq - 1 5\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1253.\n- Forcing sequence to calculate: f7f6 d1h5 g7g6 e5g6 h7g6 h5h8.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f7f6 to execute the plan.\nFinal move (UCI): f7f6",
+      "category": "tactics",
+      "rating": 1253,
+      "best_move": "f7f6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0008",
+      "question": "FEN: 8/3bkp2/3P2p1/1p2p1Pr/2p1BR2/2P4p/1P4PP/6K1 b - - 0 33\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1020.\n- Forcing sequence to calculate: e7e6 f4f6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e7e6 to execute the plan.\nFinal move (UCI): e7e6",
+      "category": "tactics",
+      "rating": 1020,
+      "best_move": "e7e6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0009",
+      "question": "FEN: 4r1k1/7p/6p1/1p1p1pQ1/1Pp5/2b2B1P/5PP1/3RqK2 w - - 2 43\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1051.\n- Forcing sequence to calculate: d1e1 e8e1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d1e1 to execute the plan.\nFinal move (UCI): d1e1",
+      "category": "tactics",
+      "rating": 1051,
+      "best_move": "d1e1",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0010",
+      "question": "FEN: 7k/6Rp/3P4/1b3N2/2p5/8/1pr2PPP/1R4K1 w - - 0 37\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1511.\n- Forcing sequence to calculate: d6d7 c2c1 b1c1 b2c1q.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d6d7 to execute the plan.\nFinal move (UCI): d6d7",
+      "category": "tactics",
+      "rating": 1511,
+      "best_move": "d6d7",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0011",
+      "question": "FEN: r2qr1k1/1p1b1p1p/1np3p1/p2N4/P7/1P2P1PP/1bN2PB1/1R1Q1RK1 b - - 1 17\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1173.\n- Forcing sequence to calculate: b2g7 d5b6 d8b6 d1d7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play b2g7 to execute the plan.\nFinal move (UCI): b2g7",
+      "category": "tactics",
+      "rating": 1173,
+      "best_move": "b2g7",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0012",
+      "question": "FEN: 8/8/6K1/6Qp/8/6P1/3k3q/8 b - - 5 61\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1564.\n- Forcing sequence to calculate: d2e2 g5h5 h2h5 g6h5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d2e2 to execute the plan.\nFinal move (UCI): d2e2",
+      "category": "tactics",
+      "rating": 1564,
+      "best_move": "d2e2",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0013",
+      "question": "FEN: 8/3qn1kR/8/3p2p1/2pP4/1pP2P2/1P1K4/7R b - - 7 42\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1060.\n- Forcing sequence to calculate: g7g6 h1h6 g6f5 h7f7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g7g6 to execute the plan.\nFinal move (UCI): g7g6",
+      "category": "tactics",
+      "rating": 1060,
+      "best_move": "g7g6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0014",
+      "question": "FEN: 3r1rk1/4bppp/pq4b1/3B4/1p3P2/7P/PP4PB/3RQR1K b - - 0 23\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1717.\n- Forcing sequence to calculate: e7f6 f4f5 g6h5 g2g4 h5g4 h3g4 d8d5 d1d5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e7f6 to execute the plan.\nFinal move (UCI): e7f6",
+      "category": "tactics",
+      "rating": 1717,
+      "best_move": "e7f6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0015",
+      "question": "FEN: 3r3k/6p1/6Pp/1Q6/p4rPq/P1NPb2P/1PP3K1/R4R2 w - - 1 29\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1760.\n- Forcing sequence to calculate: b5e5 f4f2 f1f2 h4f2 g2h1 f2f3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play b5e5 to execute the plan.\nFinal move (UCI): b5e5",
+      "category": "tactics",
+      "rating": 1760,
+      "best_move": "b5e5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0016",
+      "question": "FEN: 8/5kpp/1B1p4/P2P4/6PP/5p2/5P1K/r7 b - - 0 41\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1405.\n- Forcing sequence to calculate: f7f6 b6d4 f6e7 d4a1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f7f6 to execute the plan.\nFinal move (UCI): f7f6",
+      "category": "tactics",
+      "rating": 1405,
+      "best_move": "f7f6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0017",
+      "question": "FEN: 2kr3r/1ppq2pp/p1n3n1/3p1p2/P1PPp1P1/4P1bP/NP2B1P1/R1BQ1K1R b - - 0 15\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1428.\n- Forcing sequence to calculate: f5g4 e2g4 h8f8 f1g1 f8f5 g4f5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f5g4 to execute the plan.\nFinal move (UCI): f5g4",
+      "category": "tactics",
+      "rating": 1428,
+      "best_move": "f5g4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0018",
+      "question": "FEN: 5r2/2p2rk1/1p1p1n2/1P2pRBp/p3P1pP/P1PK2P1/8/5R2 b - - 4 36\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1583.\n- Forcing sequence to calculate: f6e8 g5h6 g7h6 f5f7 f8f7 f1f7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f6e8 to execute the plan.\nFinal move (UCI): f6e8",
+      "category": "tactics",
+      "rating": 1583,
+      "best_move": "f6e8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0019",
+      "question": "FEN: r3r1k1/ppp2ppp/1bn2q2/3p4/NP1Pn3/P2QBB2/2P2PPP/R3R1K1 b - - 0 15\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1635.\n- Forcing sequence to calculate: c6d4 a4b6 d4f3 g2f3 a7b6 f3e4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c6d4 to execute the plan.\nFinal move (UCI): c6d4",
+      "category": "tactics",
+      "rating": 1635,
+      "best_move": "c6d4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0020",
+      "question": "FEN: 8/P1pb1p2/3k4/r2P4/2p1P3/K1P1B3/2P5/3R4 w - - 1 35\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1283.\n- Forcing sequence to calculate: a3b4 a5a4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play a3b4 to execute the plan.\nFinal move (UCI): a3b4",
+      "category": "tactics",
+      "rating": 1283,
+      "best_move": "a3b4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0021",
+      "question": "FEN: k3r3/3R2p1/NR3p2/1p3P2/p5P1/2P5/4r1K1/8 w - - 3 42\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1697.\n- Forcing sequence to calculate: g2h3 e8e3 h3h4 e2h2.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g2h3 to execute the plan.\nFinal move (UCI): g2h3",
+      "category": "tactics",
+      "rating": 1697,
+      "best_move": "g2h3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0022",
+      "question": "FEN: 8/4bp2/5k1p/2p1pN1P/p1PpP3/P2P1P2/8/6K1 w - - 1 37\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1222.\n- Forcing sequence to calculate: f5e7 f6e7 g1h2 e7f6 h2g2 f6g5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f5e7 to execute the plan.\nFinal move (UCI): f5e7",
+      "category": "tactics",
+      "rating": 1222,
+      "best_move": "f5e7",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0023",
+      "question": "FEN: 8/4p2p/P1R3pk/1K2p3/2P2r2/8/1P3b2/8 b - - 0 41\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1766.\n- Forcing sequence to calculate: f4f6 c6f6 e7f6 c4c5 e5e4 a6a7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f4f6 to execute the plan.\nFinal move (UCI): f4f6",
+      "category": "tactics",
+      "rating": 1766,
+      "best_move": "f4f6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0024",
+      "question": "FEN: 4kb1r/3n1ppp/rq1ppn2/1Qp5/P3P3/2N2N2/1P1P1PPP/R1B1K2R b KQk - 0 12\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1642.\n- Forcing sequence to calculate: f6e4 b5b6 d7b6 c3e4 a6a4 a1a4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f6e4 to execute the plan.\nFinal move (UCI): f6e4",
+      "category": "tactics",
+      "rating": 1642,
+      "best_move": "f6e4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0025",
+      "question": "FEN: 2b1B1k1/pp6/2n2r2/2Np4/2p3P1/2P1p2P/PP6/2KR4 w - - 0 31\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1547.\n- Forcing sequence to calculate: d1d5 f6f1 d5d1 e3e2.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d1d5 to execute the plan.\nFinal move (UCI): d1d5",
+      "category": "tactics",
+      "rating": 1547,
+      "best_move": "d1d5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0026",
+      "question": "FEN: r5k1/1p4r1/pPp1pq2/2P3p1/3PQpN1/4pP1P/1P4P1/3R2K1 b - - 0 31\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1241.\n- Forcing sequence to calculate: f6f5 g4h6 g8h8 h6f5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f6f5 to execute the plan.\nFinal move (UCI): f6f5",
+      "category": "tactics",
+      "rating": 1241,
+      "best_move": "f6f5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0027",
+      "question": "FEN: 4Q3/6pk/p3p2p/5p2/1p1P2P1/4q2P/2B1n2B/7K w - - 0 35\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1572.\n- Forcing sequence to calculate: g4f5 e3f3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g4f5 to execute the plan.\nFinal move (UCI): g4f5",
+      "category": "tactics",
+      "rating": 1572,
+      "best_move": "g4f5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0028",
+      "question": "FEN: rnbqk2r/pp5p/2p2p1n/2bp4/7B/4PN2/PPP2PPP/RN1QKB1R w KQkq - 1 8\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1552.\n- Forcing sequence to calculate: f3e5 d8a5 b1d2 f6e5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f3e5 to execute the plan.\nFinal move (UCI): f3e5",
+      "category": "tactics",
+      "rating": 1552,
+      "best_move": "f3e5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0029",
+      "question": "FEN: r3R2k/1qp3pp/2p5/p1Q2p1b/2B2P2/1Pb5/P1P3PP/4R2K b - - 7 28\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1397.\n- Forcing sequence to calculate: h5e8 c5f8.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h5e8 to execute the plan.\nFinal move (UCI): h5e8",
+      "category": "tactics",
+      "rating": 1397,
+      "best_move": "h5e8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0030",
+      "question": "FEN: r5qk/pp2R2p/8/3N1Q2/2Pb4/1P1r4/P5PP/5K2 b - - 2 24\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1424.\n- Forcing sequence to calculate: a8f8 e7h7 g8h7 f5f8.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play a8f8 to execute the plan.\nFinal move (UCI): a8f8",
+      "category": "tactics",
+      "rating": 1424,
+      "best_move": "a8f8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0031",
+      "question": "FEN: 8/7k/2nq3P/p2pp1Pp/Pp1p4/1B1P4/1PPB2K1/4R3 b - - 2 35\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1693.\n- Forcing sequence to calculate: h7g6 e1f1 c6e7 f1f6 d6f6 g5f6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h7g6 to execute the plan.\nFinal move (UCI): h7g6",
+      "category": "tactics",
+      "rating": 1693,
+      "best_move": "h7g6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0032",
+      "question": "FEN: 3r1rk1/1bq1bppp/p1p2n2/4pRB1/2B5/2N1Q3/PPP3PP/4R1K1 b - - 3 16\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1766.\n- Forcing sequence to calculate: d8d4 f5e5 d4c4 e5e7 c7h2 g1h2.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d8d4 to execute the plan.\nFinal move (UCI): d8d4",
+      "category": "tactics",
+      "rating": 1766,
+      "best_move": "d8d4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0033",
+      "question": "FEN: 3rr1k1/pp4pp/2p5/3P1P2/3PP2n/P5NP/7P/R1B3K1 w - - 1 25\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1151.\n- Forcing sequence to calculate: c1g5 h4f3 g1f2 f3g5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c1g5 to execute the plan.\nFinal move (UCI): c1g5",
+      "category": "tactics",
+      "rating": 1151,
+      "best_move": "c1g5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0034",
+      "question": "FEN: r4rk1/pp4pp/2b1p3/3pP3/8/1P1BPnp1/PB1N2R1/R6K w - - 2 23\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1875.\n- Forcing sequence to calculate: e3e4 f3d2 g2d2 d5e4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e3e4 to execute the plan.\nFinal move (UCI): e3e4",
+      "category": "tactics",
+      "rating": 1875,
+      "best_move": "e3e4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0035",
+      "question": "FEN: 6k1/r4ppp/2prp3/3p4/PP2nP2/1NPbP3/3B2PP/R1R3K1 w - - 7 25\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1766.\n- Forcing sequence to calculate: a4a5 d3c4 b3c5 e4d2 c1d1 d2b3 c5b3 c4b3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play a4a5 to execute the plan.\nFinal move (UCI): a4a5",
+      "category": "tactics",
+      "rating": 1766,
+      "best_move": "a4a5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0036",
+      "question": "FEN: 6k1/2p2p2/2p3p1/4P3/PPP2q1P/5r2/6QP/6RK w - - 0 38\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1535.\n- Forcing sequence to calculate: h4h5 f3f2 g2f2 f4f2.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h4h5 to execute the plan.\nFinal move (UCI): h4h5",
+      "category": "tactics",
+      "rating": 1535,
+      "best_move": "h4h5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0037",
+      "question": "FEN: 3r3r/pp3pkp/2q3p1/3R2P1/8/1P3Q1P/P4P2/3R2K1 b - - 0 26\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1565.\n- Forcing sequence to calculate: h8e8 f3f6 c6f6 g5f6 g7f6 d5d8.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h8e8 to execute the plan.\nFinal move (UCI): h8e8",
+      "category": "tactics",
+      "rating": 1565,
+      "best_move": "h8e8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0038",
+      "question": "FEN: 4Q3/5rk1/b1p5/4p3/1p2qpP1/1P3n2/KP6/7R b - - 1 36\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1046.\n- Forcing sequence to calculate: e4d5 e8h8 g7g6 h8h6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e4d5 to execute the plan.\nFinal move (UCI): e4d5",
+      "category": "tactics",
+      "rating": 1046,
+      "best_move": "e4d5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0039",
+      "question": "FEN: 1Q3k2/1p2qpp1/p1p4p/4P3/PP3PP1/7P/8/6K1 b - - 3 30\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1068.\n- Forcing sequence to calculate: e7d8 b8d8.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e7d8 to execute the plan.\nFinal move (UCI): e7d8",
+      "category": "tactics",
+      "rating": 1068,
+      "best_move": "e7d8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0040",
+      "question": "FEN: 1rr3k1/2q2ppp/2b1p3/p2n4/3N1p2/B2B4/1PP1Q1PP/1KR1R3 w - - 2 23\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1762.\n- Forcing sequence to calculate: d4c6 d5c3 b1a1 c3e2 c6e7 g8h8.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d4c6 to execute the plan.\nFinal move (UCI): d4c6",
+      "category": "tactics",
+      "rating": 1762,
+      "best_move": "d4c6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0041",
+      "question": "FEN: R7/1Qq2krp/2p1p1r1/2Pp4/3PpP2/6PP/7K/1R6 b - - 1 33\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1061.\n- Forcing sequence to calculate: c7b7 b1b7 f7f6 a8f8 g7f7 b7f7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c7b7 to execute the plan.\nFinal move (UCI): c7b7",
+      "category": "tactics",
+      "rating": 1061,
+      "best_move": "c7b7",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0042",
+      "question": "FEN: r1bqk1n1/pp3pb1/4p3/2pp2P1/3nP3/2NP2P1/PPP2P2/R1BQKBN1 w Qq - 0 11\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1201.\n- Forcing sequence to calculate: g1e2 d4f3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g1e2 to execute the plan.\nFinal move (UCI): g1e2",
+      "category": "tactics",
+      "rating": 1201,
+      "best_move": "g1e2",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0043",
+      "question": "FEN: 8/8/1p3k2/p7/1PP3KP/8/8/8 w - - 0 50\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1609.\n- Forcing sequence to calculate: b4a5 b6a5 h4h5 a5a4 c4c5 a4a3 h5h6 a3a2 h6h7 f6g7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play b4a5 to execute the plan.\nFinal move (UCI): b4a5",
+      "category": "tactics",
+      "rating": 1609,
+      "best_move": "b4a5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0044",
+      "question": "FEN: 8/8/2N5/8/PP6/1k6/5r2/1K6 w - - 1 54\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1903.\n- Forcing sequence to calculate: b1c1 f2c2 c1d1 c2c6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play b1c1 to execute the plan.\nFinal move (UCI): b1c1",
+      "category": "tactics",
+      "rating": 1903,
+      "best_move": "b1c1",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0045",
+      "question": "FEN: 2r2k2/3R2p1/2p3Kp/1pp5/6P1/1P1P3P/8/8 b - - 0 38\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1159.\n- Forcing sequence to calculate: c8e8 d7f7 f8g8 f7g7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c8e8 to execute the plan.\nFinal move (UCI): c8e8",
+      "category": "tactics",
+      "rating": 1159,
+      "best_move": "c8e8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0046",
+      "question": "FEN: rnb2r2/pp4k1/3b1p1p/3BN2q/3P1BpP/8/PPPQ2P1/5RKR w - - 0 17\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1548.\n- Forcing sequence to calculate: e5c4 d6f4 d2f4 h5d5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e5c4 to execute the plan.\nFinal move (UCI): e5c4",
+      "category": "tactics",
+      "rating": 1548,
+      "best_move": "e5c4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0047",
+      "question": "FEN: r2q1rk1/bpp3p1/p2p3p/3P1p2/4N1b1/3PBN2/PPP2P2/R2QR1K1 w - - 0 17\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1849.\n- Forcing sequence to calculate: e4g3 f5f4 e3a7 f4g3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e4g3 to execute the plan.\nFinal move (UCI): e4g3",
+      "category": "tactics",
+      "rating": 1849,
+      "best_move": "e4g3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0048",
+      "question": "FEN: 6k1/1p4p1/p3p3/q2pPr1p/3P1P1b/2r3NP/P2Q2R1/6RK b - - 1 31\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1425.\n- Forcing sequence to calculate: h4g3 g2g3 c3g3 d2a5 g3g1 h1g1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h4g3 to execute the plan.\nFinal move (UCI): h4g3",
+      "category": "tactics",
+      "rating": 1425,
+      "best_move": "h4g3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0049",
+      "question": "FEN: 7k/p1p2p1p/5N2/4qp2/6r1/8/2P2QPP/R6K w - - 2 26\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1335.\n- Forcing sequence to calculate: f6g4 e5a1 f2g1 a1g1 h1g1 f5g4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f6g4 to execute the plan.\nFinal move (UCI): f6g4",
+      "category": "tactics",
+      "rating": 1335,
+      "best_move": "f6g4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0050",
+      "question": "FEN: 5k2/p1p4p/1r3p2/8/2KPn3/1BP2R2/P1P4P/8 w - - 2 37\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1086.\n- Forcing sequence to calculate: a2a4 e4d2 c4d3 d2f3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play a2a4 to execute the plan.\nFinal move (UCI): a2a4",
+      "category": "tactics",
+      "rating": 1086,
+      "best_move": "a2a4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0051",
+      "question": "FEN: 2r3k1/p4p1p/1bN1pPp1/3nP3/3p4/6B1/4r1PP/2R2R1K b - - 4 31\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1882.\n- Forcing sequence to calculate: g8f8 c6d4 c8c1 f1c1 f8e8 d4e2.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g8f8 to execute the plan.\nFinal move (UCI): g8f8",
+      "category": "tactics",
+      "rating": 1882,
+      "best_move": "g8f8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0052",
+      "question": "FEN: 8/3q3k/3r2P1/p3Qp1B/4bP1K/8/PR6/3q4 b - - 0 51\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1116.\n- Forcing sequence to calculate: h7h6 e5h8 d7h7 h8h7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h7h6 to execute the plan.\nFinal move (UCI): h7h6",
+      "category": "tactics",
+      "rating": 1116,
+      "best_move": "h7h6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0053",
+      "question": "FEN: r1b2Q2/1p1k4/p1pB1b1p/P3Nqp1/3P4/2P5/5PPP/6K1 b - - 2 24\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1980.\n- Forcing sequence to calculate: d7e6 f8f7 e6d6 e5c4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d7e6 to execute the plan.\nFinal move (UCI): d7e6",
+      "category": "tactics",
+      "rating": 1980,
+      "best_move": "d7e6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0054",
+      "question": "FEN: 8/8/2K4k/5P2/2P3Q1/P2q4/8/4r3 b - - 10 55\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1312.\n- Forcing sequence to calculate: d3a3 g4g6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d3a3 to execute the plan.\nFinal move (UCI): d3a3",
+      "category": "tactics",
+      "rating": 1312,
+      "best_move": "d3a3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0055",
+      "question": "FEN: 4r2k/1p2Np1p/p1pQ1P2/2P3r1/6pq/4R3/P5P1/6K1 b - - 4 38\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1639.\n- Forcing sequence to calculate: g5h5 e7g6 h7g6 e3e8 h8h7 e8h8 h7h8 d6f8 h8h7 f8g7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g5h5 to execute the plan.\nFinal move (UCI): g5h5",
+      "category": "tactics",
+      "rating": 1639,
+      "best_move": "g5h5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0056",
+      "question": "FEN: 8/4R1Rp/5k2/3K4/1p2pPP1/8/Prp2P1P/8 b - - 7 41\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1867.\n- Forcing sequence to calculate: c2c1q e7f7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c2c1q to execute the plan.\nFinal move (UCI): c2c1q",
+      "category": "tactics",
+      "rating": 1867,
+      "best_move": "c2c1q",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0057",
+      "question": "FEN: rn2k2r/4qppp/4pn2/1b1p4/1N1P4/pP4P1/4PPBP/R1BQ1RK1 w kq - 0 17\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1313.\n- Forcing sequence to calculate: c1a3 a8a3 a1a3 e7b4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c1a3 to execute the plan.\nFinal move (UCI): c1a3",
+      "category": "tactics",
+      "rating": 1313,
+      "best_move": "c1a3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0058",
+      "question": "FEN: 8/8/p4k2/P5p1/1N2K1P1/7n/8/8 b - - 0 46\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1503.\n- Forcing sequence to calculate: h3f2 e4f3 f2d1 b4a6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h3f2 to execute the plan.\nFinal move (UCI): h3f2",
+      "category": "tactics",
+      "rating": 1503,
+      "best_move": "h3f2",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0059",
+      "question": "FEN: 1r4k1/1p1r1ppp/p3qb2/2pNp2Q/5P2/1PPR3P/P5P1/4R1K1 w - - 0 29\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1266.\n- Forcing sequence to calculate: f4e5 d7d5 d3d5 e6d5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f4e5 to execute the plan.\nFinal move (UCI): f4e5",
+      "category": "tactics",
+      "rating": 1266,
+      "best_move": "f4e5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0060",
+      "question": "FEN: 2b4k/p6p/6p1/2N3q1/3pQr2/1P5p/P4P2/R2R3K w - - 5 27\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1690.\n- Forcing sequence to calculate: e4e8 h8g7 d1g1 g5c5.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e4e8 to execute the plan.\nFinal move (UCI): e4e8",
+      "category": "tactics",
+      "rating": 1690,
+      "best_move": "e4e8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0061",
+      "question": "FEN: 8/6p1/p4kp1/2NPp2p/8/2b2P1P/K7/8 b - - 1 36\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1089.\n- Forcing sequence to calculate: a6a5 c5e4 f6e7 e4c3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play a6a5 to execute the plan.\nFinal move (UCI): a6a5",
+      "category": "tactics",
+      "rating": 1089,
+      "best_move": "a6a5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0062",
+      "question": "FEN: r1bqr1k1/pp4pQ/3b4/2n3N1/7P/2n1P3/PP3PP1/R1B1K2R b KQ - 4 18\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1275.\n- Forcing sequence to calculate: g8f8 h7h8 f8e7 h8g7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g8f8 to execute the plan.\nFinal move (UCI): g8f8",
+      "category": "tactics",
+      "rating": 1275,
+      "best_move": "g8f8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0063",
+      "question": "FEN: 3r2k1/4b1pp/1Q2b1q1/1p3p2/4N3/P1B2P2/1P4PP/5R1K w - - 2 28\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1958.\n- Forcing sequence to calculate: e4c5 e6c4 b6g6 h7g6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e4c5 to execute the plan.\nFinal move (UCI): e4c5",
+      "category": "tactics",
+      "rating": 1958,
+      "best_move": "e4c5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0064",
+      "question": "FEN: 8/5Rp1/1p5p/p1pBk3/2P5/4P1PP/1r3bK1/8 w - - 2 40\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1253.\n- Forcing sequence to calculate: f7f2 b2f2 g2f2 a5a4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f7f2 to execute the plan.\nFinal move (UCI): f7f2",
+      "category": "tactics",
+      "rating": 1253,
+      "best_move": "f7f2",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0065",
+      "question": "FEN: 3q1rk1/1bb3p1/p6p/1p2pn2/1P1pP3/P2P2PB/3B1P1P/1QR3K1 w - - 0 31\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1361.\n- Forcing sequence to calculate: e4f5 d8d5 f2f3 d5f3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e4f5 to execute the plan.\nFinal move (UCI): e4f5",
+      "category": "tactics",
+      "rating": 1361,
+      "best_move": "e4f5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0066",
+      "question": "FEN: 2r2k2/5p1p/pQ3pq1/1p2p3/8/PR5P/1P3PPK/8 b - - 3 39\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1056.\n- Forcing sequence to calculate: g6c2 b6d6 f8g7 b3g3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g6c2 to execute the plan.\nFinal move (UCI): g6c2",
+      "category": "tactics",
+      "rating": 1056,
+      "best_move": "g6c2",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0067",
+      "question": "FEN: 7R/1r2k1pp/4p3/1p1p2PP/r2P4/2P5/p1PK4/R7 b - - 5 42\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1470.\n- Forcing sequence to calculate: h7h6 g5h6 g7h6 h8h7 e7f6 h7b7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h7h6 to execute the plan.\nFinal move (UCI): h7h6",
+      "category": "tactics",
+      "rating": 1470,
+      "best_move": "h7h6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0068",
+      "question": "FEN: 4r1k1/5pp1/1pp1N1p1/q3P3/rn6/6B1/4QPPP/3R1RK1 b - - 0 29\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1697.\n- Forcing sequence to calculate: e8e6 d1d8 g8h7 e2g4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e8e6 to execute the plan.\nFinal move (UCI): e8e6",
+      "category": "tactics",
+      "rating": 1697,
+      "best_move": "e8e6",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0069",
+      "question": "FEN: 1r3r2/6k1/p1p2p2/2qppP1p/6bP/1PN5/P1PQ2P1/4RR1K w - - 0 24\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1789.\n- Forcing sequence to calculate: e1e5 f6e5 d2g5 g7f7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play e1e5 to execute the plan.\nFinal move (UCI): e1e5",
+      "category": "tactics",
+      "rating": 1789,
+      "best_move": "e1e5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0070",
+      "question": "FEN: 5r2/1p6/p2p4/P1pPbk2/7P/2P5/1P2R1P1/6K1 b - - 2 45\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1157.\n- Forcing sequence to calculate: c5c4 e2f2 e5f4 g2g3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c5c4 to execute the plan.\nFinal move (UCI): c5c4",
+      "category": "tactics",
+      "rating": 1157,
+      "best_move": "c5c4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0071",
+      "question": "FEN: r5k1/1p4p1/p1p1Q2p/2Pp4/1P5b/P3P3/qB4PK/8 b - - 0 24\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1550.\n- Forcing sequence to calculate: g8h8 e6h6 h8g8 h6g7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g8h8 to execute the plan.\nFinal move (UCI): g8h8",
+      "category": "tactics",
+      "rating": 1550,
+      "best_move": "g8h8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0072",
+      "question": "FEN: 6k1/6p1/1p1b1p1p/3P4/1qP5/3Q1N1P/5PP1/6K1 w - - 1 33\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1102.\n- Forcing sequence to calculate: f3d4 b4e1 d3f1 d6h2 g1h2 e1f1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play f3d4 to execute the plan.\nFinal move (UCI): f3d4",
+      "category": "tactics",
+      "rating": 1102,
+      "best_move": "f3d4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0073",
+      "question": "FEN: r2q2k1/1p4pp/p1np4/3N4/2Pnp2r/3QB3/PP3PPP/2R2RK1 w - - 0 23\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1823.\n- Forcing sequence to calculate: d3d2 d4f3 g2f3 c6e5 e3f4 e5f3.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d3d2 to execute the plan.\nFinal move (UCI): d3d2",
+      "category": "tactics",
+      "rating": 1823,
+      "best_move": "d3d2",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0074",
+      "question": "FEN: r2qr1kQ/ppp5/2n1b1p1/3p1p2/8/3BP1P1/PP1N1PP1/R3K2R b KQ - 1 17\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1177.\n- Forcing sequence to calculate: g8f7 h1h7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play g8f7 to execute the plan.\nFinal move (UCI): g8f7",
+      "category": "tactics",
+      "rating": 1177,
+      "best_move": "g8f7",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0075",
+      "question": "FEN: 3r2k1/p4pp1/2b5/3P4/P1B5/1P5q/3Q1P1P/3R2K1 w - - 0 31\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1293.\n- Forcing sequence to calculate: d2e3 h3g4 g1f1 g4d1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play d2e3 to execute the plan.\nFinal move (UCI): d2e3",
+      "category": "tactics",
+      "rating": 1293,
+      "best_move": "d2e3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0076",
+      "question": "FEN: r1bq1kBr/ppp3p1/2np3p/2b3N1/3pP3/1QP5/P4PPP/RNB1K2R b KQ - 0 10\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1489.\n- Forcing sequence to calculate: h8g8 b3f7.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play h8g8 to execute the plan.\nFinal move (UCI): h8g8",
+      "category": "tactics",
+      "rating": 1489,
+      "best_move": "h8g8",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0077",
+      "question": "FEN: 8/8/6p1/1pp1KP1p/1k5P/6P1/8/8 b - - 0 47\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1672.\n- Forcing sequence to calculate: c5c4 f5f6 c4c3 f6f7 c3c2 f7f8q.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c5c4 to execute the plan.\nFinal move (UCI): c5c4",
+      "category": "tactics",
+      "rating": 1672,
+      "best_move": "c5c4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0078",
+      "question": "FEN: 8/4p1k1/2p3p1/3p1q2/3P1N2/1p2n3/1PP5/1KQ5 w - - 0 33\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1378.\n- Forcing sequence to calculate: c1e3 f5c2 b1a1 c2d1 e3c1 d1c1.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play c1e3 to execute the plan.\nFinal move (UCI): c1e3",
+      "category": "tactics",
+      "rating": 1378,
+      "best_move": "c1e3",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0079",
+      "question": "FEN: r1b1k2r/pppp2pp/5n2/8/PqBQ4/4B3/P3KPPP/R6R b kq - 6 16\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1246.\n- Forcing sequence to calculate: b4a4 c4f7 e8f7 d4a4.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play b4a4 to execute the plan.\nFinal move (UCI): b4a4",
+      "category": "tactics",
+      "rating": 1246,
+      "best_move": "b4a4",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    },
+    {
+      "id": "director-0080",
+      "question": "FEN: rnbr2k1/1pb1npp1/p1p2q1p/4p3/P1B1P3/1P3N2/1BP1NPPP/R2Q1RK1 w - - 2 13\nInstruction: Provide a strategic overview for this position.\nExplain the critical ideas and finish with the chosen move in UCI notation.",
+      "expected_answer": "Strategic briefing:\n- Position theme: tactics scenario around rating 1818.\n- Forcing sequence to calculate: b2e5 d8d1 e5f6 d1f1 g1f1 g7f6.\n- Convert the tactical gain into a lasting advantage while keeping king safety secure.\n- Key continuation: play b2e5 to execute the plan.\nFinal move (UCI): b2e5",
+      "category": "tactics",
+      "rating": 1818,
+      "best_move": "b2e5",
+      "source": "lichess_puzzles_1000_2000.jsonl"
+    }
+  ]
+}

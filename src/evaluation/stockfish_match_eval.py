@@ -102,6 +102,17 @@ def main():
         print("Could not load model.")
         return
 
+    # Warm-up to exclude model/adapters loading from latency numbers
+    print("⚙️  Priming inference pipeline (warm-up)...")
+    warmup_prompt = (
+        "FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n"
+        "Move:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+    )
+    inference.set_active_adapter("uci")
+    warm_start = time.time()
+    inference.generate_response(warmup_prompt, mode="engine", max_new_tokens=6)
+    print(f"   Warm-up completed in {time.time() - warm_start:.2f}s (excluded from measurements)")
+
     results: List[Dict[str, Any]] = []
     match = 0
     legal = 0

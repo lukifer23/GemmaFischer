@@ -4,7 +4,7 @@
 
 ChessGemma uses standardized training datasets for fine-tuning specialized expert models. All datasets are validated for quality and formatted consistently.
 
-**Current Status**: 105K+ validated training samples across three expert domains.
+**Current Status**: 150K validated, placeholder-free training samples across three expert domains.
 
 ## Available Datasets
 
@@ -13,14 +13,28 @@ ChessGemma uses standardized training datasets for fine-tuning specialized exper
 | Dataset | Location | Size | Purpose |
 |---------|----------|------|---------|
 | UCI Expert | `data/standardized/standardized_uci_expert.jsonl` | 50,000 samples | Chess move generation |
-| Tutor Expert | `data/standardized/standardized_tutor_expert.jsonl` | 50,000 samples | Chess explanations |
-| Director Expert | `data/standardized/standardized_director_expert.jsonl` | 5,133 samples | Q&A reasoning |
+| Tutor Expert | `data/standardized/standardized_tutor_expert_v2.jsonl` | 49,999 samples | Chess explanations |
+| Director Expert | `data/standardized/standardized_director_expert_v3.jsonl` | 49,999 samples | Strategic Q&A reasoning |
 
 ### Dataset Quality
 - **Validation**: 100% move legality verification with Stockfish
 - **Format**: Standardized JSONL schema
 - **Quality**: All samples validated for correctness
 - **Metadata**: Includes FEN positions, ratings, and quality scores
+
+### Validation & Evaluation Datasets
+| Dataset | Location | Purpose |
+|---------|----------|---------|
+| Router Eval Suite | `data/validation/eval_suite.jsonl` | Mixed intent queries used for MoE regression checks |
+| UCI Eval Positions | `data/validation/eval_mixed_positions_200.jsonl` | 200 Stockfish-verified move targets |
+| Tutor Eval Puzzles | `data/validation/tutor_comprehensive_validation.json` | Step-by-step analysis prompts with reference answers |
+| Director Eval QA | `data/validation/director_comprehensive_validation.json` | Strategic/rules queries with curated expectations |
+
+Regenerate the evaluation artifacts after dataset updates:
+
+```bash
+python scripts/generate_evaluation_data.py
+```
 
 
 ## Data Format

@@ -6,8 +6,17 @@ Test data quality and basic functionality without requiring full inference depen
 import os
 import sys
 import json
+import re
 from pathlib import Path
 from typing import Dict, Any, List
+
+PLACEHOLDER_TOKENS = {
+    "[tactical_move]",
+    "[discovered_attack]",
+    "[double_attack]",
+    "[skewer]",
+    "[fork]",
+}
 
 def test_expert_data_quality():
     """Test that expert training data is properly formatted."""
@@ -16,8 +25,8 @@ def test_expert_data_quality():
 
     expert_files = {
         'uci': 'data/standardized/standardized_uci_expert.jsonl',
-        'tutor': 'data/standardized/standardized_tutor_expert.jsonl',
-        'director': 'data/standardized/standardized_director_expert_v2.jsonl'
+        'tutor': 'data/standardized/standardized_tutor_expert_v2.jsonl',
+        'director': 'data/standardized/standardized_director_expert_v3.jsonl'
     }
 
     results = {}
@@ -35,7 +44,9 @@ def test_expert_data_quality():
             valid_count = 0
             sample_entries = []
 
-            with open(filepath, 'r') as f:
+            placeholder_hits = 0
+
+            with open(filepath, 'r', encoding='utf-8') as f:
                 for line_num, line in enumerate(f, 1):
                     if line.strip():
                         count += 1
@@ -53,6 +64,19 @@ def test_expert_data_quality():
                                 print(f"  ❌ Line {line_num}: Missing FEN in meta")
                                 continue
 
+                            response: str = entry.get("response", "")
+                            if any(token in response for token in PLACEHOLDER_TOKENS):
+                                print(f"  ❌ Line {line_num}: Placeholder token detected in response")
+                                placeholder_hits += 1
+                                continue
+
+                            if expert == 'tutor' and 'best move:' not in response.lower():
+                                print(f"  ❌ Line {line_num}: Tutor response missing 'best move:' marker")
+                                continue
+
+                            if expert == 'director' and (('final move' not in response.lower()) and entry.get('meta', {}).get('best_move')):
+                                print(f"  ⚠️  Line {line_num}: Director response missing 'Final move (UCI):' marker")
+
                             valid_count += 1
 
                             # Keep a few samples
@@ -67,7 +91,9 @@ def test_expert_data_quality():
                         break
 
             print(f"  ✅ Found {count} total entries, {valid_count} valid")
-            print(".1f")
+            if placeholder_hits:
+                print(f"  ⚠️  Placeholder responses skipped: {placeholder_hits}")
+
             # Show sample entries
             for i, entry in enumerate(sample_entries[:2]):
                 prompt_preview = entry['prompt'][:80] + "..." if len(entry['prompt']) > 80 else entry['prompt']
@@ -118,7 +144,10 @@ def test_evaluation_data():
             if all(field in query for field in ['question', 'expert', 'category']):
                 valid_queries += 1
 
-        print(".1f")
+        if valid_queries != len(queries):
+            print(f"  ❌ Schema errors detected in {len(queries) - valid_queries} queries")
+        else:
+            print(f"  ✅ Schema integrity: {valid_queries}/{len(queries)} queries valid")
         # Show sample queries
         print("\n📝 Sample queries:")
         for i, query in enumerate(queries[:3]):

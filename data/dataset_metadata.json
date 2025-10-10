@@ -1,7 +1,7 @@
 {
-  "version": "2.0",
-  "last_updated": "2024-09-12",
-  "total_samples": 105631,
+  "version": "2.2",
+  "last_updated": "2025-10-10",
+  "total_samples": 149998,
   "datasets": {
     "standardized_uci_expert": {
       "path": "data/standardized/standardized_uci_expert.jsonl",
@@ -13,25 +13,25 @@
       "validation_status": "Stockfish verified",
       "created_date": "2024-09-12"
     },
-    "standardized_tutor_expert": {
-      "path": "data/standardized/standardized_tutor_expert.jsonl", 
-      "samples": 50000,
+    "standardized_tutor_expert_v2": {
+      "path": "data/standardized/standardized_tutor_expert_v2.jsonl", 
+      "samples": 49999,
       "task": "tutor_explain",
       "format": "JSONL with metadata",
       "purpose": "Chess explanation training",
       "quality_score": 0.8,
-      "validation_status": "Stockfish verified",
-      "created_date": "2024-09-12"
+      "validation_status": "Stockfish verified; best-move normalized",
+      "created_date": "2025-10-10"
     },
-    "standardized_director_expert": {
-      "path": "data/standardized/standardized_director_expert_v2.jsonl",
-      "samples": 50000,
+    "standardized_director_expert_v3": {
+      "path": "data/standardized/standardized_director_expert_v3.jsonl",
+      "samples": 49999,
       "task": "director_qa", 
       "format": "JSONL with metadata",
       "purpose": "Strategic reasoning training",
       "quality_score": 0.8,
-      "validation_status": "Derived from tutor dataset with automated checks",
-      "created_date": "2025-09-16"
+      "validation_status": "Augmented strategic QA; best-move normalized",
+      "created_date": "2025-10-10"
     }
   },
   "data_structure": {

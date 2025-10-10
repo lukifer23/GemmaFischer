@@ -226,8 +226,8 @@ class ChessGemmaInference:
         self._cache_lock = threading.RLock()
 
         # Feature flags
-        self._engine_rerank_enabled = (os.environ.get('CHESSGEMMA_ENGINE_RERANK', '1') not in ('0', 'false', 'False'))
-        self._engine_policy = os.environ.get('CHESSGEMMA_ENGINE_POLICY', 'sample').strip().lower()  # sample | logprob
+        self._engine_rerank_enabled = (os.environ.get('CHESSGEMMA_ENGINE_RERANK', '0') not in ('0', 'false', 'False'))
+        self._engine_policy = os.environ.get('CHESSGEMMA_ENGINE_POLICY', 'logprob').strip().lower()  # sample | logprob
         self._engine_constrain_enabled = (os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN', '0') not in ('0','false','False'))
         self._engine_constrain_mode = os.environ.get('CHESSGEMMA_ENGINE_CONSTRAIN_MODE', 'simple').strip().lower()
         self._allowed_token_ids_cache: Optional[set] = None

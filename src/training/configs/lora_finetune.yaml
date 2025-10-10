@@ -20,7 +20,7 @@ lora:
 datasets:
   - path: "data/standardized/standardized_uci_expert.jsonl"
     weight: 0.34
-  - path: "data/standardized/standardized_tutor_expert.jsonl"
+  - path: "data/standardized/standardized_tutor_expert_v2.jsonl"
     weight: 0.33
-  - path: "data/standardized/standardized_director_expert_v2.jsonl"
+  - path: "data/standardized/standardized_director_expert_v3.jsonl"
     weight: 0.33

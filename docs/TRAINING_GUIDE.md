@@ -36,8 +36,8 @@ ChessGemma uses standardized training data across three expert domains:
 ```bash
 # Current dataset sizes (validated and processed)
 data/standardized/standardized_uci_expert.jsonl:         50,000 samples (UCI move generation)
-data/standardized/standardized_tutor_expert.jsonl:       50,000 samples (Chess explanations)
-data/standardized/standardized_director_expert_v2.jsonl:  50,000 samples (Strategic reasoning)
+data/standardized/standardized_tutor_expert_v2.jsonl:     49,999 samples (Chess explanations)
+data/standardized/standardized_director_expert_v3.jsonl:  49,999 samples (Strategic reasoning)
 data/standardized/standardized_cot_reasoning_repaired.jsonl: 2,000 samples (CoT reasoning)
 ```
 

@@ -21,7 +21,7 @@ import re
 # Constants
 TARGET_EXAMPLES = 10000
 SOURCE_DATASETS = [
-    "data/standardized/standardized_tutor_expert.jsonl",
+    "data/standardized/standardized_tutor_expert_v2.jsonl",
     "data/standardized/standardized_enhanced_tutor_expert.jsonl"
 ]
 

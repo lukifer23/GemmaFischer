@@ -428,6 +428,32 @@ class ChessEngineManager:
             logger.error(f"Error getting best move from engine: {e}")
             return None
 
+    def get_top_moves(self, board: chess.Board, depth: int = 8, top_k: int = 3) -> List[chess.Move]:
+        """Return up to top_k moves ranked by Stockfish evaluation."""
+        try:
+            limit = chess.engine.Limit(depth=depth)
+            with self._engine_lock:
+                engine = self.engine
+                if engine is None:
+                    raise RuntimeError("Chess engine is not initialized")
+                info = engine.analyse(board, limit, multipv=top_k)
+
+            moves: List[chess.Move] = []
+            if isinstance(info, list):
+                for entry in info:
+                    pv = entry.get('pv')
+                    if pv:
+                        moves.append(pv[0])
+            elif isinstance(info, dict):
+                pv = info.get('pv')
+                if pv:
+                    moves.append(pv[0])
+
+            return moves
+        except Exception as e:
+            logger.error(f"Error getting top moves from engine: {e}")
+            return []
+
     def validate_dataset_entry(self, question: str, answer: str) -> Dict[str, Any]:
         """Validate a dataset entry using chess engine analysis."""
         validation_result = {

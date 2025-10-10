@@ -109,7 +109,7 @@ def validate_director_data():
     """Validate Director training data quality."""
     print("\n🔍 Validating Director Training Data...")
 
-    data_path = project_root / "data" / "standardized" / "standardized_director_expert_v2.jsonl"
+    data_path = project_root / "data" / "standardized" / "standardized_director_expert_v3.jsonl"
 
     if not data_path.exists():
         print(f"❌ Director data file not found: {data_path}")
