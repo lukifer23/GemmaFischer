@@ -1005,18 +1005,49 @@ class ChessGemmaInference:
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
         # TEMPORARY: Use ultra-simple prompts to test if model can respond at all
+        context_block = f"\nContext: {context.strip()}" if context else ""
+
         if mode == "tutor":
-            # Simple, direct prompt
-            prompt = f"Question: {question}\n\nYou are a chess tutor. Explain this clearly:"
+            system = "System: You are ChessGemma, a concise chess tutor who answers with clear, practical chess insight."
+            prompt = f"{system}{context_block}\nUser: {question}\nAssistant:"
             return [{"role": "user", "content": prompt}]
         elif mode == "director":
-            # Simple Q&A format
-            prompt = f"Question: {question}\n\nAnswer as a chess expert:"
+            system = "System: You are ChessGemma, a strategic director who gives high-level chess guidance and reasoning."
+            prompt = f"{system}{context_block}\nUser: {question}\nAssistant:"
             return [{"role": "user", "content": prompt}]
         else:
-            # Engine mode - keep simple
-            prompt = f"Find the best chess move: {question}"
+            system = "System: Return only the strongest move for the side to move in UCI notation (e.g., e2e4)."
+            prompt = f"{system}{context_block}\nPosition: {question}\nAssistant:"
             return [{"role": "user", "content": prompt}]
+
+    @staticmethod
+    def _extract_answer_from_decoded(decoded: str, prompt_text: str) -> str:
+        """Strip prompt scaffolding and assistant markers from decoded model text."""
+        text = decoded or ""
+
+        # Exact prefix
+        if prompt_text and text.startswith(prompt_text):
+            text = text[len(prompt_text):]
+        else:
+            # Fallback: remove first occurrence of the stripped prompt
+            stripped_prompt = prompt_text.strip()
+            if stripped_prompt:
+                idx = text.find(stripped_prompt)
+                if idx != -1:
+                    text = text[idx + len(stripped_prompt):]
+
+        # Remove assistant markers
+        for marker in ("Assistant:", "assistant:", "ASSISTANT:"):
+            if marker in text:
+                text = text.split(marker, 1)[-1]
+                break
+
+        # Stop at any subsequent system/user markers
+        for marker in ("User:", "Question:", "System:", "Position:"):
+            if marker in text:
+                text = text.split(marker, 1)[0]
+
+        return text.strip()
 
     def _create_cache_key(self, question: str, context: Optional[str], mode: str,
                          max_new_tokens: int, temperature: float, top_p: float) -> str:
@@ -1234,31 +1265,16 @@ class ChessGemmaInference:
                 decoded = decoded  # already built above (prompt + answer)
             else:
                 decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Debug logging for response
+
             if self.debug:
                 logger.debug(f"Raw Response Length: {len(decoded)} chars")
                 logger.debug(f"Raw Response Preview: {decoded[:300]}{'...' if len(decoded) > 300 else ''}")
                 logger.debug(f"Raw Response Full: {decoded}")
-            
-            # Try to strip prompt prefix if echoed
-            if decoded.startswith(prompt_text):
-                answer = decoded[len(prompt_text):].strip()
-                if self.debug:
-                    logger.debug(f"Stripped prompt prefix, answer length: {len(answer)}")
-                    logger.debug(f"Stripped answer preview: '{answer[:100]}'")
-            else:
-                answer = decoded.strip()
-                if self.debug:
-                    logger.debug("No prompt prefix found, using full response")
-                    logger.debug(f"Full response preview: '{answer[:100]}'")
 
-            # TEMPORARILY DISABLE PROMPT STRIPPING FOR DEBUGGING
-            # If answer is too short after stripping, use full decoded response
-            if len(answer) < 20 and len(decoded.strip()) > len(answer) + 50:
-                if self.debug:
-                    logger.debug(f"Answer too short after stripping ({len(answer)}), using full response")
-                answer = decoded.strip()
+            answer = self._extract_answer_from_decoded(decoded, prompt_text)
+
+            if self.debug:
+                logger.debug(f"Answer after prompt stripping: '{answer[:200]}{'...' if len(answer) > 200 else ''}'")
             
             # Clean up common artifacts
             if answer.startswith("Answer:"):
@@ -1271,11 +1287,15 @@ class ChessGemmaInference:
             content_lines = []
             if self.debug:
                 logger.debug(f"Processing {len(lines)} lines from model response")
+            filtered_prefixes = (
+                'Chess Tutor:', 'Chess Engine:', 'Question:', 'Position:',
+                'Answer:', 'Move:', 'System:', 'User:', 'Assistant:'
+            )
             for i, line in enumerate(lines):
                 line = line.strip()
                 if self.debug:
                     logger.debug(f"  Line {i}: '{line[:50]}{'...' if len(line) > 50 else ''}'")
-                if line and not line.startswith(('Chess Tutor:', 'Chess Engine:', 'Question:', 'Position:', 'Answer:', 'Move:')):
+                if line and not line.startswith(filtered_prefixes):
                     content_lines.append(line)
                     if self.debug:
                         logger.debug(f"    Kept line {i}")

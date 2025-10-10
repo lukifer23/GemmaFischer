@@ -18,25 +18,516 @@ let stockfishInsightsRequestId = 0;
 let stockfishInsightsPending = false;
 let lastStockfishFen = null;
 
-// Sanitize helpers
+// Sanitize helpers with error boundaries
 function sanitizeString(str) {
-  if (window.DOMPurify) {
-    return DOMPurify.sanitize(str, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+  try {
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+      return DOMPurify.sanitize(str, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    }
+    // Fallback: basic HTML entity encoding
+    return str.replace(/[&<>"']/g, function(match) {
+      const entityMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return entityMap[match];
+    });
+  } catch (error) {
+    console.warn('DOMPurify sanitizeString failed, using raw string:', error);
+    return str || '';
   }
-  return str;
+}
+
+// -----------------
+// Training Controls
+// -----------------
+async function startTraining() {
+  const expertSel = document.getElementById('train-expert');
+  const stepsInput = document.getElementById('train-steps');
+  if (!expertSel || !stepsInput) return;
+
+  const expert = expertSel.value;
+  const steps = parseInt(stepsInput.value || '1000', 10);
+  const useInstr = document.getElementById('train-use-instr')?.checked || false;
+  const disableEval = document.getElementById('train-disable-eval')?.checked || false;
+
+  try {
+    const res = await fetch('/api/train/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expert, steps, use_instruction: useInstr, disable_eval: disableEval })
+    });
+    const data = await res.json();
+    const statusEl = document.getElementById('train-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+    if (res.ok) {
+      const startBtn = document.getElementById('btn-train-start');
+      if (startBtn) startBtn.disabled = true;
+    }
+  } catch (error) {
+    const statusEl = document.getElementById('train-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function stopTraining() {
+  try {
+    const res = await fetch('/api/train/stop', { method: 'POST' });
+    const data = await res.json();
+    const statusEl = document.getElementById('train-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+    const startBtn = document.getElementById('btn-train-start');
+    if (startBtn) startBtn.disabled = false;
+  } catch (error) {
+    const statusEl = document.getElementById('train-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function refreshTrainingStatus() {
+  try {
+    const res = await fetch('/api/train/status');
+    const data = await res.json();
+    const statusEl = document.getElementById('train-status');
+    if (statusEl) {
+      const log = data.logs_tail || '';
+      statusEl.textContent = `${JSON.stringify({ ...data, logs_tail: undefined }, null, 2)}\n\n--- Logs ---\n${log}`;
+    }
+    const running = !!data.running;
+    const meta = [];
+    if (data.checkpoint_dir) meta.push(`Checkpoint: ${data.checkpoint_dir}`);
+    if (data.log_file) meta.push(`Log: ${data.log_file}`);
+    if (data.elapsed_sec) meta.push(`Elapsed: ${Math.round(data.elapsed_sec)}s`);
+    const infoEl = document.getElementById('train-meta');
+    if (infoEl) infoEl.textContent = meta.join('  |  ');
+    const startBtn = document.getElementById('btn-train-start');
+    if (startBtn) startBtn.disabled = running;
+  } catch (error) {
+    const statusEl = document.getElementById('train-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+// -----------------
+// Evaluation Tools
+// -----------------
+async function startEvalStockfish() {
+  const fileEl = document.getElementById('eval-file');
+  const limitEl = document.getElementById('eval-limit');
+  const depthEl = document.getElementById('eval-depth');
+  if (!fileEl || !limitEl || !depthEl) return;
+
+  const payload = {
+    file: fileEl.value,
+    limit: parseInt(limitEl.value || '100', 10),
+    depth: parseInt(depthEl.value || '12', 10),
+  };
+  try {
+    const res = await fetch('/api/eval/stockfish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const statusEl = document.getElementById('eval-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const statusEl = document.getElementById('eval-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function startEvalPuzzles() {
+  const fileEl = document.getElementById('puzz-file');
+  const limitEl = document.getElementById('puzz-limit');
+  if (!fileEl || !limitEl) return;
+
+  const payload = {
+    file: fileEl.value,
+    limit: parseInt(limitEl.value || '200', 10),
+  };
+  try {
+    const res = await fetch('/api/eval/puzzles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const statusEl = document.getElementById('eval-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const statusEl = document.getElementById('eval-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function refreshEvalStatus() {
+  try {
+    const res = await fetch('/api/eval/status');
+    const data = await res.json();
+    const statusEl = document.getElementById('eval-status');
+    if (statusEl) {
+      const log = data.logs_tail || '';
+      statusEl.textContent = `${JSON.stringify({ ...data, logs_tail: undefined }, null, 2)}\n\n--- Logs ---\n${log}`;
+    }
+  } catch (error) {
+    const statusEl = document.getElementById('eval-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function loadEvalHistory() {
+  try {
+    const res = await fetch('/api/eval/history');
+    const data = await res.json();
+    const historyEl = document.getElementById('eval-history');
+    if (historyEl) historyEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const historyEl = document.getElementById('eval-history');
+    if (historyEl) historyEl.textContent = `Error: ${error}`;
+  }
+}
+
+// -----------------
+// Dataset Utilities
+// -----------------
+async function cleanDataset(kind) {
+  const inEl = document.getElementById(kind === 'uci' ? 'data-uci-in' : 'data-tutor-in');
+  const outEl = document.getElementById(kind === 'uci' ? 'data-uci-out' : 'data-tutor-out');
+  if (!inEl || !outEl) return;
+
+  try {
+    const res = await fetch('/api/data/clean', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, input_path: inEl.value, output_path: outEl.value })
+    });
+    const data = await res.json();
+    const statusEl = document.getElementById('data-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const statusEl = document.getElementById('data-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function refreshDataStatus() {
+  try {
+    const res = await fetch('/api/data/status');
+    const data = await res.json();
+    const statusEl = document.getElementById('data-status');
+    if (statusEl) {
+      const log = data.logs_tail || '';
+      statusEl.textContent = `${JSON.stringify({ ...data, logs_tail: undefined }, null, 2)}\n\n--- Logs ---\n${log}`;
+    }
+  } catch (error) {
+    const statusEl = document.getElementById('data-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+// -----------------
+// Adapter & Settings Management
+// -----------------
+async function refreshAdapters() {
+  try {
+    const res = await fetch('/api/adapters/list');
+    const data = await res.json();
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+
+    const metaEl = document.getElementById('adapters-meta');
+    if (metaEl && data.available) {
+      metaEl.textContent = `Available: ${Object.keys(data.available).join(', ')}`;
+    }
+
+    const moeStatusEl = document.getElementById('moe-info');
+    if (moeStatusEl) {
+      try {
+        const modelRes = await fetch('/api/model_info');
+        const modelData = await modelRes.json();
+        if (modelData.moe_enabled && modelData.moe_available) {
+          moeStatusEl.style.display = 'block';
+          const info = [];
+          info.push(`Enabled: ${modelData.moe_enabled}`);
+          if (modelData.moe_experts) info.push(`Experts: ${modelData.moe_experts.join(', ')}`);
+          moeStatusEl.innerHTML = info.join('<br>');
+        } else {
+          moeStatusEl.style.display = 'none';
+        }
+      } catch (err) {
+        console.warn('Unable to fetch MoE info', err);
+      }
+    }
+  } catch (error) {
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function listAdapters() {
+  try {
+    const res = await fetch('/api/adapters/list');
+    const data = await res.json();
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function activateAdapter() {
+  const adapterName = prompt('Enter adapter name to activate:');
+  if (!adapterName) return;
+  try {
+    const res = await fetch('/api/adapters/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: adapterName })
+    });
+    const data = await res.json();
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
+}
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings/get');
+    const data = await res.json();
+    const policyEl = document.getElementById('engine-policy');
+    if (policyEl && data.engine_policy) policyEl.value = data.engine_policy;
+    const rerankEl = document.getElementById('engine-rerank');
+    if (rerankEl && typeof data.engine_rerank !== 'undefined') rerankEl.checked = !!data.engine_rerank;
+    const constrainEl = document.getElementById('engine-constrain');
+    if (constrainEl && typeof data.engine_constrain !== 'undefined') constrainEl.checked = !!data.engine_constrain;
+    const moeEl = document.getElementById('moe-enabled');
+    if (moeEl && typeof data.moe_enabled !== 'undefined') moeEl.checked = !!data.moe_enabled;
+  } catch (error) {
+    console.warn('Failed to load adapter settings', error);
+  }
+}
+
+async function saveSettings() {
+  const policyEl = document.getElementById('engine-policy');
+  const rerankEl = document.getElementById('engine-rerank');
+  const constrainEl = document.getElementById('engine-constrain');
+  const moeEl = document.getElementById('moe-enabled');
+
+  const payload = {
+    engine_policy: policyEl ? policyEl.value : undefined,
+    engine_rerank: rerankEl ? rerankEl.checked : undefined,
+    engine_constrain: constrainEl ? constrainEl.checked : undefined,
+    moe_enabled: moeEl ? moeEl.checked : undefined,
+  };
+
+  try {
+    const res = await fetch('/api/settings/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = JSON.stringify(data, null, 2);
+  } catch (error) {
+    const statusEl = document.getElementById('adapters-status');
+    if (statusEl) statusEl.textContent = `Error: ${error}`;
+  }
 }
 
 function sanitizeHTML(html) {
-  if (window.DOMPurify) {
-    return DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
+  try {
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+      return DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true });
+    }
+    // Fallback: create text node only
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(document.createTextNode(html || ''));
+    return fragment;
+  } catch (error) {
+    console.warn('DOMPurify sanitizeHTML failed, using text fragment:', error);
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(document.createTextNode(html || ''));
+    return fragment;
   }
-  const fragment = document.createDocumentFragment();
-  fragment.appendChild(document.createTextNode(html));
-  return fragment;
 }
 
 function getStockfishInsightsBody() {
   return document.getElementById('stockfish-insights-body');
+}
+
+// Loading states and feedback functions
+function showLoadingSpinner(elementId, message = 'Loading...') {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  element.innerHTML = `
+    <div class="d-flex align-items-center justify-content-center p-3">
+      <div class="spinner-border spinner-border-sm me-2" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <span>${sanitizeString(message)}</span>
+    </div>
+  `;
+}
+
+function hideLoadingSpinner(elementId) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  // Clear loading state but don't remove content
+  const spinner = element.querySelector('.spinner-border');
+  if (spinner && spinner.parentElement) {
+    spinner.parentElement.remove();
+  }
+}
+
+function showErrorMessage(elementId, message, type = 'danger') {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const alertClass = type === 'warning' ? 'alert-warning' : 'alert-danger';
+  element.innerHTML = `
+    <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      ${sanitizeString(message)}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+}
+
+function showSuccessMessage(elementId, message) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  element.innerHTML = `
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="fas fa-check-circle me-2"></i>
+      ${sanitizeString(message)}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+
+  // Auto-dismiss after 3 seconds
+  setTimeout(() => {
+    const alert = element.querySelector('.alert');
+    if (alert) {
+      alert.classList.remove('show');
+      setTimeout(() => alert.remove(), 150);
+    }
+  }, 3000);
+}
+
+function updateStatusIndicator(status, message) {
+  const indicator = document.getElementById('modelStatusBanner');
+  const textElement = document.getElementById('modelStatusText');
+
+  if (!indicator || !textElement) return;
+
+  // Remove existing classes
+  indicator.classList.remove('alert-info', 'alert-success', 'alert-warning', 'alert-danger', 'd-none');
+
+  if (status === 'loading') {
+    indicator.classList.add('alert-info');
+    textElement.textContent = message || 'Loading...';
+  } else if (status === 'success') {
+    indicator.classList.add('alert-success');
+    textElement.textContent = message || 'Operation completed successfully';
+  } else if (status === 'warning') {
+    indicator.classList.add('alert-warning');
+    textElement.textContent = message || 'Warning';
+  } else if (status === 'error') {
+    indicator.classList.add('alert-danger');
+    textElement.textContent = message || 'An error occurred';
+  }
+
+  // Show the banner
+  indicator.classList.remove('d-none');
+}
+
+// API response validation and safe fetch wrapper
+async function safeFetch(url, options = {}) {
+  try {
+    // Set default headers for JSON requests
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers: defaultHeaders
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      try {
+        const errorData = await response.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (parseError) {
+        // Ignore JSON parse errors for error responses
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    // Try to parse JSON response
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      return data;
+    } else {
+      // Return text for non-JSON responses
+      return await response.text();
+    }
+
+  } catch (error) {
+    console.error(`API call failed: ${url}`, error);
+
+    // Re-throw with more context
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Network error: Unable to connect to server');
+    }
+
+    throw error;
+  }
+}
+
+// Helper function to handle API errors consistently
+function handleApiError(error, context = 'operation') {
+  console.error(`Error during ${context}:`, error);
+
+  let userMessage = 'An unexpected error occurred. Please try again.';
+
+  if (error.message) {
+    if (error.message.includes('Network error')) {
+      userMessage = 'Network error: Please check your connection and try again.';
+    } else if (error.message.includes('404')) {
+      userMessage = 'The requested resource was not found.';
+    } else if (error.message.includes('500')) {
+      userMessage = 'Server error: Please try again later.';
+    } else if (error.message.includes('timeout')) {
+      userMessage = 'Request timed out. Please try again.';
+    } else {
+      userMessage = error.message;
+    }
+  }
+
+  // Show error in status indicator
+  updateStatusIndicator('error', userMessage);
+
+  return userMessage;
 }
 
 function setStockfishInsightsPlaceholder(message = 'Include a FEN in your question or analyze the board to see engine suggestions.') {
@@ -307,18 +798,63 @@ function analyzeCurrentPositionWithStockfish() {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-  initializeChessBoard();
-  loadExamples();
-  setupEventListeners();
-  loadGameState();
+  // Progressive enhancement and feature detection
+  const features = {
+    fetch: typeof fetch !== 'undefined',
+    promises: typeof Promise !== 'undefined',
+    domPurify: typeof DOMPurify !== 'undefined',
+    localStorage: typeof localStorage !== 'undefined',
+    serviceWorker: 'serviceWorker' in navigator
+  };
 
-  // Welcome
-  showMessage('🎮 **ChessGemma Ready!**\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
+  // Check for required features
+  let missingFeatures = [];
+  Object.entries(features).forEach(([feature, available]) => {
+    if (!available) {
+      missingFeatures.push(feature);
+      console.warn(`Feature not available: ${feature}`);
+    }
+  });
 
-  setStockfishInsightsPlaceholder();
-  const analyzeBtn = document.getElementById('stockfish-analyze-btn');
-  if (analyzeBtn) {
-    analyzeBtn.addEventListener('click', () => analyzeCurrentPositionWithStockfish());
+  // Warn about critical missing features
+  if (missingFeatures.length > 0) {
+    const criticalFeatures = ['fetch', 'promises'];
+    const missingCritical = missingFeatures.filter(f => criticalFeatures.includes(f));
+
+    if (missingCritical.length > 0) {
+      updateStatusIndicator('error',
+        `Critical features not supported: ${missingCritical.join(', ')}. Please use a modern browser.`);
+      return; // Don't initialize if critical features are missing
+    }
+
+    // Non-critical warnings
+    if (missingFeatures.includes('domPurify')) {
+      console.warn('DOMPurify not loaded - using fallback sanitization');
+    }
+  }
+
+  // Initialize application
+  try {
+    initializeChessBoard();
+    loadExamples();
+    setupEventListeners();
+    loadGameState();
+
+    // Welcome
+    showMessage('🎮 **ChessGemma Ready!**\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
+
+    setStockfishInsightsPlaceholder();
+    const analyzeBtn = document.getElementById('stockfish-analyze-btn');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', () => analyzeCurrentPositionWithStockfish());
+    }
+
+    // Initialize real-time status updates
+    startStatusUpdates();
+
+  } catch (error) {
+    console.error('Failed to initialize application:', error);
+    updateStatusIndicator('error', 'Failed to initialize application. Please refresh the page.');
   }
 });
 
@@ -367,8 +903,73 @@ function handleKeyPress(event) {
   }
 }
 
+// Keyboard navigation support
+function handleQuestionKeydown(event) {
+  // Allow Enter to submit (but not Shift+Enter for multiline)
+  if (event.key === 'Enter' && !event.shiftKey && !isLoading) {
+    event.preventDefault();
+    askQuestion();
+    return;
+  }
+
+  // Ctrl+Enter or Cmd+Enter to submit
+  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !isLoading) {
+    event.preventDefault();
+    askQuestion();
+    return;
+  }
+
+  // Escape to clear input
+  if (event.key === 'Escape') {
+    const input = event.target;
+    if (input && input.value) {
+      input.value = '';
+      updateStatusIndicator('info', 'Input cleared');
+    }
+    return;
+  }
+
+  // Arrow keys for history navigation (future enhancement)
+  // For now, just prevent default behavior on some keys
+}
+
 function setupEventListeners() {
-  // Reserved for future interactions
+  const startBtn = document.getElementById('btn-train-start');
+  const stopBtn = document.getElementById('btn-train-stop');
+  const refreshBtn = document.getElementById('btn-train-refresh');
+  const questionInput = document.getElementById('questionInput');
+
+  if (startBtn && typeof startTraining === 'function') {
+    startBtn.addEventListener('click', startTraining);
+  }
+  if (stopBtn && typeof stopTraining === 'function') {
+    stopBtn.addEventListener('click', stopTraining);
+  }
+  if (refreshBtn && typeof refreshTrainingStatus === 'function') {
+    refreshBtn.addEventListener('click', refreshTrainingStatus);
+  }
+
+  // Keyboard navigation support
+  if (questionInput) {
+    questionInput.addEventListener('keydown', handleQuestionKeydown);
+    questionInput.setAttribute('tabindex', '1');
+    questionInput.setAttribute('aria-label', 'Enter your chess question');
+  }
+
+  if (typeof refreshTrainingStatus === 'function') {
+    setInterval(() => {
+      if (!document.hidden) {
+        refreshTrainingStatus();
+      }
+    }, 5000);
+  }
+
+  if (typeof refreshAdapters === 'function') {
+    refreshAdapters();
+  }
+  if (typeof loadSettings === 'function') {
+    loadSettings();
+  }
 }
 
 // Ask a question
@@ -936,6 +1537,53 @@ function updateExpertStatus(data) {
     console.log('Expert status updated:', data.primary_expert, data.moe_used);
   } catch (error) {
     console.error('Error updating expert status:', error);
+  }
+}
+
+// Real-time status updates
+let statusUpdateInterval = null;
+
+function startStatusUpdates() {
+  // Initial status check
+  updateSystemStatus();
+
+  // Set up periodic status updates (every 30 seconds)
+  statusUpdateInterval = setInterval(updateSystemStatus, 30000);
+
+  // Update status when page becomes visible
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      updateSystemStatus();
+    }
+  });
+}
+
+function stopStatusUpdates() {
+  if (statusUpdateInterval) {
+    clearInterval(statusUpdateInterval);
+    statusUpdateInterval = null;
+  }
+}
+
+async function updateSystemStatus() {
+  try {
+    const healthData = await safeFetch('/api/health');
+    const statsData = await safeFetch('/api/stats');
+
+    // Update connection status
+    if (healthData && healthData.status === 'ok') {
+      updateStatusIndicator('success', 'System online');
+    }
+
+    // Update performance metrics if available
+    if (statsData && statsData.performance) {
+      const perf = statsData.performance;
+      console.log(`📊 System Status: ${perf.total_requests} requests, ${perf.avg_response_time?.toFixed(2)}s avg response time`);
+    }
+
+  } catch (error) {
+    console.warn('Status update failed:', error);
+    updateStatusIndicator('warning', 'Connection issues detected');
   }
 }
 

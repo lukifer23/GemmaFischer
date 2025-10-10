@@ -1673,6 +1673,64 @@ def find_free_port(start_port=5000, max_attempts=10):
     raise RuntimeError(f"Could not find a free port in range {start_port}-{start_port + max_attempts - 1}")
 
 
+# Error handlers for better user experience
+@app.errorhandler(404)
+def handle_404(error):
+    """Handle 404 errors with JSON responses for API calls."""
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Endpoint not found',
+            'message': f'The API endpoint {request.path} does not exist',
+            'status_code': 404
+        }), 404
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(405)
+def handle_405(error):
+    """Handle method not allowed errors."""
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Method not allowed',
+            'message': f'The HTTP method {request.method} is not allowed for {request.path}',
+            'allowed_methods': error.valid_methods,
+            'status_code': 405
+        }), 405
+    return jsonify({'error': 'Method not allowed'}), 405
+
+
+@app.errorhandler(500)
+def handle_500(error):
+    """Handle internal server errors."""
+    logger = logging.getLogger(__name__)
+    logger.error(f"Internal server error: {error}", exc_info=True)
+
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Internal server error',
+            'message': 'Something went wrong on our end. Please try again.',
+            'status_code': 500
+        }), 500
+
+    return render_template('500.html'), 500
+
+
+@app.errorhandler(Exception)
+def handle_generic_exception(error):
+    """Handle any unhandled exceptions."""
+    logger = logging.getLogger(__name__)
+    logger.error(f"Unhandled exception: {error}", exc_info=True)
+
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'error': 'Unexpected error',
+            'message': 'An unexpected error occurred. Please try again.',
+            'status_code': 500
+        }), 500
+
+    return render_template('error.html'), 500
+
+
 if __name__ == '__main__':
     print("🚀 Starting ChessGemma Web Interface...")
     print("="*60)
