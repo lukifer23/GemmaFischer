@@ -22,7 +22,7 @@ import psutil
 import threading
 import subprocess
 import queue
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add the project root to the Python path
 project_root = Path(__file__).resolve().parents[2]
@@ -39,7 +39,8 @@ try:
         extract_first_legal_move_uci,
         post_process_uci_response,
         create_engine_prompt_strict,
-        create_tutor_prompt_with_uci
+        create_tutor_prompt_with_uci,
+        extract_fen,
     )
     from src.web.chess_game import ChessGame, ChessRAG
     from src.web.stockfish_match import StockfishMatch
@@ -1150,6 +1151,123 @@ def analyze_position():
     except Exception as e:
         print(f"Analysis error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/analysis/top_moves', methods=['POST'])
+def stockfish_top_moves():
+    """Compute best move and top alternatives for a FEN using Stockfish."""
+    payload = request.get_json() or {}
+    question = (payload.get('question') or "").strip()
+    fen = (payload.get('fen') or "").strip()
+
+    if not fen:
+        try:
+            fen = extract_fen(question or "")
+        except Exception:
+            fen = None
+
+    if not fen:
+        return jsonify({'error': 'No FEN provided for analysis.'}), 400
+
+    try:
+        board = chess.Board(fen)
+    except ValueError:
+        return jsonify({'error': 'Invalid FEN provided.'}), 400
+
+    best_depth = int(payload.get('best_depth', 14))
+    best_time_limit_ms = int(payload.get('best_time_limit_ms', 1500))
+    top_depth = int(payload.get('top_depth', 6))
+    top_time_limit_ms = int(payload.get('top_time_limit_ms', 500))
+    top_k = max(1, int(payload.get('top_k', 3)))
+
+    best_depth = max(6, min(best_depth, 30))
+    top_depth = max(2, min(top_depth, best_depth))
+    best_time_limit_ms = max(50, best_time_limit_ms)
+    top_time_limit_ms = max(50, top_time_limit_ms)
+    top_k = min(top_k, 5)
+
+    analysis_start = time.time()
+    try:
+        with ChessEngineManager(debug=False) as engine:
+            best_entries = engine.get_top_moves_info(
+                board,
+                depth=best_depth,
+                top_k=1,
+                time_limit_ms=best_time_limit_ms,
+            )
+            if not best_entries:
+                return jsonify({'error': 'Stockfish did not return a best move.'}), 503
+
+            alternatives = engine.get_top_moves_info(
+                board,
+                depth=top_depth,
+                top_k=top_k,
+                time_limit_ms=top_time_limit_ms,
+            )
+    except Exception as exc:
+        return jsonify({'error': f'Stockfish analysis failed: {exc}'}), 500
+
+    if not alternatives:
+        alternatives = best_entries
+
+    def move_to_san(target_board: chess.Board, move_uci: Optional[str]) -> Optional[str]:
+        if not move_uci:
+            return None
+        try:
+            move_obj = chess.Move.from_uci(move_uci)
+            return target_board.san(move_obj)
+        except Exception:
+            return None
+
+    def pv_to_san(base_board: chess.Board, pv_moves: List[str]) -> List[str]:
+        moves_san: List[str] = []
+        board_copy = base_board.copy(stack=False)
+        for mv in pv_moves:
+            try:
+                move_obj = chess.Move.from_uci(mv)
+                san = board_copy.san(move_obj)
+                moves_san.append(san)
+                board_copy.push(move_obj)
+            except Exception:
+                break
+        return moves_san
+
+    def normalize_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+        move_uci = entry.get('move') or entry.get('uci')
+        pv_moves = entry.get('pv') or []
+        payload_entry = {
+            'uci': move_uci,
+            'san': move_to_san(board, move_uci),
+            'score_cp': entry.get('score_cp'),
+            'mate': entry.get('mate'),
+            'depth': entry.get('depth'),
+            'seldepth': entry.get('seldepth'),
+            'nodes': entry.get('nodes'),
+            'nps': entry.get('nps'),
+            'multipv': entry.get('multipv'),
+            'pv': pv_moves,
+            'pv_san': pv_to_san(board, pv_moves),
+        }
+        return payload_entry
+
+    best_payload = normalize_entry(best_entries[0])
+    top_payloads = [normalize_entry(entry) for entry in alternatives]
+
+    analysis_duration_ms = int((time.time() - analysis_start) * 1000)
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    response = {
+        'fen': fen,
+        'best': best_payload,
+        'top_moves': top_payloads,
+        'best_depth': best_depth,
+        'best_time_limit_ms': best_time_limit_ms,
+        'top_depth': top_depth,
+        'top_time_limit_ms': top_time_limit_ms,
+        'analysis_duration_ms': analysis_duration_ms,
+        'generated_at': timestamp,
+    }
+    return jsonify(response)
 
 @app.route('/api/match/test', methods=['GET'])
 def test_stockfish():

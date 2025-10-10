@@ -7,6 +7,17 @@ let gameMode = 'analysis'; // 'analysis' or 'play'
 let stockfishMatch = null;
 let matchActive = false;
 
+const STOCKFISH_DEFAULTS = {
+  bestDepth: 14,
+  bestTimeMs: 1500,
+  topDepth: 6,
+  topTimeMs: 500,
+  topK: 3
+};
+let stockfishInsightsRequestId = 0;
+let stockfishInsightsPending = false;
+let lastStockfishFen = null;
+
 // Sanitize helpers
 function sanitizeString(str) {
   if (window.DOMPurify) {
@@ -24,6 +35,276 @@ function sanitizeHTML(html) {
   return fragment;
 }
 
+function getStockfishInsightsBody() {
+  return document.getElementById('stockfish-insights-body');
+}
+
+function setStockfishInsightsPlaceholder(message = 'Include a FEN in your question or analyze the board to see engine suggestions.') {
+  const body = getStockfishInsightsBody();
+  if (!body) return;
+  stockfishInsightsPending = false;
+  stockfishInsightsRequestId += 1; // invalidate in-flight requests
+  body.innerHTML = '';
+  const placeholder = document.createElement('p');
+  placeholder.className = 'stockfish-empty mb-0';
+  placeholder.textContent = message;
+  body.appendChild(placeholder);
+  lastStockfishFen = null;
+}
+
+function setStockfishInsightsLoading(contextText = null) {
+  const body = getStockfishInsightsBody();
+  if (!body) return;
+  body.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'stockfish-loading';
+  const spinner = document.createElement('div');
+  spinner.className = 'loading';
+  wrapper.appendChild(spinner);
+  const text = document.createElement('span');
+  text.textContent = contextText
+    ? `Analyzing ${contextText} with Stockfish…`
+    : 'Analyzing with Stockfish…';
+  wrapper.appendChild(text);
+  body.appendChild(wrapper);
+}
+
+function setStockfishInsightsError(message) {
+  const body = getStockfishInsightsBody();
+  if (!body) return;
+  body.innerHTML = '';
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'stockfish-empty text-danger';
+  errorDiv.textContent = message;
+  body.appendChild(errorDiv);
+}
+
+function extractFenCandidate(text) {
+  if (!text) return null;
+  const fenRegex = /(?:FEN[:\s]*)?(([prnbqkPRNBQK1-8]+\/){7}[prnbqkPRNBQK1-8]+\s+[wb]\s+[KQkq-]{1,4}\s+[a-h1-8-]+\s+\d+\s+\d+)/i;
+  const match = text.match(fenRegex);
+  return match ? match[1].trim() : null;
+}
+
+function questionLikelyHasFen(text) {
+  return !!extractFenCandidate(text);
+}
+
+function formatStockfishScore(entry) {
+  if (!entry) return '—';
+  if (typeof entry.mate === 'number' && entry.mate !== 0) {
+    const mateAbs = Math.abs(entry.mate);
+    return entry.mate > 0 ? `M${mateAbs}` : `M-${mateAbs}`;
+  }
+  if (typeof entry.score_cp === 'number') {
+    const value = (entry.score_cp / 100).toFixed(2);
+    return entry.score_cp >= 0 ? `+${value}` : value;
+  }
+  return '—';
+}
+
+function renderStockfishInsights(payload) {
+  const body = getStockfishInsightsBody();
+  if (!body) return;
+  stockfishInsightsPending = false;
+  body.innerHTML = '';
+
+  const bestMove = payload?.best;
+  if (!bestMove) {
+    setStockfishInsightsError('No engine analysis available.');
+    return;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'd-flex flex-column flex-sm-row justify-content-between align-items-sm-center';
+
+  const bestContainer = document.createElement('div');
+  bestContainer.className = 'stockfish-best-move';
+  const bestLabel = document.createElement('span');
+  bestLabel.textContent = 'Best move: ';
+  const bestBadge = document.createElement('span');
+  bestBadge.className = 'badge bg-primary';
+  bestBadge.textContent = sanitizeString(bestMove.san || bestMove.uci || '—');
+  bestContainer.appendChild(bestLabel);
+  bestContainer.appendChild(bestBadge);
+
+  const bestMeta = document.createElement('div');
+  bestMeta.className = 'stockfish-meta mt-2 mt-sm-0';
+  const duration = payload.analysis_duration_ms != null ? (payload.analysis_duration_ms / 1000).toFixed(2) : '—';
+  let generatedAtText = '';
+  if (payload.generated_at) {
+    const generatedDate = new Date(payload.generated_at);
+    if (!Number.isNaN(generatedDate.valueOf())) {
+      generatedAtText = ` • ${generatedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  }
+  bestMeta.textContent = `Depth ${payload.best_depth} (top ${payload.top_depth}) • ${duration}s${generatedAtText}`;
+
+  header.appendChild(bestContainer);
+  header.appendChild(bestMeta);
+  body.appendChild(header);
+
+  const table = document.createElement('table');
+  table.className = 'table table-sm table-striped mt-3 stockfish-move-table';
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  ['#', 'Move', 'Score', 'PV'].forEach(text => {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = text;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const topMoves = Array.isArray(payload.top_moves) ? payload.top_moves : [];
+  if (topMoves.length === 0) {
+    const emptyRow = document.createElement('tr');
+    const emptyCell = document.createElement('td');
+    emptyCell.colSpan = 4;
+    emptyCell.className = 'text-muted';
+    emptyCell.textContent = 'No alternative moves returned.';
+    emptyRow.appendChild(emptyCell);
+    tbody.appendChild(emptyRow);
+  } else {
+    topMoves.slice(0, STOCKFISH_DEFAULTS.topK).forEach((entry, idx) => {
+      const row = document.createElement('tr');
+      if (entry.uci && bestMove.uci && entry.uci === bestMove.uci) {
+        row.classList.add('table-success');
+      }
+      const rankCell = document.createElement('td');
+      rankCell.textContent = `${idx + 1}`;
+      row.appendChild(rankCell);
+
+      const moveCell = document.createElement('td');
+      const moveStrong = document.createElement('strong');
+      moveStrong.textContent = sanitizeString(entry.san || entry.uci || '—');
+      moveCell.appendChild(moveStrong);
+      const moveBadge = document.createElement('span');
+      moveBadge.className = 'badge bg-light text-muted border ms-2';
+      moveBadge.textContent = `depth ${entry.depth ?? payload.top_depth}`;
+      moveCell.appendChild(moveBadge);
+      if (entry.uci && entry.san && entry.san !== entry.uci) {
+        const moveSmall = document.createElement('div');
+        moveSmall.className = 'text-muted small';
+        moveSmall.textContent = entry.uci;
+        moveCell.appendChild(moveSmall);
+      }
+      row.appendChild(moveCell);
+
+      const scoreCell = document.createElement('td');
+      const scoreSpan = document.createElement('span');
+      const scoreText = formatStockfishScore(entry);
+      if (scoreText.startsWith('+') || scoreText.startsWith('M')) {
+        scoreSpan.className = 'stockfish-score-positive';
+      } else if (scoreText.startsWith('-')) {
+        scoreSpan.className = 'stockfish-score-negative';
+      } else {
+        scoreSpan.className = 'text-muted';
+      }
+      scoreSpan.textContent = scoreText;
+      scoreCell.appendChild(scoreSpan);
+      row.appendChild(scoreCell);
+
+      const pvCell = document.createElement('td');
+      const pvMoves = (entry.pv_san && entry.pv_san.length ? entry.pv_san : (entry.pv || [])).slice(0, 6);
+      const pvText = pvMoves.length ? pvMoves.join(' ') : '—';
+      const pvSpan = document.createElement('span');
+      pvSpan.className = 'text-muted';
+      pvSpan.textContent = pvText;
+      pvCell.appendChild(pvSpan);
+      row.appendChild(pvCell);
+
+      tbody.appendChild(row);
+    });
+  }
+
+  table.appendChild(tbody);
+  body.appendChild(table);
+
+  if (payload.fen) {
+    const fenBlock = document.createElement('div');
+    fenBlock.className = 'stockfish-meta mt-2';
+    fenBlock.textContent = `FEN: ${payload.fen}`;
+    body.appendChild(fenBlock);
+    lastStockfishFen = payload.fen;
+  }
+}
+
+function requestStockfishInsights({ question = null, fen = null } = {}) {
+  const body = {
+    question,
+    fen,
+    best_depth: STOCKFISH_DEFAULTS.bestDepth,
+    best_time_limit_ms: STOCKFISH_DEFAULTS.bestTimeMs,
+    top_depth: STOCKFISH_DEFAULTS.topDepth,
+    top_time_limit_ms: STOCKFISH_DEFAULTS.topTimeMs,
+    top_k: STOCKFISH_DEFAULTS.topK
+  };
+
+  stockfishInsightsPending = true;
+  const requestId = ++stockfishInsightsRequestId;
+
+  fetch('/api/analysis/top_moves', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (requestId !== stockfishInsightsRequestId) {
+        return;
+      }
+      if (!response.ok) {
+        if (response.status === 400) {
+          setStockfishInsightsPlaceholder(data.error || 'No FEN detected for analysis.');
+        } else {
+          setStockfishInsightsError(data.error || 'Stockfish analysis failed.');
+        }
+        return;
+      }
+      renderStockfishInsights(data);
+    })
+    .catch(error => {
+      console.error('Stockfish insights error:', error);
+      if (requestId === stockfishInsightsRequestId) {
+        setStockfishInsightsError('Unable to fetch Stockfish analysis.');
+      }
+    })
+    .finally(() => {
+      if (requestId === stockfishInsightsRequestId) {
+        stockfishInsightsPending = false;
+      }
+    });
+}
+
+function triggerStockfishInsightsFromQuestion(question) {
+  if (!questionLikelyHasFen(question)) {
+    setStockfishInsightsPlaceholder();
+    return;
+  }
+  const fenCandidate = extractFenCandidate(question);
+  const fenPreview = fenCandidate ? `${fenCandidate.split(' ').slice(0, 3).join(' ')} …` : null;
+  setStockfishInsightsLoading(fenPreview);
+  requestStockfishInsights({ question });
+}
+
+function analyzeCurrentPositionWithStockfish() {
+  const fen = getCurrentBoardFEN();
+  if (!fen) {
+    setStockfishInsightsError('Unable to determine current board position.');
+    return;
+  }
+  if (fen === lastStockfishFen && !stockfishInsightsPending) {
+    setStockfishInsightsPlaceholder('Analysis already reflects the current board.');
+    return;
+  }
+  const fenPreview = `${fen.split(' ').slice(0, 3).join(' ')} …`;
+  setStockfishInsightsLoading(fenPreview);
+  requestStockfishInsights({ fen });
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
   initializeChessBoard();
@@ -33,6 +314,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Welcome
   showMessage('🎮 **ChessGemma Ready!**\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
+
+  setStockfishInsightsPlaceholder();
+  const analyzeBtn = document.getElementById('stockfish-analyze-btn');
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', () => analyzeCurrentPositionWithStockfish());
+  }
 });
 
 // Initialize chess board grid
@@ -110,6 +397,8 @@ async function askQuestion() {
   `;
   document.getElementById('chatMessages').appendChild(loadingDiv);
   scrollToBottom();
+
+  triggerStockfishInsightsFromQuestion(question);
 
   try {
     const expert = 'auto'; // Always use auto mode for intelligent routing
@@ -299,11 +588,10 @@ async function loadGameState() {
   try {
     const response = await fetch('/api/game/state');
     gameState = await response.json();
-    // Update model loaded badge
+    // Update model loaded banner
     try {
       const infoResp = await fetch('/api/model_info');
       const info = await infoResp.json();
-      const header = document.querySelector('#chatPanel .message');
       const banner = document.querySelector('#modelStatusBanner');
       const loadedText = info.loaded ? '✅ Model loaded' : '⚠️ Model not loaded';
       if (banner) {
@@ -661,5 +949,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
   console.log('Expert status display initialized');
 });
-
-
