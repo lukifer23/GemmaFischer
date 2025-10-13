@@ -230,6 +230,85 @@ async function refreshDataStatus() {
 }
 
 // -----------------
+// Router Diagnostics
+// -----------------
+async function refreshRouterDiagnostics() {
+  const container = document.getElementById('router-diagnostics');
+  if (!container) return;
+
+  try {
+    const data = await safeFetch('/api/router/diagnostics');
+
+    if (!data || !data.moe_enabled) {
+      container.innerHTML = `
+        <p class="text-muted small mb-0">
+          Mixture-of-Experts routing is currently disabled.
+        </p>
+      `;
+      return;
+    }
+
+    const cache = data.cache || {};
+    const perf = (data.performance && data.performance.expert_metrics) || {};
+
+    const featureHit = typeof cache.feature_cache_hit_rate === 'number'
+      ? (cache.feature_cache_hit_rate * 100).toFixed(1)
+      : '—';
+    const routingHit = typeof cache.routing_cache_hit_rate === 'number'
+      ? (cache.routing_cache_hit_rate * 100).toFixed(1)
+      : '—';
+
+    container.innerHTML = '';
+
+    const summary = document.createElement('div');
+    summary.className = 'small text-muted mb-2';
+    summary.textContent = `Cache hit (features/routing): ${featureHit}% / ${routingHit}%`;
+    container.appendChild(summary);
+
+    const expertList = document.createElement('ul');
+    expertList.className = 'list-unstyled small mb-0';
+
+    Object.entries(perf).forEach(([expert, metrics]) => {
+      const item = document.createElement('li');
+      const accuracy = typeof metrics.accuracy === 'number'
+        ? `${(metrics.accuracy * 100).toFixed(1)}%`
+        : '—';
+      const responseTime = typeof metrics.response_time === 'number'
+        ? `${metrics.response_time.toFixed(2)}s`
+        : '—';
+      item.innerHTML = `
+        <strong>${sanitizeString(expert)}</strong>
+        <span class="text-muted ms-1">• accuracy ${accuracy} • p50 latency ${responseTime}</span>
+      `;
+      expertList.appendChild(item);
+    });
+
+    if (!expertList.children.length) {
+      const empty = document.createElement('li');
+      empty.className = 'text-muted';
+      empty.textContent = 'No performance samples collected yet.';
+      expertList.appendChild(empty);
+    }
+
+    container.appendChild(expertList);
+
+    if (data.decision_log_path) {
+      const logHint = document.createElement('div');
+      logHint.className = 'text-muted small mt-2';
+      logHint.textContent = `Decision log: ${data.decision_log_path}`;
+      container.appendChild(logHint);
+    }
+  } catch (error) {
+    console.warn('Unable to load router diagnostics', error);
+    container.innerHTML = `
+      <p class="text-muted small mb-0">
+        Unable to load router metrics. Check server logs for details.
+      </p>
+    `;
+  }
+}
+
+// -----------------
 // Adapter & Settings Management
 // -----------------
 async function refreshAdapters() {
@@ -962,6 +1041,15 @@ function setupEventListeners() {
         refreshTrainingStatus();
       }
     }, 15000);
+  }
+
+  if (typeof refreshRouterDiagnostics === 'function') {
+    refreshRouterDiagnostics();
+    setInterval(() => {
+      if (!document.hidden) {
+        refreshRouterDiagnostics();
+      }
+    }, 20000);
   }
 
   if (typeof refreshAdapters === 'function') {

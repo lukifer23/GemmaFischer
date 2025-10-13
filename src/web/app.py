@@ -198,6 +198,15 @@ class ChessModelInterface:
 
         return None
 
+    def get_router_diagnostics(self) -> Dict[str, Any]:
+        try:
+            return self._inference.get_router_diagnostics()
+        except Exception as exc:
+            return {
+                "moe_enabled": False,
+                "error": str(exc),
+            }
+
     def _analyze_fen_with_stockfish(self, fen: str) -> Optional[str]:
         try:
             import chess
@@ -1225,6 +1234,14 @@ def get_model_info():
     }
 
     return jsonify(info)
+
+@app.route('/api/router/diagnostics', methods=['GET'])
+def router_diagnostics():
+    """Return current router telemetry for UI consumption."""
+    try:
+        return jsonify(chess_model.get_router_diagnostics())
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @app.route('/api/stats', methods=['GET'])

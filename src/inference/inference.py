@@ -2021,6 +2021,29 @@ class ChessGemmaInference:
 
         return info
 
+    def get_router_diagnostics(self) -> Dict[str, Any]:
+        """Return MoE router diagnostics used by the UI and monitoring endpoints."""
+        if not (self.moe_enabled and self.moe_router):
+            return {
+                "moe_enabled": False,
+                "moe_available": MOE_AVAILABLE,
+            }
+
+        diagnostics: Dict[str, Any] = {
+            "moe_enabled": True,
+            "moe_available": MOE_AVAILABLE,
+            "cache": self.moe_router.get_cache_stats(),
+            "routing_stats": self.moe_router.get_routing_stats(),
+            "adaptive": self.moe_router.get_adaptive_routing_stats(),
+            "performance": self.moe_router.get_expert_performance_report(),
+        }
+
+        log_path = getattr(self.moe_router, "decision_log_path", None)
+        if log_path:
+            diagnostics["decision_log_path"] = str(log_path)
+
+        return diagnostics
+
     def clear_caches(self):
         """Clear all performance caches."""
         with self._cache_lock:

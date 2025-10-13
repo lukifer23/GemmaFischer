@@ -10,6 +10,7 @@ import os
 import sys
 import signal
 import threading
+from collections import Counter
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
@@ -187,6 +188,82 @@ def ensure_no_placeholder_responses(dataset, sample_limit: int = 1000):
             raise ValueError(
                 f"Placeholder token detected in training data (example #{idx}): {preview}"
             )
+
+
+def summarize_dataset(dataset, name: str, sample_limit: int = 2000) -> Dict[str, Any]:
+    """Generate a quick profile of the dataset and persist it for diagnostics."""
+    if dataset is None:
+        return {}
+
+    total = len(dataset)
+    sample_cap = min(sample_limit, total)
+    unique_fens = set()
+    sources = Counter()
+    topics = Counter()
+    prompt_chars = 0
+    response_chars = 0
+    best_move_present = 0
+    timestamps: List[str] = []
+
+    for idx in range(sample_cap):
+        example = dataset[idx]
+        prompt = example.get("prompt", "") or ""
+        response = example.get("response", "") or ""
+        prompt_chars += len(prompt)
+        response_chars += len(response)
+
+        meta = example.get("meta") or {}
+        fen = meta.get("fen")
+        if fen:
+            unique_fens.add(fen)
+        source = meta.get("source")
+        if source:
+            sources[source] += 1
+        topic = meta.get("topic")
+        if topic:
+            topics[topic] += 1
+        if meta.get("best_move"):
+            best_move_present += 1
+        timestamp = meta.get("timestamp")
+        if timestamp:
+            timestamps.append(timestamp)
+
+    summary = {
+        "dataset": name,
+        "total_examples": total,
+        "sampled_examples": sample_cap,
+        "unique_fens_in_sample": len(unique_fens),
+        "best_move_coverage": round(best_move_present / sample_cap, 3) if sample_cap else 0.0,
+        "avg_prompt_chars": round(prompt_chars / sample_cap, 1) if sample_cap else 0.0,
+        "avg_response_chars": round(response_chars / sample_cap, 1) if sample_cap else 0.0,
+        "top_sources": sources.most_common(5),
+        "top_topics": topics.most_common(5),
+    }
+    if timestamps:
+        summary["sample_timestamp_range"] = {
+            "min": min(timestamps),
+            "max": max(timestamps),
+        }
+
+    report_dir = Path("reports") / "dataset_profiles"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    output_path = report_dir / f"{name}.json"
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    print(f"\n🗂️  Dataset profile saved to {output_path}")
+    print(
+        f"   • total={summary['total_examples']} "
+        f"sampled={summary['sampled_examples']} "
+        f"unique_fens={summary['unique_fens_in_sample']} "
+        f"best_move_coverage={summary['best_move_coverage']}"
+    )
+    if summary["top_sources"]:
+        print(f"   • top sources: {summary['top_sources']}")
+    if summary["top_topics"]:
+        print(f"   • top topics: {summary['top_topics']}")
+
+    return summary
 
 
 class InstructionDataCollator:
@@ -532,6 +609,7 @@ def main():
 
         if ds is not None:
             ensure_no_placeholder_responses(ds)
+            summarize_dataset(ds, f"{args.expert}_training_mix" if args.expert != 'all' else "all_experts_training_mix")
 
         tokenizer = AutoTokenizer.from_pretrained(
             model_ref,

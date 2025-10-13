@@ -233,6 +233,18 @@ class ChessMoERouter(nn.Module):
         self._routing_cache_hits = 0
         self._total_requests = 0
 
+        # Decision logging for offline routing analysis
+        self.log_decisions_enabled = os.environ.get("CHESSGEMMA_ROUTER_LOGGING", "1") not in ("0", "false", "False")
+        default_log_path = Path("reports") / "moe" / "routing_decisions.jsonl"
+        self.decision_log_path = Path(os.environ.get("CHESSGEMMA_ROUTER_LOG", default_log_path))
+        self._decision_log_lock = threading.Lock()
+        if self.log_decisions_enabled:
+            try:
+                self.decision_log_path.parent.mkdir(parents=True, exist_ok=True)
+            except Exception as exc:
+                logger.warning(f"Unable to create router log directory {self.decision_log_path.parent}: {exc}")
+                self.log_decisions_enabled = False
+
         logger.info(f"🧠 Optimized MoE Router initialized with {num_experts} experts")
 
         # The router is used purely for inference; ensure dropout layers are disabled
@@ -333,6 +345,11 @@ class ChessMoERouter(nn.Module):
 
         # Apply expert performance weighting
         weighted_probs = self._apply_performance_weighting(gate_probs)
+        raw_confidence = float(confidence.item())
+        weighted_prob_dict = {
+            name: float(weighted_probs[idx].item()) if idx < len(weighted_probs) else 0.0
+            for idx, name in enumerate(self.expert_names)
+        }
 
         # Extract game phase information for context-aware routing
         game_phase = None
@@ -344,15 +361,17 @@ class ChessMoERouter(nn.Module):
                 game_phase = [0.33, 0.34, 0.33]  # Default equal distribution
 
         # Make routing decision with context awareness
-        decision = self._make_routing_decision(weighted_probs, confidence.item(), position_fen, query_type, game_phase)
+        decision = self._make_routing_decision(weighted_probs, raw_confidence, position_fen, query_type, game_phase)
 
         # Keyword-based routing fallback for low confidence decisions
+        keyword_override = False
         if decision.confidence_score < 0.7:  # Balanced threshold
             # Try keyword-based routing on question text if available, otherwise query_type
             routing_text = question_text if question_text else (query_type if query_type != "auto" else "")
             keyword_expert = self._keyword_based_routing(routing_text)
             if keyword_expert:
                 # Override with keyword-based decision
+                keyword_override = True
                 decision.primary_expert = keyword_expert
                 decision.confidence_score = 0.9  # Higher confidence for keyword matches
                 decision.expert_weights = {"uci": 0.1, "tutor": 0.1, "director": 0.1}  # Reset weights as dict
@@ -363,6 +382,19 @@ class ChessMoERouter(nn.Module):
 
         # Cache the decision
         self._cache_routing_decision(cache_key, decision)
+
+        # Persist routing metadata for offline analysis
+        question_feature_vector = self._extract_question_features(question_text) if question_text else [0.0] * 16
+        self._log_routing_event(
+            fen=position_fen,
+            question_text=question_text,
+            query_type=query_type,
+            raw_confidence=raw_confidence,
+            weighted_probs=weighted_prob_dict,
+            decision=decision,
+            keyword_override=keyword_override,
+            question_features=question_feature_vector
+        )
 
         logger.info(f"🎯 Computed routing: {decision.primary_expert} (confidence: {decision.confidence_score:.3f})")
         return decision
@@ -885,49 +917,60 @@ class ChessMoERouter(nn.Module):
         return (white_king_home and white_rooks_home) or (black_king_home and black_rooks_home)
 
     def _extract_question_features(self, question: str) -> List[float]:
-        """Extract features from question text."""
-        features = []
+        """Extract a fixed-width feature vector from the raw question text."""
         question_lower = question.lower()
 
-        # Chess concept detection (8 features)
-        chess_concepts = {
-            'move': ['move', 'play', 'best', 'good', 'bad'],
-            'tactics': ['tactic', 'combination', 'fork', 'pin', 'checkmate', 'mate'],
-            'strategy': ['strategy', 'plan', 'advantage', 'control', 'position'],
-            'endgame': ['endgame', 'pawn', 'promotion', 'rook', 'queen'],
-            'opening': ['opening', 'development', 'center', 'castle', 'castling'],
-            'analysis': ['analyze', 'evaluate', 'assess', 'explain', 'why'],
-            'rules': ['rule', 'legal', 'allowed', 'capture', 'en passant'],
-            'general': ['chess', 'game', 'position', 'board', 'square']
-        }
+        # Core intent buckets (6 features)
+        move_only_tokens = ['best move', 'move only', 'uci', 'play', 'respond with only', 'just give']
+        analysis_tokens = ['analyze', 'analysis', 'evaluate', 'explain', 'step by step', 'why', 'because']
+        strategy_tokens = ['strategy', 'plan', 'concept', 'idea', 'principle', 'theme', 'long term']
+        rules_tokens = ['rule', 'legal', 'allowed', 'can i', 'is it legal', 'en passant', 'castle']
+        opening_tokens = ['opening', 'theory', 'variation', 'line', 'sicilian', 'french', 'e4 e5']
+        endgame_tokens = ['endgame', 'king and pawn', 'tablebase', 'opposition', 'zugzwang', 'promotion']
 
-        for concept, keywords in chess_concepts.items():
-            score = sum(1 for keyword in keywords if keyword in question_lower)
-            features.append(min(score / 3, 1.0))  # Normalize to 0-1
+        def bucket_score(tokens: List[str]) -> float:
+            hits = sum(1 for token in tokens if token in question_lower)
+            return min(hits / 3.0, 1.0)
 
-        # Question structure features (8 features)
-        features.append(1.0 if '?' in question else 0.0)  # Has question mark
-        features.append(len(question.split()) / 50.0)  # Normalized word count
-        features.append(1.0 if 'fen:' in question_lower else 0.0)  # Has FEN
-        features.append(len(question) / 200.0)  # Normalized length
+        features: List[float] = [
+            bucket_score(move_only_tokens),
+            bucket_score(analysis_tokens),
+            bucket_score(strategy_tokens),
+            bucket_score(rules_tokens),
+            bucket_score(opening_tokens),
+            bucket_score(endgame_tokens),
+        ]
 
-        # Expert-specific indicators (strong signals for routing)
-        # UCI indicators - move generation
-        uci_indicators = ['best move', 'strongest move', 'what is the', 'move', 'play']
-        features.append(1.0 if any(indicator in question_lower for indicator in uci_indicators) else 0.0)
+        # Structural cues (5 features)
+        features.extend([
+            1.0 if 'fen:' in question_lower else 0.0,
+            1.0 if '?' in question else 0.0,
+            min(len(question.split()) / 60.0, 1.0),
+            min(len(question) / 400.0, 1.0),
+            1.0 if any(str(i) + '.' in question for i in range(1, 4)) else 0.0,  # enumerated steps
+        ])
 
-        # Tutor indicators - analysis and teaching
-        tutor_indicators = ['analyze', 'step by step', 'candidate', 'evaluate', 'strengths', 'weaknesses', 'consider']
-        features.append(1.0 if any(indicator in question_lower for indicator in tutor_indicators) else 0.0)
+        # Mode and persona hints (3 features)
+        features.append(1.0 if 'mode: engine' in question_lower or 'engine mode' in question_lower else 0.0)
+        features.append(1.0 if 'mode: tutor' in question_lower or 'tutor mode' in question_lower else 0.0)
+        features.append(1.0 if 'mode: director' in question_lower or 'director mode' in question_lower else 0.0)
 
-        # Director indicators - strategy and concepts
-        director_indicators = ['strategy', 'principle', 'concept', 'idea', 'main', 'behind', 'explain the']
-        features.append(1.0 if any(indicator in question_lower for indicator in director_indicators) else 0.0)
+        # Output-format expectations (2 features)
+        features.append(1.0 if any(token in question_lower for token in ['respond with only', 'just the move', 'uci format']) else 0.0)
+        features.append(1.0 if any(token in question_lower for token in ['explain', 'why', 'because', 'steps']) else 0.0)
 
-        # Question structure (weaker signals)
-        features.append(1.0 if any(word in question_lower for word in ['why', 'how', 'what is']) else 0.0)
-        features.append(1.0 if any(word in question_lower for word in ['better', 'worse', 'advantage']) else 0.0)
-        features.append(1.0 if any(word in question_lower for word in ['rule', 'legal', 'can']) else 0.0)
+        # Domain references (2 features)
+        history_tokens = ['fischer', 'kasparov', 'capablanca', 'history', 'classic', 'famous game']
+        tutoring_tokens = ['learning', 'teach', 'lesson', 'tips', 'improve']
+        features.append(bucket_score(history_tokens))
+        features.append(bucket_score(tutoring_tokens))
+
+        # Ensure deterministic width
+        if len(features) != 16:
+            if len(features) < 16:
+                features.extend([0.0] * (16 - len(features)))
+            else:
+                features = features[:16]
 
         return features
 
@@ -968,6 +1011,48 @@ class ChessMoERouter(nn.Module):
         """Cache routing decision for future use."""
         self._routing_cache[cache_key] = decision
         self._maintain_cache_size()
+
+    def _log_routing_event(
+        self,
+        fen: str,
+        question_text: str,
+        query_type: str,
+        raw_confidence: float,
+        weighted_probs: Dict[str, float],
+        decision: RoutingDecision,
+        keyword_override: bool,
+        question_features: List[float]
+    ) -> None:
+        """Persist routing metadata for offline analysis and retraining."""
+        if not self.log_decisions_enabled:
+            return
+
+        try:
+            ranked_experts = sorted(
+                weighted_probs.items(),
+                key=lambda item: item[1],
+                reverse=True
+            )
+            entry = {
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "fen": fen,
+                "query_type": query_type,
+                "question": question_text,
+                "question_preview": question_text[:200],
+                "raw_confidence": raw_confidence,
+                "final_confidence": decision.confidence_score,
+                "primary_expert": decision.primary_expert,
+                "expert_weights": ranked_experts,
+                "keyword_override": keyword_override,
+                "ensemble_mode": decision.ensemble_mode,
+                "fallback_used": decision.fallback_used,
+                "question_features": [round(val, 3) for val in question_features[:16]],
+            }
+            with self._decision_log_lock:
+                with self.decision_log_path.open("a", encoding="utf-8") as f:
+                    f.write(json.dumps(entry) + "\n")
+        except Exception as exc:
+            logger.debug(f"Router decision logging failed: {exc}")
 
     def _maintain_cache_size(self):
         """Maintain cache size limits using LRU eviction."""

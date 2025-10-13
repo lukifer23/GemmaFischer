@@ -3,7 +3,7 @@
     "uci": {
       "expected_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_uci",
       "status": "available",
-      "adapter_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_uci/checkpoint-1600"
+      "adapter_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_uci/checkpoint-500"
     },
     "tutor": {
       "expected_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_tutor",
@@ -13,7 +13,7 @@
     "director": {
       "expected_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_director",
       "status": "available",
-      "adapter_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_director/checkpoint-400"
+      "adapter_path": "/Users/admin/Downloads/VSCode/GemmaFischer/checkpoints/lora_director/checkpoint-1000"
     }
   }
 }

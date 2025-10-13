@@ -167,6 +167,44 @@ def balance_queries(queries: List[LabeledQuery], max_per_expert: int) -> List[La
     return balanced
 
 
+def load_logged_queries(log_path: Path, min_confidence: float, include_overrides: bool) -> List[LabeledQuery]:
+    """Load high-confidence router decisions for self-training."""
+    if not log_path.exists():
+        return []
+
+    logged: List[LabeledQuery] = []
+    with log_path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            confidence = float(payload.get("final_confidence", 0.0))
+            if confidence < min_confidence:
+                continue
+            if not include_overrides and payload.get("keyword_override"):
+                continue
+
+            question = payload.get("question") or payload.get("question_preview") or ""
+            expert = payload.get("primary_expert")
+            if not question or expert not in {"uci", "tutor", "director"}:
+                continue
+            fen = payload.get("fen") or extract_fen(question)
+            logged.append(
+                LabeledQuery(
+                    question=question,
+                    expected_expert=expert,
+                    category="logged_routing",
+                    fen=fen,
+                )
+            )
+    return logged
+
+
 def build_training_examples(router: ChessMoERouter, queries: List[LabeledQuery]) -> List[RouterTrainingExample]:
     training_examples: List[RouterTrainingExample] = []
     for idx, query in enumerate(queries, 1):
@@ -231,11 +269,30 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
     parser.add_argument("--learning-rate", type=float, default=2e-3, help="Learning rate")
     parser.add_argument("--max-per-expert", type=int, default=400, help="Max samples per expert")
+    parser.add_argument("--decision-log", type=str, default=str(Path("reports") / "moe" / "routing_decisions.jsonl"),
+                        help="Optional router decision log to augment training data")
+    parser.add_argument("--min-log-confidence", type=float, default=0.78,
+                        help="Minimum confidence to accept a logged routing decision")
+    parser.add_argument("--include-overrides", action="store_true",
+                        help="Include keyword-override decisions from the log")
+    parser.add_argument("--max-log-samples", type=int, default=300,
+                        help="Maximum number of logged routing samples to use (0 = unlimited)")
     args = parser.parse_args()
 
     print("🎯 Building labeled query set...")
     queries = load_labeled_queries()
     print(f"   Total unique queries collected: {len(queries)}")
+
+    # Optionally extend with logged production decisions
+    decision_log_path = Path(args.decision_log)
+    logged_queries = load_logged_queries(decision_log_path, args.min_log_confidence, args.include_overrides)
+    if args.max_log_samples > 0:
+        logged_queries = logged_queries[:args.max_log_samples]
+    if logged_queries:
+        existing_questions = {q.question for q in queries}
+        fresh = [q for q in logged_queries if q.question not in existing_questions]
+        queries.extend(fresh)
+        print(f"   Added {len(fresh)} logged routing samples (from {decision_log_path})")
 
     balanced_queries = balance_queries(queries, max_per_expert=args.max_per_expert)
     counts = {}

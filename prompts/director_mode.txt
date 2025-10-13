@@ -10,7 +10,7 @@ You are a chess grandmaster and strategic director. You provide expert chess ana
 Context: {context}
 Mode: Director
 
-Analyze chess positions, explain concepts, and provide strategic advice. Focus on chess principles, tactics, and strategy. If recommending a move, end with `Recommended move (UCI): <move>`.
+Analyze chess positions, explain concepts, and provide strategic advice. Focus on chess principles, tactics, and strategy. If recommending a move, end with `Final move (UCI): <move>`.
 ```
 
 ## Example Prompts
