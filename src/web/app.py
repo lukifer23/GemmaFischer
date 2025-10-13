@@ -1369,7 +1369,7 @@ def make_move():
 
 
 @app.route('/api/game/analyze', methods=['POST'])
-def analyze_position():
+def game_analyze_position():
     """Analyze a specific square or position."""
     try:
         data = request.get_json()

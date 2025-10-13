@@ -7,60 +7,60 @@
   "results": {
     "total_tests": 35,
     "format_accuracy": {
-      "overall": 0.5428571428571428
+      "overall": 0.5142857142857142
     },
-    "routing_accuracy": 0.17142857142857143,
-    "avg_generation_time": 6.0916035379682265,
-    "avg_confidence": 0.7059917943250564,
+    "routing_accuracy": 0.37142857142857144,
+    "avg_generation_time": 7.015537003108434,
+    "avg_confidence": 0.8375586004484263,
     "categories": {
       "pure_move": {
         "count": 5,
         "format_accuracy": 0.0,
         "expert_accuracy": 0.0,
         "avg_confidence": 0.9,
-        "avg_time": 5.680851650238037
+        "avg_time": 6.004723167419433
       },
       "position_analysis": {
         "count": 5,
-        "format_accuracy": 0.6,
+        "format_accuracy": 0.4,
         "expert_accuracy": 0.8,
         "avg_confidence": 0.9,
-        "avg_time": 5.5015161514282225
+        "avg_time": 9.536053609848022
       },
       "opening_strategy": {
         "count": 5,
-        "format_accuracy": 0.6,
+        "format_accuracy": 1.0,
         "expert_accuracy": 0.0,
-        "avg_confidence": 0.5566666666666666,
-        "avg_time": 8.807455587387086
+        "avg_confidence": 0.9233333333333333,
+        "avg_time": 11.836116790771484
       },
       "endgame_principles": {
         "count": 5,
-        "format_accuracy": 1.0,
+        "format_accuracy": 0.4,
         "expert_accuracy": 0.0,
-        "avg_confidence": 0.7233333333333334,
-        "avg_time": 7.92947211265564
+        "avg_confidence": 0.5066666666666666,
+        "avg_time": 3.9839804649353026
       },
       "rules_explanation": {
         "count": 5,
-        "format_accuracy": 0.8,
+        "format_accuracy": 1.0,
         "expert_accuracy": 0.0,
-        "avg_confidence": 0.7966666666666666,
-        "avg_time": 6.65329065322876
+        "avg_confidence": 0.9166666666666666,
+        "avg_time": 8.419231033325195
       },
       "tactical_patterns": {
         "count": 5,
         "format_accuracy": 0.8,
-        "expert_accuracy": 0.4,
-        "avg_confidence": 0.8386092269420624,
-        "avg_time": 6.294992923736572
+        "expert_accuracy": 0.8,
+        "avg_confidence": 0.8162435364723206,
+        "avg_time": 3.444829988479614
       },
       "mixed_analysis": {
         "count": 5,
         "format_accuracy": 0.0,
-        "expert_accuracy": 0.0,
-        "avg_confidence": 0.22666666666666666,
-        "avg_time": 1.7736456871032715
+        "expert_accuracy": 1.0,
+        "avg_confidence": 0.9,
+        "avg_time": 5.88382396697998
       }
     },
     "experts": {
@@ -68,19 +68,19 @@
         "count": 5,
         "format_accuracy": 0.0,
         "avg_confidence": 0.9,
-        "avg_time": 5.680851650238037
+        "avg_time": 6.004723167419433
       },
       "tutor": {
         "count": 15,
-        "format_accuracy": 0.4666666666666667,
-        "avg_confidence": 0.655091964536243,
-        "avg_time": 4.523384920756022
+        "format_accuracy": 0.4,
+        "avg_confidence": 0.8720811788241069,
+        "avg_time": 6.288235855102539
       },
       "director": {
         "count": 15,
         "format_accuracy": 0.8,
-        "avg_confidence": 0.6922222222222222,
-        "avg_time": 7.796739451090494
+        "avg_confidence": 0.7822222222222222,
+        "avg_time": 8.079776096343995
       }
     }
   }
