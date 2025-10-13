@@ -97,6 +97,17 @@ class ChessGemmaCoreEngine:
 
             self._model_loading = True
 
+        # Allow offline benchmarking or environments without model access to
+        # skip the heavyweight model loading sequence. This prevents the
+        # benchmarking harness from repeatedly attempting to download weights
+        # when network access is unavailable.
+        if os.environ.get("CHESSGEMMA_SKIP_MODEL_LOAD", "0") not in ("0", "false", "False"):
+            logger.warning(
+                "Skipping Gemma model load because CHESSGEMMA_SKIP_MODEL_LOAD is set."
+            )
+            self._model_loading = False
+            return False
+
         try:
             if not self.model_path:
                 print("Model path not configured. Set CHESSGEMMA_MODEL_ID or CHESSGEMMA_MODEL_PATH.")
