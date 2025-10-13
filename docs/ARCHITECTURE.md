@@ -1,10 +1,10 @@
-# ChessGemma Architecture
+# GemmaFischer Architecture
 
 ## System Overview
 
-ChessGemma is a chess AI system that fine-tunes Google's Gemma-3 270M model using LoRA adaptation. It features Mixture of Experts (MoE) routing for intelligent expert selection and operates on Apple Silicon with MPS acceleration.
+GemmaFischer is a chess AI system that combines Google's Gemma-3 270M model for strategic guidance and educational explanations with LeelaChess Zero (LC0) as the primary UCI chess engine. Uses LoRA adaptation on Apple Silicon with MPS acceleration and features a hybrid Mixture of Experts (MoE) system that intelligently routes between LC0's precise move calculation and the LLM's educational capabilities.
 
-**Platform**: Mac with Apple Silicon (M3/M4 recommended) - MPS acceleration optimized.
+**Platform**: Mac with Apple Silicon (M3/M4 recommended) - MPS acceleration optimized for both LC0 Metal backend and LLM inference.
 
 ## Core Architecture
 
@@ -15,11 +15,11 @@ ChessGemma is a chess AI system that fine-tunes Google's Gemma-3 270M model usin
 - **Real-time Feedback**: Live expert selection and routing confidence display
 - **Fallback Handling**: Graceful degradation when experts are unavailable
 
-### Expert Models
-- **UCI Expert**: Chess move generation in UCI format
-- **Tutor Expert**: Chess explanations and tactical analysis
-- **Director Expert**: Strategic Q&A and reasoning (2K+ CoT examples)
-- **LoRA Adapters**: Parameter-efficient fine-tuning with integrity validation
+### Expert Models (Hybrid Architecture)
+- **UCI Expert**: Chess move generation using LC0 neural engine as primary, with LLM fallback
+- **Tutor Expert**: Chess explanations and tactical analysis with educational focus
+- **Director Expert**: Strategic Q&A and reasoning (2K+ CoT examples) for advanced chess concepts
+- **Hybrid Integration**: LC0 provides precise move calculation while LLM adds strategic context and explanations
 
 ### Data Pipeline
 - **Standardized Datasets**: 107K+ validated training samples including CoT reasoning
@@ -28,10 +28,10 @@ ChessGemma is a chess AI system that fine-tunes Google's Gemma-3 270M model usin
 - **MPS Optimization**: Memory-efficient training with gradient checkpointing
 
 ### Web Interface
-- **Flask Application**: REST API with real-time routing and performance monitoring
-- **Interactive Chess Board**: Click-to-move interface with expert switching
-- **Expert Status Display**: Live MoE routing feedback and cache performance
-- **Training Controls**: GUI for model training with progress monitoring
+- **Flask Application**: REST API with real-time hybrid system monitoring and performance tracking
+- **Interactive Chess Board**: Click-to-move interface with LC0 analysis integration and expert switching
+- **LC0 Integration Display**: Live LC0 engine status, analysis results, and performance metrics
+- **Training Controls**: GUI for model training with progress monitoring and system health checks
 
 ### Performance & Reliability Layer
 - **Error Handling**: Comprehensive error classification and recovery strategies

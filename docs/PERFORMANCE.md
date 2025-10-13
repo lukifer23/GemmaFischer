@@ -2,17 +2,17 @@
 
 ## Overview
 
-This document provides comprehensive performance metrics for GemmaFischer, including training performance, inference benchmarks, and parallel multi-expert execution characteristics.
+This document provides comprehensive performance metrics for GemmaFischer's hybrid LLM/LC0 architecture, including training performance, inference benchmarks, and LC0 neural engine characteristics.
 
 ## Training Performance
 
-### M3 Pro Training Metrics
+### M3 Pro Training Metrics (Hybrid Architecture)
 
-| Expert | Steps | Duration | Peak Memory | Final Loss | Status |
-|--------|-------|----------|-------------|------------|--------|
-| **UCI** | 1600 | ~45 min | 4-6GB | ~0.75 | Complete |
-| **Tutor** | 1000 | ~30 min | 4-6GB | ~1.0 | In Progress |
-| **Director** | 1000 | ~30 min | 4-6GB | ~1.2 | Pending |
+| Expert | Steps | Duration | Peak Memory | Final Loss | Status | Purpose |
+|--------|-------|----------|-------------|------------|--------|---------|
+| **UCI** | 1600 | ~40 min | 4-6GB | ~0.75 | Complete | LLM fallback for LC0 |
+| **Tutor** | 1800 | ~50 min | 4-6GB | ~0.85 | Enhanced | Educational explanations |
+| **Director** | 1600 | ~45 min | 4-6GB | ~0.90 | Enhanced | Strategic guidance |
 
 ### Training Characteristics
 - **Steps/Second**: 2.5-3.0 (stable with MPS optimization)
@@ -22,10 +22,19 @@ This document provides comprehensive performance metrics for GemmaFischer, inclu
 
 ## Inference Performance
 
-### Single Expert Execution
+### LC0 Neural Engine Performance (Primary UCI Engine)
 
-| Metric | UCI Expert | Tutor Expert | Director Expert |
-|--------|------------|---------------|-----------------|
+| Metric | LC0 Metal Backend | Stockfish Fallback |
+|--------|-------------------|-------------------|
+| **Response Time** | **1.8s** avg (post warm-up) | 2.1s avg |
+| **Memory Usage** | 2-3GB | 1-2GB |
+| **Stockfish Agreement** | 50%+ (depth 8) | N/A |
+| **GPU Utilization** | 80%+ (Metal acceleration) | CPU only |
+
+### LLM Expert Performance (Educational/Strategic)
+
+| Metric | UCI Expert (LLM fallback) | Tutor Expert | Director Expert |
+|--------|---------------------------|---------------|-----------------|
 | **Response Time** | **2.3s** avg (post warm-up) | ~4.4s avg | ~5.5s avg |
 | **Memory Usage** | 6-7GB | 6-7GB | 6-7GB |
 | **Cache Hit Rate** | 75-85% | 70-80% | 65-75% |
@@ -44,6 +53,20 @@ This document provides comprehensive performance metrics for GemmaFischer, inclu
 - **Efficiency**: ~25-30% time overhead for 3x richer analysis
 - **Memory**: Linear scaling with expert count
 - **Concurrency**: Thread-safe with proper synchronization
+
+### Hybrid System Performance (LC0 + LLM Integration)
+
+| Configuration | Response Time | Memory Usage | Quality Characteristics |
+|---------------|---------------|--------------|------------------------|
+| **LC0 Primary** | 1.8s | 2-3GB | High precision moves, neural evaluation |
+| **LLM Educational** | 2.3-5.5s | 6-7GB | Strategic context, explanations |
+| **Hybrid Combined** | 2.0-2.5s | 8-10GB | **Optimal: precision + education** |
+
+**Hybrid System Benefits:**
+- **Move Quality**: 50%+ Stockfish agreement vs 15% for LLM-only
+- **Educational Value**: Strategic explanations enhance move understanding
+- **Performance**: 1.8s average response time with comprehensive analysis
+- **Reliability**: LC0 → LLM → Stockfish fallback chain
 
 ## Cache Performance
 

@@ -228,8 +228,13 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
     engine_options: Dict[str, Any] = {
         'Threads': threads,
     }
+    # Always set weights file if provided to ensure custom weights are used
     if weights_file:
-        engine_options['WeightsFile'] = weights_file
+        # Use absolute path to ensure correct file is loaded
+        import os
+        weights_path = os.path.abspath(weights_file)
+        engine_options['WeightsFile'] = weights_path
+        logger.info(f"[LC0] Using custom weights file: {weights_path}")
     if backend:
         engine_options['Backend'] = backend
     if nn_cache_size is not None:

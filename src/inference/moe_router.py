@@ -2021,22 +2021,46 @@ class MoEInferenceManager:
         }
 
     def _execute_single_expert_inference(self, fen: str, expert_name: str) -> Dict[str, Any]:
-        """Execute inference with a single expert."""
+        """Execute inference with a single expert.
+
+        For 'uci', use the LC0 HybridEngine path for move selection to ensure
+        engine-grade legality and evaluation; for 'tutor' and 'director', use
+        the standard LLM generation paths.
+        """
         self._ensure_expert_ready(expert_name)
         if self.inference_system:
             try:
                 # Switch to the correct expert
                 self.inference_system.set_active_adapter(expert_name)
 
-                # Generate question based on expert type
+                # 'uci' routes to LC0 hybrid analysis directly
                 if expert_name == 'uci':
-                    question = f"FEN: {fen}\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
-                elif expert_name == 'tutor':
+                    try:
+                        engine_payload = self.inference_system.analyze_with_engine(fen)
+                        # Map engine payload to MoE single-expert schema
+                        move_only = engine_payload.get('best_move') or ''
+                        response_text = move_only
+                        return {
+                            'response': response_text,
+                            'expert_used': 'uci',
+                            'analysis_type': 'single_expert_engine',
+                            'confidence': 0.95 if move_only else 0.5,
+                            'engine': engine_payload.get('engine'),
+                            'engine_time': engine_payload.get('engine_time'),
+                            'fallback_used': engine_payload.get('fallback_used'),
+                            'evaluation_cp': engine_payload.get('evaluation_cp'),
+                            'principal_variation': engine_payload.get('principal_variation'),
+                        }
+                    except Exception as engine_exc:
+                        logger.error(f"UCI expert engine path failed, falling back to LLM: {engine_exc}")
+
+                # Generate question based on expert type for LLM-backed experts
+                if expert_name == 'tutor':
                     question = f"FEN: {fen}\nExplain the position and suggest the best move."
                 else:  # director
                     question = f"FEN: {fen}\nAnalyze this chess position strategically."
 
-                inference_mode = 'engine' if expert_name == 'uci' else expert_name
+                inference_mode = expert_name
 
                 # Prevent recursive MoE dispatch when delegating back to inference
                 depth_attr = '_moe_dispatch_depth'

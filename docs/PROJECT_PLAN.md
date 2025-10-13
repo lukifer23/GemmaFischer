@@ -1,13 +1,15 @@
-# Project Plan: GemmaFischer — Chess LLM Engine + Tutor
+# Project Plan: GemmaFischer — Hybrid Chess LLM/LC0 System
 
 ## Summary
 
-**GemmaFischer** is a lightweight language model (based on Gemma 3B or 270M) designed to function as both:
+**GemmaFischer** is a hybrid chess AI system that combines:
 
-- A **chess engine**, capable of interfacing with UCI backends, evaluating positions, and suggesting moves
-- A **chess tutor/analyst**, able to explain concepts, annotate games, and provide historical insight through chain-of-thought (CoT) reasoning
+- **LeelaChess Zero (LC0)** as the primary UCI chess engine for precise move generation and position analysis
+- **Gemma-3 270M LLM** for strategic guidance, educational explanations, and chess tutoring
 
-**Platform**: Mac-only (M3 Pro) with MPS acceleration - no CUDA/CPU fallbacks.
+The system uses LoRA adaptation on Apple Silicon with MPS acceleration and features intelligent routing between LC0's neural engine capabilities and the LLM's educational functions.
+
+**Platform**: Mac-only (M3 Pro) with MPS acceleration and Metal backend optimization - no CUDA/CPU fallbacks.
 
 ---
 

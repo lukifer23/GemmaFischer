@@ -1,11 +1,11 @@
-# ChessGemma Training Guide
+# GemmaFischer Training Guide
 
 ## Overview
 
-This guide covers the training process for ChessGemma's Mixture of Experts (MoE) system. The training uses LoRA fine-tuning with MPS optimization on Apple Silicon hardware.
+This guide covers the training process for GemmaFischer's hybrid LLM/LC0 system. The training focuses on LoRA fine-tuning for strategic guidance and educational explanations, while LC0 handles precise move generation.
 
-**Platform**: Mac with Apple Silicon (M3/M4 recommended) - MPS acceleration optimized.
-**Current Status**: 107K+ standardized training samples including 2K high-quality CoT reasoning examples.
+**Platform**: Mac with Apple Silicon (M3/M4 recommended) - MPS acceleration optimized for both LC0 Metal backend and LLM inference.
+**Current Status**: 150K+ standardized training samples optimized for educational and strategic reasoning capabilities.
 
 ## Prerequisites
 

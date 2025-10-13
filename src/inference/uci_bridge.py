@@ -350,7 +350,7 @@ class UCIBridge:
             return None
 
     def _generate_chessgemmma_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[str]:
-        """Generate a move using ChessGemma with enhanced UCI validation and post-processing"""
+        """Generate a move using LC0 hybrid engine as primary, LLM as fallback"""
         if self.inference is None:
             self._last_generation_metadata = {
                 "requested_mode": self.options.mode,
@@ -376,13 +376,30 @@ class UCIBridge:
                 "generation_mode": generation_mode,
             }
 
-            # Create prompt based on mode using enhanced prompt functions
-            if routed_mode == "tutor":
+            # Primary: Use LC0 hybrid engine for UCI moves (much more reliable than LLM)
+            if routed_mode in ("uci", "auto"):
+                try:
+                    engine_result = self.inference.analyze_with_engine(fen)
+                    uci_move = engine_result.get('best_move')
+                    if uci_move:
+                        # Validate the move is legal
+                        try:
+                            move_obj = chess.Move.from_uci(uci_move)
+                            if board.is_legal(move_obj):
+                                logger.info(f"LC0 hybrid engine generated valid UCI move: {uci_move}")
+                                return uci_move
+                        except (ValueError, chess.InvalidMoveError):
+                            logger.warning(f"LC0 generated invalid UCI move: {uci_move}")
+                except Exception as e:
+                    logger.warning(f"LC0 hybrid engine failed, falling back to LLM: {e}")
+
+            # Fallback: Use LLM model for tutor/director modes or when engine fails
+            if routed_mode != "uci":
                 prompt = create_tutor_prompt_with_uci(fen, "Analyze this position step by step")
             else:
                 prompt = create_engine_prompt_strict(fen)
 
-            # Generate response using ChessGemma
+            # Generate response using ChessGemma LLM
             response_dict = self.inference.generate_response(
                 prompt,
                 mode=generation_mode,
@@ -390,24 +407,24 @@ class UCIBridge:
                 temperature=0.0,   # Deterministic for engine mode
                 top_p=1.0
             )
-            
+
             response = response_dict.get('response', '')
             if not response:
-                logger.warning("Empty response from ChessGemma")
+                logger.warning("Empty response from ChessGemma LLM")
                 return None
 
             # Use enhanced post-processing with strict validation
             uci_move = post_process_uci_response(
-                response, 
-                board, 
+                response,
+                board,
                 fallback_to_stockfish=self.options.use_stockfish_fallback
             )
-            
+
             if uci_move:
-                logger.info(f"ChessGemma generated valid UCI move: {uci_move}")
+                logger.info(f"ChessGemma LLM generated valid UCI move: {uci_move}")
                 return uci_move
             else:
-                logger.warning(f"ChessGemma failed to generate valid UCI move from: {response[:100]}...")
+                logger.warning(f"ChessGemma LLM failed to generate valid UCI move from: {response[:100]}...")
                 return None
 
         except Exception as e:

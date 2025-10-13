@@ -23,9 +23,17 @@ class UCIExpert:
         depth: int = 12,
         time_limit_ms: int = 5000,
     ) -> Optional[chess.Move]:
-        """Return a legal move using model; fallback to engine if needed."""
+        """Return a legal move using LC0 engine as primary; LLM as strategic guidance only."""
+        # Primary: Use LC0 engine for precise move calculation
+        if self.engine:
+            try:
+                return self.engine.get_best_move(board, depth=depth, time_limit_ms=time_limit_ms)
+            except Exception:
+                pass
+
+        # Fallback: Use LLM model if engine fails (should be rare)
         if not self.inference.load_model():
-            return self._fallback_engine(board, depth, time_limit_ms)
+            return None
 
         prompt = (
             f"FEN: {board.fen()}\n"
@@ -45,14 +53,11 @@ class UCIExpert:
                 repetition_penalty=1.0,
             )
         except Exception:
-            return self._fallback_engine(board, depth, time_limit_ms)
+            return None
 
         move_str = extract_first_uci(text)
         move_obj = to_move_if_legal(board, move_str) if move_str else None
-        if move_obj is not None:
-            return move_obj
-
-        return self._fallback_engine(board, depth, time_limit_ms)
+        return move_obj
 
     def _fallback_engine(self, board: chess.Board, depth: int, time_limit_ms: int) -> Optional[chess.Move]:
         if not self.engine:

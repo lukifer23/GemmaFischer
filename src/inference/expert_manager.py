@@ -35,8 +35,9 @@ except ImportError:
 class ChessExpertManager:
     """Manages UCI, Tutor, and Director expert adapters."""
 
-    def __init__(self, core_engine: Optional[ChessGemmaCoreEngine] = None):
+    def __init__(self, core_engine: Optional[ChessGemmaCoreEngine] = None, chess_engine: Optional[ChessEngineManager] = None):
         self.core_engine = core_engine or ChessGemmaCoreEngine()
+        self.chess_engine = chess_engine  # For UCI mode hybrid engine usage
         self.project_root = Path(__file__).resolve().parents[2]
 
         # Adapter management
@@ -285,6 +286,31 @@ class ChessExpertManager:
         """Generate response using the specified expert."""
         # Map UCI to engine mode
         mode = "engine" if expert_mode == "uci" else expert_mode
+
+        # For UCI mode, try hybrid engine first if available
+        if expert_mode == "uci" and self.chess_engine:
+            try:
+                # Use hybrid engine for UCI moves
+                import chess
+                # Extract FEN from context or question if possible
+                fen = context or question
+                if "FEN:" in fen:
+                    fen = fen.split("FEN:")[1].split("\n")[0].strip()
+                board = chess.Board(fen)
+                result = self.chess_engine.get_best_move(board, depth=12, time_limit_ms=5000)
+                if result:
+                    return {
+                        "response": result.uci(),
+                        "expert": expert_mode,
+                        "mode": mode,
+                        "engine_used": True,
+                        "confidence": 1.0
+                    }
+            except Exception as e:
+                # Log error but continue to LLM fallback
+                import logging
+                logging.warning(f"Hybrid engine failed in expert manager: {e}")
+                pass
 
         # Set active adapter for this expert
         self.set_active_adapter(expert_mode)

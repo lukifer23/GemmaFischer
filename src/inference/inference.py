@@ -175,7 +175,8 @@ class ChessGemmaInference:
 
             self._core_engine = ChessGemmaCoreEngine(model_path, adapter_path)
             self._cache = ChessInferenceCache()
-            self._expert_manager = ChessExpertManager(self._core_engine)
+            # Pass the hybrid engine to expert manager for UCI mode
+            self._expert_manager = ChessExpertManager(self._core_engine, self._chess_engine if hasattr(self, '_chess_engine') else None)
 
             # Maintain backward compatibility
             self.model_path = self._core_engine.model_path

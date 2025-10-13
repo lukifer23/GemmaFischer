@@ -13,13 +13,15 @@ chess_engine:
   primary: "lc0"
   lc0:
     enabled: true
-    engine_path: "lc0"
+    engine_path: "/opt/homebrew/bin/lc0"
     weights_file: "models/lc0_weights/network.pb.gz"
     backend: "metal"
-    threads: 6
-    nn_cache_size: 524288
-    time_limit: 2.0
+    threads: 4  # Optimized for M3 Pro GPU cores
+    nn_cache_size: 262144  # Reduced for M3 Pro memory constraints
+    time_limit: 1.5  # Faster response time
     depth: null
+    # Ensure custom weights are used, not Homebrew defaults
+    weights_priority: "custom"
     search_paths:
       - "/opt/homebrew/bin/lc0"
       - "/usr/local/bin/lc0"
@@ -27,12 +29,12 @@ chess_engine:
       - "lc0"
   fallback:
     engine_path: "/opt/homebrew/bin/stockfish"
-    threads: 2
-    hash: 128
+    threads: 4  # Better performance for fallback
+    hash: 256  # Increased hash for better analysis
     skill_level: 20
     show_wdl: true
-    depth: 18
-    time_limit: 0.5
+    depth: 16  # Slightly reduced for faster fallback
+    time_limit: 0.8  # Faster fallback response
     search_paths:
       - "/opt/homebrew/bin/stockfish"
       - "/usr/local/bin/stockfish"
@@ -81,10 +83,10 @@ experts:
     output_dir: "checkpoints/lora_uci"
     per_device_train_batch_size: 1
     gradient_accumulation_steps: 12
-    max_steps: 2400
+    max_steps: 1600  # Reduced since LC0 is primary UCI engine
     learning_rate: 2.0e-4
     num_train_epochs: 1
-    warmup_steps: 200
+    warmup_steps: 160  # Adjusted for shorter training
     weight_decay: 0.01
     max_grad_norm: 1.0
     logging_steps: 20
@@ -106,10 +108,10 @@ experts:
     output_dir: "checkpoints/lora_tutor"
     per_device_train_batch_size: 1
     gradient_accumulation_steps: 16
-    max_steps: 1600
+    max_steps: 1800  # Increased for better educational explanations
     learning_rate: 1.6e-4
     num_train_epochs: 1
-    warmup_steps: 160
+    warmup_steps: 180  # Adjusted for longer training
     weight_decay: 0.01
     max_grad_norm: 1.0
     logging_steps: 40
@@ -131,10 +133,10 @@ experts:
     output_dir: "checkpoints/lora_director"
     per_device_train_batch_size: 1
     gradient_accumulation_steps: 16
-    max_steps: 1400
+    max_steps: 1600  # Increased for better strategic reasoning
     learning_rate: 1.6e-4
     num_train_epochs: 1
-    warmup_steps: 140
+    warmup_steps: 160  # Adjusted for longer training
     weight_decay: 0.01
     max_grad_norm: 1.0
     logging_steps: 40
@@ -167,30 +169,33 @@ inference:
   pad_token_id: null
   eos_token_id: null
 
-  # Expert-specific overrides
+  # Expert-specific overrides - optimized for hybrid architecture
   engine_temperature: 0.0
   engine_top_p: 1.0
   engine_do_sample: false
-  engine_max_new_tokens: 8
+  engine_max_new_tokens: 8  # UCI moves are short
 
-  tutor_temperature: 0.7
-  tutor_top_p: 0.9
+  tutor_temperature: 0.8  # Slightly higher for more creative explanations
+  tutor_top_p: 0.95
   tutor_do_sample: true
-  tutor_max_new_tokens: 150
+  tutor_max_new_tokens: 180  # Allow longer explanations
 
-  director_temperature: 0.6
-  director_top_p: 0.9
+  director_temperature: 0.7  # Balanced for strategic guidance
+  director_top_p: 0.92
   director_do_sample: true
-  director_max_new_tokens: 200
+  director_max_new_tokens: 220  # Strategic analysis needs more space
 
-# Cache Configuration
+# Cache Configuration - Optimized for hybrid LLM/LC0 architecture
 cache:
-  max_cache_size: 512
-  engine_cache_max: 1024
+  max_cache_size: 1024  # Increased for LLM responses
+  engine_cache_max: 2048  # Increased for LC0 analysis results
   cache_ttl_seconds: 3600
   enable_response_cache: true
   enable_engine_cache: true
   enable_kv_cache: true
+  # Hybrid-specific optimizations
+  hybrid_cache_enabled: true  # Cache combined LLM+LC0 responses
+  hybrid_cache_max: 512  # Separate cache for hybrid results
 
 # System Configuration
 system:
@@ -224,18 +229,22 @@ moe:
     - endgame_principles
     - opening_strategy
 
-# Performance Configuration
+# Performance Configuration - Optimized for M3 Pro hybrid architecture
 performance:
   enable_performance_monitoring: true
-  metrics_collection_interval: 60
-  slow_query_threshold: 1.0
+  metrics_collection_interval: 30  # More frequent monitoring for hybrid system
+  slow_query_threshold: 1.5  # Adjusted for LC0 + LLM combined latency
   memory_monitoring_enabled: true
   cache_performance_tracking: true
   model_loading_optimization: true
   batch_processing_enabled: true
   parallel_inference_enabled: true
   tokenizer_batch_size: 8
-  inference_queue_size: 100
+  inference_queue_size: 150  # Increased for hybrid processing
+  # Hybrid-specific optimizations
+  hybrid_processing_enabled: true
+  engine_priority_boost: 0.8  # Prioritize LC0 for UCI moves
+  llm_optimization_enabled: true  # Optimize LLM for educational responses
 
 # Dataset Configuration
 datasets:

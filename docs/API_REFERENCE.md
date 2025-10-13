@@ -1,8 +1,8 @@
-# ChessGemma API Reference
+# GemmaFischer API Reference
 
 ## Overview
 
-ChessGemma provides a REST API for chess analysis, Q&A, and model training. The system features Mixture of Experts (MoE) routing and supports UCI-compatible chess engine functionality.
+GemmaFischer provides a REST API for chess analysis, Q&A, and model training. The system features a hybrid architecture combining LeelaChess Zero (LC0) for precise move generation with Gemma-3 LLM for strategic guidance and educational explanations, with intelligent MoE routing.
 
 **Base URL**: `http://localhost:5000`
 
@@ -11,12 +11,12 @@ ChessGemma provides a REST API for chess analysis, Q&A, and model training. The 
 ### Chess Q&A Endpoints
 
 #### POST `/api/ask`
-Main chess question answering endpoint with MoE routing.
+Main chess question answering endpoint with hybrid MoE routing.
 
 **Parameters:**
 - `question` (string): Chess-related question
 - `context` (string, optional): Additional context (FEN, position description)
-- `expert` (string): Expert selection - `"auto"`, `"uci"`, `"tutor"`, `"director"`
+- `expert` (string): Expert selection - `"auto"` (intelligent routing), `"uci"` (LC0 engine), `"tutor"` (educational analysis), `"director"` (strategic guidance)
 
 **Response:**
 ```json
