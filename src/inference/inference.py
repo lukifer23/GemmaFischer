@@ -205,6 +205,18 @@ class ChessGemmaInference:
 
         # Adapter management
         self._adapter_paths: Dict[str, Path] = {}
+
+        # Hybrid LC0 engine integration
+        self._hybrid_engine_enabled = os.environ.get('CHESSGEMMA_HYBRID_ENGINE', 'false').lower() in ('true', '1', 'yes')
+        self._hybrid_engine = None
+        if self._hybrid_engine_enabled:
+            try:
+                from .hybrid_engine import create_hybrid_engine
+                self._hybrid_engine = create_hybrid_engine(llm_model=self)
+                logger.info("🤖 Hybrid LC0 engine enabled for UCI moves")
+            except Exception as e:
+                logger.warning(f"Failed to initialize hybrid engine: {e}")
+                self._hybrid_engine_enabled = False
         # Map physical adapter names -> loaded flag
         self._loaded_adapters: Dict[str, bool] = {}
         # Map logical expert name (uci/tutor/director) -> physical adapter name (e.g., uci@checkpoint-600)
@@ -1688,7 +1700,7 @@ class ChessGemmaInference:
             return None
 
     def _generate_engine_move(self, question: str, prompt_text: str, max_new_tokens: int) -> Optional[str]:
-        """Generate an engine-style UCI move using N-best sampling and legality + optional SF re-ranking.
+        """Generate an engine-style UCI move using hybrid LC0 system or N-best sampling.
 
         Returns a move string (uci) when successful, or None to signal fallback.
         """
@@ -1703,6 +1715,35 @@ class ChessGemmaInference:
                     return cached
 
             board = chess.Board(fen) if fen else None
+
+            # Use hybrid LC0 engine if enabled and we have a position
+            if self._hybrid_engine_enabled and self._hybrid_engine and board is not None:
+                try:
+                    logger.info("🤖 Using hybrid LC0 engine for move generation")
+
+                    # Determine strategic intent from question/prompt
+                    strategic_intent = self._infer_strategic_intent(question, prompt_text)
+
+                    # Get hybrid analysis
+                    analysis = self._hybrid_engine.analyze_position_with_strategy(
+                        fen=fen,
+                        strategic_intent=strategic_intent,
+                        time_limit=2.0  # LC0 analysis time
+                    )
+
+                    if analysis.best_move:
+                        move_uci = analysis.best_move.uci()
+                        logger.info(f"🤖 Hybrid engine move: {move_uci} (conf: {analysis.confidence:.2f})")
+
+                        # Cache the result
+                        self._engine_cache_store(fen, move_uci)
+
+                        return move_uci
+                    else:
+                        logger.warning("🤖 Hybrid engine returned no move, falling back to LoRA")
+                except Exception as e:
+                    logger.error(f"🤖 Hybrid engine failed: {e}, falling back to LoRA")
+                    # Fall through to LoRA-based generation
 
             # Policy: direct scoring of legal moves by log-prob (no sampling)
             if self._engine_policy == 'logprob' and board is not None:
@@ -1780,6 +1821,40 @@ class ChessGemmaInference:
             return None
         except Exception:
             return None
+
+    def _infer_strategic_intent(self, question: str, prompt_text: str) -> str:
+        """Infer strategic intent from question/prompt text."""
+        try:
+            from .hybrid_engine import StrategicIntent
+
+            text = (question + " " + prompt_text).lower()
+
+            # Map keywords to strategic intents
+            intent_keywords = {
+                StrategicIntent.AGGRESSIVE.value: ['attack', 'aggressive', 'sharp', 'winning', 'mate', 'checkmate'],
+                StrategicIntent.DEFENSIVE.value: ['defend', 'defensive', 'solid', 'safe', 'protect', 'king safety'],
+                StrategicIntent.POSITIONAL.value: ['position', 'control', 'center', 'long-term', 'advantage', 'structure'],
+                StrategicIntent.TACTICAL.value: ['tactic', 'combination', 'fork', 'pin', 'skewer', 'sacrifice'],
+                StrategicIntent.DEVELOPMENT.value: ['develop', 'mobilize', 'activate', 'castle', 'coordination'],
+                StrategicIntent.ENDGAME.value: ['endgame', 'pawn', 'promotion', 'king activity', 'zugzwang']
+            }
+
+            # Count keyword matches for each intent
+            scores = {}
+            for intent, keywords in intent_keywords.items():
+                score = sum(1 for keyword in keywords if keyword in text)
+                scores[intent] = score
+
+            # Return intent with highest score, default to positional
+            best_intent = max(scores.items(), key=lambda x: x[1])
+            if best_intent[1] > 0:
+                return best_intent[0]
+            else:
+                return StrategicIntent.POSITIONAL.value
+
+        except Exception as e:
+            logger.debug(f"Failed to infer strategic intent: {e}")
+            return 'positional'  # Safe default
 
     # ----------------------
     # UCI constrained logits
