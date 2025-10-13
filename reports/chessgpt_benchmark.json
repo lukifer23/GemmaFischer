@@ -1,0 +1,63 @@
+{
+  "summary": {
+    "model_path": "models/chessgpt-base-v1",
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "total_samples": 5,
+    "evaluated_samples": 5,
+    "legal_predictions": 4,
+    "correct_predictions": 0,
+    "load_time_sec": 0.4013668749999999,
+    "average_latency_ms": 109523.7246164,
+    "latency_p95_ms": 121755.02945799996,
+    "latency_std_ms": 14101.85053617717,
+    "max_rss_gb": 9.338241577148438
+  },
+  "samples": [
+    {
+      "fen": "R7/P4p1k/4p3/4P3/r5p1/8/5K1P/8 b - - 3 43",
+      "expected_move": "a4a3",
+      "predicted_move": "h7g7",
+      "legal": true,
+      "matched": false,
+      "latency_ms": 86526.509041,
+      "raw_output": "You are a chess engine. Given the position in Forsyth-Edwards Notation, output the best move in UCI notation.\nFEN: R7/P4p1k/4p3/4P3/r5p1/8/5K1P/8 b - - 3 43\nBest move (UCI): h7g7"
+    },
+    {
+      "fen": "Q1b1kb1r/1p1q1ppp/4pn2/1p6/3n1B2/2P5/PP3PPP/R3KB1R w KQk - 0 12",
+      "expected_move": "e1c1",
+      "predicted_move": "a8c8",
+      "legal": true,
+      "matched": false,
+      "latency_ms": 105975.24291699998,
+      "raw_output": "You are a chess engine. Given the position in Forsyth-Edwards Notation, output the best move in UCI notation.\nFEN: Q1b1kb1r/1p1q1ppp/4pn2/1p6/3n1B2/2P5/PP3PPP/R3KB1R w KQk - 0 12\nBest move (UCI): a8c8\nU"
+    },
+    {
+      "fen": "8/6k1/5p2/5QP1/3PK2q/4PP2/8/8 w - - 3 56",
+      "expected_move": "e4d5",
+      "predicted_move": "f5f6",
+      "legal": false,
+      "matched": false,
+      "latency_ms": 117663.10566599997,
+      "raw_output": "You are a chess engine. Given the position in Forsyth-Edwards Notation, output the best move in UCI notation.\nFEN: 8/6k1/5p2/5QP1/3PK2q/4PP2/8/8 w - - 3 56\nBest move (UCI): f5f6\nStock"
+    },
+    {
+      "fen": "8/8/pk6/2p3R1/P1P1N3/1P1pn3/8/6K1 w - - 0 45",
+      "expected_move": "g5c5",
+      "predicted_move": "e4c3",
+      "legal": true,
+      "matched": false,
+      "latency_ms": 121755.02945799996,
+      "raw_output": "You are a chess engine. Given the position in Forsyth-Edwards Notation, output the best move in UCI notation.\nFEN: 8/8/pk6/2p3R1/P1P1N3/1P1pn3/8/6K1 w - - 0 45\nBest move (UCI): e4c3"
+    },
+    {
+      "fen": "r4rk1/ppp2ppp/4bq2/n2p4/3Pn3/1BN1B3/PP3PPP/R2QR1K1 w - - 3 13",
+      "expected_move": "c3d5",
+      "predicted_move": "e3g5",
+      "legal": true,
+      "matched": false,
+      "latency_ms": 115698.73600000005,
+      "raw_output": "You are a chess engine. Given the position in Forsyth-Edwards Notation, output the best move in UCI notation.\nFEN: r4rk1/ppp2ppp/4bq2/n2p4/3Pn3/1BN1B3/PP3PPP/R2QR1K1 w - - 3 13\nBest move (UCI): e3g5\nF"
+    }
+  ]
+}

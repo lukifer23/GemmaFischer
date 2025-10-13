@@ -8,6 +8,32 @@ model:
   model_id_env: "CHESSGEMMA_MODEL_ID"
   model_path_env: "CHESSGEMMA_MODEL_PATH"
 
+# Engine Configuration
+chess_engine:
+  primary: "lc0"
+  lc0:
+    engine_path: "lc0"
+    weights_file: "models/lc0_weights/default.pb.gz"
+    backend: "metal"
+    threads: 2
+    nn_cache_size: 200000
+    search_paths:
+      - "/opt/homebrew/bin/lc0"
+      - "/usr/local/bin/lc0"
+      - "/usr/bin/lc0"
+      - "lc0"
+  fallback:
+    engine_path: "/opt/homebrew/bin/stockfish"
+    threads: 2
+    hash: 128
+    skill_level: 20
+    show_wdl: true
+    search_paths:
+      - "/opt/homebrew/bin/stockfish"
+      - "/usr/local/bin/stockfish"
+      - "/usr/bin/stockfish"
+      - "stockfish"
+
 # Training Configuration (Default)
 training:
   output_dir: "checkpoints/lora_default"

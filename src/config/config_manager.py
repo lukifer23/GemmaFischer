@@ -14,7 +14,7 @@ import yaml
 import time
 import threading
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, Callable
+from typing import Dict, Any, Optional, Union, Callable, List
 from dataclasses import dataclass, field
 
 # Add project root to path for imports
@@ -203,6 +203,49 @@ class PerformanceConfig:
 
 
 @dataclass
+class LC0EngineSettings:
+    """Configuration for LC0 engine."""
+    enabled: bool = True
+    engine_path: str = "lc0"
+    weights_file: str = "models/lc0_weights/default.pb.gz"
+    backend: str = "metal"
+    threads: int = 2
+    nn_cache_size: int = 200000
+    search_paths: List[str] = field(default_factory=lambda: [
+        "/opt/homebrew/bin/lc0",
+        "/usr/local/bin/lc0",
+        "/usr/bin/lc0",
+        "lc0",
+    ])
+    debug: bool = False
+
+
+@dataclass
+class FallbackEngineSettings:
+    """Configuration for fallback Stockfish engine."""
+    enabled: bool = True
+    engine_path: str = "/opt/homebrew/bin/stockfish"
+    threads: int = 2
+    hash: int = 128
+    skill_level: int = 20
+    show_wdl: bool = True
+    search_paths: List[str] = field(default_factory=lambda: [
+        "/opt/homebrew/bin/stockfish",
+        "/usr/local/bin/stockfish",
+        "/usr/bin/stockfish",
+        "stockfish",
+    ])
+
+
+@dataclass
+class ChessEngineConfig:
+    """Configuration for chess engine orchestration."""
+    primary: str = "lc0"
+    lc0: LC0EngineSettings = field(default_factory=LC0EngineSettings)
+    fallback: FallbackEngineSettings = field(default_factory=FallbackEngineSettings)
+
+
+@dataclass
 class ChessGemmaConfig:
     """Unified configuration for ChessGemma."""
 
@@ -215,6 +258,7 @@ class ChessGemmaConfig:
     inference: InferenceConfig = field(default_factory=InferenceConfig)
     cache: CacheConfig = field(default_factory=CacheConfig)
     system: SystemConfig = field(default_factory=SystemConfig)
+    chess_engine: ChessEngineConfig = field(default_factory=ChessEngineConfig)
 
     # Advanced features
     moe: MoEConfig = field(default_factory=MoEConfig)
@@ -251,6 +295,28 @@ class ChessGemmaConfig:
         # Apply cache overrides
         if 'cache_size' in env_config:
             self.cache.max_cache_size = env_config['cache_size']
+
+        # Apply engine overrides
+        if 'engine_primary' in env_config:
+            self.chess_engine.primary = env_config['engine_primary']
+
+        if 'lc0_path' in env_config:
+            self.chess_engine.lc0.engine_path = env_config['lc0_path']
+
+        if 'lc0_weights' in env_config:
+            self.chess_engine.lc0.weights_file = env_config['lc0_weights']
+
+        if 'lc0_backend' in env_config:
+            self.chess_engine.lc0.backend = env_config['lc0_backend']
+
+        if 'lc0_threads' in env_config:
+            try:
+                self.chess_engine.lc0.threads = int(env_config['lc0_threads'])
+            except ValueError:
+                pass
+
+        if 'fallback_engine_path' in env_config:
+            self.chess_engine.fallback.engine_path = env_config['fallback_engine_path']
 
     def get_training_config(self, expert: str = "default") -> Dict[str, Any]:
         """Get training configuration for a specific expert."""
@@ -347,6 +413,7 @@ class ChessGemmaConfig:
         config_copy.inference = self.inference
         config_copy.cache = self.cache
         config_copy.system = self.system
+        config_copy.chess_engine = self.chess_engine
         config_copy.datasets = self.datasets
 
         config_dict = self._dataclass_to_dict(config_copy)
@@ -426,6 +493,24 @@ class ChessGemmaConfig:
             for field_name in config.system.__dataclass_fields__:
                 if field_name in system_data:
                     setattr(config.system, field_name, system_data[field_name])
+
+        # Set chess engine config
+        if 'chess_engine' in config_dict:
+            engine_data = config_dict['chess_engine']
+            if 'primary' in engine_data:
+                config.chess_engine.primary = engine_data['primary']
+
+            if 'lc0' in engine_data:
+                lc0_data = engine_data['lc0']
+                for field_name in config.chess_engine.lc0.__dataclass_fields__:
+                    if field_name in lc0_data:
+                        setattr(config.chess_engine.lc0, field_name, lc0_data[field_name])
+
+            if 'fallback' in engine_data:
+                fallback_data = engine_data['fallback']
+                for field_name in config.chess_engine.fallback.__dataclass_fields__:
+                    if field_name in fallback_data:
+                        setattr(config.chess_engine.fallback, field_name, fallback_data[field_name])
 
         # Set datasets
         if 'datasets' in config_dict:

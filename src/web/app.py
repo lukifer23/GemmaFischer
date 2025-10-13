@@ -1657,6 +1657,7 @@ def get_ai_move():
             data = {}
 
         expert = (data.get('expert') or 'auto').strip().lower()
+        strategic_intent = (data.get('strategic_intent') or 'positional').strip().lower()
         
         start_time = time.time()
         print(f"\n🤖 AI MOVE REQUEST")
@@ -1674,6 +1675,59 @@ def get_ai_move():
         # Guided Play pipeline
         # 1) Use UCI expert to pick a precise move
         # 2) If Tutor selected, generate a concise explanation after making the move
+        # 3) If Hybrid selected, use LLM + LC0 hybrid system
+
+        if expert == 'hybrid':
+            # Use hybrid LC0 system
+            print(f"🤖 Using HYBRID system with {strategic_intent} strategy")
+            try:
+                # Call the inference engine directly with hybrid mode
+                hybrid_result = chess_model.generate_response(
+                    f"Position: {fen}\nStrategic intent: {strategic_intent}\nWhat is the best move?",
+                    context=f"Current position: {fen}",
+                    mode='engine',  # This will trigger hybrid analysis
+                    max_length=50
+                )
+
+                # The hybrid system should return move analysis
+                response_text = hybrid_result.get('response', '')
+                move_uci = extract_move_from_response(response_text, legal_moves)
+
+                if move_uci and move_uci in legal_moves:
+                    move_result = chess_game.make_move(move_uci)
+
+                    # Enhanced response for hybrid system
+                    move_result['ai_response'] = response_text
+                    move_result['ai_confidence'] = hybrid_result.get('confidence', 0.0)
+                    move_result['hybrid_analysis'] = {
+                        'strategic_guidance': {'intent': strategic_intent},
+                        'confidence': hybrid_result.get('confidence', 0.0),
+                        'total_time': time.time() - start_time,
+                        'llm_time': hybrid_result.get('llm_time', 0.0),
+                        'lc0_time': hybrid_result.get('lc0_time', 0.0)
+                    }
+
+                    response_time = time.time() - start_time
+                    print(f"🤖 Hybrid move: {move_uci}")
+                    print(f"⏱️  Hybrid Response Time: {response_time:.2f}s")
+
+                    return jsonify(move_result)
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Hybrid system could not find a valid move',
+                        'game_state': chess_game.game_state
+                    })
+
+            except Exception as e:
+                print(f"🤖 Hybrid system error: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Hybrid system error: {str(e)}',
+                    'game_state': chess_game.game_state
+                })
+
+        # Regular LoRA-based approach for non-hybrid modes
         engine_question = (
             f"FEN: {fen}\n"
             "Move:\n"

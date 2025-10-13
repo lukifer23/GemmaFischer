@@ -10,6 +10,7 @@ Provides full integration with Stockfish chess engine for:
 - Dataset validation and enhancement
 """
 
+import os
 import chess
 import chess.engine
 import chess.pgn
@@ -27,6 +28,21 @@ from datetime import datetime
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+DEFAULT_STOCKFISH_OPTIONS = {
+    'Threads': 2,
+    'Hash': 128,
+    'Skill Level': 20,
+    'UCI_LimitStrength': False,
+    'UCI_ShowWDL': True,
+}
+
+DEFAULT_STOCKFISH_PATHS = [
+    "/opt/homebrew/bin/stockfish",
+    "/usr/local/bin/stockfish",
+    "/usr/bin/stockfish",
+    "stockfish",
+]
 
 
 @dataclass
@@ -63,21 +79,28 @@ class PositionAnalysis:
 class ChessEngineManager:
     """High-level chess engine management with Stockfish integration."""
 
-    def __init__(self, engine_path: str = "/opt/homebrew/bin/stockfish", debug: bool = False):
+    def __init__(
+        self,
+        engine_path: str = "/opt/homebrew/bin/stockfish",
+        engine_options: Optional[Dict[str, Any]] = None,
+        debug: bool = False,
+        name: str = "Stockfish",
+        search_paths: Optional[List[str]] = None,
+    ):
         """Initialize chess engine with comprehensive error handling."""
         self.engine_path = engine_path
         self.debug = debug
         self.engine = None
         self._engine_lock = threading.RLock()
+        self.name = name
 
         # Engine configuration
-        self.engine_options = {
-            'Threads': 2,  # Use 2 threads on Apple Silicon
-            'Hash': 128,   # 128MB hash table
-            'Skill Level': 20,  # Maximum skill
-            'UCI_LimitStrength': False,
-            'UCI_ShowWDL': True,  # Show win/draw/loss probabilities
-        }
+        if engine_options is None:
+            self.engine_options = DEFAULT_STOCKFISH_OPTIONS.copy()
+        else:
+            self.engine_options = dict(engine_options)
+
+        self.search_paths = search_paths or DEFAULT_STOCKFISH_PATHS
 
         self._initialize_engine()
 
@@ -90,7 +113,7 @@ class ChessEngineManager:
                 try:
                     engine_instance = chess.engine.SimpleEngine.popen_uci(self.engine_path)
                 except Exception:
-                    discovered = self._find_stockfish()
+                    discovered = self._discover_engine()
                     if not discovered:
                         raise
                     engine_instance = chess.engine.SimpleEngine.popen_uci(discovered)
@@ -110,7 +133,7 @@ class ChessEngineManager:
 
                     if valid_options:
                         self.engine.configure(valid_options)
-                        logger.info(f"Configured engine with options: {list(valid_options.keys())}")
+                        logger.info(f"[{self.name}] Configured engine with options: {list(valid_options.keys())}")
 
                     # Verify engine is responsive
                     try:
@@ -118,31 +141,24 @@ class ChessEngineManager:
                     except Exception:
                         # Fallback: issue a very quick analyse to ensure readiness
                         _ = self.engine.analyse(chess.Board(), chess.engine.Limit(depth=1, time=0.01))
-                    logger.info("Stockfish engine initialized successfully")
+                    logger.info(f"[{self.name}] UCI engine initialized successfully")
 
                     # Test with a simple position
                     board = chess.Board()
                     info = self.engine.analyse(board, chess.engine.Limit(depth=10))
-                    logger.info(f"Engine test successful, score: {info['score']}")
+                    logger.info(f"[{self.name}] Engine test successful, score: {info.get('score')}")
 
                 return
 
             except Exception as e:
-                logger.warning(f"Engine initialization attempt {attempt + 1} failed: {e}")
+                logger.warning(f"[{self.name}] Engine initialization attempt {attempt + 1} failed: {e}")
                 if attempt == max_retries - 1:
-                    raise RuntimeError(f"Failed to initialize Stockfish engine after {max_retries} attempts")
+                    raise RuntimeError(f"Failed to initialize {self.name} engine after {max_retries} attempts")
                 time.sleep(1)
 
-    def _find_stockfish(self) -> Optional[str]:
-        """Find Stockfish binary in common locations."""
-        import os
-        common_paths = [
-            "/opt/homebrew/bin/stockfish",
-            "/usr/local/bin/stockfish",
-            "/usr/bin/stockfish",
-            "stockfish",
-        ]
-        for path in common_paths:
+    def _discover_engine(self) -> Optional[str]:
+        """Find engine binary in configured search paths."""
+        for path in self.search_paths:
             if os.path.exists(path) or (os.system(f"which {path} > /dev/null 2>&1") == 0):
                 return path
         return None
@@ -159,11 +175,74 @@ class ChessEngineManager:
             if self.engine:
                 try:
                     self.engine.quit()
-                    logger.info("Chess engine cleaned up successfully")
+                    logger.info(f"[{self.name}] Engine cleaned up successfully")
                 except Exception as e:
-                    logger.warning(f"Error during engine cleanup: {e}")
+                    logger.warning(f"[{self.name}] Error during engine cleanup: {e}")
                 finally:
                     self.engine = None
+
+
+def create_stockfish_manager(config: Dict[str, Any]) -> ChessEngineManager:
+    """Create a configured Stockfish engine manager from configuration data."""
+
+    engine_path = config.get('engine_path', "/opt/homebrew/bin/stockfish")
+    threads = config.get('threads', 2)
+    hash_mb = config.get('hash', 128)
+    skill_level = config.get('skill_level', 20)
+    show_wdl = config.get('show_wdl', True)
+    search_paths = config.get('search_paths') or DEFAULT_STOCKFISH_PATHS
+
+    engine_options = {
+        'Threads': threads,
+        'Hash': hash_mb,
+        'Skill Level': skill_level,
+        'UCI_LimitStrength': False,
+        'UCI_ShowWDL': bool(show_wdl),
+    }
+
+    return ChessEngineManager(
+        engine_path=engine_path,
+        engine_options=engine_options,
+        name="Stockfish",
+        search_paths=search_paths,
+        debug=config.get('debug', False),
+    )
+
+
+def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
+    """Create a configured LC0 engine manager from configuration data."""
+
+    engine_path = config.get('engine_path', 'lc0')
+    weights_file = config.get('weights_file') or ""
+    backend = config.get('backend', 'metal')
+    threads = config.get('threads', 2)
+    search_paths = config.get('search_paths') or [
+        "/opt/homebrew/bin/lc0",
+        "/usr/local/bin/lc0",
+        "/usr/bin/lc0",
+        "lc0",
+    ]
+
+    engine_options: Dict[str, Any] = {
+        'Threads': threads,
+    }
+    if weights_file:
+        engine_options['WeightsFile'] = weights_file
+    if backend:
+        engine_options['Backend'] = backend
+
+    manager = ChessEngineManager(
+        engine_path=engine_path,
+        engine_options=engine_options,
+        name="LC0",
+        search_paths=search_paths,
+        debug=config.get('debug', False),
+    )
+
+    if weights_file and not Path(weights_file).expanduser().exists():
+        logger.warning(f"[LC0] Weights file not found at {weights_file}. Engine may fail to load network.")
+
+    return manager
 
     def validate_move(self, fen: str, move: str) -> MoveAnalysis:
         """Validate a move and provide comprehensive analysis."""

@@ -1361,6 +1361,74 @@ async function getAIMove() {
   }
 }
 
+async function makeHybridAIMove() {
+  if (gameMode !== 'play') {
+    showMessage('🤖 Hybrid AI moves only available in Play Mode', 'warning');
+    return;
+  }
+
+  if (isLoading) {
+    showMessage('⏳ AI is already thinking...', 'warning');
+    return;
+  }
+
+  try {
+    isLoading = true;
+    showMessage('🤖 Hybrid AI is analyzing position...', 'info');
+
+    // Get selected strategic intent
+    const intentSelect = document.getElementById('strategic-intent');
+    const strategicIntent = intentSelect ? intentSelect.value : 'positional';
+
+    showMessage(`🎯 AI analyzing with ${strategicIntent} strategy...`, 'info', 3000);
+
+    const response = await fetch('/api/game/ai_move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        expert: 'hybrid',
+        strategic_intent: strategicIntent
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      const moveText = result.san || result.move;
+
+      // Enhanced hybrid response display
+      let aiMessage = `🤖 **AI played: ${moveText}**\n\n`;
+
+      if (result.hybrid_analysis) {
+        const analysis = result.hybrid_analysis;
+        aiMessage += `🎯 **Strategy**: ${analysis.strategic_guidance?.intent || strategicIntent}\n`;
+        aiMessage += `🎚️ **Confidence**: ${((analysis.confidence || 0) * 100).toFixed(0)}%\n`;
+        aiMessage += `⏱️ **Analysis**: ${(analysis.total_time || 0).toFixed(1)}s `;
+
+        if (analysis.llm_time && analysis.lc0_time) {
+          aiMessage += `(LLM: ${(analysis.llm_time).toFixed(1)}s, LC0: ${(analysis.lc0_time).toFixed(1)}s)`;
+        }
+        aiMessage += '\n\n';
+      }
+
+      if (result.ai_response) {
+        aiMessage += `💭 **Analysis**:\n${result.ai_response}`;
+      }
+
+      showMessage(aiMessage, 'success');
+      updateBoardFromFEN(result.fen);
+      gameState = result;
+    } else {
+      showMessage(`❌ Hybrid AI error: ${result.error}`, 'danger');
+    }
+
+  } catch (error) {
+    showMessage(`❌ Hybrid AI error: ${error}`, 'danger');
+  } finally {
+    isLoading = false;
+  }
+}
+
 async function getLegalMoves(square) {
   try {
     const response = await fetch('/api/game/analyze', {
@@ -1451,9 +1519,15 @@ function toggleGameMode() {
     if (gameMode === 'play') {
       toggleButton.classList.add('play-mode-active');
       toggleButton.innerHTML = '<i class="fas fa-gamepad me-1"></i>Exit Play Mode';
+      // Show hybrid controls in play mode
+      const hybridControls = document.getElementById('hybrid-controls');
+      if (hybridControls) hybridControls.style.display = 'block';
     } else {
       toggleButton.classList.add('analysis-mode-active');
       toggleButton.innerHTML = '<i class="fas fa-search me-1"></i>Enter Play Mode';
+      // Hide hybrid controls in analysis mode
+      const hybridControls = document.getElementById('hybrid-controls');
+      if (hybridControls) hybridControls.style.display = 'none';
     }
   }
   selectedSquare = null;

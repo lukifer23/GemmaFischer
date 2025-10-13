@@ -178,6 +178,25 @@ def get_environment_config() -> Dict[str, Any]:
         except ValueError:
             pass
 
+    # Engine configuration
+    if engine_primary := os.environ.get("CHESSGEMMA_ENGINE_PRIMARY"):
+        config['engine_primary'] = engine_primary.lower()
+
+    if lc0_path := os.environ.get("CHESSGEMMA_LC0_PATH"):
+        config['lc0_path'] = lc0_path
+
+    if lc0_weights := os.environ.get("CHESSGEMMA_LC0_WEIGHTS"):
+        config['lc0_weights'] = lc0_weights
+
+    if lc0_backend := os.environ.get("CHESSGEMMA_LC0_BACKEND"):
+        config['lc0_backend'] = lc0_backend
+
+    if lc0_threads := os.environ.get("CHESSGEMMA_LC0_THREADS"):
+        config['lc0_threads'] = lc0_threads
+
+    if fallback_engine := os.environ.get("CHESSGEMMA_FALLBACK_ENGINE_PATH"):
+        config['fallback_engine_path'] = fallback_engine
+
     return config
 
 
