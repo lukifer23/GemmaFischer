@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Refresh tutor/director expert datasets with cleaned, augmented entries.
 
-- deduplicate by FEN/prompt combination
-- ensure tutor responses end with ``best move: <uci>``
-- ensure director responses end with ``Final move (UCI): <uci>`` when available
-- append curated evaluation puzzles/questions to broaden coverage
+- Deduplicate by FEN/prompt combination
+- Ensure tutor responses end with ``best move: <uci>``
+- Ensure director responses end with ``Final move (UCI): <uci>`` when available
+- Optionally generate an LC0-labelled tutor split with hybrid explanations
+  saved to ``data/standardized/standardized_tutor_lc0_v1.jsonl``
 """
 from __future__ import annotations
 
+import argparse
 import json
+import logging
+import random
 import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -23,6 +27,7 @@ DIRECTOR_SOURCE = STANDARDIZED_DIR / "standardized_director_expert_v2.jsonl"
 
 TUTOR_OUTPUT = STANDARDIZED_DIR / "standardized_tutor_expert_v2.jsonl"
 DIRECTOR_OUTPUT = STANDARDIZED_DIR / "standardized_director_expert_v3.jsonl"
+TUTOR_LC0_OUTPUT = STANDARDIZED_DIR / "standardized_tutor_lc0_v1.jsonl"
 
 TUTOR_EVAL = VALIDATION_DIR / "tutor_comprehensive_validation.json"
 DIRECTOR_EVAL = VALIDATION_DIR / "director_comprehensive_validation.json"
@@ -31,6 +36,13 @@ DIRECTOR_EVAL = VALIDATION_DIR / "director_comprehensive_validation.json"
 BEST_MOVE_PATTERN = re.compile(r"best move:\s*([a-h][1-8][a-h][1-8][qrbn]?)", re.IGNORECASE)
 FINAL_MOVE_PATTERN = re.compile(r"final move\s*\(uci\):\s*([a-h][1-8][a-h][1-8][qrbn]?)", re.IGNORECASE)
 UCI_PATTERN = re.compile(r"^[a-h][1-8][a-h][1-8][qrbn]?$")
+
+RNG = random.Random(3407)
+
+try:  # Lazy import so offline environments can still refresh baselines
+    from src.inference.inference import get_inference_instance
+except Exception:  # pragma: no cover - optional dependency
+    get_inference_instance = None
 
 
 def load_jsonl(path: Path) -> Iterable[Dict[str, object]]:
@@ -146,6 +158,98 @@ def process_tutor_dataset() -> List[Dict[str, object]]:
     return records
 
 
+def _normalize_hybrid_response(text: str, engine_move: str) -> str:
+    """Ensure the hybrid explanation ends with a best-move line."""
+
+    body = text.strip()
+    if body and not body.endswith("\n"):
+        body += "\n"
+    if f"best move: {engine_move}".lower() not in body.lower():
+        body += f"Best move: {engine_move}"
+    return body
+
+
+def generate_lc0_tutor_dataset(
+    base_records: List[Dict[str, object]],
+    *,
+    limit: Optional[int] = None,
+) -> List[Dict[str, object]]:
+    """Run LC0 hybrid analysis over tutor prompts to build labelled samples."""
+
+    if get_inference_instance is None:
+        raise RuntimeError(
+            "LC0 inference stack is unavailable. Install dependencies and ensure "
+            "the inference package can be imported."
+        )
+
+    inference = get_inference_instance()
+    inference.load_model()
+
+    candidates = [rec for rec in base_records if rec.get("meta", {}).get("fen")]
+    RNG.shuffle(candidates)
+
+    seen_fens: set[str] = set()
+    enriched: List[Dict[str, object]] = []
+
+    for record in candidates:
+        if limit is not None and len(enriched) >= limit:
+            break
+
+        meta = record.get("meta") or {}
+        fen = meta.get("fen")
+        if not fen or fen in seen_fens:
+            continue
+
+        prompt = record.get("prompt") or ""
+
+        try:
+            engine_payload = inference.analyze_with_engine(fen, explanation_mode="tutor")
+        except Exception as exc:  # pragma: no cover - engine failures are rare
+            logging.warning("LC0 analysis failed for %s: %s", fen, exc)
+            continue
+
+        engine_move = engine_payload.get("best_move")
+        if not engine_move:
+            continue
+
+        explanation = engine_payload.get("explanation") or record.get("response") or ""
+        normalized_response = _normalize_hybrid_response(explanation, engine_move)
+
+        principal_variation = engine_payload.get("principal_variation") or []
+
+        enriched_meta = dict(meta)
+        enriched_meta.update(
+            {
+                "engine": engine_payload.get("engine"),
+                "engine_move": engine_move,
+                "engine_evaluation_cp": engine_payload.get("evaluation_cp"),
+                "engine_evaluation_pawns": engine_payload.get("evaluation_pawns"),
+                "engine_mate_in": engine_payload.get("mate_in"),
+                "engine_depth": engine_payload.get("depth"),
+                "engine_nodes": engine_payload.get("nodes"),
+                "engine_time": engine_payload.get("engine_time"),
+                "principal_variation": principal_variation,
+                "hybrid_key_points": engine_payload.get("key_points", []),
+                "explanation_adapter": engine_payload.get("explanation_adapter"),
+                "engine_source": "lc0_hybrid_v1",
+                "source": "standardized_tutor_lc0_v1",
+            }
+        )
+        enriched_meta.setdefault("quality_score", meta.get("quality_score", 0.9))
+
+        enriched.append(
+            {
+                "task": "tutor_explain",
+                "prompt": prompt,
+                "response": normalized_response,
+                "meta": enriched_meta,
+            }
+        )
+        seen_fens.add(fen)
+
+    return enriched
+
+
 def process_director_dataset() -> List[Dict[str, object]]:
     records: List[Dict[str, object]] = []
     seen_questions: set[str] = set()
@@ -201,6 +305,20 @@ def process_director_dataset() -> List[Dict[str, object]]:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Refresh standardized expert datasets.")
+    parser.add_argument(
+        "--skip-lc0",
+        action="store_true",
+        help="Skip generating the LC0-labelled tutor dataset.",
+    )
+    parser.add_argument(
+        "--lc0-limit",
+        type=int,
+        default=None,
+        help="Cap the number of LC0 tutor samples (defaults to all available prompts).",
+    )
+    args = parser.parse_args()
+
     tutor_records = process_tutor_dataset()
     director_records = process_director_dataset()
 
@@ -209,6 +327,18 @@ def main() -> None:
 
     print(f"✅ Tutor dataset written to {TUTOR_OUTPUT} ({len(tutor_records)} entries)")
     print(f"✅ Director dataset written to {DIRECTOR_OUTPUT} ({len(director_records)} entries)")
+
+    if not args.skip_lc0:
+        try:
+            lc0_records = generate_lc0_tutor_dataset(tutor_records, limit=args.lc0_limit)
+        except RuntimeError as exc:
+            logging.warning("Skipping LC0 tutor generation: %s", exc)
+        else:
+            save_jsonl(lc0_records, TUTOR_LC0_OUTPUT)
+            print(
+                f"✅ LC0 tutor dataset written to {TUTOR_LC0_OUTPUT} "
+                f"({len(lc0_records)} entries)"
+            )
 
 
 if __name__ == "__main__":
