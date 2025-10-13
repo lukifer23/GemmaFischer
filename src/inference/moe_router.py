@@ -1877,7 +1877,8 @@ class MoEInferenceManager:
             'expert_weights': routing_decision.expert_weights,
             'confidence_score': routing_decision.confidence_score,
             'reasoning': routing_decision.reasoning,
-            'ensemble_mode': routing_decision.ensemble_mode
+            'ensemble_mode': routing_decision.ensemble_mode,
+            'fallback_used': routing_decision.fallback_used,
         }
 
         return response

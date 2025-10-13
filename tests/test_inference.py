@@ -3,6 +3,9 @@
 Comprehensive tests for ChessGemma inference functionality.
 """
 
+import os
+import subprocess
+import warnings
 import pytest
 import sys
 import logging
@@ -34,6 +37,34 @@ class _DummyPeftModel:
 peft_stub.PeftModel = _DummyPeftModel
 sys.modules.setdefault("peft", peft_stub)
 
+
+@pytest.fixture(scope="module", autouse=True)
+def _verify_lc0_networks():
+    """Run LC0 network verification before executing inference tests."""
+
+    script_path = project_root / "scripts" / "verify_lc0_network.py"
+    if not script_path.exists():
+        warnings.warn("LC0 verification script not found; skipping pre-check.")
+        return
+
+    weights_dir = project_root / "models" / "lc0_weights"
+    result = subprocess.run(
+        [sys.executable, str(script_path), "--dir", str(weights_dir)],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        message = (
+            "LC0 network verification failed (ignored for non-strict runs).\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+        strict = os.environ.get("CHESSGEMMA_VERIFY_LC0_STRICT", "").lower() in {"1", "true", "yes"}
+        if strict:
+            pytest.fail(message)
+        warnings.warn(message)
+
 from src.inference.inference import (
     ChessGemmaInference,
     run_inference,
@@ -41,6 +72,7 @@ from src.inference.inference import (
     unload_model,
     get_model_info,
 )
+from src.inference.hybrid_engine import HybridEngineResult
 from src.inference.moe_router import RoutingDecision, MoEInferenceManager
 from src.inference.enhanced_inference import (
     EnhancedChessInference,
@@ -315,6 +347,59 @@ class TestChessGemmaInference:
         move = chess.Move.from_uci(move_str)
         assert move in board.legal_moves
         assert router.last_query_type == 'engine'
+
+    def test_analyze_with_engine_includes_lc0_metadata(self, monkeypatch):
+        """Hybrid engine responses should include LC0 metadata and fallback flags."""
+
+        inference = ChessGemmaInference()
+        inference._hybrid_engine_enabled = True
+
+        fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2"
+        fake_result = HybridEngineResult(
+            fen=fen,
+            engine_name="Stockfish",
+            best_move="d2d4",
+            principal_variation=["d2d4", "d7d5"],
+            evaluation_cp=120,
+            mate_in=None,
+            depth=22,
+            nodes=4096,
+            engine_time=0.12,
+            fallback_used=True,
+            raw_analysis={
+                "evaluation": {"depth": 22, "nodes": 4096},
+                "threats": ["fork"],
+                "opportunities": ["center"],
+                "position_type": "opening",
+                "error": None,
+            },
+        )
+
+        fake_engine = Mock()
+        fake_engine.analyze.return_value = fake_result
+        monkeypatch.setattr(inference, "_ensure_hybrid_engine", Mock(return_value=fake_engine))
+        monkeypatch.setattr(
+            inference,
+            "_generate_engine_explanation",
+            Mock(return_value={
+                "text": "Great move!",
+                "adapter": "tutor",
+                "key_points": ["Control the center"],
+            }),
+        )
+
+        payload = inference.analyze_with_engine(fen)
+
+        assert payload["engine"] == "Stockfish"
+        assert payload["best_move"] == "d2d4"
+        assert payload["principal_variation"] == ["d2d4", "d7d5"]
+        assert payload["fallback_used"] is True
+        assert payload["analysis"]["evaluation"]["depth"] == 22
+        assert payload["analysis"]["position_type"] == "opening"
+        assert payload["analysis"]["error"] is None
+        assert payload["key_points"] == ["Control the center"]
+        assert payload["explanation_adapter"] == "tutor"
+        assert inference._last_engine_analysis is fake_result
 
     def test_get_model_info(self):
         """Test model info retrieval."""
