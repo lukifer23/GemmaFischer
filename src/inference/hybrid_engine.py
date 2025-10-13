@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field, asdict
+import threading
 from typing import Dict, List, Optional, Tuple
 
 import chess
@@ -59,9 +60,15 @@ class HybridEngine:
         self.primary: Optional[EngineSelection] = None
         self.fallback: Optional[EngineSelection] = None
         self._engines_initialized = False
+        self._init_lock = threading.RLock()
 
     def _initialize_engines(self) -> None:
-        cfg = self.settings
+        # Guard against concurrent initialization under parallel requests
+        with self._init_lock:
+            if self._engines_initialized and self.primary is not None:
+                return
+
+            cfg = self.settings
 
         # Primary engine
         primary_key = cfg.primary.lower()
@@ -112,11 +119,12 @@ class HybridEngine:
             self.primary = self.fallback
             self.fallback = None
 
+        self._engines_initialized = True
+
     def analyze(self, fen: str) -> HybridEngineResult:
         # Lazy initialization of engines
         if not self._engines_initialized:
             self._initialize_engines()
-            self._engines_initialized = True
 
         if not self.primary:
             raise RuntimeError("No chess engine available for analysis.")
