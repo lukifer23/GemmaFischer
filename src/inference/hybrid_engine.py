@@ -62,8 +62,6 @@ class HybridEngine:
 
     def _initialize_engines(self) -> None:
         cfg = self.settings
-        print(f"DEBUG: Primary engine setting: {cfg.primary}")
-        print(f"DEBUG: LC0 enabled: {cfg.lc0.enabled}")
 
         # Primary engine
         primary_key = cfg.primary.lower()
