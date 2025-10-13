@@ -238,7 +238,10 @@ async function refreshRouterDiagnostics() {
   if (!container) return;
 
   try {
-    const data = await safeFetch('/api/router/diagnostics');
+    const [data, health] = await Promise.all([
+      safeFetch('/api/router/diagnostics'),
+      safeFetch('/api/engine/health').catch(() => null)
+    ]);
 
     if (!data || !data.moe_enabled) {
       container.innerHTML = `
@@ -305,6 +308,18 @@ async function refreshRouterDiagnostics() {
       engineSummary.className = 'text-muted small mt-2';
       engineSummary.textContent = `LC0 last recommendation: ${lastHybridAnalysis.best_move} (${lastHybridAnalysis.engine || 'LC0'})`;
       container.appendChild(engineSummary);
+    }
+
+    if (health && health.available) {
+      const healthDiv = document.createElement('div');
+      healthDiv.className = 'text-muted small mt-1';
+      const primary = health.primary;
+      const fallback = health.fallback;
+      healthDiv.textContent = `Primary engine: ${primary?.name || 'unknown'} (${primary?.engine_path || 'n/a'})`;
+      if (fallback) {
+        healthDiv.textContent += ` • Fallback: ${fallback.name}`;
+      }
+      container.appendChild(healthDiv);
     }
   } catch (error) {
     console.warn('Unable to load router diagnostics', error);
@@ -1552,7 +1567,7 @@ function updateBoardFromFEN(fen) {
   const squares = document.querySelectorAll('.chess-square');
   squares.forEach(sq => {
     sq.textContent = '';
-    sq.classList.remove('selected', 'legal-move');
+    sq.classList.remove('selected', 'legal-move', 'engine-highlight');
   });
   // Validate FEN piece placement has 8 ranks
   const ranks = boardState.split('/');

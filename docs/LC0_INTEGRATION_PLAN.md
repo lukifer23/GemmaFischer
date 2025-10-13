@@ -8,6 +8,7 @@ This document outlines the comprehensive plan for integrating LeelaChess Zero (L
 - `ChessEngineManager` now accepts arbitrary UCI engines and exposes helpers (`create_lc0_manager`, `create_stockfish_manager`).
 - `HybridEngine` (src/inference/hybrid_engine.py) orchestrates LC0 analysis with Stockfish fallback.
 - `ChessGemmaInference.analyze_with_engine` produces structured LC0 analysis plus LLM-generated tutoring explanations.
+- `/api/engine/health` surfaces primary/fallback engine availability for monitoring dashboards.
 - New REST endpoint `/api/analyze` backs the web UI LC0 panel; `/api/ask` automatically uses LC0 when a FEN is provided.
 - Tutor prompt templates now consume engine metadata (`engine_move`, `engine_evaluation`, `principal_variation`) and emit recommendation summaries.
 
