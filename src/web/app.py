@@ -629,7 +629,16 @@ def analyze_position():
 def engine_health():
     """Expose current engine availability and configuration."""
     try:
-        return jsonify(chess_model.engine_health())
+        health = chess_model.engine_health()
+        # Augment response with simple availability summary for UI
+        summary = {
+            'available': bool(health.get('primary')) or bool(health.get('fallback')),
+            'primary_name': (health.get('primary') or {}).get('name'),
+            'primary_path': (health.get('primary') or {}).get('engine_path'),
+            'fallback_name': (health.get('fallback') or {}).get('name'),
+        }
+        health.update({'summary': summary})
+        return jsonify(health)
     except Exception as exc:
         return jsonify({'available': False, 'error': str(exc)}), 500
 
@@ -918,43 +927,8 @@ def ask_question():
         
         print(f"🧠 RAG Knowledge: {rag_knowledge}")
 
-        # Handle expert selection with MoE routing support
-        if expert == 'auto' and chess_model._inference.moe_enabled and chess_model._inference.moe_manager:
-            # Use MoE intelligent routing
-            print("🎯 WEB: Using MoE intelligent routing for 'auto' mode")
-            # Extract FEN for MoE routing
-            from src.inference.uci_utils import extract_fen
-            fen = extract_fen(question) or extract_fen(enhanced_context)
-            if fen:
-                try:
-                    moe_result = chess_model._inference.moe_manager.analyze_position(fen, "auto")
-                    response = moe_result.get('response', '')
-                    confidence = moe_result.get('routing_info', {}).get('confidence_score', 0.5)
-                    routing_info = moe_result.get('routing_info', {})
-
-                    # Calculate timing
-                    processing_time = time.time() - start_time
-                    tokens_per_second = len(response.split()) / max(processing_time, 0.001)
-
-                    return jsonify({
-                        'response': response,
-                        'confidence': confidence,
-                        'model_loaded': True,
-                        'processing_time': processing_time,
-                        'tokens_per_second': tokens_per_second,
-                        'moe_used': True,
-                        'routing_info': routing_info,
-                        'question': question,
-                        'context': context
-                    })
-                except Exception as moe_err:
-                    print(f"⚠️ WEB: MoE routing failed, falling back to single expert: {moe_err}")
-                    # Fall through to single expert mode
-            else:
-                print("⚠️ WEB: No FEN found for MoE routing, falling back to single expert")
-                # Fall through to single expert mode
-
-        # LC0 hybrid analysis when FEN present and engine mode requested
+        # Extract FEN once and prefer HybridEngine (LC0) for move-focused requests
+        from src.inference.uci_utils import extract_fen
         fen_for_hybrid = None
         try:
             fen_for_hybrid = extract_fen(question) or extract_fen(enhanced_context)
@@ -988,7 +962,44 @@ def ask_question():
                 }
                 return jsonify(response_payload)
             except Exception as hybrid_exc:
-                print(f"⚠️ WEB: Hybrid engine analysis failed ({hybrid_exc}), falling back to model generation")
+                print(f"⚠️ WEB: Hybrid engine analysis failed ({hybrid_exc}), falling back to model/MoE")
+
+        # Handle expert selection with MoE routing support (only when no FEN-driven hybrid path)
+        if expert == 'auto' and chess_model._inference.moe_enabled and chess_model._inference.moe_manager and not fen_for_hybrid:
+            # Use MoE intelligent routing
+            print("🎯 WEB: Using MoE intelligent routing for 'auto' mode")
+            # Extract FEN for MoE routing
+            fen = extract_fen(question) or extract_fen(enhanced_context)
+            if fen:
+                try:
+                    moe_result = chess_model._inference.moe_manager.analyze_position(fen, "auto")
+                    response = moe_result.get('response', '')
+                    confidence = moe_result.get('routing_info', {}).get('confidence_score', 0.5)
+                    routing_info = moe_result.get('routing_info', {})
+
+                    # Calculate timing
+                    processing_time = time.time() - start_time
+                    tokens_per_second = len(response.split()) / max(processing_time, 0.001)
+
+                    return jsonify({
+                        'response': response,
+                        'confidence': confidence,
+                        'model_loaded': True,
+                        'processing_time': processing_time,
+                        'tokens_per_second': tokens_per_second,
+                        'moe_used': True,
+                        'routing_info': routing_info,
+                        'question': question,
+                        'context': context
+                    })
+                except Exception as moe_err:
+                    print(f"⚠️ WEB: MoE routing failed, falling back to single expert: {moe_err}")
+                    # Fall through to single expert mode
+            else:
+                print("⚠️ WEB: No FEN found for MoE routing, falling back to single expert")
+                # Fall through to single expert mode
+
+        # (MoE may have handled the request above; otherwise continue to single-expert path)
 
         # Single expert mode (fallback or explicit expert selection)
         mode = 'tutor'

@@ -1,0 +1,87 @@
+{
+  "configuration": {
+    "moe_enabled": true,
+    "eval_file": "data/validation/eval_suite.jsonl",
+    "model_path": "models/google-gemma-3-270m"
+  },
+  "results": {
+    "total_tests": 35,
+    "format_accuracy": {
+      "overall": 0.5428571428571428
+    },
+    "routing_accuracy": 0.17142857142857143,
+    "avg_generation_time": 6.0916035379682265,
+    "avg_confidence": 0.7059917943250564,
+    "categories": {
+      "pure_move": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.9,
+        "avg_time": 5.680851650238037
+      },
+      "position_analysis": {
+        "count": 5,
+        "format_accuracy": 0.6,
+        "expert_accuracy": 0.8,
+        "avg_confidence": 0.9,
+        "avg_time": 5.5015161514282225
+      },
+      "opening_strategy": {
+        "count": 5,
+        "format_accuracy": 0.6,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.5566666666666666,
+        "avg_time": 8.807455587387086
+      },
+      "endgame_principles": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.7233333333333334,
+        "avg_time": 7.92947211265564
+      },
+      "rules_explanation": {
+        "count": 5,
+        "format_accuracy": 0.8,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.7966666666666666,
+        "avg_time": 6.65329065322876
+      },
+      "tactical_patterns": {
+        "count": 5,
+        "format_accuracy": 0.8,
+        "expert_accuracy": 0.4,
+        "avg_confidence": 0.8386092269420624,
+        "avg_time": 6.294992923736572
+      },
+      "mixed_analysis": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.22666666666666666,
+        "avg_time": 1.7736456871032715
+      }
+    },
+    "experts": {
+      "uci": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "avg_confidence": 0.9,
+        "avg_time": 5.680851650238037
+      },
+      "tutor": {
+        "count": 15,
+        "format_accuracy": 0.4666666666666667,
+        "avg_confidence": 0.655091964536243,
+        "avg_time": 4.523384920756022
+      },
+      "director": {
+        "count": 15,
+        "format_accuracy": 0.8,
+        "avg_confidence": 0.6922222222222222,
+        "avg_time": 7.796739451090494
+      }
+    }
+  }
+}

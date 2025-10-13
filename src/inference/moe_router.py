@@ -281,7 +281,7 @@ class ChessMoERouter(nn.Module):
 
         return gate_logits, confidence
 
-    def _keyword_based_routing(self, query_text: str) -> Optional[str]:
+    def _keyword_based_routing(self, query_text: str, fen_present: bool = False) -> Optional[str]:
         """Enhanced keyword-based routing as fallback for ML router."""
         query_lower = query_text.lower()
 
@@ -294,10 +294,18 @@ class ChessMoERouter(nn.Module):
         if any(keyword in query_lower for keyword in tutor_keywords):
             return "tutor"
 
-        # UCI expert: Pure move questions (high priority)
+        # FEN-aware bias:
+        # If a FEN is present, prefer Tutor unless user explicitly asks for a single move-only output
+        if fen_present:
+            move_only_tokens = ["uci", "respond with only", "only the move", "just the move", "best move"]
+            analysis_tokens = ["analyze", "analysis", "evaluate", "explain", "step by step", "why", "how"]
+            if any(tok in query_lower for tok in move_only_tokens) and not any(tok in query_lower for tok in analysis_tokens):
+                return "uci"
+            return "tutor"
+
+        # UCI expert: Pure move questions (high priority) when no FEN bias
         move_keywords = ["what is the best move", "what move", "best move", "what should", "play", "move"]
         if any(keyword in query_lower for keyword in move_keywords):
-            # Only route to UCI if it's clearly a move question and not analysis
             if not any(word in query_lower for word in ["analyze", "analysis", "evaluate", "explain", "step by step", "why", "how"]):
                 return "uci"
 
@@ -368,7 +376,7 @@ class ChessMoERouter(nn.Module):
         if decision.confidence_score < 0.7:  # Balanced threshold
             # Try keyword-based routing on question text if available, otherwise query_type
             routing_text = question_text if question_text else (query_type if query_type != "auto" else "")
-            keyword_expert = self._keyword_based_routing(routing_text)
+            keyword_expert = self._keyword_based_routing(routing_text, fen_present=bool(position_fen))
             if keyword_expert:
                 # Override with keyword-based decision
                 keyword_override = True

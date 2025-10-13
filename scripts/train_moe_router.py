@@ -263,8 +263,59 @@ def train_router(
     return best_train_acc, val_acc
 
 
+def analyze_training_data() -> None:
+    """Analyze the current router training data."""
+    print("🔍 Analyzing router training data...")
+
+    queries = load_labeled_queries()
+    print(f"📊 Total unique queries: {len(queries)}")
+
+    # Count by expert
+    expert_counts = {}
+    category_counts = {}
+    for q in queries:
+        expert_counts[q.expected_expert] = expert_counts.get(q.expected_expert, 0) + 1
+        category_counts[q.category] = category_counts.get(q.category, 0) + 1
+
+    print("👥 Expert distribution:")
+    for expert, count in expert_counts.items():
+        print(f"   {expert}: {count}")
+
+    print("📂 Category distribution:")
+    for category, count in category_counts.items():
+        print(f"   {category}: {count}")
+
+    # Check for logged decisions
+    decision_log_path = Path("reports") / "moe" / "routing_decisions.jsonl"
+    if decision_log_path.exists():
+        logged_queries = load_logged_queries(decision_log_path, 0.5, True)
+        print(f"📝 Available logged decisions: {len(logged_queries)}")
+        if logged_queries:
+            # Show some examples
+            print("🎯 Sample logged decisions:")
+            for i, q in enumerate(logged_queries[:3]):
+                conf_str = f" (conf: {q.confidence:.2f})" if hasattr(q, 'confidence') else ""
+                print(f"   {i+1}. '{q.question[:60]}...' -> {q.expected_expert}{conf_str}")
+    else:
+        print("📝 No logged decisions found")
+
+    # Check for data quality issues
+    print("🔍 Data quality checks:")
+    fen_count = sum(1 for q in queries if extract_fen(q.question))
+    print(f"   Questions with FEN: {fen_count}/{len(queries)} ({fen_count/len(queries)*100:.1f}%)")
+
+    short_questions = sum(1 for q in queries if len(q.question) < 20)
+    print(f"   Very short questions: {short_questions}")
+
+    # Check for duplicates
+    question_texts = [q.question for q in queries]
+    unique_questions = len(set(question_texts))
+    print(f"   Duplicate questions: {len(queries) - unique_questions}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the MoE router with curated labels")
+    parser.add_argument("--analyze-data", action="store_true", help="Analyze training data without training")
     parser.add_argument("--epochs", type=int, default=30, help="Training epochs")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size")
     parser.add_argument("--learning-rate", type=float, default=2e-3, help="Learning rate")
@@ -278,6 +329,10 @@ def main() -> None:
     parser.add_argument("--max-log-samples", type=int, default=300,
                         help="Maximum number of logged routing samples to use (0 = unlimited)")
     args = parser.parse_args()
+
+    if args.analyze_data:
+        analyze_training_data()
+        return
 
     print("🎯 Building labeled query set...")
     queries = load_labeled_queries()
