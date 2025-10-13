@@ -8,6 +8,7 @@ report when ``--out`` is provided.
 
 import argparse
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -15,6 +16,7 @@ from typing import Optional, Dict, Any, List
 import sys
 
 import chess
+import chess.engine
 
 # Ensure project root on sys.path when running directly
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -98,20 +100,26 @@ def main():
         return
 
     inference = ChessGemmaInference()
-    if not inference.load_model():
-        print("Could not load model.")
-        return
+    model_loaded = inference.load_model()
+    if not model_loaded:
+        if os.environ.get("CHESSGEMMA_SKIP_MODEL_LOAD", "0") not in ("0", "false", "False"):
+            print("⚠️  Model loading skipped (CHESSGEMMA_SKIP_MODEL_LOAD). Continuing with offline evaluation.")
+        else:
+            print("Could not load model.")
+            return
 
-    # Warm-up to exclude model/adapters loading from latency numbers
-    print("⚙️  Priming inference pipeline (warm-up)...")
-    warmup_prompt = (
-        "FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n"
-        "Move:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
-    )
-    inference.set_active_adapter("uci")
-    warm_start = time.time()
-    inference.generate_response(warmup_prompt, mode="engine", max_new_tokens=6)
-    print(f"   Warm-up completed in {time.time() - warm_start:.2f}s (excluded from measurements)")
+    # Warm-up only when the model is actually available to avoid repeated
+    # warnings in offline benchmarking scenarios.
+    if model_loaded:
+        print("⚙️  Priming inference pipeline (warm-up)...")
+        warmup_prompt = (
+            "FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n"
+            "Move:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."
+        )
+        inference.set_active_adapter("uci")
+        warm_start = time.time()
+        inference.generate_response(warmup_prompt, mode="engine", max_new_tokens=6)
+        print(f"   Warm-up completed in {time.time() - warm_start:.2f}s (excluded from measurements)")
 
     results: List[Dict[str, Any]] = []
     match = 0
@@ -130,8 +138,17 @@ def main():
             model_text = gen.get("response", "")
             model_move = parse_uci_from_text(model_text, board)
 
-            # Stockfish best move
-            sf_move = engine.get_best_move(board, depth=args.depth, time_limit_ms=0)
+            # Stockfish best move (fallback if helper is unavailable)
+            if hasattr(engine, "get_best_move"):
+                sf_move = engine.get_best_move(board, depth=args.depth, time_limit_ms=0)
+            else:
+                limit = chess.engine.Limit(depth=args.depth, time=0.0)
+                with engine._engine_lock:
+                    backend = getattr(engine, "engine", None)
+                    if backend is None:
+                        raise RuntimeError("Stockfish backend is not initialized")
+                    result = backend.play(board, limit)
+                sf_move = result.move if result else None
 
             if model_move is not None:
                 legal += 1

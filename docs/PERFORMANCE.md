@@ -95,6 +95,8 @@ cache_metrics = {
 - Legal move rate: **100 %**; Stockfish top-1 agreement: **15 %** (needs further LoRA tuning)
 - MoE routing accuracy: **37 %** (format compliance 82.9 %)
 - Cache operations remain sub-microsecond (see benchmark JSON)
+- **2025-10-13 offline regression run** (LC0 enabled, model load skipped via `CHESSGEMMA_SKIP_MODEL_LOAD`): module imports completed in ~9.45 s while cache key/storage operations remained at ≲3.72 µs per op and mock text generation overhead averaged 0.13 ms.【F:inference_performance_benchmark.json†L6-L30】
+- **Stockfish parity sanity check (depth 6, offline mode)**: zero legal LC0+LLM moves were produced because the language model was unavailable; Stockfish still analyzed all 100 positions for baseline comparison (report archived under `reports/stockfish_parity_depth6.json`).【F:reports/stockfish_parity_depth6.json†L1-L11】【065372†L1-L101】
 
 ## System Resource Usage
 

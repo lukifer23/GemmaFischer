@@ -41,6 +41,7 @@ DEFAULT_STOCKFISH_PATHS = [
     "/opt/homebrew/bin/stockfish",
     "/usr/local/bin/stockfish",
     "/usr/bin/stockfish",
+    "/usr/games/stockfish",
     "stockfish",
 ]
 

@@ -16,8 +16,8 @@ chess_engine:
     engine_path: "lc0"
     weights_file: "models/lc0_weights/network.pb.gz"
     backend: "metal"
-    threads: 2
-    nn_cache_size: 200000
+    threads: 6
+    nn_cache_size: 524288
     time_limit: 2.0
     depth: null
     search_paths:
@@ -37,6 +37,7 @@ chess_engine:
       - "/opt/homebrew/bin/stockfish"
       - "/usr/local/bin/stockfish"
       - "/usr/bin/stockfish"
+      - "/usr/games/stockfish"
       - "stockfish"
 
 # Training Configuration (Default)
