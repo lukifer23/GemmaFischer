@@ -72,17 +72,21 @@ class LC0NetworkVerifier:
                 )
                 
                 # Check if LC0 could parse it
-                if 'unparseable' in lc0_test.stdout.lower() or 'error' in lc0_test.stdout.lower():
+                output = lc0_test.stdout + lc0_test.stderr
+                if 'unparseable' in output.lower() or 'error' in output.lower() or 'fatal' in output.lower():
                     result['lc0_parseable'] = False
-                    result['error'] = "LC0 cannot parse this file"
-                elif lc0_test.returncode == 0:
+                    if result['error'] is None:
+                        result['error'] = "LC0 cannot parse this file"
+                elif 'Loading weights' in output and lc0_test.returncode == 0:
                     result['lc0_parseable'] = True
-                    result['valid'] = True
-                    result['error'] = None
+                    if result['error'] is None:
+                        result['valid'] = True
             except subprocess.TimeoutExpired:
-                result['error'] = "LC0 test timed out"
+                if result['error'] is None:
+                    result['error'] = "LC0 test timed out"
             except Exception as e:
-                result['error'] = f"LC0 test failed: {e}"
+                if result['error'] is None:
+                    result['error'] = f"LC0 test failed: {e}"
         
         return result
     
