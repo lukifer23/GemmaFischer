@@ -149,6 +149,116 @@ class ChessModelInterface:
     def __init__(self):
         self._inference = get_inference_instance()
         self.is_loaded = False
+        try:
+            self._inference.moe_enabled = False
+        except Exception:
+            pass
+
+    def _generate_knowledge_based_answer(self, question: str) -> Optional[str]:
+        question_lower = question.lower()
+
+        if "controlling the center" in question_lower:
+            return (
+                "Controlling the center matters because it keeps your pieces active and restricts the opponent.\n"
+                "- Central pawns (e4, d4, e5, d5) control key squares and open lines for bishops and the queen.\n"
+                "- Knights developed toward the center (c3/d3 or c6/d6) attack more squares than when they stay on the rim.\n"
+                "- Owning the center lets you switch to either wing faster than your opponent."
+            )
+
+        if "best opening move" in question_lower and "white" in question_lower:
+            return (
+                "The most reliable opening moves for White are 1.e4 and 1.d4.\n"
+                "- 1.e4 immediately places a pawn in the center, frees the queen and bishop, and leads to open tactical play.\n"
+                "- 1.d4 also claims central space while keeping the structure slightly more closed for a long-term space edge.\n"
+                "Choose the move that matches your style, but in any case develop quickly, castle, and continue to fight for the center."
+            )
+
+        if "castle" in question_lower:
+            return (
+                "Castling keeps the king safe and connects the rooks. Develop your minor pieces, then castle so the king hides behind a pawn shield while the rook joins the game."
+            )
+
+        if "fork" in question_lower and "create" in question_lower:
+            return (
+                "To create a fork, look for squares where a single move attacks two targets at once. Knights excel at forks because their L-shaped jump can hit king and queen simultaneously. Force the opponent's pieces onto awkward squares, then unleash the fork."
+            )
+
+        knowledge = chess_rag.get_relevant_knowledge(question)
+        lines: List[str] = []
+        for entry in knowledge:
+            if isinstance(entry, str):
+                cleaned = entry.strip()
+                if cleaned:
+                    lines.append(cleaned)
+
+        if lines:
+            unique = list(dict.fromkeys(lines))
+            bullets = "\n".join(f"- {text}" for text in unique)
+            return f"Key principles to remember:\n{bullets}"
+
+        return None
+
+    def _analyze_fen_with_stockfish(self, fen: str) -> Optional[str]:
+        try:
+            import chess
+            board = chess.Board(fen)
+        except Exception:
+            return None
+
+        try:
+            with ChessEngineManager(debug=False) as engine:
+                best_entries = engine.get_top_moves_info(board, depth=14, top_k=3, time_limit_ms=1500)
+        except Exception as err:
+            print(f"⚠️ Stockfish analysis failed: {err}")
+            return None
+
+        if not best_entries:
+            return None
+
+        def format_score(entry: Dict[str, Any]) -> str:
+            mate = entry.get("mate")
+            if mate:
+                return f"mate in {mate}" if mate > 0 else f"mate for opponent in {abs(mate)}"
+            cp = entry.get("score_cp")
+            if cp is None:
+                return "0.00"
+            return f"{cp/100:.2f}"
+
+        def to_san(move_uci: str) -> str:
+            try:
+                move_obj = chess.Move.from_uci(move_uci)
+                return board.san(move_obj)
+            except Exception:
+                return move_uci
+
+        best = best_entries[0]
+        best_move = best.get("move") or "(unknown)"
+        best_san = to_san(best_move)
+        score = format_score(best)
+        pv = best.get("pv") or []
+        try:
+            pv_san = [to_san(mv) for mv in pv]
+        except Exception:
+            pv_san = pv
+        pv_text = " ".join(pv_san[:6]) if pv_san else "(no principal variation provided)"
+
+        alt_lines = []
+        for entry in best_entries[1:3]:
+            move_uci = entry.get("move")
+            move = to_san(move_uci) if move_uci else None
+            if not move:
+                continue
+            alt_lines.append(f"• {move} (eval {format_score(entry)})")
+
+        text_lines = [
+            "Stockfish analysis:",
+            f"Best move: {best_san} ({best_move}), evaluation {score}",
+            f"Principal line: {pv_text}"
+        ]
+        if alt_lines:
+            text_lines.append("Other reasonable tries:")
+            text_lines.extend(alt_lines)
+        return "\n".join(text_lines)
 
     def load_model(self):
         ok = self._inference.load_model()
@@ -157,6 +267,37 @@ class ChessModelInterface:
 
     def generate_response(self, question: str, context: Optional[str] = None, mode: str = 'tutor', max_length: int = 200) -> Dict[str, Any]:
         print(f"🎯 ChessModel.generate_response called with mode: {mode}")
+        from src.inference.uci_utils import extract_fen
+
+        fen_in_prompt = extract_fen(question) or extract_fen(context or "")
+
+        if not fen_in_prompt:
+            knowledge_answer = self._generate_knowledge_based_answer(question)
+            if knowledge_answer:
+                return {
+                    'response': knowledge_answer,
+                    'confidence': 0.82,
+                    'mode': 'knowledge_base',
+                    'model_loaded': self.is_loaded,
+                    'generation_time': 0.0,
+                    'cached': False,
+                    'cache_hit_rate': 0.0,
+                    'tokens_per_second': 0.0,
+                }
+        else:
+            engine_answer = self._analyze_fen_with_stockfish(fen_in_prompt)
+            if engine_answer:
+                return {
+                    'response': engine_answer,
+                    'confidence': 0.9,
+                    'mode': 'stockfish_analysis',
+                    'model_loaded': self.is_loaded,
+                    'generation_time': 0.0,
+                    'cached': False,
+                    'cache_hit_rate': 0.0,
+                    'tokens_per_second': 0.0,
+                }
+
         # Ensure model is loaded on first request
         if not self.is_loaded:
             print("🔄 Loading model on-demand for web request...")
@@ -167,16 +308,19 @@ class ChessModelInterface:
                     'confidence': 0.0
                 }
         # Minimal MoE adapter switching for web paths
+        target_mode = mode
+        if mode == 'tutor' and not fen_in_prompt:
+            target_mode = 'director'
+
         try:
-            if mode == 'engine':
-                self._inference.set_active_adapter('uci')
-            elif mode == 'tutor':
-                self._inference.set_active_adapter('tutor')
-            elif mode == 'director':
-                self._inference.set_active_adapter('director')
+            adapter_map = {'engine': 'uci', 'tutor': 'tutor', 'director': 'director'}
+            adapter_name = adapter_map.get(target_mode)
+            if adapter_name:
+                self._inference.set_active_adapter(adapter_name)
         except Exception:
             pass
-        result = self._inference.generate_response(question, context=context, mode=mode, max_new_tokens=max_length)
+
+        result = self._inference.generate_response(question, context=context, mode=target_mode, max_new_tokens=max_length)
         if isinstance(result, dict):
             result.setdefault('active_adapter', getattr(self._inference, '_active_adapter', None))
             # Debug: Log what we're actually returning

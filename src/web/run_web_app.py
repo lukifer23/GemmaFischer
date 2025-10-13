@@ -21,7 +21,7 @@ def main():
 
     try:
         # Import and run the web application
-        from src.web.app import app
+        from src.web.app import app, chess_model
 
         print("=" * 60)
         print("🚀 Starting ChessGemma Web Application")
@@ -46,6 +46,17 @@ def main():
         print("   • Real-time model responses")
         print("   • Example questions")
         print("=" * 60)
+
+        # Warm the model at startup so first request is responsive
+        try:
+            print("⏳ Loading ChessGemma model (one-time startup cost)...")
+            if chess_model.load_model():
+                print("✅ Model loaded and adapters initialized.")
+            else:
+                print("⚠️  Model failed to load during startup; requests will retry on demand.")
+        except Exception as preload_err:
+            print(f"⚠️  Model preload encountered an error: {preload_err}")
+            print("   The server will continue and attempt to load on first request.")
 
         # Start the Flask development server
         app.run(

@@ -961,7 +961,7 @@ function setupEventListeners() {
       if (!document.hidden) {
         refreshTrainingStatus();
       }
-    }, 5000);
+    }, 15000);
   }
 
   if (typeof refreshAdapters === 'function') {

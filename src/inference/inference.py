@@ -1004,20 +1004,52 @@ class ChessGemmaInference:
             return "You are a chess expert. Answer this question:"
 
     def _build_messages(self, question: str, context: Optional[str], mode: str) -> List[Dict[str, str]]:
-        # TEMPORARY: Use ultra-simple prompts to test if model can respond at all
+        from .uci_utils import extract_fen
+
         context_block = f"\nContext: {context.strip()}" if context else ""
+        fen = extract_fen(question) or extract_fen(context or "")
 
         if mode == "tutor":
-            system = "System: You are ChessGemma, a concise chess tutor who answers with clear, practical chess insight."
-            prompt = f"{system}{context_block}\nUser: {question}\nAssistant:"
+            system = (
+                "System: You are ChessGemma, an expert chess tutor. Provide accurate, concise explanations "
+                "grounded in sound chess principles. Cite the best move in UCI format when a board position is provided."
+            )
+            if fen:
+                template = self._load_prompt_template("tutor")
+                template = template.replace("{fen}", fen).replace("{style}", "balanced")
+                user_content = f"{template}\n\nQuestion: {question.strip()}"
+            else:
+                user_content = (
+                    "Analyze the following chess question and give a helpful, factually correct explanation.\n"
+                    f"Question: {question.strip()}"
+                )
+            prompt = f"{system}{context_block}\n{user_content}\nAssistant:"
             return [{"role": "user", "content": prompt}]
         elif mode == "director":
-            system = "System: You are ChessGemma, a strategic director who gives high-level chess guidance and reasoning."
-            prompt = f"{system}{context_block}\nUser: {question}\nAssistant:"
+            system = (
+                "System: You are ChessGemma, the strategic director. Provide high-level planning, explain trade-offs, "
+                "and ensure advice is actionable for competitive chess players."
+            )
+            if fen:
+                prompt_body = (
+                    f"Position FEN: {fen}\n"
+                    f"Question: {question.strip()}\n"
+                    "Offer strategic guidance, key plans, and practical advice."
+                )
+            else:
+                prompt_body = f"Question: {question.strip()}"
+            prompt = f"{system}{context_block}\n{prompt_body}\nAssistant:"
             return [{"role": "user", "content": prompt}]
         else:
             system = "System: Return only the strongest move for the side to move in UCI notation (e.g., e2e4)."
-            prompt = f"{system}{context_block}\nPosition: {question}\nAssistant:"
+            if fen:
+                prompt_body = f"FEN: {fen}\nDetermine the best move in UCI format."
+            else:
+                prompt_body = (
+                    f"Position description: {question.strip()}\n"
+                    "If a legal move cannot be determined, respond with an empty string."
+                )
+            prompt = f"{system}{context_block}\n{prompt_body}\nAssistant:"
             return [{"role": "user", "content": prompt}]
 
     @staticmethod
