@@ -631,11 +631,22 @@ def engine_health():
     try:
         health = chess_model.engine_health()
         # Augment response with simple availability summary for UI
+        primary = (health.get('primary') or {}) if isinstance(health, dict) else {}
+        fallback = (health.get('fallback') or {}) if isinstance(health, dict) else {}
         summary = {
-            'available': bool(health.get('primary')) or bool(health.get('fallback')),
-            'primary_name': (health.get('primary') or {}).get('name'),
-            'primary_path': (health.get('primary') or {}).get('engine_path'),
-            'fallback_name': (health.get('fallback') or {}).get('name'),
+            'available': bool(primary) or bool(fallback),
+            'primary': {
+                'name': primary.get('name'),
+                'engine_path': primary.get('engine_path'),
+                'active': primary.get('active', False),
+            },
+            'fallback': {
+                'name': fallback.get('name'),
+                'engine_path': fallback.get('engine_path'),
+                'active': fallback.get('active', False),
+            },
+            'lc0_available': bool(primary) and bool(primary.get('active', False) or primary.get('engine_path')),
+            'stockfish_available': bool(fallback) and bool(fallback.get('active', False) or fallback.get('engine_path')),
         }
         health.update({'summary': summary})
         return jsonify(health)

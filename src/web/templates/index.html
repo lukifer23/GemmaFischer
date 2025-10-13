@@ -126,6 +126,209 @@
             flex-wrap: wrap;
         }
 
+        .engine-health {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .engine-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 999px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .engine-chip.status-ok {
+            background: #dcfce7;
+            color: #047857;
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+
+        .engine-chip.status-warn {
+            background: #fef9c3;
+            color: #92400e;
+            border-color: rgba(217, 119, 6, 0.35);
+        }
+
+        .engine-chip.status-error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: rgba(248, 113, 113, 0.45);
+        }
+
+        .engine-chip .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .engine-chip.status-ok .status-dot { background: #047857; }
+        .engine-chip.status-warn .status-dot { background: #b45309; }
+        .engine-chip.status-error .status-dot { background: #b91c1c; }
+
+        .chat-controls {
+            padding: 16px 24px 0;
+            border-top: 1px solid var(--border-color);
+            background: #ffffff;
+        }
+
+        .response-toggle-group .btn {
+            border-radius: 999px !important;
+            padding: 0.3rem 0.95rem;
+            font-weight: 600;
+        }
+
+        .response-toggle-group .btn.active {
+            background: var(--accent-primary);
+            color: #ffffff;
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+
+        .response-summary {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .lc0-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 24px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(148, 163, 184, 0.08);
+            font-size: 0.85rem;
+        }
+
+        .lc0-status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .lc0-status-chip i {
+            font-size: 0.75rem;
+        }
+
+        .lc0-status-chip.primary {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .lc0-status-chip.fallback {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .lc0-status-chip.idle {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .lc0-analysis-body {
+            padding: 20px 24px 24px;
+        }
+
+        .lc0-analysis-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .lc0-summary-item {
+            background: rgba(148, 163, 184, 0.12);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .lc0-summary-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.04em;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .lc0-summary-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .lc0-pv-block {
+            background: rgba(79, 70, 229, 0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+
+        .lc0-pv-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #4338ca;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
+
+        .lc0-pv-value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.95rem;
+            color: #312e81;
+        }
+
+        .lc0-llm-block {
+            background: rgba(14, 116, 144, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .lc0-llm-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .lc0-explanation-text p {
+            margin-bottom: 8px;
+            line-height: 1.55;
+        }
+
+        .lc0-key-points {
+            margin-top: 12px;
+            padding-left: 18px;
+        }
+
+        .lc0-fallback-alert {
+            background: rgba(248, 113, 113, 0.12);
+            border: 1px solid rgba(248, 113, 113, 0.35);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.85rem;
+            color: #b91c1c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .badge-group .badge {
             margin-right: 0.4rem;
             font-size: 0.75rem;
@@ -513,6 +716,16 @@
                         <span class="badge bg-warning text-dark" data-expert="director">Director</span>
                     </div>
                     <span id="routing-indicator">Auto-routing active</span>
+                    <div class="engine-health" id="engine-health">
+                        <span class="engine-chip status-warn" id="lc0-health-chip">
+                            <span class="status-dot"></span>
+                            LC0 status pending
+                        </span>
+                        <span class="engine-chip status-warn" id="stockfish-health-chip">
+                            <span class="status-dot"></span>
+                            Stockfish status pending
+                        </span>
+                    </div>
                 </div>
             </div>
             <div id="modelStatusBanner" class="alert alert-info d-none mt-2 mb-0" role="alert">
@@ -531,6 +744,19 @@
                                 <strong>ChessGemma</strong>
                             </div>
                             <p>Hello! I'm your AI chess assistant. Ask me anything about chess strategy, openings, tactics, or endgames. I can help you improve your game!</p>
+                        </div>
+                    </div>
+                    <div class="chat-controls">
+                        <div class="d-flex flex-column flex-lg-row gap-3 align-items-lg-center justify-content-lg-between">
+                            <div>
+                                <div class="text-uppercase text-muted small fw-semibold mb-1">Response Mix</div>
+                                <div class="btn-group btn-group-sm response-toggle-group" role="group" aria-label="Choose response expert">
+                                    <button type="button" class="btn btn-outline-secondary active" data-mode="auto">Router</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-mode="tutor">Tutor</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-mode="director">Director</button>
+                                </div>
+                            </div>
+                            <div class="response-summary" id="response-mode-summary">Router selects the best expert mix for each question.</div>
                         </div>
                     </div>
                     <div class="chat-input">
@@ -626,6 +852,13 @@
                                 <i class="fas fa-robot me-1"></i>
                                 Analyze with LC0
                             </button>
+                        </div>
+                        <div class="lc0-status-bar" id="lc0-analysis-status">
+                            <span class="lc0-status-chip idle">
+                                <i class="fas fa-signal"></i>
+                                Awaiting analysis
+                            </span>
+                            <span class="text-muted small" id="lc0-analysis-meta">Ready to analyze the current board.</span>
                         </div>
                         <div class="lc0-analysis-body" id="lc0-analysis-body">
                             <p class="text-muted small mb-0">

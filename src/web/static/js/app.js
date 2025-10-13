@@ -18,6 +18,7 @@ const STOCKFISH_DEFAULTS = {
 let stockfishInsightsRequestId = 0;
 let stockfishInsightsPending = false;
 let lastStockfishFen = null;
+let responseMode = 'auto';
 
 // Sanitize helpers with error boundaries
 function sanitizeString(str) {
@@ -40,6 +41,69 @@ function sanitizeString(str) {
     console.warn('DOMPurify sanitizeString failed, using raw string:', error);
     return str || '';
   }
+}
+
+function getExplanationMode() {
+  return responseMode === 'director' ? 'director' : 'tutor';
+}
+
+function updateResponseModeSummary() {
+  const summaryEl = document.getElementById('response-mode-summary');
+  if (!summaryEl) return;
+
+  let summaryText = 'Router selects the best expert mix for each question.';
+  if (responseMode === 'tutor') {
+    summaryText = 'Tutor expert delivers instructional, step-by-step explanations on every reply.';
+  } else if (responseMode === 'director') {
+    summaryText = 'Director expert focuses on strategic direction and high-level planning in responses.';
+  }
+
+  summaryEl.textContent = summaryText;
+}
+
+function setResponseMode(mode = 'auto') {
+  responseMode = mode || 'auto';
+
+  const toggles = document.querySelectorAll('.response-toggle-group .btn');
+  toggles.forEach(btn => {
+    const btnMode = btn.getAttribute('data-mode') || 'auto';
+    const isActive = btnMode === responseMode;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const routingEl = document.getElementById('routing-indicator');
+  if (routingEl) {
+    routingEl.textContent = responseMode === 'auto'
+      ? 'Auto-routing active'
+      : `Preferred expert: ${formatExpertLabel(responseMode)}`;
+  }
+
+  updateResponseModeSummary();
+}
+
+function initResponseModeControls() {
+  const toggles = document.querySelectorAll('.response-toggle-group .btn');
+  if (!toggles.length) {
+    return;
+  }
+
+  toggles.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode') || 'auto';
+      setResponseMode(mode);
+    });
+  });
+
+  setResponseMode(responseMode);
+}
+
+function formatExpertLabel(value) {
+  if (!value || typeof value !== 'string') return '';
+  const lower = value.toLowerCase();
+  if (lower === 'uci') return 'UCI';
+  if (lower === 'moe') return 'MoE';
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
 // -----------------
@@ -672,19 +736,73 @@ function setStockfishInsightsError(message) {
   body.appendChild(errorDiv);
 }
 
+function setLc0Status(state = 'idle', metaText = '') {
+  const statusChip = document.querySelector('#lc0-analysis-status .lc0-status-chip');
+  const metaEl = document.getElementById('lc0-analysis-meta');
+
+  if (!statusChip) {
+    return;
+  }
+
+  statusChip.classList.remove('primary', 'fallback', 'idle');
+
+  let chipClass = 'idle';
+  let icon = 'fa-signal';
+  let text = 'Awaiting analysis';
+
+  switch (state) {
+    case 'loading':
+      chipClass = 'primary';
+      icon = 'fa-circle-notch fa-spin';
+      text = 'Analyzing…';
+      break;
+    case 'primary':
+      chipClass = 'primary';
+      icon = 'fa-signal';
+      text = 'LC0 primary engine';
+      break;
+    case 'fallback':
+      chipClass = 'fallback';
+      icon = 'fa-triangle-exclamation';
+      text = 'Fallback engine';
+      break;
+    case 'error':
+      chipClass = 'fallback';
+      icon = 'fa-circle-exclamation';
+      text = 'Analysis unavailable';
+      break;
+    default:
+      chipClass = 'idle';
+      icon = 'fa-signal';
+      text = 'Awaiting analysis';
+  }
+
+  statusChip.classList.add(chipClass);
+  statusChip.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+
+  if (metaEl) {
+    if (metaText) {
+      metaEl.textContent = metaText;
+    } else if (state === 'idle') {
+      metaEl.textContent = 'Ready to analyze the current board.';
+    }
+  }
+}
+
 function updateEngineAnalysis(payload) {
   const body = document.getElementById('lc0-analysis-body');
   if (!body) return;
 
-  if (!payload || !payload.best_move) {
+  if (!payload || (!payload.best_move && !payload.explanation)) {
     body.innerHTML = '<p class="text-muted small mb-0">No LC0 analysis available.</p>';
+    setLc0Status('error', 'No engine insights are available for this position.');
     lastHybridAnalysis = null;
     return;
   }
 
   lastHybridAnalysis = payload;
 
-  const evalText = payload.mate_in !== null && payload.mate_in !== undefined
+  const evaluationText = payload.mate_in !== null && payload.mate_in !== undefined
     ? `Mate in ${payload.mate_in}`
     : (payload.evaluation_pawns !== null && payload.evaluation_pawns !== undefined
       ? `${payload.evaluation_pawns} pawns`
@@ -692,27 +810,79 @@ function updateEngineAnalysis(payload) {
         ? `${(payload.evaluation_cp / 100).toFixed(2)} pawns`
         : 'N/A'));
 
-  const pvText = (payload.principal_variation && payload.principal_variation.length)
-    ? payload.principal_variation.join(' ')
-    : '—';
+  const pvSource = payload.principal_variation;
+  let pvArray = [];
+  if (Array.isArray(pvSource)) {
+    pvArray = pvSource;
+  } else if (typeof pvSource === 'string' && pvSource.trim()) {
+    pvArray = pvSource.trim().split(/\s+/);
+  }
+  const pvText = pvArray.length ? pvArray.join(' ') : '—';
 
   const keyPoints = (payload.key_points || [])
     .map(point => `<li>${sanitizeString(point)}</li>`)
     .join('');
 
-  const explanation = payload.explanation ? sanitizeString(payload.explanation) : '';
+  const explanationParagraphs = (payload.explanation || '')
+    .split(/\n+/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => `<p>${sanitizeString(line)}</p>`)
+    .join('');
 
-  body.innerHTML = `
-    <div class="lc0-meta mb-2">
-      <div>Engine: <strong>${sanitizeString(payload.engine || 'LC0')}</strong>${payload.fallback_used ? ' (fallback)' : ''}</div>
-      <div>Computation time: ${payload.engine_time ? payload.engine_time.toFixed(2) : '—'} s</div>
-    </div>
-    <div class="lc0-move-highlight mb-2">Best move: ${sanitizeString(payload.best_move || '—')}</div>
-    <div class="lc0-meta mb-2">Evaluation: ${sanitizeString(evalText)}</div>
-    <div class="lc0-meta mb-2">Principal variation: ${sanitizeString(pvText)}</div>
-    ${explanation ? `<div class="lc0-explanation mb-2">${explanation}</div>` : ''}
-    ${keyPoints ? `<ul class="small lc0-key-points">${keyPoints}</ul>` : ''}
-  `;
+  const explanationHtml = explanationParagraphs || '<p class="text-muted small mb-0">No explanation returned by the language model.</p>';
+  const adapterLabel = payload.explanation_adapter === 'director' ? 'Director expert' : 'Tutor expert';
+
+  const rawEngineName = payload.engine || 'LC0';
+  const engineName = sanitizeString(rawEngineName);
+  const engineTime = payload.engine_time != null ? `${payload.engine_time.toFixed(2)}s` : '—';
+  const depthText = payload.depth != null ? `${payload.depth}` : '—';
+
+  const fallbackDetected = !!payload.fallback_used || rawEngineName.toLowerCase().includes('stockfish');
+  const metaText = `Engine: ${engineName} • Depth ${depthText} • ${engineTime}`;
+  setLc0Status(fallbackDetected ? 'fallback' : 'primary', metaText);
+
+  const fallbackNotice = fallbackDetected
+    ? `<div class="lc0-fallback-alert"><i class="fas fa-exclamation-triangle"></i><span>Primary LC0 engine was unavailable. Showing analysis from ${engineName}.</span></div>`
+    : '';
+
+  const summaryHtml = `
+    <div class="lc0-analysis-summary">
+      <div class="lc0-summary-item">
+        <span class="lc0-summary-label">Best move</span>
+        <span class="lc0-summary-value">${sanitizeString(payload.best_move || '—')}</span>
+      </div>
+      <div class="lc0-summary-item">
+        <span class="lc0-summary-label">Evaluation</span>
+        <span class="lc0-summary-value">${sanitizeString(evaluationText)}</span>
+      </div>
+      <div class="lc0-summary-item">
+        <span class="lc0-summary-label">Computation</span>
+        <span class="lc0-summary-value">${sanitizeString(engineTime)}</span>
+      </div>
+    </div>`;
+
+  const pvHtml = `
+    <div class="lc0-pv-block">
+      <div class="lc0-pv-label">Principal Variation</div>
+      <div class="lc0-pv-value">${sanitizeString(pvText)}</div>
+    </div>`;
+
+  const adapterBadge = adapterLabel
+    ? `<span class="badge bg-light text-dark border ms-2">${sanitizeString(adapterLabel)}</span>`
+    : '';
+
+  const llmHtml = `
+    <div class="lc0-llm-block">
+      <div class="lc0-llm-header">
+        <span><i class="fas fa-comments me-2"></i>LLM Explanation</span>
+        ${adapterBadge}
+      </div>
+      <div class="lc0-explanation-text">${explanationHtml}</div>
+      ${keyPoints ? `<ul class="small lc0-key-points">${keyPoints}</ul>` : ''}
+    </div>`;
+
+  body.innerHTML = `${fallbackNotice}${summaryHtml}${pvHtml}${llmHtml}`;
 }
 
 async function requestHybridAnalysis() {
@@ -721,10 +891,11 @@ async function requestHybridAnalysis() {
   const intent = intentSelect ? intentSelect.value : null;
 
   try {
+    setLc0Status('loading', 'Submitting position to hybrid engine…');
     const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fen, intent })
+      body: JSON.stringify({ fen, intent, explanation_mode: getExplanationMode() })
     });
     const data = await response.json();
     if (!response.ok) {
@@ -736,6 +907,7 @@ async function requestHybridAnalysis() {
     console.error('Hybrid analysis failed:', error);
     updateEngineAnalysis(null);
     updateStatusIndicator('error', `Hybrid analysis failed: ${error.message || error}`);
+    setLc0Status('error', 'Hybrid engine request failed.');
   }
 }
 
@@ -1148,6 +1320,8 @@ function setupEventListeners() {
   if (typeof loadSettings === 'function') {
     loadSettings();
   }
+
+  initResponseModeControls();
 }
 
 // Ask a question
@@ -1180,11 +1354,12 @@ async function askQuestion() {
   triggerStockfishInsightsFromQuestion(question);
 
   try {
-    const expert = 'auto'; // Always use auto mode for intelligent routing
+    const expert = responseMode || 'auto';
+    const explanationMode = getExplanationMode();
     const response = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, context: '', expert })
+      body: JSON.stringify({ question, context: '', expert, explanation_mode: explanationMode })
     });
     const data = await response.json();
     loadingDiv.remove();
@@ -1771,9 +1946,14 @@ function updateExpertStatus(data) {
     const routingEl = document.getElementById('routing-indicator');
     if (routingEl) {
       if (data.primary_expert) {
-        routingEl.textContent = `Using: ${data.primary_expert} expert`;
+        const preferenceSuffix = responseMode !== 'auto'
+          ? ` (preferred: ${formatExpertLabel(responseMode)})`
+          : '';
+        routingEl.textContent = `Using: ${formatExpertLabel(data.primary_expert)} expert${preferenceSuffix}`;
       } else {
-        routingEl.textContent = 'Auto-routing active';
+        routingEl.textContent = responseMode === 'auto'
+          ? 'Auto-routing active'
+          : `Preferred expert: ${formatExpertLabel(responseMode)}`;
       }
     }
 
@@ -1802,6 +1982,75 @@ function updateExpertStatus(data) {
 // Real-time status updates
 let statusUpdateInterval = null;
 
+function applyEngineChipState(chip, engine, defaultLabel, errorOverride = false) {
+  if (!chip) return;
+
+  chip.classList.remove('status-ok', 'status-warn', 'status-error');
+
+  const label = sanitizeString(defaultLabel);
+  let statusClass = 'status-error';
+  let text = `${label} unavailable`;
+
+  if (errorOverride) {
+    text = `${label} unreachable`;
+  } else if (engine) {
+    const engineLabel = sanitizeString(engine.name || label);
+    const active = engine.active === true;
+    const configured = !!engine.engine_path;
+    if (active) {
+      statusClass = 'status-ok';
+      text = `${engineLabel} online`;
+    } else if (configured) {
+      statusClass = 'status-warn';
+      text = `${engineLabel} idle`;
+    } else {
+      statusClass = 'status-error';
+      text = `${engineLabel} offline`;
+    }
+    if (engine.engine_path) {
+      chip.title = engine.engine_path;
+    } else {
+      chip.removeAttribute('title');
+    }
+  } else {
+    statusClass = 'status-error';
+    text = `${label} unavailable`;
+    chip.removeAttribute('title');
+  }
+
+  chip.classList.add(statusClass);
+  chip.innerHTML = `<span class="status-dot"></span>${text}`;
+}
+
+function updateEngineHealthUI(data) {
+  const lc0Chip = document.getElementById('lc0-health-chip');
+  const stockfishChip = document.getElementById('stockfish-health-chip');
+  if (!lc0Chip || !stockfishChip) return;
+
+  if (!data || data.error) {
+    applyEngineChipState(lc0Chip, null, 'LC0', true);
+    applyEngineChipState(stockfishChip, null, 'Stockfish', true);
+    return;
+  }
+
+  const summary = data.summary || {};
+  const primary = summary.primary || data.primary || null;
+  const fallback = summary.fallback || data.fallback || null;
+
+  applyEngineChipState(lc0Chip, primary, (primary && primary.name) || 'LC0');
+  applyEngineChipState(stockfishChip, fallback, (fallback && fallback.name) || 'Stockfish');
+}
+
+async function refreshEngineHealth() {
+  try {
+    const data = await safeFetch('/api/engine/health');
+    updateEngineHealthUI(data);
+  } catch (error) {
+    console.warn('Engine health fetch failed:', error);
+    updateEngineHealthUI({ error: error.message });
+  }
+}
+
 function startStatusUpdates() {
   // Initial status check
   updateSystemStatus();
@@ -1827,23 +2076,25 @@ function stopStatusUpdates() {
 async function updateSystemStatus() {
   try {
     const healthData = await safeFetch('/api/health');
-    const statsData = await safeFetch('/api/stats');
-
-    // Update connection status
     if (healthData && healthData.status === 'ok') {
       updateStatusIndicator('success', 'System online');
     }
-
-    // Update performance metrics if available
-    if (statsData && statsData.performance) {
-      const perf = statsData.performance;
-      console.log(`📊 System Status: ${perf.total_requests} requests, ${perf.avg_response_time?.toFixed(2)}s avg response time`);
-    }
-
   } catch (error) {
     console.warn('Status update failed:', error);
     updateStatusIndicator('warning', 'Connection issues detected');
   }
+
+  try {
+    const statsData = await safeFetch('/api/stats');
+    if (statsData && statsData.performance) {
+      const perf = statsData.performance;
+      console.log(`📊 System Status: ${perf.total_requests} requests, ${perf.avg_response_time?.toFixed(2)}s avg response time`);
+    }
+  } catch (error) {
+    console.warn('Stats update failed:', error);
+  }
+
+  await refreshEngineHealth();
 }
 
 // Initialize expert status on page load
