@@ -6,6 +6,7 @@ let selectedSquareIndex = null;
 let gameMode = 'analysis'; // 'analysis' or 'play'
 let stockfishMatch = null;
 let matchActive = false;
+let lastHybridAnalysis = null;
 
 const STOCKFISH_DEFAULTS = {
   bestDepth: 14,
@@ -297,6 +298,13 @@ async function refreshRouterDiagnostics() {
       logHint.className = 'text-muted small mt-2';
       logHint.textContent = `Decision log: ${data.decision_log_path}`;
       container.appendChild(logHint);
+    }
+
+    if (lastHybridAnalysis && lastHybridAnalysis.best_move) {
+      const engineSummary = document.createElement('div');
+      engineSummary.className = 'text-muted small mt-2';
+      engineSummary.textContent = `LC0 last recommendation: ${lastHybridAnalysis.best_move} (${lastHybridAnalysis.engine || 'LC0'})`;
+      container.appendChild(engineSummary);
     }
   } catch (error) {
     console.warn('Unable to load router diagnostics', error);
@@ -647,6 +655,73 @@ function setStockfishInsightsError(message) {
   errorDiv.className = 'stockfish-empty text-danger';
   errorDiv.textContent = message;
   body.appendChild(errorDiv);
+}
+
+function updateEngineAnalysis(payload) {
+  const body = document.getElementById('lc0-analysis-body');
+  if (!body) return;
+
+  if (!payload || !payload.best_move) {
+    body.innerHTML = '<p class="text-muted small mb-0">No LC0 analysis available.</p>';
+    lastHybridAnalysis = null;
+    return;
+  }
+
+  lastHybridAnalysis = payload;
+
+  const evalText = payload.mate_in !== null && payload.mate_in !== undefined
+    ? `Mate in ${payload.mate_in}`
+    : (payload.evaluation_pawns !== null && payload.evaluation_pawns !== undefined
+      ? `${payload.evaluation_pawns} pawns`
+      : (payload.evaluation_cp !== null && payload.evaluation_cp !== undefined
+        ? `${(payload.evaluation_cp / 100).toFixed(2)} pawns`
+        : 'N/A'));
+
+  const pvText = (payload.principal_variation && payload.principal_variation.length)
+    ? payload.principal_variation.join(' ')
+    : '—';
+
+  const keyPoints = (payload.key_points || [])
+    .map(point => `<li>${sanitizeString(point)}</li>`)
+    .join('');
+
+  const explanation = payload.explanation ? sanitizeString(payload.explanation) : '';
+
+  body.innerHTML = `
+    <div class="lc0-meta mb-2">
+      <div>Engine: <strong>${sanitizeString(payload.engine || 'LC0')}</strong>${payload.fallback_used ? ' (fallback)' : ''}</div>
+      <div>Computation time: ${payload.engine_time ? payload.engine_time.toFixed(2) : '—'} s</div>
+    </div>
+    <div class="lc0-move-highlight mb-2">Best move: ${sanitizeString(payload.best_move || '—')}</div>
+    <div class="lc0-meta mb-2">Evaluation: ${sanitizeString(evalText)}</div>
+    <div class="lc0-meta mb-2">Principal variation: ${sanitizeString(pvText)}</div>
+    ${explanation ? `<div class="lc0-explanation mb-2">${explanation}</div>` : ''}
+    ${keyPoints ? `<ul class="small lc0-key-points">${keyPoints}</ul>` : ''}
+  `;
+}
+
+async function requestHybridAnalysis() {
+  const fen = getCurrentBoardFEN();
+  const intentSelect = document.getElementById('strategic-intent');
+  const intent = intentSelect ? intentSelect.value : null;
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fen, intent })
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'LC0 analysis failed');
+    }
+    updateEngineAnalysis(data);
+    updateStatusIndicator('success', 'LC0 analysis complete.');
+  } catch (error) {
+    console.error('Hybrid analysis failed:', error);
+    updateEngineAnalysis(null);
+    updateStatusIndicator('error', `Hybrid analysis failed: ${error.message || error}`);
+  }
 }
 
 function extractFenCandidate(text) {
@@ -1100,6 +1175,12 @@ async function askQuestion() {
     loadingDiv.remove();
     let messageClass = 'assistant';
 
+    if (data.analysis) {
+      updateEngineAnalysis(data.analysis);
+    } else if (data.best_move || data.principal_variation) {
+      updateEngineAnalysis(data);
+    }
+
     const container = document.createElement('div');
 
     const headerDiv = document.createElement('div');
@@ -1161,6 +1242,7 @@ async function askQuestion() {
     console.error('Error:', error);
     loadingDiv.remove();
     addMessage('Sorry, I encountered an error while processing your question. Please try again.', 'error');
+    updateEngineAnalysis(null);
   } finally {
     isLoading = false;
   }

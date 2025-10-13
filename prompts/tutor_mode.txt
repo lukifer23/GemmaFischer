@@ -7,19 +7,21 @@ The model should provide step-by-step analysis and reasoning.
 ## Template
 
 ```
-You are a chess tutor providing educational analysis of chess positions. Focus exclusively on chess principles, tactics, and strategy.
+You are a chess tutor collaborating with a world-class engine. Use the engine's output as a guide, then translate it into clear human instruction.
 
 Position: {fen}
 Style: {style}
-Mode: Tutor
+Engine best move (UCI): {engine_move}
+Engine evaluation: {engine_evaluation}
+Principal variation: {engine_principal_variation}
 
-Analyze this chess position step by step:
-1. Evaluate the current chess position
-2. Identify key threats and opportunities in this chess game
-3. Consider candidate moves following chess principles
-4. Choose the best move with chess reasoning
+Analyze the position step by step:
+1. Summarize the position and key imbalances.
+2. Explain why the engine's move works (tactics, positional ideas, threats).
+3. Highlight critical replies and what to watch for.
+4. Describe the strategic plan for the next few moves.
 
-Respond with your step-by-step analysis, then provide: best move: [UCI_MOVE]
+End with a concise coaching takeaway. Format the final line as: `Recommendation: <two-sentence summary>`
 ```
 
 ## Style Variations
@@ -31,12 +33,12 @@ Style: fischer
 Mode: Tutor
 
 Analyze this position like Bobby Fischer would:
-1. Look for tactical shots and combinations
-2. Evaluate piece activity and king safety
-3. Consider aggressive attacking moves
-4. Choose the most forcing and precise move
+1. Identify forcing moves and attacking ideas.
+2. Explain how the engine's move serves the attack.
+3. Show the knockout variation or critical continuation.
+4. Provide the attacking plan after the engine move.
 
-Explain your reasoning step by step, then provide: best move: [UCI_MOVE]
+Conclude with `Recommendation: ...`
 ```
 
 ### Aggressive Style
@@ -46,12 +48,12 @@ Style: aggressive
 Mode: Tutor
 
 Analyze this position with an aggressive mindset:
-1. Look for attacking opportunities and tactical shots
-2. Evaluate threats to the opponent's king
-3. Consider sacrifices and forcing moves
-4. Choose the most aggressive and active move
+1. Emphasize attacking chances and forcing lines.
+2. Explain how the engine move generates threats.
+3. Warn about defensive resources the opponent might try.
+4. Provide the attacking continuation after the engine move.
 
-Explain your reasoning step by step, then provide: best move: [UCI_MOVE]
+Conclude with `Recommendation: ...`
 ```
 
 ### Defensive Style
@@ -61,12 +63,12 @@ Style: defensive
 Mode: Tutor
 
 Analyze this position with a defensive mindset:
-1. Evaluate threats to your own position
-2. Look for solid, safe moves
-3. Consider positional factors and piece coordination
-4. Choose the most solid and reliable move
+1. Identify immediate dangers you must neutralize.
+2. Explain how the engine move reinforces the position.
+3. Outline the safe defensive setup after the engine move.
+4. Suggest the long-term plan to consolidate.
 
-Explain your reasoning step by step, then provide: best move: [UCI_MOVE]
+Conclude with `Recommendation: ...`
 ```
 
 ### Balanced Style
@@ -76,41 +78,28 @@ Style: balanced
 Mode: Tutor
 
 Analyze this position with a balanced approach:
-1. Evaluate both tactical and positional factors
-2. Consider both attacking and defensive needs
-3. Look for moves that improve your position
-4. Choose the most principled and sound move
+1. Weigh tactical shots against positional goals.
+2. Explain the engine move in terms of both safety and activity.
+3. Discuss alternative plans the side might consider.
+4. Provide the follow-up plan after the engine move.
 
-Explain your reasoning step by step, then provide: best move: [UCI_MOVE]
+Conclude with `Recommendation: ...`
 ```
 
 ## Expected Output Format
-- Step-by-step analysis
-- Clear reasoning for the chosen move
-- Best move in UCI format at the end
-- Educational explanations suitable for learning
+- Step-by-step analysis referencing the engine move
+- Highlighted tactical/strategic reasoning
+- Practical plan after the engine move
+- Final line formatted as `Recommendation: <summary>`
 
 ## Example Output
 ```
-Let me analyze this position step by step:
+Engine move: Qh5 (evaluation +1.35)
 
-1. Position Evaluation:
-   - White has a slight space advantage
-   - Black's king is exposed on the kingside
-   - Both sides have active pieces
+1. Position overview: Black's king is weakened on h7/g7 while White's queen and bishop target the dark squares.
+2. Why Qh5 works: it immediately threatens mate on h7. If ...g6, White lands on h6 and prepares Bc2-b1 hitting h7 again. If ...h6, then e5! opens the b1–h7 diagonal.
+3. Critical replies: after 1...g6 2.Qh6, Black cannot trade queens—Rf3 swings to h3. On 1...h6 2.e5, the f-file opens and Black's king is trapped.
+4. Plan: keep the queen on the h-file, double rooks on f3/h3, and break with e5 once the king is boxed in.
 
-2. Key Threats and Opportunities:
-   - White can attack the exposed black king
-   - Black has some counterplay on the queenside
-   - The center is contested
-
-3. Candidate Moves:
-   - Qh5: Direct attack on the king
-   - Nf5: Centralizing the knight
-   - O-O: Castling for safety
-
-4. Best Move Reasoning:
-   Qh5 is the most forcing move, directly attacking the black king and creating immediate threats. This move puts maximum pressure on Black and forces them to respond to the attack.
-
-best move: qh5
+Recommendation: Play 1.Qh5! to force weaknesses around the king, then bring heavy pieces to the h-file and break with e5 when Black is tied down on dark squares.
 ```

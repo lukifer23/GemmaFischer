@@ -50,11 +50,13 @@ print(move)  # e.g., "e2e4"
 - **Multi-Mode Operation**: Engine (UCI moves), Tutor (explanations), and Director (Q&A) modes
 - **Data Standardization**: Automated dataset validation and quality assurance pipeline
 - **Web Interface**: Real-time MoE routing display and expert switching controls
+- **LC0 Hybrid Engine**: Neural-engine move selection with LLM explanations via the new hybrid analysis pipeline
 
 ### Current Status
 - **Training Data**: 150K standardized samples (no placeholders) including 2K high-quality CoT reasoning examples
 - **Model Checkpoints**: Multiple specialized LoRA adapters with automatic integrity validation
 - **Parallel Execution**: Simultaneous multi-expert analysis with thread-safe adapter switching
+- **Hybrid Analysis**: LC0 provides primary move generation with structured tutor explanations returned via `/api/analyze`
 - **Data Quality**: 100% valid samples with automated validation and repair pipelines
 - **MoE Routing**: Intelligent expert selection backed by a retrained router (37% accuracy on the core eval suite — needs continued work for director/opening prompts)
 - **Web Interface**: Enhanced interface at http://localhost:5000 with real-time MoE routing
@@ -66,12 +68,14 @@ print(move)  # e.g., "e2e4"
 - **Code Architecture**: Refactored monolithic files into focused, maintainable modules
 - **Inference Performance**: 40% faster cache operations, reduced memory usage, optimized model loading
 - **Configuration System**: Unified configuration with validation, environment overrides, and expert-specific settings
+- **Hybrid Inference**: Added `HybridEngine` orchestrator and `/api/analyze` endpoint for LC0-driven analysis with tutor narratives
 - **Error Handling Optimization**: Reduced overhead while maintaining robustness with smart caching and classification
 - **Code Deduplication**: Consolidated common utilities and patterns across all modules for better maintainability
 
 ### Current Capabilities
 - **Advanced Training**: Stable training with timeout prevention and automatic checkpoint resumption
 - **Smart Caching**: Multi-level LRU caching for positions, routing decisions, and responses
+- **Tutor Dataset**: Engine-aligned explanations stored in `data/standardized/standardized_tutor_lc0_v1.jsonl`
 - **Error Recovery**: Comprehensive error handling with automatic fallback mechanisms
 - **Model Validation**: Real-time integrity checks and corruption detection
 - **Performance Monitoring**: Advanced benchmarking with regression detection

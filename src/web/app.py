@@ -337,6 +337,9 @@ class ChessModelInterface:
             print(f"🔍 Response preview: '{result.get('response', '')[:100]}...'")
         return result
 
+    def analyze_with_engine(self, fen: str, intent: Optional[str] = None, explanation_mode: str = "tutor") -> Dict[str, Any]:
+        return self._inference.analyze_with_engine(fen, intent=intent, explanation_mode=explanation_mode)
+
     def generate_parallel_responses(self, question: str, context: Optional[str] = None,
                                    experts: List[str] = None, max_length: int = 200) -> Dict[str, Dict[str, Any]]:
         """Generate responses from multiple experts in parallel."""
@@ -596,6 +599,27 @@ def api_eval_stockfish():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_position():
+    """Run LC0-powered analysis and return structured explanation."""
+    start_time = time.time()
+    data = request.get_json(force=True) or {}
+
+    fen = (data.get('fen') or '').strip()
+    intent = data.get('intent')
+    explanation_mode = data.get('explanation_mode', 'tutor')
+
+    if not fen:
+        return jsonify({'error': 'FEN is required for analysis'}), 400
+
+    try:
+        result = chess_model.analyze_with_engine(fen, intent=intent, explanation_mode=explanation_mode)
+        result['processing_time'] = time.time() - start_time
+        return jsonify(result)
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @app.route('/api/eval/puzzles', methods=['POST'])
@@ -917,6 +941,42 @@ def ask_question():
             else:
                 print("⚠️ WEB: No FEN found for MoE routing, falling back to single expert")
                 # Fall through to single expert mode
+
+        # LC0 hybrid analysis when FEN present and engine mode requested
+        fen_for_hybrid = None
+        try:
+            fen_for_hybrid = extract_fen(question) or extract_fen(enhanced_context)
+        except Exception:
+            fen_for_hybrid = None
+
+        if fen_for_hybrid and expert in ('uci', 'auto'):
+            try:
+                intent = data.get('intent') if isinstance(data, dict) else None
+                explanation_mode = data.get('explanation_mode', 'tutor') if isinstance(data, dict) else 'tutor'
+                hybrid_result = chess_model.analyze_with_engine(fen_for_hybrid, intent=intent, explanation_mode=explanation_mode)
+                processing_time = time.time() - start_time
+                response_payload = {
+                    'response': hybrid_result.get('explanation', ''),
+                    'analysis': hybrid_result,
+                    'best_move': hybrid_result.get('best_move'),
+                    'principal_variation': hybrid_result.get('principal_variation', []),
+                    'evaluation_cp': hybrid_result.get('evaluation_cp'),
+                    'evaluation_pawns': hybrid_result.get('evaluation_pawns'),
+                    'mate_in': hybrid_result.get('mate_in'),
+                    'engine': hybrid_result.get('engine'),
+                    'engine_time': hybrid_result.get('engine_time'),
+                    'fallback_used': hybrid_result.get('fallback_used'),
+                    'confidence': 0.9,
+                    'model_loaded': True,
+                    'mode': 'engine',
+                    'processing_time': processing_time,
+                    'tokens_per_second': len(hybrid_result.get('explanation', '').split()) / max(processing_time, 0.001),
+                    'question': question,
+                    'context': context,
+                }
+                return jsonify(response_payload)
+            except Exception as hybrid_exc:
+                print(f"⚠️ WEB: Hybrid engine analysis failed ({hybrid_exc}), falling back to model generation")
 
         # Single expert mode (fallback or explicit expert selection)
         mode = 'tutor'

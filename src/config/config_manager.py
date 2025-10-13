@@ -218,6 +218,8 @@ class LC0EngineSettings:
         "lc0",
     ])
     debug: bool = False
+    time_limit: float = 2.0
+    depth: Optional[int] = None
 
 
 @dataclass
@@ -235,6 +237,8 @@ class FallbackEngineSettings:
         "/usr/bin/stockfish",
         "stockfish",
     ])
+    depth: int = 18
+    time_limit: float = 0.5
 
 
 @dataclass

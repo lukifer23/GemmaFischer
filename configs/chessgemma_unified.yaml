@@ -17,6 +17,8 @@ chess_engine:
     backend: "metal"
     threads: 2
     nn_cache_size: 200000
+    time_limit: 2.0
+    depth: null
     search_paths:
       - "/opt/homebrew/bin/lc0"
       - "/usr/local/bin/lc0"
@@ -28,6 +30,8 @@ chess_engine:
     hash: 128
     skill_level: 20
     show_wdl: true
+    depth: 18
+    time_limit: 0.5
     search_paths:
       - "/opt/homebrew/bin/stockfish"
       - "/usr/local/bin/stockfish"

@@ -4,6 +4,13 @@
 
 This document outlines the comprehensive plan for integrating LeelaChess Zero (LC0) as the UCI expert in the GemmaFischer Mixture of Experts (MoE) system. The integration creates a hybrid architecture where the LLM provides strategic guidance and LC0 handles precise move calculation, resulting in significantly improved chess analysis capabilities.
 
+### Latest Implementation Snapshot (Oct 2025)
+- `ChessEngineManager` now accepts arbitrary UCI engines and exposes helpers (`create_lc0_manager`, `create_stockfish_manager`).
+- `HybridEngine` (src/inference/hybrid_engine.py) orchestrates LC0 analysis with Stockfish fallback.
+- `ChessGemmaInference.analyze_with_engine` produces structured LC0 analysis plus LLM-generated tutoring explanations.
+- New REST endpoint `/api/analyze` backs the web UI LC0 panel; `/api/ask` automatically uses LC0 when a FEN is provided.
+- Tutor prompt templates now consume engine metadata (`engine_move`, `engine_evaluation`, `principal_variation`) and emit recommendation summaries.
+
 ## Current System Analysis
 
 ### Existing Architecture
@@ -17,6 +24,12 @@ This document outlines the comprehensive plan for integrating LeelaChess Zero (L
 - **Metal Backend**: Native Apple Silicon GPU acceleration
 - **UCI Compatible**: Same protocol as Stockfish
 - **Hybrid Potential**: LLM strategy + LC0 precision
+
+### Implemented Components
+- **`ChessEngineManager` upgrades**: parameterized UCI loader with reusable option filtering and search path discovery.
+- **`HybridEngine` orchestration**: selects LC0 as primary, Stockfish as fallback, and returns normalized `HybridEngineResult` objects.
+- **Inference bridge**: `ChessGemmaInference.analyze_with_engine` generates tutor explanations and exposes them through `generate_best_move`.
+- **Web API/UI**: `/api/analyze` endpoint feeds the new LC0 analysis card, while chat responses embed hybrid analysis when a FEN is detected.
 
 ## Integration Architecture
 
@@ -260,6 +273,13 @@ chess_engine:
 - [ ] Production deployment and monitoring
 - [ ] User acceptance testing
 - [ ] Performance monitoring and optimization
+
+## Tutor Dataset Refresh
+- **Hybrid records** now include `engine_move`, `engine_evaluation`, and `principal_variation` extracted from LC0.
+- **Prompt alignment** is handled by the updated `prompts/tutor_mode.txt` template: explanations reference the engine move, end with a `Recommendation:` line, and warn about critical defensive tries.
+- **Training script** (`scripts/train_lora_poc.py`) accepts the new schema; the instruction collator masks prompt fields and supervises only the explanation text.
+- **Data generation pipeline** should batch LC0 analyses, store them under `data/standardized/standardized_tutor_lc0_v1.jsonl`, and include Stockfish cross-checks to label major blunders.
+- **Evaluation**: updated scorecards should verify that explanations mention the engine move, provide a follow-up plan, and cover at least one opponent resource.
 
 ## Success Criteria
 

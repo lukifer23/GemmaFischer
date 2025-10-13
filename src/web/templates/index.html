@@ -341,6 +341,26 @@
             font-size: 0.85rem;
         }
 
+        .lc0-section {
+            padding: 20px 24px 24px;
+            background: #eef4ff;
+        }
+
+        .lc0-analysis-body {
+            min-height: 140px;
+        }
+
+        .lc0-move-highlight {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1d4ed8;
+        }
+
+        .lc0-meta {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
         .stockfish-section {
             padding: 20px 24px 24px;
             background: #f8fafc;
@@ -558,7 +578,7 @@
                                 Test Stockfish
                             </button>
                         </div>
-                        <div class="hybrid-controls mt-3" id="hybrid-controls" style="display: none;">
+                        <div class="hybrid-controls mt-3" id="hybrid-controls">
                             <div class="card-section">
                                 <h6 class="card-title mb-2">
                                     <i class="fas fa-brain me-2"></i>
@@ -585,6 +605,27 @@
                                     </small>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div class="card-divider"></div>
+                    <div class="lc0-section" id="lc0-analysis-card">
+                        <div class="card-header">
+                            <div>
+                                <h5 class="card-title mb-1">
+                                    <i class="fas fa-network-wired me-2"></i>
+                                    LC0 Analysis
+                                </h5>
+                                <small class="text-muted">Neural engine recommendation with LLM explanation</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-success" id="lc0-analyze-btn" onclick="requestHybridAnalysis()">
+                                <i class="fas fa-robot me-1"></i>
+                                Analyze with LC0
+                            </button>
+                        </div>
+                        <div class="lc0-analysis-body" id="lc0-analysis-body">
+                            <p class="text-muted small mb-0">
+                                Provide a FEN or select a position to see LC0's best move and explanation.
+                            </p>
                         </div>
                     </div>
                     <div class="card-divider"></div>

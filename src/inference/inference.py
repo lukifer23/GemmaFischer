@@ -29,6 +29,9 @@ import threading
 from functools import lru_cache
 import hashlib
 
+from ..utils.common import get_config_manager
+from .hybrid_engine import HybridEngine, HybridEngineResult
+
 # Import MoE components
 try:
     from .moe_router import ChessMoERouter, MoEInferenceManager
@@ -207,16 +210,25 @@ class ChessGemmaInference:
         self._adapter_paths: Dict[str, Path] = {}
 
         # Hybrid LC0 engine integration
-        self._hybrid_engine_enabled = os.environ.get('CHESSGEMMA_HYBRID_ENGINE', 'false').lower() in ('true', '1', 'yes')
-        self._hybrid_engine = None
-        if self._hybrid_engine_enabled:
-            try:
-                from .hybrid_engine import create_hybrid_engine
-                self._hybrid_engine = create_hybrid_engine(llm_model=self)
-                logger.info("🤖 Hybrid LC0 engine enabled for UCI moves")
-            except Exception as e:
-                logger.warning(f"Failed to initialize hybrid engine: {e}")
-                self._hybrid_engine_enabled = False
+        self._config_manager = get_config_manager()
+        self._hybrid_engine_enabled = True
+        self._hybrid_engine: Optional[HybridEngine] = None
+        try:
+            engine_config = None
+            if self._config_manager:
+                try:
+                    engine_config = self._config_manager().chess_engine
+                except Exception:
+                    engine_config = None
+            self._hybrid_engine = HybridEngine(engine_config)
+            logger.info("🤖 Hybrid engine ready for LC0-powered analysis")
+        except Exception as e:
+            logger.warning(f"Hybrid engine disabled: {e}")
+            self._hybrid_engine_enabled = False
+            self._hybrid_engine = None
+
+        self._last_engine_analysis: Optional[HybridEngineResult] = None
+        self._last_engine_explanation: Optional[str] = None
         # Map physical adapter names -> loaded flag
         self._loaded_adapters: Dict[str, bool] = {}
         # Map logical expert name (uci/tutor/director) -> physical adapter name (e.g., uci@checkpoint-600)
@@ -936,6 +948,118 @@ class ChessGemmaInference:
         except Exception:
             pass
 
+    def analyze_with_engine(
+        self,
+        fen: str,
+        intent: Optional[str] = None,
+        explanation_mode: str = "tutor",
+    ) -> Dict[str, Any]:
+        """Run LC0 analysis and generate an LLM explanation for the position."""
+
+        if not fen:
+            raise ValueError("FEN string is required for engine analysis")
+
+        engine = self._ensure_hybrid_engine()
+        engine_result = engine.analyze(fen)
+
+        explanation = self._generate_engine_explanation(
+            fen=fen,
+            analysis=engine_result,
+            intent=intent,
+            explanation_mode=explanation_mode,
+        )
+
+        score_pawns = None
+        if engine_result.evaluation_cp is not None:
+            score_pawns = round(engine_result.evaluation_cp / 100.0, 2)
+
+        payload = {
+            "fen": fen,
+            "engine": engine_result.engine_name,
+            "best_move": engine_result.best_move,
+            "principal_variation": engine_result.principal_variation,
+            "evaluation_cp": engine_result.evaluation_cp,
+            "evaluation_pawns": score_pawns,
+            "mate_in": engine_result.mate_in,
+            "depth": engine_result.depth,
+            "nodes": engine_result.nodes,
+            "engine_time": engine_result.engine_time,
+            "fallback_used": engine_result.fallback_used,
+            "analysis": engine_result.raw_analysis,
+            "explanation": explanation["text"],
+            "key_points": explanation.get("key_points", []),
+            "explanation_adapter": explanation.get("adapter"),
+        }
+
+        self._last_engine_analysis = engine_result
+        self._last_engine_explanation = explanation["text"]
+
+        return payload
+
+    def _generate_engine_explanation(
+        self,
+        fen: str,
+        analysis: HybridEngineResult,
+        intent: Optional[str],
+        explanation_mode: str,
+    ) -> Dict[str, Any]:
+        adapter = "tutor" if explanation_mode not in ("director",) else "director"
+
+        self.set_active_adapter(adapter)
+
+        # Ensure model ready
+        self.load_model()
+
+        pv_text = " ".join(analysis.principal_variation) if analysis.principal_variation else "(no principal variation provided)"
+        eval_text = self._format_engine_score(analysis)
+
+        intent_text = intent or "balanced"
+
+        prompt = (
+            "You are a chess coach working alongside a top-tier chess engine.\n"
+            "Explain the engine's recommendation in clear coaching language.\n"
+            f"FEN: {fen}\n"
+            f"Engine: {analysis.engine_name}\n"
+            f"Playing intent: {intent_text}\n"
+            f"Best move (UCI): {analysis.best_move or 'unknown'}\n"
+            f"Evaluation: {eval_text}\n"
+            f"Principal variation: {pv_text}\n"
+            "\nStructure your response with:\n"
+            "1. Brief position overview and key imbalances.\n"
+            "2. Why the engine move works (tactics, positional ideas, threats).\n"
+            "3. Critical variations or opponent responses to watch.\n"
+            "4. A practical plan for the next few moves.\n"
+            "Conclude with concise advice in two sentences."
+        )
+
+        explanation_text = self.generate_text(
+            prompt,
+            max_new_tokens=220,
+            do_sample=False,
+            temperature=0.0,
+            top_p=1.0,
+            repetition_penalty=1.05,
+        ).strip()
+
+        key_points: List[str] = []
+        for line in explanation_text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(('-', '*')):
+                key_points.append(stripped.lstrip('-* ').strip())
+
+        return {
+            "text": explanation_text,
+            "adapter": adapter,
+            "key_points": key_points,
+        }
+
+    def _format_engine_score(self, analysis: HybridEngineResult) -> str:
+        if analysis.mate_in is not None:
+            return f"mate in {analysis.mate_in}"
+        if analysis.evaluation_cp is None:
+            return "unknown evaluation"
+        return f"{analysis.evaluation_cp / 100:.2f} pawns"
+
     def refresh_adapters(self) -> None:
         """Re-discover latest checkpoints and ensure corresponding adapters are loaded.
 
@@ -967,6 +1091,21 @@ class ChessGemmaInference:
                 self._active_adapter = name
             except Exception:
                 pass
+
+    def _ensure_hybrid_engine(self) -> HybridEngine:
+        """Lazy-initialize the hybrid engine if available."""
+        if not self._hybrid_engine_enabled:
+            raise RuntimeError("Hybrid engine is disabled")
+        if self._hybrid_engine is None:
+            try:
+                engine_config = None
+                if self._config_manager:
+                    engine_config = self._config_manager().chess_engine
+                self._hybrid_engine = HybridEngine(engine_config)
+            except Exception as exc:
+                self._hybrid_engine_enabled = False
+                raise RuntimeError(f"Failed to initialize hybrid engine: {exc}")
+        return self._hybrid_engine
         else:
             # Provide visibility if requested adapter is unavailable
             try:
@@ -1717,33 +1856,16 @@ class ChessGemmaInference:
             board = chess.Board(fen) if fen else None
 
             # Use hybrid LC0 engine if enabled and we have a position
-            if self._hybrid_engine_enabled and self._hybrid_engine and board is not None:
+            if self._hybrid_engine_enabled and board is not None:
                 try:
-                    logger.info("🤖 Using hybrid LC0 engine for move generation")
-
-                    # Determine strategic intent from question/prompt
-                    strategic_intent = self._infer_strategic_intent(question, prompt_text)
-
-                    # Get hybrid analysis
-                    analysis = self._hybrid_engine.analyze_position_with_strategy(
-                        fen=fen,
-                        strategic_intent=strategic_intent,
-                        time_limit=2.0  # LC0 analysis time
-                    )
-
+                    analysis = self._ensure_hybrid_engine().analyze(fen)
+                    self._last_engine_analysis = analysis
                     if analysis.best_move:
-                        move_uci = analysis.best_move.uci()
-                        logger.info(f"🤖 Hybrid engine move: {move_uci} (conf: {analysis.confidence:.2f})")
-
-                        # Cache the result
+                        move_uci = analysis.best_move
                         self._engine_cache_store(fen, move_uci)
-
                         return move_uci
-                    else:
-                        logger.warning("🤖 Hybrid engine returned no move, falling back to LoRA")
                 except Exception as e:
-                    logger.error(f"🤖 Hybrid engine failed: {e}, falling back to LoRA")
-                    # Fall through to LoRA-based generation
+                    logger.warning(f"Hybrid engine analysis failed, falling back to model policy: {e}")
 
             # Policy: direct scoring of legal moves by log-prob (no sampling)
             if self._engine_policy == 'logprob' and board is not None:
@@ -2243,8 +2365,7 @@ def analyze_chess_position(fen: str, mode: str = "tutor") -> Dict[str, Any]:
 def generate_best_move(fen: str) -> Dict[str, Any]:
     """Enhanced best move generation with MoE routing."""
     instance = get_inference_instance()
-    question = f"FEN: {fen}\nWhat is the best move?"
-    return instance.generate_response(question, mode="engine")
+    return instance.analyze_with_engine(fen)
 
 def switch_inference_expert(expert_name: str) -> bool:
     """Switch to a different expert adapter (legacy function, now uses MoE routing)."""
@@ -2302,3 +2423,6 @@ class ChessModelInterface:
         lock_context = cache_lock if cache_lock is not None else nullcontext()
         with lock_context:
             return self._inference.generate_text(prompt)
+
+    def analyze_with_engine(self, fen: str, intent: Optional[str] = None, explanation_mode: str = "tutor") -> Dict[str, Any]:
+        return self._inference.analyze_with_engine(fen, intent=intent, explanation_mode=explanation_mode)
