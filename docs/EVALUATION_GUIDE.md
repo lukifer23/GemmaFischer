@@ -23,6 +23,9 @@ curl http://localhost:5000/api/router/diagnostics | jq
 
 # 4. Tail live routing decisions (consumed when retraining the router)
 tail -f reports/moe/routing_decisions.jsonl
+
+# 5. Benchmark LC0+LLM pipeline (captures latency/legal rate)
+python3 scripts/benchmark_lc0.py --num-samples 8
 ```
 
 > **Tip:** The training orchestration script automatically writes dataset profiles to `reports/dataset_profiles/`. Regenerate them whenever you modify sampling, weights, or curricula.

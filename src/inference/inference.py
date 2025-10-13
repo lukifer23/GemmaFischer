@@ -1091,6 +1091,12 @@ class ChessGemmaInference:
                 self._active_adapter = name
             except Exception:
                 pass
+        else:
+            try:
+                avail = ", ".join(sorted(self._adapter_paths.keys())) or "none"
+                print(f"[Router] Requested adapter '{name}' not available. Available: {avail}")
+            except Exception:
+                pass
 
     def _ensure_hybrid_engine(self) -> HybridEngine:
         """Lazy-initialize the hybrid engine if available."""
@@ -1106,13 +1112,6 @@ class ChessGemmaInference:
                 self._hybrid_engine_enabled = False
                 raise RuntimeError(f"Failed to initialize hybrid engine: {exc}")
         return self._hybrid_engine
-        else:
-            # Provide visibility if requested adapter is unavailable
-            try:
-                avail = ", ".join(sorted(self._adapter_paths.keys())) or "none"
-                print(f"[Router] Requested adapter '{name}' not available. Available: {avail}")
-            except Exception:
-                pass
 
     def _load_prompt_template(self, mode: str) -> str:
         """Load prompt template from prompts directory, fallback to defaults."""
