@@ -174,6 +174,11 @@ class HybridEngine:
             return {
                 'name': selection.name,
                 'engine_path': getattr(manager, 'engine_path', None),
+                # Expose configured options when available for UI debugging
+                'options': list(getattr(manager, 'engine', None).options.keys()) if getattr(manager, 'engine', None) is not None else [],
+                'configured_threads': getattr(manager, 'engine_options', {}).get('Threads') if hasattr(manager, 'engine_options') else None,
+                'configured_backend': getattr(manager, 'engine_options', {}).get('Backend') if hasattr(manager, 'engine_options') else None,
+                'configured_weights': getattr(manager, 'engine_options', {}).get('WeightsFile') if hasattr(manager, 'engine_options') else None,
                 'search_depth': selection.depth,
                 'time_limit': selection.time_limit,
                 'active': getattr(manager, 'engine', None) is not None,

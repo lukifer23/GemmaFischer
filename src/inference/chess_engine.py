@@ -217,6 +217,7 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
     weights_file = config.get('weights_file') or ""
     backend = config.get('backend', 'metal')
     threads = config.get('threads', 2)
+    nn_cache_size = config.get('nn_cache_size')
     search_paths = config.get('search_paths') or [
         "/opt/homebrew/bin/lc0",
         "/usr/local/bin/lc0",
@@ -231,6 +232,9 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
         engine_options['WeightsFile'] = weights_file
     if backend:
         engine_options['Backend'] = backend
+    if nn_cache_size is not None:
+        # Only pass NNCacheSize if provided by config; lc0 will ignore if unsupported
+        engine_options['NNCacheSize'] = nn_cache_size
 
     manager = ChessEngineManager(
         engine_path=engine_path,

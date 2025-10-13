@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-10-13T18:35:24.344257",
+  "total_experts": 1,
+  "successful_experts": 1,
+  "failed_experts": 0,
+  "expert_scorecards": {
+    "uci": {
+      "expert_name": "uci",
+      "evaluation_time": "2025-10-13T18:30:20.078871",
+      "total_tests": 5,
+      "passed_tests": 0,
+      "failed_tests": 0,
+      "overall_accuracy": 0.0,
+      "overall_quality_score": 0.0,
+      "overall_response_time": 139.17781698703766,
+      "error_rate": 0.0,
+      "uci_syntax_rate": 0.0,
+      "uci_legality_rate": 0.0,
+      "uci_stockfish_top1": 0.0,
+      "tutor_first_move_accuracy": 0.0,
+      "tutor_cot_structure_adherence": 0.0,
+      "director_rules_accuracy": 0.0,
+      "director_opening_accuracy": 0.0,
+      "errors": [],
+      "warnings": []
+    }
+  },
+  "router_evaluation": {},
+  "regression_analysis": {},
+  "recommendations": [],
+  "summary": {
+    "timestamp": "2025-10-13T18:35:24.344257",
+    "total_experts": 1,
+    "successful_experts": 1,
+    "failed_experts": 0,
+    "success_rate": 1.0,
+    "average_accuracy": 0.0,
+    "average_quality": 0.0,
+    "average_response_time": 139.17781698703766
+  }
+}
