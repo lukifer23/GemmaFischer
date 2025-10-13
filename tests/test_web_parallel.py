@@ -9,7 +9,7 @@ import json
 import time
 from pathlib import Path
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -33,6 +33,30 @@ class TestParallelWebAPI:
         """Mock web components for testing."""
         # Mock chess model
         chess_model.is_loaded = True
+        self.sample_hybrid_result = {
+            'fen': 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+            'engine': 'LC0',
+            'best_move': 'e2e4',
+            'principal_variation': ['e2e4', 'e7e5', 'g1f3'],
+            'evaluation_cp': 85,
+            'evaluation_pawns': 0.85,
+            'mate_in': None,
+            'depth': 20,
+            'nodes': 2048,
+            'engine_time': 0.42,
+            'fallback_used': False,
+            'analysis': {
+                'evaluation': {'depth': 20, 'nodes': 2048},
+                'threats': ['center pressure'],
+                'opportunities': ['king safety'],
+                'position_type': 'opening',
+                'error': None,
+            },
+            'explanation': 'Control the center and develop quickly.',
+            'key_points': ['Central control', 'Rapid development'],
+            'explanation_adapter': 'tutor',
+        }
+        chess_model.analyze_with_engine = Mock(return_value=self.sample_hybrid_result)
         chess_model.generate_parallel_responses = Mock(return_value={
             'uci': {
                 'response': 'e2e4',
@@ -161,6 +185,31 @@ class TestParallelWebAPI:
 
         # Verify RAG was called
         chess_rag.get_relevant_knowledge.assert_called_with('What is the best move?')
+
+    def test_ask_endpoint_includes_lc0_metadata(self):
+        """LC0 analysis responses should expose metadata for the UI."""
+
+        fen = self.sample_hybrid_result['fen']
+        response = self.client.post(
+            '/api/ask',
+            json={'question': f'FEN: {fen}\nWhat now?', 'expert': 'uci'}
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()
+
+        assert data['engine'] == self.sample_hybrid_result['engine']
+        assert data['fallback_used'] == self.sample_hybrid_result['fallback_used']
+        assert 'analysis' in data
+
+        raw_analysis = data['analysis']['analysis']
+        assert raw_analysis['evaluation']['depth'] == self.sample_hybrid_result['analysis']['evaluation']['depth']
+        assert raw_analysis['position_type'] == 'opening'
+        assert raw_analysis['error'] is None
+        assert data['analysis']['key_points'] == self.sample_hybrid_result['key_points']
+        assert data['best_move'] == self.sample_hybrid_result['best_move']
+        assert data['principal_variation'] == self.sample_hybrid_result['principal_variation']
+        assert chess_model.analyze_with_engine.called
 
     def test_parallel_api_error_missing_question(self):
         """Test error handling when question is missing."""
