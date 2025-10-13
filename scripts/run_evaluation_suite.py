@@ -8,6 +8,7 @@ Provides detailed metrics by category and expert performance
 
 import json
 import time
+import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
@@ -16,11 +17,12 @@ import re
 import statistics
 import argparse
 
-# Add src to path for imports
-import sys
-sys.path.append('src')
+# Repository paths
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in os.sys.path:
+    os.sys.path.insert(0, str(PROJECT_ROOT))
 
-from inference.inference import ChessGemmaInference
+from src.inference.inference import ChessGemmaInference
 
 @dataclass
 class EvaluationResult:

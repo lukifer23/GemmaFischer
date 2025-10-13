@@ -19,16 +19,26 @@ class LC0WeightsDownloader:
     # Known working LC0 network sources
     NETWORK_SOURCES = {
         'T60-3770': {
-            'url': 'https://training.lczero.org/networks/512x15x8h-t60-3770/network-3770.pb.gz',
+            'url': 'https://storage.lczero.org/files/networks-contrib/t60-3770.pb.gz',
             'hash': None,  # We'll validate by testing with LC0
             'description': 'T60 network - good balance of strength and speed'
         },
         'T75-2380': {
-            'url': 'https://training.lczero.org/networks/512x15x8h-t75-2380/network-2380.pb.gz', 
+            'url': 'https://storage.lczero.org/files/networks-contrib/t75-2380.pb.gz',
             'hash': None,
             'description': 'T75 network - stronger but slower'
         },
-        # Add more networks as needed
+        'T80-3300': {
+            'url': 'https://storage.lczero.org/files/networks-contrib/t80-3300.pb.gz',
+            'hash': None,
+            'description': 'T80 network - very strong but slower'
+        },
+        # Fallback sources
+        'T60-fallback': {
+            'url': 'https://github.com/LeelaChessZero/lczero/releases/download/v0.29.0/t60-3770.pb.gz',
+            'hash': None,
+            'description': 'T60 network from GitHub releases'
+        }
     }
     
     def __init__(self, weights_dir: str = "models/lc0_weights"):

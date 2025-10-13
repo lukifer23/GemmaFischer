@@ -58,11 +58,12 @@ class HybridEngine:
         self.settings = config
         self.primary: Optional[EngineSelection] = None
         self.fallback: Optional[EngineSelection] = None
-
-        self._initialize_engines()
+        self._engines_initialized = False
 
     def _initialize_engines(self) -> None:
         cfg = self.settings
+        print(f"DEBUG: Primary engine setting: {cfg.primary}")
+        print(f"DEBUG: LC0 enabled: {cfg.lc0.enabled}")
 
         # Primary engine
         primary_key = cfg.primary.lower()
@@ -114,6 +115,11 @@ class HybridEngine:
             self.fallback = None
 
     def analyze(self, fen: str) -> HybridEngineResult:
+        # Lazy initialization of engines
+        if not self._engines_initialized:
+            self._initialize_engines()
+            self._engines_initialized = True
+
         if not self.primary:
             raise RuntimeError("No chess engine available for analysis.")
 
@@ -150,6 +156,10 @@ class HybridEngine:
 
     def health(self) -> Dict[str, Any]:
         """Return health information for primary and fallback engines."""
+        # Lazy initialization of engines
+        if not self._engines_initialized:
+            self._initialize_engines()
+            self._engines_initialized = True
 
         def _summary(selection: Optional[EngineSelection]) -> Optional[Dict[str, Any]]:
             if not selection:

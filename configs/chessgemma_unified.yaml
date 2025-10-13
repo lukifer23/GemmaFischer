@@ -10,8 +10,9 @@ model:
 
 # Engine Configuration
 chess_engine:
-  primary: "lc0"
+  primary: "stockfish"
   lc0:
+    enabled: false
     engine_path: "lc0"
     weights_file: "models/lc0_weights/default.pb.gz"
     backend: "metal"
