@@ -340,6 +340,9 @@ class ChessModelInterface:
     def analyze_with_engine(self, fen: str, intent: Optional[str] = None, explanation_mode: str = "tutor") -> Dict[str, Any]:
         return self._inference.analyze_with_engine(fen, intent=intent, explanation_mode=explanation_mode)
 
+    def engine_health(self) -> Dict[str, Any]:
+        return self._inference.get_engine_health()
+
     def generate_parallel_responses(self, question: str, context: Optional[str] = None,
                                    experts: List[str] = None, max_length: int = 200) -> Dict[str, Dict[str, Any]]:
         """Generate responses from multiple experts in parallel."""
@@ -620,6 +623,15 @@ def analyze_position():
         return jsonify(result)
     except Exception as exc:
         return jsonify({'error': str(exc)}), 500
+
+
+@app.route('/api/engine/health', methods=['GET'])
+def engine_health():
+    """Expose current engine availability and configuration."""
+    try:
+        return jsonify(chess_model.engine_health())
+    except Exception as exc:
+        return jsonify({'available': False, 'error': str(exc)}), 500
 
 
 @app.route('/api/eval/puzzles', methods=['POST'])

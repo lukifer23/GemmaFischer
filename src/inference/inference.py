@@ -1060,6 +1060,19 @@ class ChessGemmaInference:
             return "unknown evaluation"
         return f"{analysis.evaluation_cp / 100:.2f} pawns"
 
+    def get_engine_health(self) -> Dict[str, Any]:
+        try:
+            engine = self._ensure_hybrid_engine()
+        except RuntimeError as exc:
+            return {
+                "available": False,
+                "error": str(exc),
+            }
+
+        health = engine.health()
+        health["available"] = True
+        return health
+
     def refresh_adapters(self) -> None:
         """Re-discover latest checkpoints and ensure corresponding adapters are loaded.
 

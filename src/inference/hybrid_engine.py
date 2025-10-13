@@ -148,6 +148,26 @@ class HybridEngine:
             },
         )
 
+    def health(self) -> Dict[str, Any]:
+        """Return health information for primary and fallback engines."""
+
+        def _summary(selection: Optional[EngineSelection]) -> Optional[Dict[str, Any]]:
+            if not selection:
+                return None
+            manager = selection.manager
+            return {
+                'name': selection.name,
+                'engine_path': getattr(manager, 'engine_path', None),
+                'search_depth': selection.depth,
+                'time_limit': selection.time_limit,
+                'active': getattr(manager, 'engine', None) is not None,
+            }
+
+        return {
+            'primary': _summary(self.primary),
+            'fallback': _summary(self.fallback),
+        }
+
     def _run_engine(
         self,
         selection: EngineSelection,
