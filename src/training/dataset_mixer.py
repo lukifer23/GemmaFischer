@@ -25,6 +25,8 @@ def _load_single_jsonl(
     *,
     streaming: bool = False,
     cache_dir: Optional[str] = None,
+    drop_tasks: Optional[List[str]] = None,
+    keep_tasks: Optional[List[str]] = None,
 ) -> Dataset | IterableDataset:
     """Load a JSONL dataset and normalize its columns.
 
@@ -81,6 +83,23 @@ def _load_single_jsonl(
     # Map lazily and drop any unexpected columns
     extra_cols = [c for c in ds.column_names if c not in expected_cols]
     ds = ds.map(_normalize, remove_columns=extra_cols)
+
+    if (drop_tasks or keep_tasks) and streaming:
+        raise ValueError("Task filtering is not supported in streaming mode.")
+
+    if drop_tasks or keep_tasks:
+        drop_set = {t.lower() for t in drop_tasks or []}
+        keep_set = {t.lower() for t in keep_tasks or []} or None
+
+        def _task_filter(example: Dict[str, Any]) -> bool:
+            task_name = (example.get("task") or "").lower()
+            if keep_set is not None and task_name not in keep_set:
+                return False
+            if drop_set and (task_name in drop_set or any(task_name.startswith(prefix) for prefix in drop_set)):
+                return False
+            return True
+
+        ds = ds.filter(_task_filter)
     return ds
 
 
@@ -93,7 +112,16 @@ def build_mixture(
 ) -> Dataset | IterableDataset:
     """Build an interleaved mixture from dataset specs.
 
-    dataset_specs: list of { 'path': str, 'weight': float }
+    ``dataset_specs`` accepts dictionaries with the following keys::
+
+        {
+            'path': str,
+            'weight': float,
+            'drop_tasks': List[str],      # optional task blacklist
+            'keep_tasks': List[str],      # optional task whitelist
+            'drop_engine_uci': bool,      # convenience flag
+        }
+
     Weights are normalized automatically.
     """
     if not dataset_specs:
@@ -110,7 +138,18 @@ def build_mixture(
         if weight <= 0:
             # Skip zero/negative weights
             continue
-        ds = _load_single_jsonl(path, streaming=streaming, cache_dir=cache_dir)
+        drop_tasks = spec.get('drop_tasks')
+        keep_tasks = spec.get('keep_tasks')
+        if spec.get('drop_engine_uci'):
+            drop_tasks = list(drop_tasks or []) + ['engine_uci']
+
+        ds = _load_single_jsonl(
+            path,
+            streaming=streaming,
+            cache_dir=cache_dir,
+            drop_tasks=drop_tasks,
+            keep_tasks=keep_tasks,
+        )
         datasets_list.append(ds)
         weights.append(weight)
 

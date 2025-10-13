@@ -593,6 +593,19 @@ def main():
                 from src.training.dataset_mixer import _load_single_jsonl
                 ds = _load_single_jsonl(ds_path)
 
+        if ds is not None and args.expert not in ('uci',):
+            try:
+                initial_size = len(ds) if hasattr(ds, '__len__') else None
+                ds = ds.filter(lambda ex: (ex.get('task') or '') != 'engine_uci')
+                if initial_size is not None:
+                    removed = initial_size - len(ds)
+                    if removed > 0:
+                        print(f"Filtered out {removed} engine_uci samples from training mix")
+                else:
+                    print("Filtered engine_uci tasks from streaming dataset")
+            except Exception as exc:
+                print(f"Warning: unable to filter engine_uci tasks ({exc}); proceeding without removal")
+
         # Optional expert filtering by task field
         if ds is not None and args.expert != 'all':
             task_map = {'uci': 'engine_uci', 'tutor': 'tutor_explain', 'director': 'director_qa'}

@@ -6,7 +6,7 @@ This script samples high-quality records from the standardized training corpora
 and produces curated evaluation files with consistent schemas:
 
   - data/validation/eval_mixed_positions_200.jsonl
-  - data/validation/tutor_comprehensive_validation.json
+  - data/validation/tutor_comprehensive_validation.json (hybrid LC0+LLM references)
   - data/validation/director_comprehensive_validation.json
 
 No synthetic placeholders are introduced; all samples come directly from the
@@ -27,7 +27,8 @@ STANDARDIZED_DIR = PROJECT_ROOT / "data" / "standardized"
 VALIDATION_DIR = PROJECT_ROOT / "data" / "validation"
 
 UCI_SOURCE = STANDARDIZED_DIR / "standardized_uci_expert_v2.jsonl"
-TUTOR_SOURCE = STANDARDIZED_DIR / "standardized_tutor_expert_v2.jsonl"
+TUTOR_SOURCE = STANDARDIZED_DIR / "standardized_tutor_lc0_v1.jsonl"
+LEGACY_TUTOR_SOURCE = STANDARDIZED_DIR / "standardized_tutor_expert_v2.jsonl"
 DIRECTOR_SOURCE = STANDARDIZED_DIR / "standardized_director_expert_v3.jsonl"
 
 UCI_OUTPUT = VALIDATION_DIR / "eval_mixed_positions_200.jsonl"
@@ -105,7 +106,11 @@ def pick_uci_positions(limit: int = 200) -> None:
 
 def pick_tutor_puzzles(limit: int = 80) -> None:
     puzzles = []
-    candidate_rows = list(load_jsonl(TUTOR_SOURCE))
+    tutor_source = TUTOR_SOURCE if TUTOR_SOURCE.exists() else LEGACY_TUTOR_SOURCE
+    if tutor_source != TUTOR_SOURCE:
+        print(f"⚠️  Using legacy tutor dataset at {tutor_source}")
+
+    candidate_rows = list(load_jsonl(tutor_source))
     RANDOM.shuffle(candidate_rows)
 
     for row in candidate_rows:
@@ -128,16 +133,31 @@ def pick_tutor_puzzles(limit: int = 80) -> None:
         if not best_move:
             continue
 
+        engine_move = meta.get("engine_move") or best_move
+        principal_variation = meta.get("principal_variation") or []
+        engine_eval_cp = meta.get("engine_evaluation_cp")
+        engine_eval_pawns = meta.get("engine_evaluation_pawns")
         rating = meta.get("rating")
         puzzles.append({
             "id": f"tutor-{len(puzzles)+1:04d}",
             "fen": fen,
-            "expected_move": best_move,
+            "expected_move": engine_move,
             "rating": rating,
             "difficulty": difficulty_from_rating(rating),
             "question": prompt.strip(),
             "reference_analysis": response.strip(),
-            "source": meta.get("source", "standardized_tutor_expert"),
+            "engine_move": engine_move,
+            "principal_variation": principal_variation,
+            "engine_evaluation_cp": engine_eval_cp,
+            "engine_evaluation_pawns": engine_eval_pawns,
+            "hybrid_reference": {
+                "analysis": response.strip(),
+                "engine": meta.get("engine"),
+                "engine_move": engine_move,
+                "principal_variation": principal_variation,
+                "key_points": meta.get("hybrid_key_points", []),
+            },
+            "source": meta.get("source", tutor_source.stem),
         })
 
         if len(puzzles) >= limit:
@@ -148,7 +168,7 @@ def pick_tutor_puzzles(limit: int = 80) -> None:
 
     payload = {
         "metadata": {
-            "generated_from": str(TUTOR_SOURCE),
+            "generated_from": str(tutor_source),
             "sample_size": len(puzzles),
             "seed": SAMPLE_SEED,
         },
@@ -175,13 +195,22 @@ def pick_director_questions(limit: int = 80) -> None:
         category = meta.get("topic", "general")
         rating = meta.get("rating")
 
+        hybrid_reference = {
+            "analysis": response.strip(),
+            "engine": meta.get("engine"),
+            "engine_move": meta.get("engine_move"),
+            "principal_variation": meta.get("principal_variation") or [],
+        }
+
         questions.append({
             "id": f"director-{len(questions)+1:04d}",
             "question": prompt.strip(),
             "expected_answer": response.strip(),
+            "reference_answer": response.strip(),
             "category": category,
             "rating": rating,
             "best_move": meta.get("best_move"),
+            "hybrid_reference": hybrid_reference,
             "source": meta.get("source", "standardized_director_expert_v2"),
         })
 
