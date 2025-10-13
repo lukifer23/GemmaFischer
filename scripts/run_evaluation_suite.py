@@ -9,6 +9,7 @@ Provides detailed metrics by category and expert performance
 import json
 import time
 import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
@@ -23,6 +24,8 @@ if str(PROJECT_ROOT) not in os.sys.path:
     os.sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.inference.inference import ChessGemmaInference
+from src.inference.moe_router import ChessMoERouter
+from src.inference.uci_utils import extract_fen
 
 @dataclass
 class EvaluationResult:
@@ -56,12 +59,22 @@ class EvaluationSuiteResults:
 class EvaluationSuiteRunner:
     """Comprehensive evaluation suite runner with MoE support."""
 
-    def __init__(self, model_path: str = "models/google-gemma-3-270m"):
+    def __init__(self, model_path: str = "models/google-gemma-3-270m", router_only: bool = False):
         self.model_path = model_path
         self.inference = None
+        self.router_only = router_only
+        self.router: Optional[ChessMoERouter] = None
 
     def initialize_inference(self) -> bool:
-        """Initialize the inference system."""
+        """Initialize the inference system or router."""
+        if self.router_only:
+            try:
+                self.router = ChessMoERouter()
+                return True
+            except Exception as e:
+                print(f"❌ Failed to initialize router: {e}")
+                return False
+
         try:
             self.inference = ChessGemmaInference(model_path=self.model_path)
             return self.inference.load_model()
@@ -140,54 +153,81 @@ class EvaluationSuiteRunner:
         try:
             start_time = time.time()
 
-            # Generate response
-            if use_moe and category != "pure_move":
-                # Use MoE routing (auto mode) for non-pure-move questions
-                response_data = self.inference.generate_response(
-                    question=question,
-                    mode="tutor"  # Use tutor as base for MoE routing
-                )
-                result.moe_used = True
-            elif use_moe and category == "pure_move":
-                # Force UCI routing for pure move questions
-                response_data = self.inference.generate_response(
-                    question=question,
-                    mode="uci"  # Force UCI expert for pure moves
-                )
-                result.moe_used = False  # Not really MoE since we forced the expert
+            if self.router_only:
+                # Lightweight routing evaluation without full model generation
+                fen = extract_fen(question)
+                query_type = self._determine_query_type(category, expected_expert)
+
+                if use_moe and self.router:
+                    decision = self.router.route_query(
+                        position_fen=fen or "",
+                        query_type=query_type,
+                        question_text=question
+                    )
+                    result.response = f"ROUTED:{decision.primary_expert}"
+                    result.confidence = decision.confidence_score
+                    result.routed_expert = decision.primary_expert
+                    result.moe_used = True
+                else:
+                    # Simulate MoE disabled by routing all queries to the engine expert
+                    routed = "uci"
+                    result.response = f"ROUTED:{routed}"
+                    result.confidence = 0.0
+                    result.routed_expert = routed
+                    result.moe_used = False
+
+                result.generation_time = time.time() - start_time
+                result.format_score = self._estimate_format_score(result.routed_expert, expected_format)
+                result.expert_score = 1.0 if result.routed_expert == expected_expert else 0.0
+
             else:
-                # Use specific expert
-                response_data = self.inference.generate_response(
-                    question=question,
-                    mode=expected_expert
-                )
-                result.moe_used = False
+                # Full inference pathway
+                if use_moe and category != "pure_move":
+                    # Use MoE routing (auto mode) for non-pure-move questions
+                    response_data = self.inference.generate_response(
+                        question=question,
+                        mode="tutor"  # Use tutor as base for MoE routing
+                    )
+                    result.moe_used = True
+                elif use_moe and category == "pure_move":
+                    # Force UCI routing for pure move questions
+                    response_data = self.inference.generate_response(
+                        question=question,
+                        mode="uci"  # Force UCI expert for pure moves
+                    )
+                    result.moe_used = False  # Not really MoE since we forced the expert
+                else:
+                    # Use specific expert
+                    response_data = self.inference.generate_response(
+                        question=question,
+                        mode=expected_expert
+                    )
+                    result.moe_used = False
 
-            result.response = response_data.get("response", "")
-            result.confidence = response_data.get("confidence", 0.0)
-            result.generation_time = time.time() - start_time
+                result.response = response_data.get("response", "")
+                result.confidence = response_data.get("confidence", 0.0)
+                result.generation_time = time.time() - start_time
 
+                # Check which expert was actually used
+                # For MoE routing, use the primary_expert field
+                if result.moe_used and "primary_expert" in response_data:
+                    result.routed_expert = response_data["primary_expert"]
+                else:
+                    # Fallback to active_adapter for non-MoE routing
+                    active_adapter = response_data.get("active_adapter")
+                    if active_adapter:
+                        if "uci" in active_adapter:
+                            result.routed_expert = "uci"
+                        elif "tutor" in active_adapter:
+                            result.routed_expert = "tutor"
+                        elif "director" in active_adapter:
+                            result.routed_expert = "director"
 
-            # Check which expert was actually used
-            # For MoE routing, use the primary_expert field
-            if result.moe_used and "primary_expert" in response_data:
-                result.routed_expert = response_data["primary_expert"]
-            else:
-                # Fallback to active_adapter for non-MoE routing
-                active_adapter = response_data.get("active_adapter")
-                if active_adapter:
-                    if "uci" in active_adapter:
-                        result.routed_expert = "uci"
-                    elif "tutor" in active_adapter:
-                        result.routed_expert = "tutor"
-                    elif "director" in active_adapter:
-                        result.routed_expert = "director"
+                # Validate response format
+                result.format_score = self.validate_response_format(result.response, expected_format)
 
-            # Validate response format
-            result.format_score = self.validate_response_format(result.response, expected_format)
-
-            # Check expert routing accuracy
-            result.expert_score = 1.0 if result.routed_expert == expected_expert else 0.0
+                # Check expert routing accuracy
+                result.expert_score = 1.0 if result.routed_expert == expected_expert else 0.0
 
         except Exception as e:
             print(f"❌ Error evaluating {test_id}: {e}")
@@ -268,7 +308,7 @@ class EvaluationSuiteRunner:
 
         # Calculate overall format accuracy
         all_format_scores = [r.format_score for r in individual_results]
-        results.format_accuracy["overall"] = statistics.mean(all_format_scores)
+        results.format_accuracy["overall"] = statistics.mean(all_format_scores) if all_format_scores else 0.0
 
         # Calculate routing accuracy (if MoE was used)
         if use_moe:
@@ -276,6 +316,23 @@ class EvaluationSuiteRunner:
             results.routing_accuracy = statistics.mean(routing_scores)
 
         return results
+
+    def _determine_query_type(self, category: str, expected_expert: str) -> str:
+        """Map evaluation categories to router query types."""
+        category = category or ""
+        if category == "pure_move" or expected_expert == "uci":
+            return "engine"
+        if expected_expert == "director":
+            return "director"
+        return "tutor"
+
+    def _estimate_format_score(self, routed_expert: str, expected_format: str) -> float:
+        """Heuristic format score when running in router-only mode."""
+        if expected_format == "uci_move_only":
+            return 1.0 if routed_expert == "uci" else 0.0
+        if expected_format in {"step_by_step_analysis", "analysis_with_move", "strategic_explanation", "tactical_analysis"}:
+            return 1.0 if routed_expert in {"tutor", "director"} else 0.0
+        return 0.0
 
     def print_results(self, results: EvaluationSuiteResults, use_moe: bool):
         """Print formatted evaluation results."""
@@ -322,11 +379,12 @@ def main():
     parser.add_argument("--no-moe", action="store_true",
                        help="Disable MoE routing, use expert-specific mode")
     parser.add_argument("--output", help="Save results to JSON file")
+    parser.add_argument("--router-only", action="store_true", help="Evaluate routing without loading the full model")
 
     args = parser.parse_args()
 
     # Initialize runner
-    runner = EvaluationSuiteRunner(model_path=args.model_path)
+    runner = EvaluationSuiteRunner(model_path=args.model_path, router_only=args.router_only)
 
     if not runner.initialize_inference():
         print("❌ Failed to initialize inference system")

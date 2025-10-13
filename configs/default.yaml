@@ -218,6 +218,11 @@ moe:
   min_expert_confidence: 0.6
   max_expert_response_time: 2.0
   ensemble_size: 2
+  retrain_action: "targeted_retrain"
+  retrain_focus_categories:
+    - rules_explanation
+    - endgame_principles
+    - opening_strategy
 
 # Performance Configuration
 performance:

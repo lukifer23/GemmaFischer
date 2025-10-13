@@ -185,6 +185,8 @@ class MoEConfig:
     min_expert_confidence: float = 0.6
     max_expert_response_time: float = 2.0  # seconds
     ensemble_size: int = 2  # Number of experts to combine
+    retrain_action: str = "monitor"
+    retrain_focus_categories: List[str] = field(default_factory=list)
 
 
 @dataclass

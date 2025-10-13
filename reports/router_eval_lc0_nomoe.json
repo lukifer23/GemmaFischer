@@ -1,0 +1,87 @@
+{
+  "configuration": {
+    "moe_enabled": false,
+    "eval_file": "data/validation/eval_suite.jsonl",
+    "model_path": "models/google-gemma-3-270m"
+  },
+  "results": {
+    "total_tests": 35,
+    "format_accuracy": {
+      "overall": 0.14285714285714285
+    },
+    "routing_accuracy": 0.0,
+    "avg_generation_time": 7.469313485281808e-05,
+    "avg_confidence": 0.0,
+    "categories": {
+      "pure_move": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "expert_accuracy": 1.0,
+        "avg_confidence": 0.0,
+        "avg_time": 0.00014295578002929688
+      },
+      "position_analysis": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 8.764266967773438e-05
+      },
+      "opening_strategy": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 8.296966552734375e-05
+      },
+      "endgame_principles": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 3.1948089599609376e-06
+      },
+      "rules_explanation": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 2.765655517578125e-06
+      },
+      "tactical_patterns": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 0.00011606216430664063
+      },
+      "mixed_analysis": {
+        "count": 5,
+        "format_accuracy": 0.0,
+        "expert_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 8.726119995117188e-05
+      }
+    },
+    "experts": {
+      "uci": {
+        "count": 5,
+        "format_accuracy": 1.0,
+        "avg_confidence": 0.0,
+        "avg_time": 0.00014295578002929688
+      },
+      "tutor": {
+        "count": 15,
+        "format_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 9.698867797851563e-05
+      },
+      "director": {
+        "count": 15,
+        "format_accuracy": 0.0,
+        "avg_confidence": 0.0,
+        "avg_time": 2.964337666829427e-05
+      }
+    }
+  }
+}
