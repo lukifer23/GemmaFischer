@@ -31,6 +31,9 @@ except ImportError:
     # Fallback for standalone testing
     ChessGemmaCoreEngine = None
 
+from .hybrid_engine import HybridEngine, HybridEngineResult
+from .uci_utils import extract_fen
+
 
 class ChessExpertManager:
     """Manages UCI, Tutor, and Director expert adapters."""
@@ -45,6 +48,18 @@ class ChessExpertManager:
         self._logical_to_physical: Dict[str, str] = {}
         self._adapter_loaded_from: Dict[str, Path] = {}
         self._active_adapter: Optional[str] = None
+
+        # Hybrid engine integration
+        self._hybrid_engine_enabled = True
+        self._hybrid_engine: Optional[HybridEngine] = None
+        self._last_engine_analysis: Optional[HybridEngineResult] = None
+        try:
+            engine_cfg = config_manager().chess_engine if config_manager else None
+            self._hybrid_engine = HybridEngine(engine_cfg)
+        except Exception as exc:
+            logger.warning("Hybrid engine unavailable in expert manager: %s", exc)
+            self._hybrid_engine_enabled = False
+            self._hybrid_engine = None
 
         # Expert-specific configurations - load from unified config if available
         if config_manager:
@@ -272,6 +287,39 @@ class ChessExpertManager:
             prompt = f"Find the best chess move: {question}"
             return [{"role": "user", "content": prompt}]
 
+    def _ensure_hybrid_engine(self) -> HybridEngine:
+        if not self._hybrid_engine_enabled:
+            raise RuntimeError("Hybrid engine is disabled")
+        if self._hybrid_engine is None:
+            try:
+                engine_cfg = config_manager().chess_engine if config_manager else None
+                self._hybrid_engine = HybridEngine(engine_cfg)
+            except Exception as exc:
+                self._hybrid_engine_enabled = False
+                raise RuntimeError(f"Failed to initialize hybrid engine: {exc}")
+        return self._hybrid_engine
+
+    def _serialize_engine_result(self, analysis: Optional[HybridEngineResult]) -> Optional[Dict[str, Any]]:
+        if analysis is None:
+            return None
+        score_pawns = None
+        if analysis.evaluation_cp is not None:
+            score_pawns = round(analysis.evaluation_cp / 100.0, 2)
+        return {
+            "fen": analysis.fen,
+            "engine": analysis.engine_name,
+            "best_move": analysis.best_move,
+            "principal_variation": analysis.principal_variation,
+            "evaluation_cp": analysis.evaluation_cp,
+            "evaluation_pawns": score_pawns,
+            "mate_in": analysis.mate_in,
+            "depth": analysis.depth,
+            "nodes": analysis.nodes,
+            "engine_time": analysis.engine_time,
+            "fallback_used": analysis.fallback_used,
+            "raw_analysis": analysis.raw_analysis,
+        }
+
     def generate_expert_response(
         self,
         question: str,
@@ -288,6 +336,34 @@ class ChessExpertManager:
 
         # Set active adapter for this expert
         self.set_active_adapter(expert_mode)
+
+        engine_analysis: Optional[HybridEngineResult] = None
+        if mode == "engine":
+            try:
+                fen = extract_fen(question) or extract_fen(context or "")
+            except Exception:
+                fen = None
+            if fen and self._hybrid_engine_enabled:
+                try:
+                    engine = self._ensure_hybrid_engine()
+                    engine_analysis = engine.analyze(fen)
+                    self._last_engine_analysis = engine_analysis
+                except Exception as exc:
+                    logger.warning("Hybrid engine analysis failed in expert manager: %s", exc)
+            if engine_analysis and engine_analysis.best_move:
+                return {
+                    "response": engine_analysis.best_move,
+                    "confidence": 0.9,
+                    "model_loaded": self.core_engine.is_loaded,
+                    "mode": mode,
+                    "expert": expert_mode,
+                    "active_adapter": self._active_adapter,
+                    "engine_analysis": self._serialize_engine_result(engine_analysis),
+                    "best_move": engine_analysis.best_move,
+                    "principal_variation": engine_analysis.principal_variation,
+                    "engine_time": engine_analysis.engine_time,
+                    "fallback_used": engine_analysis.fallback_used,
+                }
 
         # Get expert-specific parameters
         expert_config = self._expert_configs.get(expert_mode, self._expert_configs["tutor"])
@@ -321,6 +397,11 @@ class ChessExpertManager:
             "mode": mode,
             "expert": expert_mode,
             "active_adapter": self._active_adapter,
+            "best_move": engine_analysis.best_move if engine_analysis else None,
+            "principal_variation": engine_analysis.principal_variation if engine_analysis else [],
+            "engine_analysis": self._serialize_engine_result(engine_analysis) if mode == "engine" else None,
+            "engine_time": engine_analysis.engine_time if engine_analysis else None,
+            "fallback_used": engine_analysis.fallback_used if engine_analysis else False,
         }
 
     def _calculate_confidence(self, response: str, mode: str) -> float:

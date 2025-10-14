@@ -30,18 +30,31 @@ from src.inference.uci_bridge import UCIBridge
 
 def _setup_bridge(mock_inference_cls, mock_engine_manager):
     mock_inference = Mock()
-    mock_inference.generate_response.return_value = {"response": "e2e4"}
+    engine_result = types.SimpleNamespace(
+        best_move="e2e4",
+        fallback_used=False,
+        engine_time=0.5,
+        principal_variation=["e2e4", "e7e5"],
+        evaluation_cp=20,
+        mate_in=None,
+        depth=18,
+        nodes=1024,
+        raw_analysis={},
+        fen=chess.STARTING_FEN,
+        engine_name="LC0",
+    )
+    mock_inference.run_engine_analysis.return_value = engine_result
     mock_inference_cls.return_value = mock_inference
     mock_engine_manager.return_value = Mock()
 
     bridge = UCIBridge()
-    return bridge, mock_inference
+    return bridge, mock_inference, engine_result
 
 
 @patch("src.inference.uci_bridge.ChessEngineManager")
 @patch("src.inference.uci_bridge.ChessGemmaInference")
 def test_uci_mode_uses_engine_generation(mock_inference_cls, mock_engine_manager):
-    bridge, mock_inference = _setup_bridge(mock_inference_cls, mock_engine_manager)
+    bridge, mock_inference, engine_result = _setup_bridge(mock_inference_cls, mock_engine_manager)
     bridge.options.mode = "uci"
 
     board = chess.Board()
@@ -50,8 +63,8 @@ def test_uci_mode_uses_engine_generation(mock_inference_cls, mock_engine_manager
         move = bridge._generate_chessgemmma_move(board, depth=12, time_limit=1000)
 
     assert move == "e2e4"
-    _, kwargs = mock_inference.generate_response.call_args
-    assert kwargs["mode"] == "engine"
+    mock_inference.run_engine_analysis.assert_called_once_with(board.fen())
+    assert bridge._last_engine_result is engine_result
     assert bridge._last_generation_metadata == {
         "requested_mode": "uci",
         "routed_mode": "uci",
@@ -62,7 +75,7 @@ def test_uci_mode_uses_engine_generation(mock_inference_cls, mock_engine_manager
 @patch("src.inference.uci_bridge.ChessEngineManager")
 @patch("src.inference.uci_bridge.ChessGemmaInference")
 def test_auto_mode_routes_to_engine_and_records_request(mock_inference_cls, mock_engine_manager):
-    bridge, mock_inference = _setup_bridge(mock_inference_cls, mock_engine_manager)
+    bridge, mock_inference, engine_result = _setup_bridge(mock_inference_cls, mock_engine_manager)
     bridge.options.mode = "auto"
     bridge.options.moe_enabled = True
 
@@ -72,8 +85,8 @@ def test_auto_mode_routes_to_engine_and_records_request(mock_inference_cls, mock
         move = bridge._generate_chessgemmma_move(board, depth=12, time_limit=1000)
 
     assert move == "e2e4"
-    _, kwargs = mock_inference.generate_response.call_args
-    assert kwargs["mode"] == "engine"
+    mock_inference.run_engine_analysis.assert_called_once_with(board.fen())
+    assert bridge._last_engine_result is engine_result
     assert bridge._last_generation_metadata == {
         "requested_mode": "auto",
         "routed_mode": "auto",
@@ -84,7 +97,7 @@ def test_auto_mode_routes_to_engine_and_records_request(mock_inference_cls, mock
 @patch("src.inference.uci_bridge.ChessEngineManager")
 @patch("src.inference.uci_bridge.ChessGemmaInference")
 def test_auto_mode_without_moe_behaves_like_uci(mock_inference_cls, mock_engine_manager):
-    bridge, mock_inference = _setup_bridge(mock_inference_cls, mock_engine_manager)
+    bridge, mock_inference, engine_result = _setup_bridge(mock_inference_cls, mock_engine_manager)
     bridge.options.mode = "auto"
     bridge.options.moe_enabled = False
 
@@ -94,8 +107,8 @@ def test_auto_mode_without_moe_behaves_like_uci(mock_inference_cls, mock_engine_
         move = bridge._generate_chessgemmma_move(board, depth=12, time_limit=1000)
 
     assert move == "e2e4"
-    _, kwargs = mock_inference.generate_response.call_args
-    assert kwargs["mode"] == "engine"
+    mock_inference.run_engine_analysis.assert_called_once_with(board.fen())
+    assert bridge._last_engine_result is engine_result
     assert bridge._last_generation_metadata == {
         "requested_mode": "auto",
         "routed_mode": "uci",

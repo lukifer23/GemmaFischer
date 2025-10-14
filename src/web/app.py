@@ -35,9 +35,8 @@ try:
     from src.inference.inference import get_inference_instance
     from src.inference.chess_engine import ChessEngineManager
     from src.inference.uci_utils import (
-        extract_first_legal_move, 
+        extract_first_legal_move,
         extract_first_legal_move_uci,
-        post_process_uci_response,
         create_engine_prompt_strict,
         create_tutor_prompt_with_uci,
         extract_fen,
@@ -939,11 +938,29 @@ def ask_question():
             try:
                 intent = data.get('intent') if isinstance(data, dict) else None
                 explanation_mode = data.get('explanation_mode', 'tutor') if isinstance(data, dict) else 'tutor'
-                hybrid_result = chess_model.analyze_with_engine(fen_for_hybrid, intent=intent, explanation_mode=explanation_mode)
+                hybrid_result = chess_model.analyze_with_engine(
+                    fen_for_hybrid,
+                    intent=intent,
+                    explanation_mode=explanation_mode,
+                )
+                engine_analysis = hybrid_result.get('engine_analysis') or {
+                    'fen': hybrid_result.get('fen'),
+                    'engine': hybrid_result.get('engine'),
+                    'best_move': hybrid_result.get('best_move'),
+                    'principal_variation': hybrid_result.get('principal_variation', []),
+                    'evaluation_cp': hybrid_result.get('evaluation_cp'),
+                    'evaluation_pawns': hybrid_result.get('evaluation_pawns'),
+                    'mate_in': hybrid_result.get('mate_in'),
+                    'depth': hybrid_result.get('depth'),
+                    'nodes': hybrid_result.get('nodes'),
+                    'engine_time': hybrid_result.get('engine_time'),
+                    'fallback_used': hybrid_result.get('fallback_used'),
+                }
                 processing_time = time.time() - start_time
                 response_payload = {
                     'response': hybrid_result.get('explanation', ''),
                     'analysis': hybrid_result,
+                    'engine_analysis': engine_analysis,
                     'best_move': hybrid_result.get('best_move'),
                     'principal_variation': hybrid_result.get('principal_variation', []),
                     'evaluation_cp': hybrid_result.get('evaluation_cp'),

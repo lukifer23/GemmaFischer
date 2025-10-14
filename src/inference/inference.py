@@ -247,6 +247,7 @@ class ChessGemmaInference:
         # Simple memoization for deterministic engine prompts (FEN -> move)
         self._engine_cache_max = 512
         self._engine_cache: "OrderedDict[str, str]" = OrderedDict()
+        self._engine_result_cache: Dict[str, HybridEngineResult] = {}
         self._cache_lock = threading.RLock()
 
         # Feature flags
@@ -948,6 +949,17 @@ class ChessGemmaInference:
         except Exception:
             pass
 
+    def run_engine_analysis(self, fen: str) -> HybridEngineResult:
+        """Run the hybrid engine for a FEN and return the structured result."""
+
+        if not fen:
+            raise ValueError("FEN string is required for engine analysis")
+
+        engine = self._ensure_hybrid_engine()
+        engine_result = engine.analyze(fen)
+        self._last_engine_analysis = engine_result
+        return engine_result
+
     def analyze_with_engine(
         self,
         fen: str,
@@ -956,11 +968,7 @@ class ChessGemmaInference:
     ) -> Dict[str, Any]:
         """Run LC0 analysis and generate an LLM explanation for the position."""
 
-        if not fen:
-            raise ValueError("FEN string is required for engine analysis")
-
-        engine = self._ensure_hybrid_engine()
-        engine_result = engine.analyze(fen)
+        engine_result = self.run_engine_analysis(fen)
 
         explanation = self._generate_engine_explanation(
             fen=fen,
@@ -985,13 +993,13 @@ class ChessGemmaInference:
             "nodes": engine_result.nodes,
             "engine_time": engine_result.engine_time,
             "fallback_used": engine_result.fallback_used,
+            "engine_analysis": self._serialize_engine_result(engine_result),
             "analysis": engine_result.raw_analysis,
             "explanation": explanation["text"],
             "key_points": explanation.get("key_points", []),
             "explanation_adapter": explanation.get("adapter"),
         }
 
-        self._last_engine_analysis = engine_result
         self._last_engine_explanation = explanation["text"]
 
         return payload
@@ -1399,6 +1407,11 @@ class ChessGemmaInference:
                 logger.debug(f"Prompt Length: {len(prompt_text)} chars")
 
             inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
+            engine_result: Optional[HybridEngineResult] = None
+            engine_cached = False
+            answer = ""
+            outputs = None
+            decoded = ""
 
             # Debug: Check input tensor
             if self.debug:
@@ -1408,10 +1421,53 @@ class ChessGemmaInference:
 
             with torch.no_grad():
                 if mode == "engine":
-                    # Engine mode: try cached + policy/rerank constrained decoding
-                    answer = self._generate_engine_move(question, messages[0]['content'], max_new_tokens)
-                    if answer:
-                        decoded = messages[0]['content'] + answer
+                    move, engine_result, engine_cached = self._generate_engine_move(
+                        question,
+                        messages[0]['content'],
+                        max_new_tokens,
+                    )
+                    if engine_result and move:
+                        generation_time = time.time() - start_time
+                        token_count = max(len(move.split()), 1)
+                        with self._cache_lock:
+                            self._generation_stats['total_tokens_generated'] += token_count
+                            total_requests = max(self._total_requests, 1)
+                            prev_requests = max(self._total_requests - 1, 0)
+                            prev_avg = self._generation_stats['average_generation_time']
+                            self._generation_stats['average_generation_time'] = (
+                                (prev_avg * prev_requests) + generation_time
+                            ) / total_requests
+                            hit_rate = self._cache_hits / total_requests
+                            self._generation_stats['cache_hit_rate'] = hit_rate
+
+                        response_dict = {
+                            "response": move,
+                            "confidence": 0.9,
+                            "model_loaded": True,
+                            "mode": mode,
+                            "postprocessed": False,
+                            "prompt_len_chars": len(prompt_text),
+                            "answer_len_chars": len(move),
+                            "generation_time": generation_time,
+                            "cached": engine_cached,
+                            "cache_hit_rate": hit_rate,
+                            "tokens_per_second": token_count / max(generation_time, 0.001),
+                            "engine_analysis": self._serialize_engine_result(engine_result),
+                            "best_move": engine_result.best_move,
+                            "principal_variation": engine_result.principal_variation,
+                            "engine_time": engine_result.engine_time,
+                            "fallback_used": engine_result.fallback_used,
+                        }
+
+                        if requested_mode != mode:
+                            response_dict["requested_mode"] = requested_mode
+
+                        self._cache_response(cache_key, response_dict)
+                        return response_dict
+
+                    if move:
+                        answer = move
+                        decoded = messages[0]['content'] + move
                         outputs = None  # bypass default path
                     else:
                         # Fallback to deterministic single-shot decoding (optionally constrained)
@@ -1578,10 +1634,23 @@ class ChessGemmaInference:
                 "prompt_len_chars": len(prompt_text),
                 "answer_len_chars": len(answer),
                 "generation_time": generation_time,
-                "cached": False,
+                "cached": engine_cached if mode == "engine" else False,
                 "cache_hit_rate": hit_rate,
                 "tokens_per_second": token_count / max(generation_time, 0.001)
             }
+
+            if mode == "engine":
+                response_dict["engine_analysis"] = self._serialize_engine_result(engine_result)
+                if engine_result:
+                    response_dict.setdefault("best_move", engine_result.best_move)
+                    response_dict.setdefault("principal_variation", engine_result.principal_variation)
+                    response_dict.setdefault("engine_time", engine_result.engine_time)
+                    response_dict.setdefault("fallback_used", engine_result.fallback_used)
+                else:
+                    response_dict.setdefault("engine_time", None)
+                    response_dict.setdefault("fallback_used", False)
+            else:
+                response_dict["engine_analysis"] = None
 
             if requested_mode != mode:
                 response_dict["requested_mode"] = requested_mode
@@ -1820,18 +1889,49 @@ class ChessGemmaInference:
     # ----------------------
     # Engine helpers
     # ----------------------
-    def _engine_cache_store(self, fen: Optional[str], move: str) -> None:
+    def _serialize_engine_result(self, analysis: Optional[HybridEngineResult]) -> Optional[Dict[str, Any]]:
+        if analysis is None:
+            return None
+        score_pawns = None
+        if analysis.evaluation_cp is not None:
+            score_pawns = round(analysis.evaluation_cp / 100.0, 2)
+        return {
+            "fen": analysis.fen,
+            "engine": analysis.engine_name,
+            "best_move": analysis.best_move,
+            "principal_variation": analysis.principal_variation,
+            "evaluation_cp": analysis.evaluation_cp,
+            "evaluation_pawns": score_pawns,
+            "mate_in": analysis.mate_in,
+            "depth": analysis.depth,
+            "nodes": analysis.nodes,
+            "engine_time": analysis.engine_time,
+            "fallback_used": analysis.fallback_used,
+            "raw_analysis": analysis.raw_analysis,
+        }
+
+    def _engine_cache_store(
+        self,
+        fen: Optional[str],
+        move: str,
+        analysis: Optional[HybridEngineResult] = None,
+    ) -> None:
         try:
             if not fen:
                 return
             with self._cache_lock:
-                # simple LRU behavior with OrderedDict
                 if fen in self._engine_cache:
                     self._engine_cache.pop(fen, None)
                 self._engine_cache[fen] = move
-                # evict oldest
+                if analysis is not None:
+                    self._engine_result_cache[fen] = analysis
+                # Keep caches aligned and respect capacity
+                stale_results = [k for k in self._engine_result_cache.keys() if k not in self._engine_cache]
+                for key in stale_results:
+                    self._engine_result_cache.pop(key, None)
                 while len(self._engine_cache) > self._engine_cache_max:
-                    self._engine_cache.popitem(last=False)
+                    old_fen, _ = self._engine_cache.popitem(last=False)
+                    self._engine_result_cache.pop(old_fen, None)
         except Exception:
             pass
 
@@ -1843,118 +1943,61 @@ class ChessGemmaInference:
                 mv = self._engine_cache.get(fen)
                 if mv is None:
                     return None
-                # refresh LRU order
                 self._engine_cache.pop(fen, None)
                 self._engine_cache[fen] = mv
                 return mv
         except Exception:
             return None
 
-    def _generate_engine_move(self, question: str, prompt_text: str, max_new_tokens: int) -> Optional[str]:
-        """Generate an engine-style UCI move using hybrid LC0 system or N-best sampling.
-
-        Returns a move string (uci) when successful, or None to signal fallback.
-        """
+    def _engine_result_lookup(self, fen: Optional[str]) -> Optional[HybridEngineResult]:
         try:
-            from .uci_utils import extract_fen, extract_first_legal_move_uci
-            import chess
-
-            fen = extract_fen(question) or extract_fen(prompt_text)
-            if fen:
-                cached = self._engine_cache_lookup(fen)
-                if cached:
-                    return cached
-
-            board = chess.Board(fen) if fen else None
-
-            # Use hybrid LC0 engine if enabled and we have a position
-            if self._hybrid_engine_enabled and board is not None:
-                try:
-                    analysis = self._ensure_hybrid_engine().analyze(fen)
-                    self._last_engine_analysis = analysis
-                    if analysis.best_move:
-                        move_uci = analysis.best_move
-                        self._engine_cache_store(fen, move_uci)
-                        return move_uci
-                except Exception as e:
-                    logger.warning(f"Hybrid engine analysis failed, falling back to model policy: {e}")
-
-            # Policy: direct scoring of legal moves by log-prob (no sampling)
-            if self._engine_policy == 'logprob' and board is not None:
-                best = self._engine_policy_logprob(prompt_text, board)
-                if best:
-                    if fen:
-                        self._engine_cache_store(fen, best)
-                    return best
-
-            if not self._engine_rerank_enabled:
+            if not fen:
                 return None
-
-            inputs = self.tokenizer(prompt_text, return_tensors="pt").to(self.model.device)
-            logits_processors = None
-            if self._engine_constrain_enabled and self._engine_policy == 'sample':
-                if self._engine_constrain_mode == 'strict':
-                    logits_processors = [self._build_stateful_uci_processor(prompt_len=inputs['input_ids'].shape[1])]
-                else:
-                    logits_processors = [self._build_uci_logits_processor(prompt_len=inputs['input_ids'].shape[1])]
-            # Multi-sample candidates
-            n_best = 5
-            gen = self.model.generate(
-                **inputs,
-                max_new_tokens=min(max_new_tokens, 8),
-                do_sample=True,
-                temperature=0.3,
-                top_p=0.95,
-                num_return_sequences=n_best,
-                pad_token_id=self.tokenizer.eos_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-                use_cache=True,
-                logits_processor=logits_processors,
-            )
-
-            # Decode candidates and parse potential moves
-            cands: List[str] = []
-            if gen is not None and getattr(gen, "shape", None) is not None and gen.shape[0] >= 1:
-                for i in range(gen.shape[0]):
-                    cand = self.tokenizer.decode(gen[i], skip_special_tokens=True)
-                    if cand.startswith(prompt_text):
-                        cand = cand[len(prompt_text):].strip()
-                    cands.append(cand)
-
-            legal: List[str] = []
-            if board is not None:
-                for s in cands:
-                    mv = extract_first_legal_move_uci(s, board)
-                    if mv:
-                        legal.append(mv)
-
-            # If we have at least one legal candidate, optionally score with engine
-            if legal:
-                best = legal[0]
-                try:
-                    from .chess_engine import ChessEngineManager
-                    side = 1 if board.turn == chess.WHITE else -1
-                    scores: List[float] = []
-                    with ChessEngineManager() as ce:
-                        for mv in legal:
-                            # validate_move analyses resulting position
-                            res = ce.validate_move(board.fen(), mv)
-                            sc = res.centipawn_score if res.centipawn_score is not None else 0
-                            scores.append(side * float(sc))
-                    # pick argmax
-                    if scores:
-                        best = legal[int(max(range(len(scores)), key=lambda i: scores[i]))]
-                except Exception:
-                    # Stockfish unavailable; keep first legal
-                    pass
-
-                if fen:
-                    self._engine_cache_store(fen, best)
-                return best
-
-            return None
+            with self._cache_lock:
+                return self._engine_result_cache.get(fen)
         except Exception:
             return None
+
+    def _generate_engine_move(
+        self,
+        question: str,
+        prompt_text: str,
+        max_new_tokens: int,
+    ) -> Tuple[Optional[str], Optional[HybridEngineResult], bool]:
+        """Run HybridEngine analysis and return the primary move/result when available."""
+
+        try:
+            from .uci_utils import extract_fen
+
+            fen = extract_fen(question) or extract_fen(prompt_text)
+            if not fen:
+                return None, None, False
+
+            cached_move = self._engine_cache_lookup(fen)
+            cached_result = self._engine_result_lookup(fen)
+            if cached_move:
+                if cached_result:
+                    self._last_engine_analysis = cached_result
+                return cached_move, cached_result, True
+
+            if not self._hybrid_engine_enabled:
+                return None, None, False
+
+            try:
+                analysis = self.run_engine_analysis(fen)
+                if analysis.best_move:
+                    self._engine_cache_store(fen, analysis.best_move, analysis=analysis)
+                else:
+                    with self._cache_lock:
+                        self._engine_result_cache[fen] = analysis
+                return analysis.best_move, analysis, False
+            except Exception as exc:
+                logger.warning(
+                    "Hybrid engine analysis failed for %s: %s", fen, exc
+                )
+                return None, None, False
+        except Exception:
+            return None, None, False
 
     def _infer_strategic_intent(self, question: str, prompt_text: str) -> str:
         """Infer strategic intent from question/prompt text."""
@@ -2438,3 +2481,6 @@ class ChessModelInterface:
 
     def analyze_with_engine(self, fen: str, intent: Optional[str] = None, explanation_mode: str = "tutor") -> Dict[str, Any]:
         return self._inference.analyze_with_engine(fen, intent=intent, explanation_mode=explanation_mode)
+
+    def run_engine_analysis(self, fen: str) -> HybridEngineResult:
+        return self._inference.run_engine_analysis(fen)

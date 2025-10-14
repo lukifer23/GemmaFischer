@@ -172,38 +172,54 @@ def extract_and_validate_uci(text: str, board: chess.Board) -> Optional[str]:
     return uci_candidate
 
 
-def post_process_uci_response(response: str, board: chess.Board, 
-                            fallback_to_stockfish: bool = True) -> Optional[str]:
-    """Post-process UCI response with strict validation and Stockfish fallback.
-    
-    Args:
-        response: Raw model response
-        board: Chess board for validation
-        fallback_to_stockfish: Whether to use Stockfish fallback
-        
-    Returns:
-        Valid UCI move or None
-    """
-    if not response or not board:
+def post_process_uci_response(
+    response: Optional[object],
+    board: chess.Board,
+    fallback_to_stockfish: bool = True,
+) -> Optional[str]:
+    """Validate LC0 move output and fall back to Stockfish only when necessary."""
+
+    if board is None:
         return None
-    
-    # Try to extract and validate UCI move
-    uci_move = extract_and_validate_uci(response, board)
-    if uci_move:
-        logger.info(f"Valid UCI move extracted: {uci_move}")
-        return uci_move
-    
-    # If no valid UCI found and fallback enabled, try Stockfish
+
+    candidate_move: Optional[str] = None
+    raw_text: Optional[str] = None
+
+    if hasattr(response, "best_move"):
+        candidate_move = getattr(response, "best_move", None)
+        raw_text = candidate_move or ""
+    elif isinstance(response, dict):
+        candidate_move = response.get("best_move")
+        raw_text = response.get("response") or candidate_move or ""
+    elif isinstance(response, str):
+        raw_text = response
+    else:
+        raw_text = str(response) if response else ""
+
+    if candidate_move:
+        move = candidate_move.strip().lower()
+        if validate_uci_syntax(move) and is_legal_uci(board.fen(), move):
+            logger.info(f"Valid LC0 move returned: {move}")
+            return move
+        logger.warning(f"LC0 candidate move invalid: {move}")
+
+    if raw_text:
+        parsed_move = extract_and_validate_uci(raw_text, board)
+        if parsed_move:
+            logger.info(f"Valid UCI move extracted: {parsed_move}")
+            return parsed_move
+
     if fallback_to_stockfish:
         try:
             stockfish_move = get_stockfish_best_move(board)
             if stockfish_move:
-                logger.info(f"Using Stockfish fallback: {stockfish_move}")
+                logger.info(f"Using Stockfish fallback move: {stockfish_move}")
                 return stockfish_move
         except Exception as e:
             logger.warning(f"Stockfish fallback failed: {e}")
-    
-    logger.warning(f"No valid UCI move found in response: {response[:100]}...")
+
+    snippet = raw_text[:100] + "..." if raw_text and len(raw_text) > 100 else raw_text
+    logger.warning(f"No valid UCI move found in response: {snippet}")
     return None
 
 

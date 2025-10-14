@@ -21,13 +21,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.inference.inference import ChessGemmaInference
+from src.inference.hybrid_engine import HybridEngineResult
 from src.inference.chess_engine import ChessEngineManager
-from src.inference.uci_utils import (
-    post_process_uci_response, 
-    create_engine_prompt_strict,
-    create_tutor_prompt_with_uci,
-    extract_and_validate_uci
-)
+from src.inference.uci_utils import post_process_uci_response
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -93,6 +89,7 @@ class UCIBridge:
             "routed_mode": None,
             "generation_mode": None,
         }
+        self._last_engine_result: Optional[HybridEngineResult] = None
 
         # Initialize inference with MoE support
         try:
@@ -376,39 +373,21 @@ class UCIBridge:
                 "generation_mode": generation_mode,
             }
 
-            # Create prompt based on mode using enhanced prompt functions
-            if routed_mode == "tutor":
-                prompt = create_tutor_prompt_with_uci(fen, "Analyze this position step by step")
-            else:
-                prompt = create_engine_prompt_strict(fen)
+            analysis = self.inference.run_engine_analysis(fen)
+            self._last_engine_result = analysis
 
-            # Generate response using ChessGemma
-            response_dict = self.inference.generate_response(
-                prompt,
-                mode=generation_mode,
-                max_new_tokens=8,  # Limit for UCI moves
-                temperature=0.0,   # Deterministic for engine mode
-                top_p=1.0
+            move = post_process_uci_response(
+                analysis,
+                board,
+                fallback_to_stockfish=False,
             )
-            
-            response = response_dict.get('response', '')
-            if not response:
-                logger.warning("Empty response from ChessGemma")
-                return None
 
-            # Use enhanced post-processing with strict validation
-            uci_move = post_process_uci_response(
-                response, 
-                board, 
-                fallback_to_stockfish=self.options.use_stockfish_fallback
-            )
-            
-            if uci_move:
-                logger.info(f"ChessGemma generated valid UCI move: {uci_move}")
-                return uci_move
-            else:
-                logger.warning(f"ChessGemma failed to generate valid UCI move from: {response[:100]}...")
-                return None
+            if move:
+                logger.info(f"ChessGemma hybrid engine move: {move}")
+                return move
+
+            logger.warning("Hybrid engine did not provide a legal move; deferring to fallback")
+            return None
 
         except Exception as e:
             logger.error(f"Error generating ChessGemma move: {e}")
