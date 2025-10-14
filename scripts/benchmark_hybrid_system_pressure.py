@@ -17,6 +17,7 @@ import random
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from statistics import mean
@@ -24,6 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import psutil
 import chess
+import signal
 
 # Ensure project src is importable
 import sys
@@ -223,23 +225,65 @@ def run_benchmark(
     results: List[RequestResult] = []
     start_ts = time.time()
 
+    # Allow graceful interruption: on SIGINT, stop sampling and continue to summary
+    interrupted = {'flag': False}
+    def _sigint_handler(signum, frame):
+        interrupted['flag'] = True
+        print("\n[Signal] Interrupt received, finalizing...", flush=True)
+    prev_handler = signal.signal(signal.SIGINT, _sigint_handler)
+
     def _task(fen: str, use_engine: bool) -> RequestResult:
         return run_engine_request(inf, fen) if use_engine else run_tutor_request(inf, fen)
 
-    with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
-        futures = []
-        for i in range(num_requests):
-            fen = fens[i % len(fens)]
-            use_engine = (random.random() < engine_share)
-            futures.append(pool.submit(_task, fen, use_engine))
-        for fut in as_completed(futures):
-            try:
-                results.append(fut.result())
-            except Exception as e:
-                results.append(RequestResult(kind='error', fen='', total_time=0.0))
+    completed = 0
+    last_print = time.time()
+    smoothed_rate: Optional[float] = None  # EMA to stabilize ETA
+    def maybe_progress(force: bool = False) -> None:
+        nonlocal last_print, smoothed_rate
+        now = time.time()
+        if force or (now - last_print) >= 0.5:
+            elapsed = now - start_ts
+            inst_rate = completed / max(1e-6, elapsed)
+            if smoothed_rate is None:
+                smoothed_rate = inst_rate
+            else:
+                alpha = 0.3
+                smoothed_rate = alpha * inst_rate + (1 - alpha) * smoothed_rate
+            remaining = max(0, num_requests - completed)
+            eta_sec = remaining / max(1e-6, smoothed_rate) if smoothed_rate > 0 else None
+            if eta_sec is not None and eta_sec < 3e6:
+                finish_ts = datetime.fromtimestamp(now + eta_sec).strftime('%H:%M:%S')
+                eta_text = f" ~{eta_sec:.1f}s (finish {finish_ts})"
+            else:
+                eta_text = " (warming up…)"
+            print(f"[Progress] {completed}/{num_requests} done | rate {smoothed_rate:.2f}/s | elapsed {elapsed:.1f}s{eta_text}", flush=True)
+            last_print = now
 
-    stop_event.set()
-    sampler.join(timeout=2.0)
+    try:
+        with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
+            futures = []
+            for i in range(num_requests):
+                if interrupted['flag']:
+                    break
+                fen = fens[i % len(fens)]
+                use_engine = (random.random() < engine_share)
+                futures.append(pool.submit(_task, fen, use_engine))
+            for fut in as_completed(futures):
+                try:
+                    results.append(fut.result())
+                except Exception:
+                    results.append(RequestResult(kind='error', fen='', total_time=0.0))
+                finally:
+                    completed += 1
+                    maybe_progress(False)
+                if interrupted['flag']:
+                    break
+    finally:
+        stop_event.set()
+        sampler.join(timeout=2.0)
+        signal.signal(signal.SIGINT, prev_handler)
+
+    maybe_progress(True)
     end_ts = time.time()
 
     summary = summarize(results)
@@ -248,6 +292,7 @@ def run_benchmark(
         'started_at': start_ts,
         'ended_at': end_ts,
         'duration_sec': end_ts - start_ts,
+        'interrupted': interrupted['flag'],
         'config': {
             'num_requests': num_requests,
             'concurrency': concurrency,

@@ -144,10 +144,14 @@ class ChessEngineManager:
                         _ = self.engine.analyse(chess.Board(), chess.engine.Limit(depth=1, time=0.01))
                     logger.info(f"[{self.name}] UCI engine initialized successfully")
 
-                    # Test with a simple position
+                    # Lightweight readiness probe (keep extremely short to avoid startup stalls)
                     board = chess.Board()
-                    info = self.engine.analyse(board, chess.engine.Limit(depth=10))
-                    logger.info(f"[{self.name}] Engine test successful, score: {info.get('score')}")
+                    try:
+                        info = self.engine.analyse(board, chess.engine.Limit(depth=2, time=0.05))
+                        logger.info(f"[{self.name}] Engine test successful, score: {info.get('score')}")
+                    except Exception:
+                        # Non-fatal: engine responded to ping above; proceed
+                        logger.info(f"[{self.name}] Engine quick test skipped due to error; continuing")
 
                 return
 
@@ -234,7 +238,14 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
         import os
         weights_path = os.path.abspath(weights_file)
         engine_options['WeightsFile'] = weights_path
-        logger.info(f"[LC0] Using custom weights file: {weights_path}")
+
+        # Verify the weights file exists
+        if os.path.exists(weights_path):
+            logger.info(f"✅ [LC0] Using custom weights file: {weights_path}")
+        else:
+            logger.warning(f"⚠️ [LC0] Custom weights file not found at {weights_path}, engine may use default weights")
+            # Remove the option if file doesn't exist to avoid LC0 errors
+            engine_options.pop('WeightsFile', None)
     if backend:
         engine_options['Backend'] = backend
     if nn_cache_size is not None:
@@ -700,6 +711,198 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
                 response += f"{i}. {move.move} ({score:+.1f})\n"
 
         return response
+
+
+class LC0EnginePool:
+    """
+    Singleton pool for managing LC0 engine instances.
+
+    Prevents multiple LC0 processes from spawning and provides proper
+    lifecycle management with comprehensive logging.
+    """
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialize_pool()
+        return cls._instance
+
+    def _initialize_pool(self):
+        """Initialize the engine pool."""
+        self._engines: Dict[str, ChessEngineManager] = {}
+        self._engine_usage: Dict[str, int] = {}
+        self._pool_lock = threading.RLock()
+        self._creation_times: Dict[str, float] = {}
+
+        # Register cleanup on exit
+        import atexit
+        atexit.register(self.cleanup_all)
+
+    def get_engine(self, config_key: str = "default",
+                   config: Optional[Dict[str, Any]] = None) -> ChessEngineManager:
+        """
+        Get or create an LC0 engine instance for the given configuration.
+
+        Args:
+            config_key: Unique identifier for engine configuration
+            config: Optional engine configuration override
+
+        Returns:
+            ChessEngineManager instance for the configuration
+        """
+        with self._pool_lock:
+            if config_key not in self._engines:
+                logger.info(f"🔧 Creating new LC0 engine instance: {config_key}")
+
+                # Use provided config or default LC0 config
+                if config is None:
+                    config_manager = get_config_manager()
+                    if config_manager:
+                        try:
+                            config = asdict(config_manager().chess_engine.lc0)
+                        except Exception:
+                            config = {
+                                'engine_path': '/opt/homebrew/bin/lc0',
+                                'weights_file': 'models/lc0_weights/network.pb.gz',
+                                'backend': 'metal',
+                                'threads': 4,
+                                'nn_cache_size': 262144,
+                                'time_limit': 1.5
+                            }
+
+                # Create the engine instance
+                engine = create_lc0_manager(config)
+                self._engines[config_key] = engine
+                self._engine_usage[config_key] = 0
+                self._creation_times[config_key] = time.time()
+
+                logger.info(f"✅ LC0 engine '{config_key}' created successfully")
+
+            # Increment usage counter
+            self._engine_usage[config_key] += 1
+
+            engine = self._engines[config_key]
+            logger.debug(f"🔄 LC0 engine '{config_key}' usage count: {self._engine_usage[config_key]}")
+
+            return engine
+
+    def release_engine(self, config_key: str = "default") -> None:
+        """
+        Release an engine instance (decrement usage counter).
+
+        Args:
+            config_key: Engine configuration key to release
+        """
+        with self._pool_lock:
+            if config_key in self._engine_usage:
+                self._engine_usage[config_key] -= 1
+                logger.debug(f"🔄 LC0 engine '{config_key}' usage count: {self._engine_usage[config_key]}")
+
+    def cleanup_unused_engines(self, max_idle_time: float = 300.0) -> int:
+        """
+        Clean up engine instances that haven't been used recently.
+
+        Args:
+            max_idle_time: Maximum idle time in seconds before cleanup
+
+        Returns:
+            Number of engines cleaned up
+        """
+        with self._pool_lock:
+            current_time = time.time()
+            cleaned_count = 0
+
+            keys_to_remove = []
+            for config_key, last_used in self._engine_usage.items():
+                # Check if engine hasn't been used and is old enough
+                if (last_used == 0 and
+                    config_key in self._creation_times and
+                    current_time - self._creation_times[config_key] > max_idle_time):
+
+                    logger.info(f"🗑️ Cleaning up unused LC0 engine: {config_key}")
+
+                    # Clean up the engine
+                    try:
+                        engine = self._engines[config_key]
+                        engine.cleanup()
+                    except Exception as e:
+                        logger.warning(f"⚠️ Error cleaning up engine {config_key}: {e}")
+
+                    keys_to_remove.append(config_key)
+                    cleaned_count += 1
+
+            # Remove from tracking dictionaries
+            for key in keys_to_remove:
+                self._engines.pop(key, None)
+                self._engine_usage.pop(key, None)
+                self._creation_times.pop(key, None)
+
+            if cleaned_count > 0:
+                logger.info(f"✅ Cleaned up {cleaned_count} unused LC0 engine(s)")
+
+            return cleaned_count
+
+    def cleanup_all(self) -> None:
+        """
+        Clean up all engine instances in the pool.
+        Called automatically on program exit.
+        """
+        logger.info("🛑 Cleaning up all LC0 engine instances")
+
+        with self._pool_lock:
+            for config_key, engine in self._engines.items():
+                try:
+                    logger.debug(f"🔧 Cleaning up LC0 engine: {config_key}")
+                    engine.cleanup()
+                except Exception as e:
+                    logger.warning(f"⚠️ Error cleaning up engine {config_key}: {e}")
+
+            self._engines.clear()
+            self._engine_usage.clear()
+            self._creation_times.clear()
+
+        logger.info("✅ All LC0 engine instances cleaned up")
+
+    def get_pool_status(self) -> Dict[str, Any]:
+        """
+        Get comprehensive status of the engine pool.
+
+        Returns:
+            Dictionary with pool statistics and engine details
+        """
+        with self._pool_lock:
+            current_time = time.time()
+
+            status = {
+                'total_engines': len(self._engines),
+                'active_engines': sum(1 for usage in self._engine_usage.values() if usage > 0),
+                'engines': {}
+            }
+
+            for config_key in self._engines.keys():
+                engine = self._engines[config_key]
+                usage = self._engine_usage.get(config_key, 0)
+                creation_time = self._creation_times.get(config_key, 0)
+                age = current_time - creation_time if creation_time > 0 else 0
+
+                status['engines'][config_key] = {
+                    'usage_count': usage,
+                    'creation_time': creation_time,
+                    'age_seconds': age,
+                    'is_active': usage > 0,
+                    'engine_name': getattr(engine, 'name', 'Unknown')
+                }
+
+            return status
+
+
+# Global instance for easy access
+lc0_pool = LC0EnginePool()
 
 
 # Convenience functions for easy integration

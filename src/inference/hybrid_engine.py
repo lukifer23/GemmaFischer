@@ -15,6 +15,7 @@ from .chess_engine import (
     create_lc0_manager,
     create_stockfish_manager,
     PositionAnalysis,
+    lc0_pool,
 )
 from ..config.config_manager import ChessEngineConfig
 from ..utils.common import get_config_manager
@@ -74,16 +75,18 @@ class HybridEngine:
         primary_key = cfg.primary.lower()
         if primary_key == "lc0" and cfg.lc0.enabled:
             try:
-                manager = create_lc0_manager(asdict(cfg.lc0))
+                # Use the LC0 pool instead of creating new instances
+                lc0_config = asdict(cfg.lc0)
+                manager = lc0_pool.get_engine("primary", lc0_config)
                 self.primary = EngineSelection(
                     name="LC0",
                     manager=manager,
                     time_limit=cfg.lc0.time_limit,
                     depth=cfg.lc0.depth,
                 )
+                logger.info("✅ LC0 primary engine initialized from pool")
             except Exception as exc:
-                from ..utils.common import get_logger
-                get_logger(__name__).warning("Failed to initialize LC0: %s", exc)
+                logger.warning("Failed to initialize LC0 from pool: %s", exc)
                 self.primary = None
         elif primary_key == "stockfish":
             try:
