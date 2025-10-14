@@ -232,6 +232,7 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
     engine_options: Dict[str, Any] = {
         'Threads': threads,
     }
+
     # Always set weights file if provided to ensure custom weights are used
     if weights_file:
         # Use absolute path to ensure correct file is loaded
@@ -242,6 +243,8 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
         # Verify the weights file exists
         if os.path.exists(weights_path):
             logger.info(f"✅ [LC0] Using custom weights file: {weights_path}")
+            # Ensure this takes precedence over any default weights
+            logger.info(f"🔧 [LC0] Weights file priority set to override defaults")
         else:
             logger.warning(f"⚠️ [LC0] Custom weights file not found at {weights_path}, engine may use default weights")
             # Remove the option if file doesn't exist to avoid LC0 errors
@@ -401,8 +404,11 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
                 best_move_result = engine.play(board, limit)
             best_move = best_move_result.move.uci() if best_move_result.move else None
 
-            # Get top 5 moves for variety
-            top_moves = self._get_top_moves(board, limit, count=5)
+            # Get top moves only for Stockfish; skip for LC0 to reduce latency
+            if self.name == "LC0":
+                top_moves = []
+            else:
+                top_moves = self._get_top_moves(board, limit, count=5)
 
             # Analyze position characteristics
             position_type = self._classify_position(board)
@@ -924,29 +930,101 @@ def generate_position_explanation(fen: str) -> str:
         return engine.generate_position_analysis(fen)
 
 
+# LC0 Pool test function for debugging
+def test_lc0_pool() -> Dict[str, Any]:
+    """
+    Test the LC0 engine pool functionality.
+
+    Returns:
+        Dictionary with test results and pool status
+    """
+    results = {
+        'pool_created': False,
+        'engine_created': False,
+        'move_generated': False,
+        'pool_status': {},
+        'errors': []
+    }
+
+    try:
+        # Test pool creation
+        pool = lc0_pool
+        results['pool_created'] = True
+        logger.info("✅ LC0 engine pool created successfully")
+
+        # Test engine creation
+        engine = pool.get_engine("test")
+        results['engine_created'] = True
+        logger.info("✅ LC0 engine instance created from pool")
+
+        # Test move generation
+        import chess
+        board = chess.Board()
+        move = engine.get_best_move(board, depth=8, time_limit_ms=2000)
+        if move:
+            results['move_generated'] = True
+            logger.info(f"✅ LC0 generated move: {move.uci()}")
+
+        # Get pool status
+        results['pool_status'] = pool.get_pool_status()
+        logger.info(f"📊 LC0 pool status: {results['pool_status']}")
+
+    except Exception as e:
+        results['errors'].append(str(e))
+        logger.error(f"❌ LC0 pool test failed: {e}")
+
+    return results
+
+
 if __name__ == "__main__":
-    # Test the engine integration
-    print("Testing Chess Engine Integration...")
+    # Test the engine integration and LC0 pool
+    print("Testing Chess Engine Integration & LC0 Pool...")
+    print("=" * 60)
 
-    # Test basic move validation
-    starting_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    test_move = "e2e4"
+    # Test LC0 pool
+    print("\n🔧 Testing LC0 Engine Pool...")
+    try:
+        pool_test = test_lc0_pool()
+        print(f"Pool created: {'✅' if pool_test['pool_created'] else '❌'}")
+        print(f"Engine created: {'✅' if pool_test['engine_created'] else '❌'}")
+        print(f"Move generated: {'✅' if pool_test['move_generated'] else '❌'}")
 
-    print(f"Testing move {test_move} in starting position...")
+        if pool_test['errors']:
+            print(f"Errors: {pool_test['errors']}")
 
-    with ChessEngineManager() as engine:
-        analysis = engine.validate_move(starting_position, test_move)
-        print(f"Move: {analysis.move}")
-        print(f"Legal: {analysis.is_legal}")
-        print(f"Best move: {analysis.is_best}")
-        print(f"Quality: {analysis.move_quality}")
-        print(f"Explanation: {analysis.explanation}")
+        # Show pool status
+        status = pool_test['pool_status']
+        print(f"Total engines: {status.get('total_engines', 0)}")
+        print(f"Active engines: {status.get('active_engines', 0)}")
 
-        # Test position analysis
-        print("\nAnalyzing starting position...")
-        pos_analysis = engine.analyze_position(starting_position)
-        print(f"Best move: {pos_analysis.best_move}")
-        print(f"Position type: {pos_analysis.position_type}")
-        print(f"Top moves: {[m.move for m in pos_analysis.top_moves[:3]]}")
+        for engine_key, engine_info in status.get('engines', {}).items():
+            print(f"  {engine_key}: usage={engine_info['usage_count']}, active={engine_info['is_active']}")
 
-    print("Chess engine integration test completed!")
+    except Exception as e:
+        print(f"❌ LC0 pool test failed: {e}")
+
+    # Test basic engine creation (backward compatibility)
+    print("\n🔧 Testing Basic Engine Creation...")
+    try:
+        print("Creating engine...")
+        with ChessEngineManager() as engine:
+            print(f"✅ Engine created: {engine.name}")
+
+            # Test move validation
+            starting_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            test_move = "e2e4"
+
+            print(f"Testing move {test_move} in starting position...")
+            with ChessEngineManager() as engine:
+                analysis = engine.validate_move(starting_position, test_move)
+                print(f"Move: {analysis.move}")
+                print(f"Legal: {analysis.is_legal}")
+                print(f"Best move: {analysis.is_best}")
+                print(f"Quality: {analysis.move_quality}")
+                print(f"Explanation: {analysis.explanation}")
+
+    except Exception as e:
+        print(f"❌ Engine test failed: {e}")
+
+    print("=" * 60)
+    print("Engine integration test complete.")

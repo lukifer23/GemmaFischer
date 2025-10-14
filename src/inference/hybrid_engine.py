@@ -18,7 +18,10 @@ from .chess_engine import (
     lc0_pool,
 )
 from ..config.config_manager import ChessEngineConfig
-from ..utils.common import get_config_manager
+from ..utils.common import get_config_manager, get_logger
+
+# Module logger
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -139,7 +142,8 @@ class HybridEngine:
             analysis, elapsed, error = self._run_engine(self.fallback, fen)
             used_selection = self.fallback
 
-        pv = [mv.move for mv in analysis.top_moves] if analysis.top_moves else []
+        # Use engine best only; LC0 multipv may be unavailable/expensive
+        pv = []
         nodes = analysis.evaluation.get('nodes', 0)
         depth = analysis.evaluation.get('depth', 0)
 
@@ -201,7 +205,7 @@ class HybridEngine:
         try:
             analysis = selection.manager.analyze_position(
                 fen,
-                depth=selection.depth if selection.depth is not None else 15,
+                depth=selection.depth,  # pass through None to use time-only
                 time_limit=selection.time_limit,
             )
             elapsed = time.time() - start

@@ -11,6 +11,7 @@ Features:
 """
 
 from flask import Flask, render_template, request, jsonify, session
+import logging
 from flask_cors import CORS
 import json
 import os
@@ -33,7 +34,7 @@ try:
     import torch
     import chess
     from src.inference.inference import get_inference_instance
-    from src.inference.chess_engine import ChessEngineManager
+    from src.inference.chess_engine import ChessEngineManager, lc0_pool
     from src.inference.uci_utils import (
         extract_first_legal_move, 
         extract_first_legal_move_uci,
@@ -216,7 +217,39 @@ class ChessModelInterface:
 
         try:
             with ChessEngineManager(debug=False) as engine:
-                best_entries = engine.get_top_moves_info(board, depth=14, top_k=3, time_limit_ms=1500)
+                best_entries = []
+                if hasattr(engine, 'get_top_moves_info'):
+                    best_entries = engine.get_top_moves_info(board, depth=14, top_k=3, time_limit_ms=1500)
+                else:
+                    # Fallback: derive best move and simple alternatives via direct UCI calls
+                    limit_best = chess.engine.Limit(time=1.5)
+                    result = engine.engine.play(board, limit_best)
+                    if result and result.move:
+                        best_entries.append({
+                            'move': result.move,
+                            'score_cp': None,
+                            'mate': None,
+                            'depth': None,
+                            'pv': []
+                        })
+                    # Attempt a lightweight multipv if supported
+                    try:
+                        info_mv = engine.engine.analyse(board, chess.engine.Limit(depth=10), multipv=3)
+                        info_list = info_mv if isinstance(info_mv, list) else [info_mv]
+                        for entry in info_list:
+                            pv = entry.get('pv') or []
+                            mv = pv[0] if pv else entry.get('move')
+                            if mv is None:
+                                continue
+                            best_entries.append({
+                                'move': mv,
+                                'score_cp': (entry.get('score') or None),
+                                'mate': None,
+                                'depth': entry.get('depth'),
+                                'pv': pv,
+                            })
+                    except Exception:
+                        pass
         except Exception as err:
             print(f"⚠️ Stockfish analysis failed: {err}")
             return None
@@ -1739,186 +1772,67 @@ def reset_game():
 
 @app.route('/api/game/ai_move', methods=['POST'])
 def get_ai_move():
-    """Get AI's recommended move for the current position."""
+    """Get AI's recommended move for the current position using LC0 hybrid first."""
     try:
         fen = chess_game.get_fen()
         current_player = chess_game.current_player
         legal_moves = chess_game.get_legal_moves()
+
         try:
             data = request.get_json() or {}
-        except Exception as e:
-            print(f"JSON parsing error: {e}")
+        except Exception:
             data = {}
 
-        expert = (data.get('expert') or 'auto').strip().lower()
         strategic_intent = (data.get('strategic_intent') or 'positional').strip().lower()
-        
         start_time = time.time()
-        print(f"\n🤖 AI MOVE REQUEST")
-        print(f"FEN: {fen}")
-        print(f"Player: {current_player}")
-        print(f"Legal moves: {legal_moves}")
-        
+        print(f"\n🤖 AI MOVE REQUEST | Player: {current_player} | FEN: {fen}")
+
         if not legal_moves:
-            return jsonify({
-                'success': False,
-                'error': 'No legal moves available',
-                'game_state': chess_game.game_state
-            })
-        
-        # Guided Play pipeline
-        # 1) Use UCI expert to pick a precise move
-        # 2) If Tutor selected, generate a concise explanation after making the move
-        # 3) If Hybrid selected, use LLM + LC0 hybrid system
+            return jsonify({'success': False, 'error': 'No legal moves available', 'game_state': chess_game.game_state})
 
-        if expert == 'hybrid':
-            # Use hybrid LC0 system
-            print(f"🤖 Using HYBRID system with {strategic_intent} strategy")
-            try:
-                # Call the inference engine directly with hybrid mode
-                hybrid_result = chess_model.generate_response(
-                    f"Position: {fen}\nStrategic intent: {strategic_intent}\nWhat is the best move?",
-                    context=f"Current position: {fen}",
-                    mode='engine',  # This will trigger hybrid analysis
-                    max_length=50
-                )
-
-                # The hybrid system should return move analysis
-                response_text = hybrid_result.get('response', '')
-                move_uci = extract_move_from_response(response_text, legal_moves)
-
-                if move_uci and move_uci in legal_moves:
-                    move_result = chess_game.make_move(move_uci)
-
-                    # Enhanced response for hybrid system
-                    move_result['ai_response'] = response_text
-                    move_result['ai_confidence'] = hybrid_result.get('confidence', 0.0)
-                    move_result['hybrid_analysis'] = {
-                        'strategic_guidance': {'intent': strategic_intent},
-                        'confidence': hybrid_result.get('confidence', 0.0),
-                        'total_time': time.time() - start_time,
-                        'llm_time': hybrid_result.get('llm_time', 0.0),
-                        'lc0_time': hybrid_result.get('lc0_time', 0.0)
-                    }
-
-                    response_time = time.time() - start_time
-                    print(f"🤖 Hybrid move: {move_uci}")
-                    print(f"⏱️  Hybrid Response Time: {response_time:.2f}s")
-
-                    return jsonify(move_result)
-                else:
-                    return jsonify({
-                        'success': False,
-                        'error': 'Hybrid system could not find a valid move',
-                        'game_state': chess_game.game_state
-                    })
-
-            except Exception as e:
-                print(f"🤖 Hybrid system error: {e}")
-                return jsonify({
-                    'success': False,
-                    'error': f'Hybrid system error: {str(e)}',
-                    'game_state': chess_game.game_state
-                })
-
-        # Regular LoRA-based approach for non-hybrid modes
-        engine_question = (
-            f"FEN: {fen}\n"
-            "Move:\n"
-            "Mode: Engine\n"
-            "Generate the best move in UCI format (e.g., e2e4). Respond with only the move."
-        )
-        rag_knowledge = chess_rag.get_relevant_knowledge(engine_question, fen)
-        rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
-        result_engine = chess_model.generate_response(
-            engine_question,
-            context=f"Current position: {fen}",
-            mode='engine',
-            max_length=16
-        )
-        
-        # Try to extract a move from the engine response
-        response_text = result_engine.get('response', '')
+        # Primary: LC0 hybrid
         try:
-            b = chess.Board(fen)
-            strict_mv = extract_first_legal_move_uci(response_text, b)
-        except Exception:
-            strict_mv = None
-        move_uci = strict_mv or extract_move_from_response(response_text, legal_moves)
-        
-        print(f"Engine text: {response_text[:200]}...")
-        print(f"Extracted move: {move_uci}")
-        
-        # Log performance metrics for AI move
-        response_time = time.time() - start_time
-        tokens_per_second = len((response_text or '').split()) / response_time if response_time > 0 else 0
-        print(f"⏱️  AI Response Time: {response_time:.2f}s")
-        print(f"🚀 AI Tokens/Second: {tokens_per_second:.1f}")
-        print(f"📊 AI Response Length: {len(response_text or '')} chars")
-        
-        if move_uci and move_uci in legal_moves:
-            # Make the AI move
-            move_result = chess_game.make_move(move_uci)
-            if expert == 'uci':
-                # Engine-only path, return raw engine text
-                move_result['ai_response'] = response_text
-                move_result['ai_confidence'] = result_engine.get('confidence', 0.0)
-            else:
-                # Tutor explanation (concise)
-                pre_fen = fen
-                post_fen = move_result.get('fen', chess_game.get_fen())
-                move_san = move_result.get('san', move_uci)
-                tutor_question = (
-                    f"FEN before: {pre_fen}\n"
-                    f"FEN after: {post_fen}\n"
-                    f"We played {move_san} ({move_uci}).\n\n"
-                    "In 3 short bullets, explain: \n"
-                    "- Why this move is good now (threats/ideas)\n"
-                    "- Opponent's best reply and our follow-up\n"
-                    "- One practical tip for the user in this position\n\n"
-                    "Keep it under 120 words."
-                )
-                result_tutor = chess_model.generate_response(
-                    tutor_question,
-                    context=f"Current position: {post_fen}",
-                    mode='tutor',
-                    max_length=180
-                )
-                tutor_text = result_tutor.get('response', '')
-                move_result['ai_response'] = tutor_text
-                move_result['ai_confidence'] = result_tutor.get('confidence', 0.0)
+            engine_payload = chess_model.analyze_with_engine(fen, intent=strategic_intent, explanation_mode='tutor')
+            move_uci = engine_payload.get('best_move')
+            if move_uci and move_uci in legal_moves:
+                move_result = chess_game.make_move(move_uci)
+                move_result['ai_response'] = engine_payload.get('explanation', '')
+                move_result['ai_confidence'] = 0.9
+                move_result['hybrid_analysis'] = {
+                    'engine': engine_payload.get('engine'),
+                    'engine_time': engine_payload.get('engine_time'),
+                    'evaluation_cp': engine_payload.get('evaluation_cp'),
+                    'fallback_used': engine_payload.get('fallback_used')
+                }
+                print(f"✅ LC0 move: {move_uci} | time {engine_payload.get('engine_time')}s")
+                return jsonify(move_result)
+        except Exception as e:
+            print(f"LC0 hybrid error: {e}")
 
-            print(f"AI Move: {move_uci}")
-            print(f"Success: {move_result['success']}")
+        # Fallback: Stockfish single move (robust path, no score math)
+        try:
+            with ChessEngineManager(debug=False) as ce:
+                board = chess.Board(fen)
+                result = ce.engine.play(board, chess.engine.Limit(time=1.0))
+                if result and result.move:
+                    fallback_move = result.move.uci()
+                    if fallback_move in legal_moves:
+                        move_result = chess_game.make_move(fallback_move)
+                        move_result['ai_response'] = f"engine fallback: {fallback_move}"
+                        move_result['ai_confidence'] = 0.6
+                        print(f"⚙️  Fallback move: {fallback_move}")
+                        return jsonify(move_result)
+        except Exception as e:
+            print(f"Engine fallback error: {e}")
 
-            return jsonify(move_result)
-        else:
-            # Fallback: use ChessEngineManager to find a legal move
-            fallback_move = None
-            try:
-                with ChessEngineManager() as ce:
-                    board = chess.Board(fen)
-                    engine_move = ce.get_best_move(board, depth=12, time_limit_ms=5000)
-                    if engine_move:
-                        fallback_move = engine_move.uci()
-            except Exception as e:
-                print(f"Engine fallback error: {e}")
-
-            if not fallback_move:
-                import random
-                fallback_move = random.choice(legal_moves)
-                fallback_text = f"AI chose: {fallback_move} (random fallback)"
-            else:
-                fallback_text = f"AI chose: {fallback_move} (engine fallback)"
-
-            print(f"Using fallback move: {fallback_move}")
-
-            move_result = chess_game.make_move(fallback_move)
-            move_result['ai_response'] = fallback_text
-            move_result['ai_confidence'] = 0.5
-
-            return jsonify(move_result)
-            
+        # Last resort: choose any legal move to keep the game flowing
+        import random
+        fallback_move = random.choice(legal_moves)
+        move_result = chess_game.make_move(fallback_move)
+        move_result['ai_response'] = f"random fallback: {fallback_move}"
+        move_result['ai_confidence'] = 0.3
+        print(f"🔁 Random fallback move: {fallback_move}")
+        return jsonify(move_result)
     except Exception as e:
         print(f"AI move error: {e}")
         return jsonify({'error': str(e)}), 500
@@ -1992,7 +1906,10 @@ def handle_404(error):
             'message': f'The API endpoint {request.path} does not exist',
             'status_code': 404
         }), 404
-    return render_template('404.html'), 404
+    try:
+        return render_template('404.html'), 404
+    except Exception:
+        return ("404 Not Found", 404)
 
 
 @app.errorhandler(405)
@@ -2021,7 +1938,10 @@ def handle_500(error):
             'status_code': 500
         }), 500
 
-    return render_template('500.html'), 500
+    try:
+        return render_template('500.html'), 500
+    except Exception:
+        return ("500 Internal Server Error", 500)
 
 
 @app.errorhandler(Exception)
