@@ -392,23 +392,35 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
         try:
             board = chess.Board(fen)
 
-            # Get main analysis
-            limit = chess.engine.Limit(depth=depth, time=time_limit)
             with self._engine_lock:
                 engine = self.engine
                 if engine is None:
                     raise RuntimeError("Chess engine is not initialized")
-                info = engine.analyse(board, limit)
 
-                # Get best move
-                best_move_result = engine.play(board, limit)
-            best_move = best_move_result.move.uci() if best_move_result.move else None
+                # Allocate time budget to avoid starving best-move search
+                if self.name == "LC0":
+                    # For LC0, get the move first, then a very quick eval if desired
+                    play_limit = chess.engine.Limit(time=max(0.1, float(time_limit or 1.0)))
+                    best_move_result = engine.play(board, play_limit)
+                    best_move = best_move_result.move.uci() if (best_move_result and best_move_result.move) else None
+
+                    # Quick, lightweight eval (do not block)
+                    try:
+                        info = engine.analyse(board, chess.engine.Limit(time=0.05))
+                    except Exception:
+                        info = {}
+                else:
+                    # For Stockfish, balanced analyse + play using shared budget
+                    limit = chess.engine.Limit(depth=depth, time=time_limit)
+                    info = engine.analyse(board, limit)
+                    best_move_result = engine.play(board, limit)
+                    best_move = best_move_result.move.uci() if (best_move_result and best_move_result.move) else None
 
             # Get top moves only for Stockfish; skip for LC0 to reduce latency
             if self.name == "LC0":
                 top_moves = []
             else:
-                top_moves = self._get_top_moves(board, limit, count=5)
+                top_moves = self._get_top_moves(board, chess.engine.Limit(depth=10, time=0.3), count=5)
 
             # Analyze position characteristics
             position_type = self._classify_position(board)

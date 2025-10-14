@@ -194,6 +194,10 @@ def get_environment_config() -> Dict[str, Any]:
     if lc0_threads := os.environ.get("CHESSGEMMA_LC0_THREADS"):
         config['lc0_threads'] = lc0_threads
 
+    # LC0 optional time limit (seconds)
+    if lc0_time_limit := os.environ.get("CHESSGEMMA_LC0_TIME_LIMIT"):
+        config['lc0_time_limit'] = lc0_time_limit
+
     if fallback_engine := os.environ.get("CHESSGEMMA_FALLBACK_ENGINE_PATH"):
         config['fallback_engine_path'] = fallback_engine
 

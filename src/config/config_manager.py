@@ -321,6 +321,13 @@ class ChessGemmaConfig:
             except ValueError:
                 pass
 
+        # Optional LC0 time limit override
+        if 'lc0_time_limit' in env_config:
+            try:
+                self.chess_engine.lc0.time_limit = float(env_config['lc0_time_limit'])
+            except ValueError:
+                pass
+
         if 'fallback_engine_path' in env_config:
             self.chess_engine.fallback.engine_path = env_config['fallback_engine_path']
 
