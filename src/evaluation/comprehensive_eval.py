@@ -35,12 +35,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 try:
-    from ..inference.enhanced_inference import get_inference_manager, analyze_chess_position, generate_best_move
+    from ..inference.inference import get_inference_instance, analyze_chess_position, generate_best_move
     from ..inference.chess_engine import ChessEngineManager
     import chess
 except ImportError:
-    logger.warning("Enhanced inference not available, using fallback")
-    get_inference_manager = None
+    logger.warning("Inference not available, using fallback")
+    get_inference_instance = None
 
 
 @dataclass
@@ -131,14 +131,12 @@ class ComprehensiveChessEvaluator:
                 logger.warning("⚠️  No Stockfish path provided, engine analysis disabled")
 
             # Initialize inference system
-            if get_inference_manager:
-                self.inference_manager = get_inference_manager()
-                if not self.inference_manager.initialize():
-                    logger.warning("⚠️  Enhanced inference initialization failed")
-                else:
-                    logger.info("✅ Enhanced inference initialized")
+            if get_inference_instance:
+                self.inference_manager = get_inference_instance()
+                # ChessGemmaInference doesn't need explicit initialization
+                logger.info("✅ Inference system initialized")
             else:
-                logger.warning("⚠️  Enhanced inference not available")
+                logger.warning("⚠️  Inference system not available")
 
             return True
 

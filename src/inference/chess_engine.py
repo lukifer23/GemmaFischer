@@ -16,7 +16,7 @@ import chess.engine
 import chess.pgn
 import chess.svg
 from typing import Dict, List, Optional, Tuple, Any, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import time
 import logging
@@ -24,6 +24,7 @@ import re
 import threading
 import json
 from datetime import datetime
+from ..utils.common import get_config_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -185,88 +186,6 @@ class ChessEngineManager:
                     logger.warning(f"[{self.name}] Error during engine cleanup: {e}")
                 finally:
                     self.engine = None
-
-
-def create_stockfish_manager(config: Dict[str, Any]) -> ChessEngineManager:
-    """Create a configured Stockfish engine manager from configuration data."""
-
-    engine_path = config.get('engine_path', "/opt/homebrew/bin/stockfish")
-    threads = config.get('threads', 2)
-    hash_mb = config.get('hash', 128)
-    skill_level = config.get('skill_level', 20)
-    show_wdl = config.get('show_wdl', True)
-    search_paths = config.get('search_paths') or DEFAULT_STOCKFISH_PATHS
-
-    engine_options = {
-        'Threads': threads,
-        'Hash': hash_mb,
-        'Skill Level': skill_level,
-        'UCI_LimitStrength': False,
-        'UCI_ShowWDL': bool(show_wdl),
-    }
-
-    return ChessEngineManager(
-        engine_path=engine_path,
-        engine_options=engine_options,
-        name="Stockfish",
-        search_paths=search_paths,
-        debug=config.get('debug', False),
-    )
-
-
-def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
-    """Create a configured LC0 engine manager from configuration data."""
-
-    engine_path = config.get('engine_path', 'lc0')
-    weights_file = config.get('weights_file') or ""
-    backend = config.get('backend', 'metal')
-    threads = config.get('threads', 2)
-    nn_cache_size = config.get('nn_cache_size')
-    search_paths = config.get('search_paths') or [
-        "/opt/homebrew/bin/lc0",
-        "/usr/local/bin/lc0",
-        "/usr/bin/lc0",
-        "lc0",
-    ]
-
-    engine_options: Dict[str, Any] = {
-        'Threads': threads,
-    }
-
-    # Always set weights file if provided to ensure custom weights are used
-    if weights_file:
-        # Use absolute path to ensure correct file is loaded
-        import os
-        weights_path = os.path.abspath(weights_file)
-        engine_options['WeightsFile'] = weights_path
-
-        # Verify the weights file exists
-        if os.path.exists(weights_path):
-            logger.info(f"✅ [LC0] Using custom weights file: {weights_path}")
-            # Ensure this takes precedence over any default weights
-            logger.info(f"🔧 [LC0] Weights file priority set to override defaults")
-        else:
-            logger.warning(f"⚠️ [LC0] Custom weights file not found at {weights_path}, engine may use default weights")
-            # Remove the option if file doesn't exist to avoid LC0 errors
-            engine_options.pop('WeightsFile', None)
-    if backend:
-        engine_options['Backend'] = backend
-    if nn_cache_size is not None:
-        # Only pass NNCacheSize if provided by config; lc0 will ignore if unsupported
-        engine_options['NNCacheSize'] = nn_cache_size
-
-    manager = ChessEngineManager(
-        engine_path=engine_path,
-        engine_options=engine_options,
-        name="LC0",
-        search_paths=search_paths,
-        debug=config.get('debug', False),
-    )
-
-    if weights_file and not Path(weights_file).expanduser().exists():
-        logger.warning(f"[LC0] Weights file not found at {weights_file}. Engine may fail to load network.")
-
-    return manager
 
     def validate_move(self, fen: str, move: str) -> MoveAnalysis:
         """Validate a move and provide comprehensive analysis."""
@@ -729,6 +648,88 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
                 response += f"{i}. {move.move} ({score:+.1f})\n"
 
         return response
+
+
+def create_stockfish_manager(config: Dict[str, Any]) -> ChessEngineManager:
+    """Create a configured Stockfish engine manager from configuration data."""
+
+    engine_path = config.get('engine_path', "/opt/homebrew/bin/stockfish")
+    threads = config.get('threads', 2)
+    hash_mb = config.get('hash', 128)
+    skill_level = config.get('skill_level', 20)
+    show_wdl = config.get('show_wdl', True)
+    search_paths = config.get('search_paths') or DEFAULT_STOCKFISH_PATHS
+
+    engine_options = {
+        'Threads': threads,
+        'Hash': hash_mb,
+        'Skill Level': skill_level,
+        'UCI_LimitStrength': False,
+        'UCI_ShowWDL': bool(show_wdl),
+    }
+
+    return ChessEngineManager(
+        engine_path=engine_path,
+        engine_options=engine_options,
+        name="Stockfish",
+        search_paths=search_paths,
+        debug=config.get('debug', False),
+    )
+
+
+def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
+    """Create a configured LC0 engine manager from configuration data."""
+
+    engine_path = config.get('engine_path', 'lc0')
+    weights_file = config.get('weights_file') or ""
+    backend = config.get('backend', 'metal')
+    threads = config.get('threads', 2)
+    nn_cache_size = config.get('nn_cache_size')
+    search_paths = config.get('search_paths') or [
+        "/opt/homebrew/bin/lc0",
+        "/usr/local/bin/lc0",
+        "/usr/bin/lc0",
+        "lc0",
+    ]
+
+    engine_options: Dict[str, Any] = {
+        'Threads': threads,
+    }
+
+    # Always set weights file if provided to ensure custom weights are used
+    if weights_file:
+        # Use absolute path to ensure correct file is loaded
+        import os
+        weights_path = os.path.abspath(weights_file)
+        engine_options['WeightsFile'] = weights_path
+
+        # Verify the weights file exists
+        if os.path.exists(weights_path):
+            logger.info(f"✅ [LC0] Using custom weights file: {weights_path}")
+            # Ensure this takes precedence over any default weights
+            logger.info(f"🔧 [LC0] Weights file priority set to override defaults")
+        else:
+            logger.warning(f"⚠️ [LC0] Custom weights file not found at {weights_path}, engine may use default weights")
+            # Remove the option if file doesn't exist to avoid LC0 errors
+            engine_options.pop('WeightsFile', None)
+    if backend:
+        engine_options['Backend'] = backend
+    if nn_cache_size is not None:
+        # Only pass NNCacheSize if provided by config; lc0 will ignore if unsupported
+        engine_options['NNCacheSize'] = nn_cache_size
+
+    manager = ChessEngineManager(
+        engine_path=engine_path,
+        engine_options=engine_options,
+        name="LC0",
+        search_paths=search_paths,
+        debug=config.get('debug', False),
+    )
+
+    if weights_file and not Path(weights_file).expanduser().exists():
+        logger.warning(f"[LC0] Weights file not found at {weights_file}. Engine may fail to load network.")
+
+    return manager
 
 
 class LC0EnginePool:

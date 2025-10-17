@@ -22,6 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
+from src.inference.hybrid_engine import HybridEngine
 from src.inference.uci_utils import (
     post_process_uci_response, 
     create_engine_prompt_strict,
@@ -102,13 +103,13 @@ class UCIBridge:
             logger.error(f"Failed to create inference: {e}")
             self.inference = None
 
-        # Initialize chess engine for fallback and validation
+        # Initialize hybrid engine for LC0 primary with Stockfish fallback
         try:
-            self.chess_engine = ChessEngineManager()
-            logger.info("Chess engine initialized for validation and fallback")
+            self.hybrid_engine = HybridEngine()
+            logger.info("Hybrid engine initialized (LC0 primary, Stockfish fallback)")
         except Exception as e:
-            logger.error(f"Failed to initialize chess engine: {e}")
-            self.chess_engine = None
+            logger.error(f"Failed to initialize hybrid engine: {e}")
+            self.hybrid_engine = None
     
     def handle_uci_command(self, command: str) -> str:
         """
@@ -293,11 +294,7 @@ class UCIBridge:
     
     def _handle_quit(self) -> str:
         """Handle 'quit' command"""
-        if self.chess_engine:
-            try:
-                self.chess_engine.cleanup()
-            except Exception:
-                pass
+        # HybridEngine uses managed engine instances; no explicit cleanup needed here
         return ""
     
     def _generate_move(self, depth: int, time_limit: int) -> Optional[str]:
@@ -328,8 +325,18 @@ class UCIBridge:
             if board.is_game_over():
                 return None
             
-            # Generate move using ChessGemma with MoE routing
-            move_uci = self._generate_chessgemmma_move(board, depth, time_limit)
+            # Try LC0/Stockfish via HybridEngine first (authoritative bestmove)
+            move_uci = None
+            if self.hybrid_engine is not None:
+                try:
+                    result = self.hybrid_engine.analyze(board.fen())
+                    move_uci = result.best_move
+                except Exception as e:
+                    logger.warning(f"Hybrid engine analyze failed: {e}")
+
+            # If hybrid failed or returned no move, try LLM+postprocess path
+            if not move_uci:
+                move_uci = self._generate_chessgemmma_move(board, depth, time_limit)
 
             if move_uci:
                 try:
@@ -339,9 +346,15 @@ class UCIBridge:
                 except ValueError:
                     pass
 
-            # Fallback to Stockfish if available and enabled
-            if self.options.use_stockfish_fallback and self.chess_engine:
-                return self._generate_stockfish_move(board, depth, time_limit)
+            # Final fallback through hybrid again using fallback engine only
+            if self.options.use_stockfish_fallback and self.hybrid_engine is not None:
+                try:
+                    # Temporarily force fallback by disabling primary in a local call if supported
+                    # Otherwise, reuse previous result (already attempted) and return None here
+                    result = self.hybrid_engine.analyze(board.fen())
+                    return result.best_move
+                except Exception:
+                    pass
 
             return None
             
@@ -432,21 +445,8 @@ class UCIBridge:
             return None
 
     def _generate_stockfish_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
-        """Generate a move using Stockfish as fallback"""
-        if not self.chess_engine:
-            return None
-
-        try:
-            # Use Stockfish to find best move
-            result = self.chess_engine.get_best_move(
-                board,
-                depth=min(depth, 15),  # Limit depth for UCI compatibility
-                time_limit_ms=int(time_limit * 1000)  # Convert seconds to milliseconds
-            )
-            return result
-        except Exception as e:
-            logger.error(f"Error generating Stockfish move: {e}")
-            return None
+        """Deprecated: HybridEngine manages fallback to Stockfish internally."""
+        return None
 
     
     def _create_engine_prompt(self, board: chess.Board) -> str:
@@ -500,9 +500,10 @@ def main():
                 break
                 
     finally:
-        if bridge.chess_engine:
+        if getattr(bridge, 'hybrid_engine', None):
             try:
-                bridge.chess_engine.cleanup()
+                # HybridEngine manages its own engine managers; nothing to explicitly close here
+                pass
             except Exception:
                 pass
 

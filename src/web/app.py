@@ -327,18 +327,29 @@ class ChessModelInterface:
                     'tokens_per_second': 0.0,
                 }
         else:
-            engine_answer = self._analyze_fen_with_stockfish(fen_in_prompt)
-            if engine_answer:
-                return {
-                    'response': engine_answer,
-                    'confidence': 0.9,
-                    'mode': 'stockfish_analysis',
-                    'model_loaded': self.is_loaded,
-                    'generation_time': 0.0,
-                    'cached': False,
-                    'cache_hit_rate': 0.0,
-                    'tokens_per_second': 0.0,
-                }
+            try:
+                # Prefer unified hybrid engine path for consistent behavior
+                engine_payload = self.analyze_with_engine(fen_in_prompt, intent=None, explanation_mode='tutor')
+                if engine_payload and isinstance(engine_payload, dict):
+                    response_text = engine_payload.get('explanation') or ''
+                    if not response_text:
+                        # Fall back to a concise engine-only summary
+                        best = engine_payload.get('best_move') or ''
+                        score = engine_payload.get('evaluation_pawns')
+                        response_text = f"Engine suggests {best} (eval {score:+.2f} pawns)" if score is not None else f"Engine suggests {best}"
+                    return {
+                        'response': response_text,
+                        'confidence': 0.9,
+                        'mode': 'hybrid_analysis',
+                        'model_loaded': self.is_loaded,
+                        'generation_time': 0.0,
+                        'cached': False,
+                        'cache_hit_rate': 0.0,
+                        'tokens_per_second': 0.0,
+                    }
+            except Exception:
+                # Fall through to model generation below on hybrid failure
+                pass
 
         # Ensure model is loaded on first request
         if not self.is_loaded:
@@ -753,7 +764,7 @@ def api_data_clean():
             return jsonify({'error': 'Invalid in/out paths'}), 400
         cmd = [
             sys.executable,
-            str(project_root / 'data' / 'scripts' / 'validate_and_augment.py'),
+            (str(project_root / 'scripts' / 'validate_and_repair_datasets.py') if (project_root / 'scripts' / 'validate_and_repair_datasets.py').exists() else str(project_root / 'data' / 'scripts' / 'validate_and_augment.py')),
             '--in', in_path,
             '--out', out_path,
             '--mode', mode,
@@ -1813,7 +1824,7 @@ def get_ai_move():
         try:
             with ChessEngineManager(debug=False) as ce:
                 board = chess.Board(fen)
-                result = ce.engine.play(board, chess.engine.Limit(time=1.0))
+                result = ce.engine.play(board, chess.engine.Limit(time=1.5))
                 if result and result.move:
                     fallback_move = result.move.uci()
                     if fallback_move in legal_moves:

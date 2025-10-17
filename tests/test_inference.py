@@ -74,11 +74,6 @@ from src.inference.inference import (
 )
 from src.inference.hybrid_engine import HybridEngineResult
 from src.inference.moe_router import RoutingDecision, MoEInferenceManager
-from src.inference.enhanced_inference import (
-    EnhancedChessInference,
-    InferenceConfig,
-    ChessWhitelistLogitsProcessor,
-)
 
 
 class TestChessGemmaInference:
