@@ -163,7 +163,7 @@ python -m src.training.train_lora_poc --expert director --config auto --max_step
 Launch the web interface for interactive chess analysis:
 
 ```bash
-python -m src.web.run_web_app
+./run_hybrid_webapp.sh
 # Visit: http://localhost:5000
 ```
 

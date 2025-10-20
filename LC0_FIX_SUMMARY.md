@@ -29,8 +29,7 @@ python scripts/verify_lc0_network.py
 # Test LC0 directly
 lc0 bench --weights=models/lc0_weights/network.pb.gz --backend=metal
 
-# Test Python integration  
-python src/inference/lc0_engine.py
+LC0 integration is exercised via `HybridEngine` in `src/inference/hybrid_engine.py`. Use `scripts/verify_lc0_network.py` to validate networks.
 ```
 
 ## Git Status Note

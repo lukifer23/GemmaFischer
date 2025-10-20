@@ -23,7 +23,7 @@ def _make_config() -> ChessEngineConfig:
 
     return ChessEngineConfig(
         primary="lc0",
-        lc0=LC0EngineSettings(enabled=True, time_limit=0.05, depth=12),
+        lc0=LC0EngineSettings(enabled=True, time_limit=0.05, depth=12, use_pool=False),
         fallback=FallbackEngineSettings(enabled=True, time_limit=0.05, depth=18),
     )
 
@@ -37,6 +37,7 @@ def _analysis(best_move: str | None, depth: int, nodes: int, pv: list[str] | Non
         best_score=34 if best_move else None,
         mate_in=None,
         evaluation={"depth": depth, "nodes": nodes},
+        principal_variation=pv or [],
         top_moves=[
             MoveAnalysis(move=move, is_legal=True, is_best=index == 0)
             for index, move in enumerate(pv or [])

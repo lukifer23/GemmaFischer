@@ -31,14 +31,14 @@ class ExpertTrainingDemo:
 
     def demonstrate_data_processing(self):
         """Demonstrate expert-specific data processing."""
-        print("🔄 Demonstrating Expert Data Processing")
+        print("Demonstrating Expert Data Processing")
         print("=" * 50)
 
         # Check available data
         dataset_files = list(self.data_dir.glob("*.jsonl"))
-        print(f"📁 Found {len(dataset_files)} dataset files:")
+        print(f"Found {len(dataset_files)} dataset files:")
         for f in dataset_files:
-            print(f"   • {f.name}")
+            print(f"   - {f.name}")
 
         # Process sample data for each expert type
         expert_samples = {
@@ -49,7 +49,7 @@ class ExpertTrainingDemo:
 
         # Load and categorize data
         for dataset_file in dataset_files:
-            print(f"\n📖 Processing {dataset_file.name}...")
+            print(f"\nProcessing {dataset_file.name}...")
 
             with open(dataset_file, 'r', encoding='utf-8') as f:
                 for i, line in enumerate(f):
@@ -76,7 +76,7 @@ class ExpertTrainingDemo:
 
         # Show sample processing for each expert
         for expert_name, samples in expert_samples.items():
-            print(f"\n🎯 {expert_name.upper()} Expert Samples: {len(samples)}")
+            print(f"\n{expert_name.upper()} Expert Samples: {len(samples)}")
             if samples:
                 sample = samples[0]
                 print(f"   Original: {sample.get('response', '')[:100]}...")
@@ -95,7 +95,7 @@ class ExpertTrainingDemo:
 
     def demonstrate_expert_configuration(self):
         """Demonstrate expert-specific configurations."""
-        print("\n⚙️  Expert Configuration Overview")
+        print("\nExpert Configuration Overview")
         print("=" * 50)
 
         expert_configs = {
@@ -132,46 +132,46 @@ class ExpertTrainingDemo:
         }
 
         for expert_name, config in expert_configs.items():
-            print(f"\n🎯 {expert_name.upper()} Expert:")
+            print(f"\n{expert_name.upper()} Expert:")
             print(f"   Focus: {config['focus']}")
             print(f"   Key Features: {', '.join(config['key_features'])}")
             print("   Training Parameters:")
             for param, value in config['training_params'].items():
-                print(f"     • {param}: {value}")
+                print(f"     - {param}: {value}")
             print("   Target Metrics:")
             for metric in config['target_metrics']:
-                print(f"     • {metric}")
+                print(f"     - {metric}")
 
     def demonstrate_training_pipeline(self, expert_samples):
         """Demonstrate the training pipeline structure."""
-        print("\n🚀 Training Pipeline Demonstration")
+        print("\nTraining Pipeline Demonstration")
         print("=" * 50)
 
         for expert_name, samples in expert_samples.items():
             print(f"\n🔧 {expert_name.upper()} Expert Training Pipeline:")
 
             if not samples:
-                print("   ❌ No training data available")
+                print("   No training data available")
                 continue
 
             # Show data preparation steps
-            print("   📊 Data Preparation:")
-            print(f"     • Samples: {len(samples)}")
-            print("     • Filtering: ✓ Applied")
-            print("     • Formatting: ✓ Expert-specific")
+            print("   Data Preparation:")
+            print(f"     - Samples: {len(samples)}")
+            print("     - Filtering: Applied")
+            print("     - Formatting: Expert-specific")
             # Simulate training metrics
-            print("   🎯 Simulated Training Results:")
-            print("     • Epochs: 1")
-            print("     • Steps: 2000")
-            print("     • Loss: 1.2 → 0.8")
-            print("     • Performance: 0.78")
-            print("     • Time: 45 minutes")
+            print("   Simulated Training Results:")
+            print("     - Epochs: 1")
+            print("     - Steps: 2000")
+            print("     - Loss: 1.2 -> 0.8")
+            print("     - Performance: 0.78")
+            print("     - Time: 45 minutes")
 
             # Show validation
-            print("   ✅ Validation:")
-            print("     • Move accuracy: 76%")
-            print("     • Response time: 0.4s")
-            print("     • Quality score: 0.82")
+            print("   Validation:")
+            print("     - Move accuracy: 76%")
+            print("     - Response time: 0.4s")
+            print("     - Quality score: 0.82")
 
     def create_demo_report(self, expert_samples):
         """Create a comprehensive demonstration report."""
@@ -225,13 +225,13 @@ class ExpertTrainingDemo:
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2)
 
-        print(f"✅ Demo report saved to: {report_file}")
+        print(f"Demo report saved to: {report_file}")
 
         return report
 
     def run_full_demonstration(self):
         """Run the complete expert training demonstration."""
-        print("🎯 Chess Expert Training System - DEMO")
+        print("Chess Expert Training System - DEMO")
         print("=" * 60)
         print("This demo showcases the expert training architecture")
         print("without requiring full model training (which needs GPU)")
@@ -250,17 +250,16 @@ class ExpertTrainingDemo:
         report = self.create_demo_report(expert_samples)
 
         # Summary
-        print("\n🎉 Expert Training Demo Complete!")
-        print("=" * 60)
-        print("📊 Summary:")
-        print(f"   • Data samples processed: {sum(len(samples) for samples in expert_samples.values())}")
-        print("   • Expert types configured: 3")
-        print("   • Training pipeline: ✓ Ready")
-        print("   • Performance projections: ✓ Calculated")
-        print("   • Integration ready: ✓ Yes")
-        print("\n🚀 Next Steps:")
-        print("   1. Run full training: python src/training/expert_trainer.py --expert all")
-        print("   2. Integrate experts: Update inference.py with expert switching")
+        print("\nExpert Training Demo Complete!")
+        print("Summary:")
+        print(f"   - Data samples processed: {sum(len(samples) for samples in expert_samples.values())}")
+        print("   - Expert types configured: 3")
+        print("   - Training pipeline: Ready")
+        print("   - Performance projections: Calculated")
+        print("   - Integration ready: Yes")
+        print("\nNext Steps:")
+        print("   1. Run full training: python -m src.training.unified_trainer --expert uci|tutor|director")
+        print("   2. Integrate experts: Use MoE router-based switching")
         print("   3. Deploy system: Use enhanced inference for production")
         print("   4. Monitor performance: Run comprehensive evaluation regularly")
 

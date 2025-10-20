@@ -321,10 +321,10 @@ async function refreshRouterDiagnostics() {
 
     const featureHit = typeof cache.feature_cache_hit_rate === 'number'
       ? (cache.feature_cache_hit_rate * 100).toFixed(1)
-      : '—';
+      : '-';
     const routingHit = typeof cache.routing_cache_hit_rate === 'number'
       ? (cache.routing_cache_hit_rate * 100).toFixed(1)
-      : '—';
+      : '-';
 
     container.innerHTML = '';
 
@@ -340,13 +340,13 @@ async function refreshRouterDiagnostics() {
       const item = document.createElement('li');
       const accuracy = typeof metrics.accuracy === 'number'
         ? `${(metrics.accuracy * 100).toFixed(1)}%`
-        : '—';
+        : '-';
       const responseTime = typeof metrics.response_time === 'number'
         ? `${metrics.response_time.toFixed(2)}s`
-        : '—';
+        : '-';
       item.innerHTML = `
         <strong>${sanitizeString(expert)}</strong>
-        <span class="text-muted ms-1">• accuracy ${accuracy} • p50 latency ${responseTime}</span>
+        <span class="text-muted ms-1">- accuracy ${accuracy} - p50 latency ${responseTime}</span>
       `;
       expertList.appendChild(item);
     });
@@ -381,7 +381,7 @@ async function refreshRouterDiagnostics() {
       const fallback = health.fallback;
       healthDiv.textContent = `Primary engine: ${primary?.name || 'unknown'} (${primary?.engine_path || 'n/a'})`;
       if (fallback) {
-        healthDiv.textContent += ` • Fallback: ${fallback.name}`;
+        healthDiv.textContent += ` - Fallback: ${fallback.name}`;
       }
       container.appendChild(healthDiv);
     }
@@ -720,8 +720,8 @@ function setStockfishInsightsLoading(contextText = null) {
   wrapper.appendChild(spinner);
   const text = document.createElement('span');
   text.textContent = contextText
-    ? `Analyzing ${contextText} with Stockfish…`
-    : 'Analyzing with Stockfish…';
+    ? `Analyzing ${contextText} with Stockfish...`
+    : 'Analyzing with Stockfish...';
   wrapper.appendChild(text);
   body.appendChild(wrapper);
 }
@@ -754,7 +754,7 @@ function setLc0Status(state = 'idle', metaText = '') {
     case 'loading':
       chipClass = 'primary';
       icon = 'fa-circle-notch fa-spin';
-      text = 'Analyzing…';
+      text = 'Analyzing...';
       break;
     case 'primary':
       chipClass = 'primary';
@@ -817,7 +817,7 @@ function updateEngineAnalysis(payload) {
   } else if (typeof pvSource === 'string' && pvSource.trim()) {
     pvArray = pvSource.trim().split(/\s+/);
   }
-  const pvText = pvArray.length ? pvArray.join(' ') : '—';
+  const pvText = pvArray.length ? pvArray.join(' ') : '-';
 
   const keyPoints = (payload.key_points || [])
     .map(point => `<li>${sanitizeString(point)}</li>`)
@@ -835,11 +835,11 @@ function updateEngineAnalysis(payload) {
 
   const rawEngineName = payload.engine || 'LC0';
   const engineName = sanitizeString(rawEngineName);
-  const engineTime = payload.engine_time != null ? `${payload.engine_time.toFixed(2)}s` : '—';
-  const depthText = payload.depth != null ? `${payload.depth}` : '—';
+  const engineTime = payload.engine_time != null ? `${payload.engine_time.toFixed(2)}s` : '-';
+  const depthText = payload.depth != null ? `${payload.depth}` : '-';
 
   const fallbackDetected = !!payload.fallback_used || rawEngineName.toLowerCase().includes('stockfish');
-  const metaText = `Engine: ${engineName} • Depth ${depthText} • ${engineTime}`;
+  const metaText = `Engine: ${engineName} - Depth ${depthText} - ${engineTime}`;
   setLc0Status(fallbackDetected ? 'fallback' : 'primary', metaText);
 
   const fallbackNotice = fallbackDetected
@@ -850,7 +850,7 @@ function updateEngineAnalysis(payload) {
     <div class="lc0-analysis-summary">
       <div class="lc0-summary-item">
         <span class="lc0-summary-label">Best move</span>
-        <span class="lc0-summary-value">${sanitizeString(payload.best_move || '—')}</span>
+        <span class="lc0-summary-value">${sanitizeString(payload.best_move || '-')}</span>
       </div>
       <div class="lc0-summary-item">
         <span class="lc0-summary-label">Evaluation</span>
@@ -891,7 +891,7 @@ async function requestHybridAnalysis() {
   const intent = intentSelect ? intentSelect.value : null;
 
   try {
-    setLc0Status('loading', 'Submitting position to hybrid engine…');
+    setLc0Status('loading', 'Submitting position to hybrid engine...');
     const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -956,21 +956,21 @@ function renderStockfishInsights(payload) {
   bestLabel.textContent = 'Best move: ';
   const bestBadge = document.createElement('span');
   bestBadge.className = 'badge bg-primary';
-  bestBadge.textContent = sanitizeString(bestMove.san || bestMove.uci || '—');
+  bestBadge.textContent = sanitizeString(bestMove.san || bestMove.uci || '-');
   bestContainer.appendChild(bestLabel);
   bestContainer.appendChild(bestBadge);
 
   const bestMeta = document.createElement('div');
   bestMeta.className = 'stockfish-meta mt-2 mt-sm-0';
-  const duration = payload.analysis_duration_ms != null ? (payload.analysis_duration_ms / 1000).toFixed(2) : '—';
+  const duration = payload.analysis_duration_ms != null ? (payload.analysis_duration_ms / 1000).toFixed(2) : '-';
   let generatedAtText = '';
   if (payload.generated_at) {
     const generatedDate = new Date(payload.generated_at);
     if (!Number.isNaN(generatedDate.valueOf())) {
-      generatedAtText = ` • ${generatedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      generatedAtText = ` - ${generatedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
   }
-  bestMeta.textContent = `Depth ${payload.best_depth} (top ${payload.top_depth}) • ${duration}s${generatedAtText}`;
+  bestMeta.textContent = `Depth ${payload.best_depth} (top ${payload.top_depth}) - ${duration}s${generatedAtText}`;
 
   header.appendChild(bestContainer);
   header.appendChild(bestMeta);
@@ -1011,7 +1011,7 @@ function renderStockfishInsights(payload) {
 
       const moveCell = document.createElement('td');
       const moveStrong = document.createElement('strong');
-      moveStrong.textContent = sanitizeString(entry.san || entry.uci || '—');
+      moveStrong.textContent = sanitizeString(entry.san || entry.uci || '-');
       moveCell.appendChild(moveStrong);
       const moveBadge = document.createElement('span');
       moveBadge.className = 'badge bg-light text-muted border ms-2';
@@ -1041,7 +1041,7 @@ function renderStockfishInsights(payload) {
 
       const pvCell = document.createElement('td');
       const pvMoves = (entry.pv_san && entry.pv_san.length ? entry.pv_san : (entry.pv || [])).slice(0, 6);
-      const pvText = pvMoves.length ? pvMoves.join(' ') : '—';
+      const pvText = pvMoves.length ? pvMoves.join(' ') : '-';
       const pvSpan = document.createElement('span');
       pvSpan.className = 'text-muted';
       pvSpan.textContent = pvText;
@@ -1117,7 +1117,7 @@ function triggerStockfishInsightsFromQuestion(question) {
     return;
   }
   const fenCandidate = extractFenCandidate(question);
-  const fenPreview = fenCandidate ? `${fenCandidate.split(' ').slice(0, 3).join(' ')} …` : null;
+  const fenPreview = fenCandidate ? `${fenCandidate.split(' ').slice(0, 3).join(' ')} ...` : null;
   setStockfishInsightsLoading(fenPreview);
   requestStockfishInsights({ question });
 }
@@ -1132,7 +1132,7 @@ function analyzeCurrentPositionWithStockfish() {
     setStockfishInsightsPlaceholder('Analysis already reflects the current board.');
     return;
   }
-  const fenPreview = `${fen.split(' ').slice(0, 3).join(' ')} …`;
+  const fenPreview = `${fen.split(' ').slice(0, 3).join(' ')} ...`;
   setStockfishInsightsLoading(fenPreview);
   requestStockfishInsights({ fen });
 }

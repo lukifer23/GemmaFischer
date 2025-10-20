@@ -222,7 +222,7 @@ class ChessGemmaInference:
                 except Exception:
                     engine_config = None
             self._hybrid_engine = HybridEngine(engine_config)
-            logger.info("🤖 Hybrid engine ready for LC0-powered analysis")
+            logger.info("Hybrid engine ready for LC0-powered analysis")
         except Exception as e:
             logger.warning(f"Hybrid engine disabled: {e}")
             self._hybrid_engine_enabled = False
@@ -367,7 +367,7 @@ class ChessGemmaInference:
                 else:
                     logger.warning(
                         "MoE router checkpoint override %s not found; falling back to default search",
-                        router_override=router_override,
+                        router_override,
                     )
 
             if router_checkpoint is None:
@@ -434,12 +434,12 @@ class ChessGemmaInference:
             daemon=True
         )
         self._prewarm_thread.start()
-        logger.info("🚀 Started model pre-warming in background")
+        logger.info("Started model pre-warming in background")
 
     def _prewarm_models(self):
         """Pre-warm models in the background to reduce first-request latency."""
         try:
-            logger.debug("🔄 Pre-warming models...")
+            logger.debug("Pre-warming models...")
 
             # Load the base model first
             if not self.is_loaded:
@@ -478,10 +478,10 @@ class ChessGemmaInference:
                     logger.debug(f"MoE router pre-warm failed: {e}")
 
             self._prewarm_complete = True
-            logger.info("✅ Model pre-warming completed")
+            logger.info("Model pre-warming completed")
 
         except Exception as e:
-            logger.error(f"❌ Model pre-warming failed: {e}")
+            logger.error(f"Model pre-warming failed: {e}")
             self._prewarm_complete = False
 
     def wait_for_prewarm(self, timeout: float = 30.0) -> bool:
@@ -843,7 +843,7 @@ class ChessGemmaInference:
                         for warning in validation_result.warnings:
                             logger.warning(f"Model validation warning: {warning}")
                     else:
-                        logger.info("✅ Model validation passed")
+                        logger.info("Model validation passed")
                 except Exception as val_e:
                     logger.error(f"Model validation error: {val_e}")
                     logger.error(f"Model validation traceback: {traceback.format_exc()}")
@@ -854,10 +854,10 @@ class ChessGemmaInference:
                 try:
                     self.moe_manager.prime_available_experts()
                 except Exception as moe_err:
-                    logger.warning("MoE expert priming failed: %s", error=moe_err)
+                    logger.warning("MoE expert priming failed: %s", moe_err)
             return True
         except Exception as e:
-            print(f"❌ Error loading model: {e}")
+            print(f"Error loading model: {e}")
             self.is_loaded = False
             self._model_loading = False  # Reset loading flag
             return False
@@ -872,11 +872,7 @@ class ChessGemmaInference:
                 del self.model
             if self.tokenizer is not None:
                 del self.tokenizer
-            if torch.cuda.is_available():
-                try:
-                    torch.cuda.empty_cache()
-                except Exception:
-                    pass
+            # MPS-only: no CUDA cache operations
         finally:
             self.model = None
             self.tokenizer = None
@@ -2260,7 +2256,7 @@ class ChessGemmaInference:
             self._response_cache.clear()
             self._cache_hits = 0
         self._kv_cache.clear()
-        logger.info("🧹 Inference caches cleared")
+        logger.info("Inference caches cleared")
 
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get comprehensive performance statistics."""

@@ -133,7 +133,7 @@ class ChessGemmaCoreEngine:
             if torch.backends.mps.is_available():
                 torch_dtype = torch.float32
                 device_map = None
-            elif not torch.cuda.is_available():
+            else:
                 torch_dtype = torch.float32
 
             base_model = AutoModelForCausalLM.from_pretrained(
@@ -198,11 +198,11 @@ class ChessGemmaCoreEngine:
                         model_path_for_validation, str(self.adapter_path) if self.adapter_path else None
                     )
                     if not validation_result.is_valid:
-                        print(f"⚠️  Model validation failed: {', '.join(validation_result.errors)}")
+                        print(f"Warning: Model validation failed: {', '.join(validation_result.errors)}")
                         for warning in validation_result.warnings:
-                            print(f"⚠️  {warning}")
+                            print(f"Warning: {warning}")
                     else:
-                        print("✅ Model validation passed")
+                        print("Model validation passed")
                 except Exception as val_e:
                     print(f"⚠️  Model validation error: {val_e}")
 
@@ -210,7 +210,7 @@ class ChessGemmaCoreEngine:
             self._model_loading = False  # Reset loading flag
             return True
         except Exception as e:
-            print(f"❌ Error loading model: {e}")
+            print(f"Error loading model: {e}")
             self.is_loaded = False
             self._model_loading = False  # Reset loading flag
             return False
@@ -225,11 +225,7 @@ class ChessGemmaCoreEngine:
                 del self.model
             if self.tokenizer is not None:
                 del self.tokenizer
-            if torch.cuda.is_available():
-                try:
-                    torch.cuda.empty_cache()
-                except Exception:
-                    pass
+            # MPS-only: no CUDA cache operations
         finally:
             self.model = None
             self.tokenizer = None

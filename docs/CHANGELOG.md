@@ -217,7 +217,7 @@
 - Import path for data prep tests by adding `data/__init__.py`.
 
 
-All notable changes to ChessGemma will be documented in this file.
+All notable changes to GemmaFischer (formerly ChessGemma) will be documented in this file.
 
 ## [2.0.0] - 2025-01-27
 
@@ -334,10 +334,10 @@ All notable changes to ChessGemma will be documented in this file.
    # Old
    python run_web_app.py
    
-   # New
-   python src/web/app.py
-   # or
-   python src/web/run_web_app.py
+# New
+./run_hybrid_webapp.sh
+# or
+python -m src.web.run_web_app
    ```
 
 ### Breaking Changes

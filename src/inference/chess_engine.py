@@ -11,6 +11,7 @@ Provides full integration with Stockfish chess engine for:
 """
 
 import os
+import shutil
 import chess
 import chess.engine
 import chess.pgn
@@ -72,6 +73,7 @@ class PositionAnalysis:
     best_score: Optional[int] = None
     mate_in: Optional[int] = None
     evaluation: Dict[str, Any] = field(default_factory=dict)
+    principal_variation: List[str] = field(default_factory=list)
     top_moves: List[MoveAnalysis] = field(default_factory=list)
     threats: List[str] = field(default_factory=list)
     opportunities: List[str] = field(default_factory=list)
@@ -165,8 +167,11 @@ class ChessEngineManager:
     def _discover_engine(self) -> Optional[str]:
         """Find engine binary in configured search paths."""
         for path in self.search_paths:
-            if os.path.exists(path) or (os.system(f"which {path} > /dev/null 2>&1") == 0):
+            if os.path.isabs(path) and os.path.exists(path):
                 return path
+            resolved = shutil.which(path)
+            if resolved:
+                return resolved
         return None
 
     def __enter__(self):
@@ -335,6 +340,11 @@ class ChessEngineManager:
                     best_move_result = engine.play(board, limit)
                     best_move = best_move_result.move.uci() if (best_move_result and best_move_result.move) else None
 
+            principal_variation = []
+            if isinstance(info, dict):
+                pv_moves = info.get('pv') or []
+                principal_variation = [m.uci() for m in pv_moves if hasattr(m, "uci")]
+
             # Get top moves only for Stockfish; skip for LC0 to reduce latency
             if self.name == "LC0":
                 top_moves = []
@@ -357,6 +367,7 @@ class ChessEngineManager:
                     'time': info.get('time', 0),
                     'score_type': 'mate' if info.get('score') and info['score'].is_mate() else 'centipawns'
                 },
+                principal_variation=principal_variation,
                 top_moves=top_moves,
                 threats=threats,
                 opportunities=opportunities,
@@ -624,7 +635,7 @@ class ChessEngineManager:
         response = f"Position Analysis ({analysis.position_type.title()}):\n\n"
 
         if analysis.mate_in:
-            response += f"♔ Checkmate in {abs(analysis.mate_in)} moves!\n"
+            response += f"Checkmate in {abs(analysis.mate_in)} moves!\n"
         elif analysis.best_score:
             score = analysis.best_score / 100.0
             response += f"Evaluation: {score:+.2f} pawns (White advantage)\n"
@@ -634,12 +645,12 @@ class ChessEngineManager:
         if analysis.threats:
             response += "Threats:\n"
             for threat in analysis.threats:
-                response += f"• {threat}\n"
+                response += f"- {threat}\n"
 
         if analysis.opportunities:
             response += "\nOpportunities:\n"
             for opp in analysis.opportunities:
-                response += f"• {opp}\n"
+                response += f"- {opp}\n"
 
         if analysis.top_moves:
             response += f"\nTop {len(analysis.top_moves)} moves:\n"
@@ -705,11 +716,11 @@ def create_lc0_manager(config: Dict[str, Any]) -> ChessEngineManager:
 
         # Verify the weights file exists
         if os.path.exists(weights_path):
-            logger.info(f"✅ [LC0] Using custom weights file: {weights_path}")
+            logger.info(f"[LC0] Using custom weights file: {weights_path}")
             # Ensure this takes precedence over any default weights
-            logger.info(f"🔧 [LC0] Weights file priority set to override defaults")
+            logger.info(f"[LC0] Weights file priority set to override defaults")
         else:
-            logger.warning(f"⚠️ [LC0] Custom weights file not found at {weights_path}, engine may use default weights")
+            logger.warning(f"[LC0] Custom weights file not found at {weights_path}, engine may use default weights")
             # Remove the option if file doesn't exist to avoid LC0 errors
             engine_options.pop('WeightsFile', None)
     if backend:
@@ -776,7 +787,7 @@ class LC0EnginePool:
         """
         with self._pool_lock:
             if config_key not in self._engines:
-                logger.info(f"🔧 Creating new LC0 engine instance: {config_key}")
+                logger.info(f"Creating new LC0 engine instance: {config_key}")
 
                 # Use provided config or default LC0 config
                 if config is None:
@@ -800,13 +811,13 @@ class LC0EnginePool:
                 self._engine_usage[config_key] = 0
                 self._creation_times[config_key] = time.time()
 
-                logger.info(f"✅ LC0 engine '{config_key}' created successfully")
+                logger.info(f"LC0 engine '{config_key}' created successfully")
 
             # Increment usage counter
             self._engine_usage[config_key] += 1
 
             engine = self._engines[config_key]
-            logger.debug(f"🔄 LC0 engine '{config_key}' usage count: {self._engine_usage[config_key]}")
+            logger.debug(f"LC0 engine '{config_key}' usage count: {self._engine_usage[config_key]}")
 
             return engine
 
@@ -820,7 +831,7 @@ class LC0EnginePool:
         with self._pool_lock:
             if config_key in self._engine_usage:
                 self._engine_usage[config_key] -= 1
-                logger.debug(f"🔄 LC0 engine '{config_key}' usage count: {self._engine_usage[config_key]}")
+                logger.debug(f"LC0 engine '{config_key}' usage count: {self._engine_usage[config_key]}")
 
     def cleanup_unused_engines(self, max_idle_time: float = 300.0) -> int:
         """
@@ -843,14 +854,14 @@ class LC0EnginePool:
                     config_key in self._creation_times and
                     current_time - self._creation_times[config_key] > max_idle_time):
 
-                    logger.info(f"🗑️ Cleaning up unused LC0 engine: {config_key}")
+                    logger.info(f"Cleaning up unused LC0 engine: {config_key}")
 
                     # Clean up the engine
                     try:
                         engine = self._engines[config_key]
                         engine.cleanup()
                     except Exception as e:
-                        logger.warning(f"⚠️ Error cleaning up engine {config_key}: {e}")
+                        logger.warning(f"Error cleaning up engine {config_key}: {e}")
 
                     keys_to_remove.append(config_key)
                     cleaned_count += 1
@@ -862,7 +873,7 @@ class LC0EnginePool:
                 self._creation_times.pop(key, None)
 
             if cleaned_count > 0:
-                logger.info(f"✅ Cleaned up {cleaned_count} unused LC0 engine(s)")
+                logger.info(f"Cleaned up {cleaned_count} unused LC0 engine(s)")
 
             return cleaned_count
 
@@ -871,21 +882,21 @@ class LC0EnginePool:
         Clean up all engine instances in the pool.
         Called automatically on program exit.
         """
-        logger.info("🛑 Cleaning up all LC0 engine instances")
+        self._safe_log("info", "Cleaning up all LC0 engine instances")
 
         with self._pool_lock:
             for config_key, engine in self._engines.items():
                 try:
-                    logger.debug(f"🔧 Cleaning up LC0 engine: {config_key}")
+                    self._safe_log("debug", f"Cleaning up LC0 engine: {config_key}")
                     engine.cleanup()
                 except Exception as e:
-                    logger.warning(f"⚠️ Error cleaning up engine {config_key}: {e}")
+                    self._safe_log("warning", f"Error cleaning up engine {config_key}: {e}")
 
             self._engines.clear()
             self._engine_usage.clear()
             self._creation_times.clear()
 
-        logger.info("✅ All LC0 engine instances cleaned up")
+        self._safe_log("info", "All LC0 engine instances cleaned up")
 
     def get_pool_status(self) -> Dict[str, Any]:
         """
@@ -918,6 +929,27 @@ class LC0EnginePool:
                 }
 
             return status
+
+    @staticmethod
+    def _safe_log(level: str, message: str) -> None:
+        """Emit log messages defensively, even during interpreter shutdown."""
+        try:
+            handlers = getattr(logger, "handlers", [])
+        except Exception:
+            pass
+        else:
+            has_open_handler = False
+            for handler in handlers:
+                stream = getattr(handler, "stream", None)
+                if stream is None or not getattr(stream, "closed", False):
+                    has_open_handler = True
+                    break
+            if not has_open_handler:
+                return
+        try:
+            getattr(logger, level)(message)
+        except Exception:
+            pass
 
 
 # Global instance for easy access
@@ -963,12 +995,12 @@ def test_lc0_pool() -> Dict[str, Any]:
         # Test pool creation
         pool = lc0_pool
         results['pool_created'] = True
-        logger.info("✅ LC0 engine pool created successfully")
+        logger.info("LC0 engine pool created successfully")
 
         # Test engine creation
         engine = pool.get_engine("test")
         results['engine_created'] = True
-        logger.info("✅ LC0 engine instance created from pool")
+        logger.info("LC0 engine instance created from pool")
 
         # Test move generation
         import chess
@@ -976,15 +1008,15 @@ def test_lc0_pool() -> Dict[str, Any]:
         move = engine.get_best_move(board, depth=8, time_limit_ms=2000)
         if move:
             results['move_generated'] = True
-            logger.info(f"✅ LC0 generated move: {move.uci()}")
+            logger.info(f"LC0 generated move: {move.uci()}")
 
         # Get pool status
         results['pool_status'] = pool.get_pool_status()
-        logger.info(f"📊 LC0 pool status: {results['pool_status']}")
+        logger.info(f"LC0 pool status: {results['pool_status']}")
 
     except Exception as e:
         results['errors'].append(str(e))
-        logger.error(f"❌ LC0 pool test failed: {e}")
+        logger.error(f"LC0 pool test failed: {e}")
 
     return results
 
@@ -995,12 +1027,12 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # Test LC0 pool
-    print("\n🔧 Testing LC0 Engine Pool...")
+    print("\nTesting LC0 Engine Pool...")
     try:
         pool_test = test_lc0_pool()
-        print(f"Pool created: {'✅' if pool_test['pool_created'] else '❌'}")
-        print(f"Engine created: {'✅' if pool_test['engine_created'] else '❌'}")
-        print(f"Move generated: {'✅' if pool_test['move_generated'] else '❌'}")
+        print(f"Pool created: {'OK' if pool_test['pool_created'] else 'FAIL'}")
+        print(f"Engine created: {'OK' if pool_test['engine_created'] else 'FAIL'}")
+        print(f"Move generated: {'OK' if pool_test['move_generated'] else 'FAIL'}")
 
         if pool_test['errors']:
             print(f"Errors: {pool_test['errors']}")
@@ -1014,14 +1046,14 @@ if __name__ == "__main__":
             print(f"  {engine_key}: usage={engine_info['usage_count']}, active={engine_info['is_active']}")
 
     except Exception as e:
-        print(f"❌ LC0 pool test failed: {e}")
+        print(f"LC0 pool test failed: {e}")
 
     # Test basic engine creation (backward compatibility)
-    print("\n🔧 Testing Basic Engine Creation...")
+    print("\nTesting Basic Engine Creation...")
     try:
         print("Creating engine...")
         with ChessEngineManager() as engine:
-            print(f"✅ Engine created: {engine.name}")
+            print(f"Engine created: {engine.name}")
 
             # Test move validation
             starting_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -1037,7 +1069,7 @@ if __name__ == "__main__":
                 print(f"Explanation: {analysis.explanation}")
 
     except Exception as e:
-        print(f"❌ Engine test failed: {e}")
+        print(f"Engine test failed: {e}")
 
     print("=" * 60)
     print("Engine integration test complete.")

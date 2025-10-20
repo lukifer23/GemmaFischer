@@ -24,7 +24,7 @@ def main():
         from src.web.app import app, chess_model
 
         print("=" * 60)
-        print("🚀 Starting ChessGemma Web Application")
+        print("Starting ChessGemma Web Application")
         print("=" * 60)
         # Determine port with fallback if busy
         preferred_port = int(os.environ.get("CHESSGEMMA_PORT", "5000"))
@@ -39,23 +39,23 @@ def main():
                 s.close()
                 port += 1
 
-        print(f"📍 URL: http://localhost:{port}")
-        print("🎯 Features:")
-        print("   • AI-powered chess Q&A")
-        print("   • Interactive chess board")
-        print("   • Real-time model responses")
-        print("   • Example questions")
+        print(f"URL: http://localhost:{port}")
+        print("Features:")
+        print("   - AI-powered chess Q&A")
+        print("   - Interactive chess board")
+        print("   - Real-time model responses")
+        print("   - Example questions")
         print("=" * 60)
 
         # Warm the model at startup so first request is responsive
         try:
-            print("⏳ Loading ChessGemma model (one-time startup cost)...")
+            print("Loading ChessGemma model (one-time startup cost)...")
             if chess_model.load_model():
-                print("✅ Model loaded and adapters initialized.")
+                print("Model loaded and adapters initialized.")
             else:
-                print("⚠️  Model failed to load during startup; requests will retry on demand.")
+                print("Warning: Model failed to load during startup; requests will retry on demand.")
         except Exception as preload_err:
-            print(f"⚠️  Model preload encountered an error: {preload_err}")
+            print(f"Warning: Model preload encountered an error: {preload_err}")
             print("   The server will continue and attempt to load on first request.")
 
         # Start the Flask development server
@@ -68,7 +68,7 @@ def main():
         )
 
     except ImportError as e:
-        print(f"❌ Import error: {e}")
+        print(f"Import error: {e}")
         print("Make sure you have activated the virtual environment:")
         print("  source .venv/bin/activate")
         print("And installed dependencies:")
@@ -76,7 +76,7 @@ def main():
         sys.exit(1)
 
     except Exception as e:
-        print(f"❌ Error starting web application: {e}")
+        print(f"Error starting web application: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

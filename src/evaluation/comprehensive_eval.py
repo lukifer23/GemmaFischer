@@ -92,7 +92,7 @@ class ComprehensiveChessEvaluator:
         # Chess knowledge base for quality assessment
         self.chess_concepts = self._load_chess_knowledge()
 
-        logger.info("🔧 Comprehensive Chess Evaluator initialized")
+        logger.info("Comprehensive Chess Evaluator initialized")
 
     def _load_chess_knowledge(self) -> Dict[str, List[str]]:
         """Load chess knowledge base for quality assessment."""
@@ -126,22 +126,22 @@ class ComprehensiveChessEvaluator:
             # Initialize Stockfish engine
             if self.stockfish_path:
                 self.engine_manager = ChessEngineManager(self.stockfish_path)
-                logger.info("✅ Stockfish engine initialized")
+                logger.info("Stockfish engine initialized")
             else:
-                logger.warning("⚠️  No Stockfish path provided, engine analysis disabled")
+                logger.warning("No Stockfish path provided, engine analysis disabled")
 
             # Initialize inference system
             if get_inference_instance:
                 self.inference_manager = get_inference_instance()
                 # ChessGemmaInference doesn't need explicit initialization
-                logger.info("✅ Inference system initialized")
+                logger.info("Inference system initialized")
             else:
-                logger.warning("⚠️  Inference system not available")
+                logger.warning("Inference system not available")
 
             return True
 
         except Exception as e:
-            logger.error(f"❌ Failed to initialize evaluation system: {e}")
+            logger.error(f"Failed to initialize evaluation system: {e}")
             return False
 
     def evaluate_position(self, fen: str, expected_move: str, difficulty: str = "medium") -> PositionEvaluation:
@@ -189,7 +189,7 @@ class ComprehensiveChessEvaluator:
             )
 
         except Exception as e:
-            logger.error(f"❌ Position evaluation failed: {e}")
+            logger.error(f"Position evaluation failed: {e}")
             return PositionEvaluation(
                 fen=fen,
                 predicted_move="",
@@ -406,7 +406,7 @@ class ComprehensiveChessEvaluator:
     def run_comprehensive_evaluation(self, test_dataset: List[Dict[str, Any]],
                                    max_positions: int = 100) -> Dict[str, Any]:
         """Run comprehensive evaluation on a test dataset."""
-        logger.info(f"🎯 Running comprehensive evaluation on {min(len(test_dataset), max_positions)} positions")
+        logger.info(f"Running comprehensive evaluation on {min(len(test_dataset), max_positions)} positions")
 
         # Initialize evaluation system
         if not self.initialize_evaluation_system():
@@ -438,8 +438,8 @@ class ComprehensiveChessEvaluator:
 
         evaluation_time = time.time() - start_time
 
-        logger.info(f"✅ Evaluation completed in {evaluation_time:.2f} seconds")
-        logger.info(f"📊 Evaluated {len(self.position_evaluations)} positions")
+        logger.info(f"Evaluation completed in {evaluation_time:.2f} seconds")
+        logger.info(f"Evaluated {len(self.position_evaluations)} positions")
 
         return self._generate_evaluation_report(evaluation_time)
 
@@ -668,16 +668,16 @@ def main():
 
     args = parser.parse_args()
 
-    print("🎯 Comprehensive Chess Evaluation System")
+    print("Comprehensive Chess Evaluation System")
     print("=" * 50)
 
     # Load test dataset
     test_dataset = load_test_dataset(args.dataset)
     if not test_dataset:
-        print(f"❌ Failed to load test dataset from {args.dataset}")
+        print(f"Failed to load test dataset from {args.dataset}")
         return
 
-    print(f"📚 Loaded {len(test_dataset)} test positions")
+    print(f"Loaded {len(test_dataset)} test positions")
 
     # Initialize evaluator
     evaluator = ComprehensiveChessEvaluator(
@@ -691,7 +691,7 @@ def main():
         results = evaluator.run_benchmark_comparison(args.benchmark, test_dataset)
     else:
         # Run single comprehensive evaluation
-        print("🔍 Running comprehensive evaluation...")
+        print("Running comprehensive evaluation...")
         results = evaluator.run_comprehensive_evaluation(test_dataset, args.max_positions)
 
     # Save results
@@ -700,14 +700,14 @@ def main():
     # Print summary
     if 'performance_metrics' in results:
         metrics = results['performance_metrics']
-        print("\n📊 Performance Summary:")
+        print("\nPerformance Summary:")
         print(f"  Move Accuracy: {metrics['move_accuracy']}%")
         print(f"  Explanation Quality: {metrics['explanation_quality_score']:.3f}")
         print(f"  Strategic Understanding: {metrics['strategic_understanding_score']:.3f}")
         print(f"  Average Response Time: {metrics['average_response_time']:.3f}s")
         print(f"  Stockfish Agreement: {metrics['stockfish_agreement_rate']}%")
 
-    print(f"\n✅ Evaluation complete! Results saved to: {args.output}")
+    print(f"\nEvaluation complete! Results saved to: {args.output}")
 
 
 if __name__ == '__main__':

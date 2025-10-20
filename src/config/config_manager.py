@@ -17,10 +17,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union, Callable, List
 from dataclasses import dataclass, field
 
-# Add project root to path for imports
+# Project root (module-relative only)
 project_root = Path(__file__).resolve().parents[2]
-import sys
-sys.path.insert(0, str(project_root))
 
 # Import common utilities
 from ..utils.common import get_logger, get_environment_config
@@ -213,6 +211,7 @@ class LC0EngineSettings:
     backend: str = "metal"
     threads: int = 2
     nn_cache_size: int = 200000
+    use_pool: bool = True
     search_paths: List[str] = field(default_factory=lambda: [
         "/opt/homebrew/bin/lc0",
         "/usr/local/bin/lc0",
@@ -320,6 +319,10 @@ class ChessGemmaConfig:
                 self.chess_engine.lc0.threads = int(env_config['lc0_threads'])
             except ValueError:
                 pass
+
+        if 'lc0_use_pool' in env_config:
+            value = str(env_config['lc0_use_pool']).lower()
+            self.chess_engine.lc0.use_pool = value not in ('0', 'false', 'no')
 
         # Optional LC0 time limit override
         if 'lc0_time_limit' in env_config:

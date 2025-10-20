@@ -14,8 +14,9 @@ Features:
 """
 
 import logging
+import os
 import time
-from typing import Dict, List, Any, Optional, Tuple, Union, Callable
+from typing import Dict, List, Any, Optional, Tuple, Union, Callable, Set
 from pathlib import Path
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -90,9 +91,7 @@ class MoEInferenceManager:
                 self._expert_ready[expert_name] = False
                 logger.info(f"Registered {expert_name} expert adapter at {path_obj}")
             else:
-                logger.warning(
-                    "Expert model not found for %s: %s", expert_name=expert_name, model_path=model_path
-                )
+                logger.warning("Expert model not found for %s: %s", expert_name, model_path)
 
         self.prime_available_experts()
 
@@ -160,9 +159,8 @@ class MoEInferenceManager:
             query_type="auto"
         )
 
-        # Record routing decision metrics
         response_time = time.time() - start_time
-        self.metrics.record_routing_decision(routing_decision, response_time)
+        self._record_metrics(routing_decision, response_time)
 
         # Generate response using selected expert
         response = self._generate_expert_response(
@@ -178,6 +176,80 @@ class MoEInferenceManager:
             "response_time": response_time,
             "expert_used": routing_decision.primary_expert
         }
+
+    def analyze_position(self, fen: str, query_type: str = "auto") -> Dict[str, Any]:
+        """Route a position-focused query and expose routing metadata."""
+        start_time = time.time()
+
+        routing_decision = self.router.route_query(
+            fen,
+            query_type=query_type,
+            question_text="",
+        )
+
+        response_time = time.time() - start_time
+        self._record_metrics(routing_decision, response_time)
+
+        routing_info = {
+            "primary_expert": routing_decision.primary_expert,
+            "confidence": routing_decision.confidence_score,
+            "fallback_used": getattr(routing_decision, "fallback_used", False),
+            "ensemble_mode": routing_decision.ensemble_mode,
+            "weights": routing_decision.expert_weights,
+            "reasoning": routing_decision.reasoning,
+        }
+
+        payload: Dict[str, Any] = {
+            "routing_info": routing_info,
+            "response_time": response_time,
+        }
+
+        if self.inference_system:
+            try:
+                payload["response"] = self._generate_expert_response(
+                    routing_decision.primary_expert,
+                    question="",
+                    position_fen=fen,
+                    context="",
+                )
+            except Exception as exc:
+                payload["response_error"] = str(exc)
+
+        return payload
+
+    def _record_metrics(self, decision: RoutingDecision, response_time: float) -> None:
+        """Lightweight metrics tracking without requiring the full collector."""
+        if not self.metrics:
+            return
+
+        metrics = self.metrics
+        previous_total = metrics.total_requests
+        metrics.total_requests += 1
+
+        confidence = getattr(decision, "confidence_score", 0.0) or 0.0
+        fallback = 1.0 if getattr(decision, "fallback_used", False) else 0.0
+        ensemble = 1.0 if getattr(decision, "ensemble_mode", False) else 0.0
+
+        if metrics.total_requests:
+            metrics.average_confidence = (
+                (metrics.average_confidence * previous_total + confidence) / metrics.total_requests
+            )
+            metrics.fallback_rate = (
+                (metrics.fallback_rate * previous_total + fallback) / metrics.total_requests
+            )
+            metrics.ensemble_usage_rate = (
+                (metrics.ensemble_usage_rate * previous_total + ensemble) / metrics.total_requests
+            )
+
+        metrics.expert_usage_distribution.setdefault(decision.primary_expert, 0)
+        metrics.expert_usage_distribution[decision.primary_expert] += 1
+
+        bucket = (
+            "under_0.5s" if response_time < 0.5
+            else "under_1s" if response_time < 1.0
+            else "over_1s"
+        )
+        metrics.response_time_distribution[bucket] = metrics.response_time_distribution.get(bucket, 0) + 1
 
     def _generate_expert_response(self, expert_name: str, question: str, position_fen: str, context: str) -> str:
         """Generate response using the specified expert."""

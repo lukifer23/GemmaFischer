@@ -194,6 +194,9 @@ def get_environment_config() -> Dict[str, Any]:
     if lc0_threads := os.environ.get("CHESSGEMMA_LC0_THREADS"):
         config['lc0_threads'] = lc0_threads
 
+    if lc0_use_pool := os.environ.get("CHESSGEMMA_LC0_USE_POOL"):
+        config['lc0_use_pool'] = lc0_use_pool
+
     # LC0 optional time limit (seconds)
     if lc0_time_limit := os.environ.get("CHESSGEMMA_LC0_TIME_LIMIT"):
         config['lc0_time_limit'] = lc0_time_limit

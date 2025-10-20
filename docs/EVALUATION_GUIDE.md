@@ -1,8 +1,8 @@
-# ChessGemma Evaluation Guide
+# GemmaFischer Evaluation Guide
 
 ## Overview
 
-This guide covers the comprehensive evaluation framework for ChessGemma, including automated metrics, web-based evaluation tools, and performance benchmarking. The system supports real-time evaluation through the web interface and automated testing against Stockfish.
+This guide covers the comprehensive evaluation framework for GemmaFischer, including automated metrics, web-based evaluation tools, and performance benchmarking. The system supports real-time evaluation through the web interface and automated testing against Stockfish.
 
 **Current Status**: Advanced benchmarking system with statistical analysis, regression detection, automated evaluation pipelines, and comprehensive performance monitoring.
 
@@ -26,6 +26,9 @@ tail -f reports/moe/routing_decisions.jsonl
 
 # 5. Benchmark LC0+LLM pipeline (captures latency/legal rate)
 python3 scripts/benchmark_lc0.py --num-samples 8
+
+Note: Before running evaluations, ensure datasets are clean or freshly generated:
+`python scripts/validate_and_repair_datasets.py --generate --repair`
 ```
 
 > **Tip:** The training orchestration script automatically writes dataset profiles to `reports/dataset_profiles/`. Regenerate them whenever you modify sampling, weights, or curricula.

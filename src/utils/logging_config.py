@@ -234,14 +234,17 @@ def log_performance(func):
         try:
             result = func(*args, **kwargs)
             elapsed = time.time() - start_time
-            logger.info(f"Completed {func.__qualname__}", elapsed_seconds=elapsed)
+            logger.info("Completed %s in %.3fs", func.__qualname__, elapsed)
             return result
         except Exception as e:
             elapsed = time.time() - start_time
-            logger.error(f"Failed {func.__qualname__}",
-                        elapsed_seconds=elapsed,
-                        error=str(e),
-                        exc_info=True)
+            logger.error(
+                "Failed %s after %.3fs: %s",
+                func.__qualname__,
+                elapsed,
+                e,
+                exc_info=True,
+            )
             raise
 
     return wrapper
@@ -253,27 +256,44 @@ def log_model_load(model_name: str, model_path: Path, success: bool, **kwargs):
     logger = get_logger("model_loading")
     level = "info" if success else "error"
     message = f"{'Loaded' if success else 'Failed to load'} model {model_name}"
-    getattr(logger, level)(message, model_path=str(model_path), **kwargs)
+    details = ", ".join(f"{key}={value}" for key, value in kwargs.items())
+    if details:
+        getattr(logger, level)("%s (path=%s; %s)", message, model_path, details)
+    else:
+        getattr(logger, level)("%s (path=%s)", message, model_path)
 
 
 def log_inference_error(error: Exception, request_data: Dict[str, Any]):
     """Log inference errors with context."""
     logger = get_logger("inference_errors")
-    logger.error("Inference failed",
-                error_type=type(error).__name__,
-                error_message=str(error),
-                request_data=request_data,
-                exc_info=True)
+    logger.error(
+        "Inference failed (%s): %s | request=%s",
+        type(error).__name__,
+        error,
+        request_data,
+        exc_info=True,
+    )
 
 
 def log_training_checkpoint(epoch: int, step: int, checkpoint_path: Path, metrics: Dict[str, Any]):
     """Log training checkpoint saves."""
     logger = get_logger("training")
-    logger.info("Saved training checkpoint",
-               epoch=epoch,
-               step=step,
-               checkpoint_path=str(checkpoint_path),
-               **metrics)
+    metric_summary = ", ".join(f"{k}={v}" for k, v in metrics.items())
+    if metric_summary:
+        logger.info(
+            "Saved training checkpoint epoch=%s step=%s path=%s (%s)",
+            epoch,
+            step,
+            checkpoint_path,
+            metric_summary,
+        )
+    else:
+        logger.info(
+            "Saved training checkpoint epoch=%s step=%s path=%s",
+            epoch,
+            step,
+            checkpoint_path,
+        )
 
 
 # Initialize default loggers

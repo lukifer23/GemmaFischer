@@ -9,7 +9,7 @@ GemmaFischer's parallel multi-expert execution allows you to query all three spe
 ### Web Interface
 ```bash
 # Start the web server
-python -m src.web.run_web_app
+./run_hybrid_webapp.sh
 # Visit: http://localhost:5000
 
 # Use the parallel endpoint instead of the regular /api/ask

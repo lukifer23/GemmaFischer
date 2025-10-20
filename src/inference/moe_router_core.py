@@ -16,6 +16,7 @@ from functools import lru_cache
 from collections import OrderedDict
 import threading
 import os
+import chess
 
 from .moe_types import (
     RoutingDecision,
@@ -127,10 +128,63 @@ class ChessMoERouter(nn.Module):
                 logger.warning(f"Unable to create router log directory {Path(self.decision_log_path).parent}: {exc}")
                 self.log_decisions_enabled = False
 
-        logger.info(f"🧠 Optimized MoE Router initialized with {num_experts} experts")
+        logger.info(f"Optimized MoE Router initialized with {num_experts} experts")
 
         # The router is used purely for inference; ensure dropout layers are disabled
         self.eval()
+
+    def _fen_to_board(self, fen: str) -> chess.Board:
+        """Convert a FEN string to a Board with defensive fallback."""
+        try:
+            return chess.Board(fen)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.warning("Invalid FEN provided to router: %s", exc)
+            return chess.Board()
+
+    def _find_kings(self, board: chess.Board) -> Dict[str, Optional[chess.Square]]:
+        """Locate both kings on the board."""
+        return {
+            "white": board.king(chess.WHITE),
+            "black": board.king(chess.BLACK),
+        }
+
+    def _calculate_king_safety_score(
+        self,
+        board: chess.Board,
+        king_square: Optional[chess.Square],
+        color: str,
+    ) -> float:
+        """Heuristic king-safety estimate used for deterministic routing rules."""
+        if king_square is None:
+            return 0.0
+
+        friendly_color = chess.WHITE if color == "white" else chess.BLACK
+        enemy_color = chess.BLACK if friendly_color == chess.WHITE else chess.WHITE
+
+        king_zone = chess.SquareSet(chess.BB_KING_ATTACKS[king_square])
+
+        friendly_guards = len(board.attackers(friendly_color, king_square))
+        friendly_support = sum(
+            1 for sq in king_zone if board.color_at(sq) == friendly_color
+        )
+
+        enemy_pressure = len(board.attackers(enemy_color, king_square))
+        enemy_control = sum(
+            1 for sq in king_zone if board.is_attacked_by(enemy_color, sq)
+        )
+
+        score = 0.5
+        score += 0.12 * friendly_guards
+        score += 0.08 * friendly_support
+        score -= 0.18 * enemy_pressure
+        score -= 0.08 * enemy_control
+
+        if board.is_attacked_by(enemy_color, king_square):
+            score -= 0.2
+        if board.is_check():
+            score -= 0.25
+
+        return max(0.0, min(1.0, score))
 
     def _determine_feature_dim(self) -> int:
         """Return the fixed training embedding dimensionality."""
@@ -222,7 +276,7 @@ class ChessMoERouter(nn.Module):
             cached_decision = self._routing_cache[cache_key]
             # Update LRU order
             self._routing_cache.move_to_end(cache_key)
-            logger.info(f"🎯 Cached routing: {cached_decision.primary_expert} (confidence: {cached_decision.confidence_score:.3f})")
+            logger.info(f"Cached routing: {cached_decision.primary_expert} (confidence: {cached_decision.confidence_score:.3f})")
             return cached_decision
 
         # Extract features from position (with caching)

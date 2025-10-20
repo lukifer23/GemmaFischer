@@ -1,22 +1,33 @@
 #!/bin/bash
 
-# Run ChessGemma Web App with Hybrid LC0 System Enabled
+# GemmaFischer hybrid web app launcher
 
-echo "🤖 Starting ChessGemma with Hybrid LC0 Integration"
-echo "=================================================="
+set -euo pipefail
 
-# Enable hybrid engine
-export CHESSGEMMA_HYBRID_ENGINE=true
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "✅ Hybrid LC0 engine enabled (CHESSGEMMA_HYBRID_ENGINE=true)"
+echo "🤖 Starting GemmaFischer with Hybrid LC0 Integration"
+echo "===================================================="
+
+echo "ℹ️  This launcher keeps the LC0 pool enabled by default."
+echo "   Set GEMMAFISCHER_DISABLE_LC0_POOL=1 to force a fresh LC0 instance per run."
 echo ""
+
+if [[ "${GEMMAFISCHER_DISABLE_LC0_POOL:-0}" == "1" ]]; then
+  export CHESSGEMMA_LC0_USE_POOL=0
+  echo "⚙️  LC0 engine pool disabled for this session."
+else
+  export CHESSGEMMA_LC0_USE_POOL=1
+fi
+
+export CHESSGEMMA_MOE_ENABLED="${CHESSGEMMA_MOE_ENABLED:-1}"
+
 echo "🎯 Features:"
-echo "   • Strategic intent selector (6 options)"
-echo "   • Hybrid AI move button in Play Mode"
-echo "   • Enhanced analysis display with LLM+LC0 details"
-echo "   • 87.5% LLM strategic guidance + 12.5% LC0 precision"
+echo "   • LC0 + Gemma hybrid analysis with live explanations"
+echo "   • MoE routing across UCI, Tutor, and Director experts"
+echo "   • System metrics panel with engine health checks"
 echo ""
-echo "🚀 Starting web application..."
+echo "🚀 Launching web application..."
 
-# Run the web app
-cd src/web && python app.py
+cd "$PROJECT_ROOT"
+python -m src.web.run_web_app

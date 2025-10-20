@@ -86,7 +86,7 @@ class ChessPositionEmbedder:
             chess.KING: 0  # King has no material value in counting
         }
 
-        logger.info(f"🔧 Chess Position Embedder initialized (dim={embedding_dim})")
+        logger.info(f"Chess Position Embedder initialized (dim={embedding_dim})")
 
     def embed_position(self, fen: str) -> PositionEmbedding:
         """
@@ -498,7 +498,7 @@ class ChessPositionRetriever:
         self.index: Dict[str, PositionEmbedding] = {}
         self.position_hashes: Set[str] = set()
 
-        logger.info("🔧 Chess Position Retriever initialized")
+        logger.info("Chess Position Retriever initialized")
 
     def add_position(self, fen: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
         """Add a position to the index."""
@@ -591,38 +591,75 @@ class ChessPositionRetriever:
             'positions': [emb.__dict__ for emb in self.index.values()]
         }
 
-        with open(filepath, 'wb') as f:
-            pickle.dump(index_data, f)
-
-        logger.info(f"💾 Saved position index with {len(self.index)} positions to {filepath}")
+        # Save in JSON format for safe, portable storage
+        try:
+            serializable = {
+                'version': 1,
+                'embedder_config': index_data['embedder_config'],
+                'positions': [
+                    {
+                        **{k: v for k, v in pos.items() if k != 'embedding'},
+                        'embedding': pos['embedding'].tolist() if hasattr(pos['embedding'], 'tolist') else list(pos['embedding'])
+                    }
+                    for pos in index_data['positions']
+                ],
+            }
+            import json
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(serializable, f)
+            logger.info(f"Saved position index with {len(self.index)} positions to {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save index to {filepath}: {e}")
 
     def load_index(self, filepath: Path) -> bool:
         """Load the position index from disk."""
         try:
-            with open(filepath, 'rb') as f:
-                index_data = pickle.load(f)
-
-            # Recreate embedder
+            # Prefer JSON format
+            import json
+            with open(filepath, 'r', encoding='utf-8') as f:
+                index_data = json.load(f)
+            data_version = index_data.get('version', 1)
             embedder_config = index_data.get('embedder_config', {})
             self.embedder = ChessPositionEmbedder(**embedder_config)
 
-            # Load positions
             self.index.clear()
             self.position_hashes.clear()
 
             for pos_data in index_data.get('positions', []):
-                embedding_array = np.array(pos_data['embedding'])
+                embedding_array = np.array(pos_data['embedding'], dtype=float)
+                pos_data = {k: v for k, v in pos_data.items() if k != 'embedding'}
                 pos_data['embedding'] = embedding_array
                 embedding = PositionEmbedding(**pos_data)
                 self.index[embedding.position_hash] = embedding
                 self.position_hashes.add(embedding.position_hash)
 
-            logger.info(f"📂 Loaded position index with {len(self.index)} positions from {filepath}")
+            logger.info(f"Loaded position index with {len(self.index)} positions from {filepath}")
             return True
-
-        except Exception as e:
-            logger.error(f"Failed to load index from {filepath}: {e}")
-            return False
+        except Exception:
+            # Migration fallback: attempt to read legacy pickle and convert
+            try:
+                with open(filepath, 'rb') as f:
+                    legacy = pickle.load(f)
+                embedder_config = legacy.get('embedder_config', {})
+                self.embedder = ChessPositionEmbedder(**embedder_config)
+                self.index.clear()
+                self.position_hashes.clear()
+                for pos_data in legacy.get('positions', []):
+                    embedding_array = np.array(pos_data['embedding'])
+                    pos_data['embedding'] = embedding_array
+                    embedding = PositionEmbedding(**pos_data)
+                    self.index[embedding.position_hash] = embedding
+                    self.position_hashes.add(embedding.position_hash)
+                # Write JSON sidecar for future loads
+                try:
+                    self.save_index(filepath)
+                except Exception:
+                    pass
+                logger.info(f"Loaded legacy pickle index with {len(self.index)} positions from {filepath}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to load index from {filepath}: {e}")
+                return False
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics about the position index."""

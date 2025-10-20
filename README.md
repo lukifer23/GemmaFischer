@@ -2,6 +2,8 @@
 
 A chess AI system that combines Google's Gemma-3 270M model for strategic guidance and educational explanations with LeelaChess Zero (LC0) as the primary UCI chess engine. Uses LoRA adaptation on Apple Silicon with MPS acceleration and features a hybrid Mixture of Experts (MoE) system that intelligently routes between LC0's precise move calculation and the LLM's educational capabilities.
 
+> **Note:** Runtime environment variables still use the historical `CHESSGEMMA_*` prefix for compatibility. The rest of the project has been renamed to **GemmaFischer**.
+
 ## Pre-trained Models
 
 **HuggingFace Collection**: [GemmaFischer: Chess MoE](https://huggingface.co/collections/Dontbeafed69/gemmafischer-chess-engine-and-tutor-with-mixture-of-experts-68e6a915d31285cda968d204)
@@ -57,7 +59,7 @@ print(move)  # e.g., "e2e4"
 - **Training Data**: 150K standardized samples optimized for LLM educational capabilities and strategic reasoning
 - **Model Checkpoints**: Specialized LoRA adapters for Tutor (explanations) and Director (strategic analysis) modes
 - **LC0 Integration**: Metal-accelerated LC0 neural engine with optimized configuration for M3 Pro performance
-- **Data Quality**: 100% valid samples with automated validation and repair pipelines
+- **Data Quality**: `python scripts/validate_and_repair_datasets.py --generate --repair` consolidates dataset generation and validation; `python scripts/test_data_quality.py` provides additional assertions.
 - **Intelligent Routing**: MoE system intelligently routes UCI moves to LC0 and educational queries to LLM experts
 - **Web Interface**: Enhanced interface at http://localhost:5000 with real-time LC0 analysis and LLM explanations
 - **Performance**: Optimized for M3 Pro with LC0 Metal backend and efficient LLM inference
@@ -108,7 +110,7 @@ Use the enhanced training script for stable, monitored training:
 
 ```bash
 # Complete UCI expert training with automatic checkpoint resumption
-cd /Users/admin/Downloads/VSCode/ChessGemma && python scripts/train_uci_complete.py --max_steps 1600 --timeout_minutes 240
+cd /Users/admin/Downloads/VSCode/GemmaFischer && python scripts/train_uci_complete.py --max_steps 1600 --timeout_minutes 240
 ```
 
 #### Individual Expert Training
@@ -141,9 +143,15 @@ python -m src.training.train_lora_poc --expert director --config auto --max_step
 Launch the web interface for testing and evaluation:
 
 ```bash
-# Start web interface
-python -m src.web.run_web_app
+# Start web interface with hybrid LC0 pool
+./run_hybrid_webapp.sh
 # Visit: http://localhost:5000
+
+# Or launch manually
+python -m src.web.run_web_app
+
+# Disable the LC0 pool if you want a fresh engine instance per session
+GEMMAFISCHER_DISABLE_LC0_POOL=1 ./run_hybrid_webapp.sh
 ```
 
 ### Prerequisites
@@ -158,7 +166,7 @@ python -m src.web.run_web_app
 ```bash
 # Clone repository
 git clone <repository-url>
-cd ChessGemma
+cd GemmaFischer
 
 # Setup virtual environment
 python -m venv .venv
@@ -192,7 +200,7 @@ reproducible.
 
 1. **Start web interface:**
 ```bash
-python -m src.web.run_web_app
+./run_hybrid_webapp.sh
 # Visit: http://localhost:5000
 ```
 
@@ -226,6 +234,14 @@ print("UCI Expert:", results['uci']['response'])
 print("Tutor Expert:", results['tutor']['response'])
 print("Director Expert:", results['director']['response'])
 ```
+
+### Environment Variables
+
+- `CHESSGEMMA_MODEL_ID` / `CHESSGEMMA_MODEL_PATH`: point to the Gemma-3 270M base weights (HF hub ID or local snapshot).
+- `CHESSGEMMA_MOE_ROUTER_CKPT`: override the default MoE router checkpoint location.
+- `CHESSGEMMA_LC0_USE_POOL`: set to `0` to disable the shared LC0 engine pool (the launcher sets this automatically when `GEMMAFISCHER_DISABLE_LC0_POOL=1`).
+- `CHESSGEMMA_DEBUG`: enable verbose logging when set to `1`, `true`, etc.
+- `GEMMAFISCHER_DISABLE_LC0_POOL`: convenience flag for `run_hybrid_webapp.sh`; when set to `1` the script exports `CHESSGEMMA_LC0_USE_POOL=0` before starting the server.
 
 ### Adapter Health & Evaluation
 
@@ -270,7 +286,7 @@ curl -X POST http://localhost:5000/api/ask_parallel \
 ## Project Structure
 
 ```
-ChessGemma/
+GemmaFischer/
 ├── src/
 │   ├── training/       # LoRA fine-tuning scripts
 │   ├── inference/      # Model inference and MoE routing
@@ -280,6 +296,7 @@ ChessGemma/
 │   ├── standardized/  # 150K placeholder-free training samples
 │   └── validation/    # Quality assessment reports
 ├── checkpoints/       # LoRA adapter checkpoints
+├── run_hybrid_webapp.sh  # Hybrid launcher (LC0 + LLM web UI)
 └── docs/             # Documentation
 
 ```

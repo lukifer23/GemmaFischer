@@ -103,7 +103,7 @@ def main():
     model_loaded = inference.load_model()
     if not model_loaded:
         if os.environ.get("CHESSGEMMA_SKIP_MODEL_LOAD", "0") not in ("0", "false", "False"):
-            print("⚠️  Model loading skipped (CHESSGEMMA_SKIP_MODEL_LOAD). Continuing with offline evaluation.")
+            print("Warning: Model loading skipped (CHESSGEMMA_SKIP_MODEL_LOAD). Continuing with offline evaluation.")
         else:
             print("Could not load model.")
             return
@@ -111,7 +111,7 @@ def main():
     # Warm-up only when the model is actually available to avoid repeated
     # warnings in offline benchmarking scenarios.
     if model_loaded:
-        print("⚙️  Priming inference pipeline (warm-up)...")
+        print("Priming inference pipeline (warm-up)...")
         warmup_prompt = (
             "FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n"
             "Move:\nMode: Engine\nGenerate the best move in UCI format (e.g., e2e4). Respond with only the move."

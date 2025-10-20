@@ -72,12 +72,8 @@ lc0 bench --weights=models/lc0_weights/network.pb.gz --backend=metal
 **Result**: ✅ Successfully loaded on Apple M3 Pro with Metal backend
 
 #### Python Integration Test
-```python
-from src.inference.lc0_engine import LC0EngineManager, LC0Config
-config = LC0Config(weights_file='models/lc0_weights/network.pb.gz')
-engine = LC0EngineManager(config)
-```
-**Result**: ✅ Engine initialized successfully with Metal backend
+Use the `HybridEngine` path at runtime via the web API or inference module. For networks:
+`python scripts/verify_lc0_network.py` and `python scripts/download_lc0_weights.py` remain the canonical tools.
 
 ---
 

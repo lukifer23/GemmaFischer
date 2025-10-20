@@ -17,16 +17,13 @@ import chess
 import chess.engine
 from pathlib import Path
 
-# Add the project root to the path for imports
-sys.path.append(str(Path(__file__).parent.parent.parent))
+# Use module-relative imports only (no sys.path modifications)
 
 from src.inference.inference import ChessGemmaInference
 from src.inference.chess_engine import ChessEngineManager
 from src.inference.hybrid_engine import HybridEngine
 from src.inference.uci_utils import (
-    post_process_uci_response, 
-    create_engine_prompt_strict,
-    create_tutor_prompt_with_uci,
+    post_process_uci_response,
     extract_and_validate_uci
 )
 
@@ -363,118 +360,31 @@ class UCIBridge:
             return None
 
     def _generate_chessgemmma_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[str]:
-        """Generate a move using LC0 hybrid engine as primary, LLM as fallback"""
-        if self.inference is None:
-            self._last_generation_metadata = {
-                "requested_mode": self.options.mode,
-                "routed_mode": None,
-                "generation_mode": None,
-            }
-            return None
-
+        """Generate a move strictly via HybridEngine analysis with validation."""
         try:
-            # Convert board to FEN
-            fen = board.fen()
-
-            # Determine expert mode based on UCI options
-            requested_mode = self.options.mode
-            routed_mode = requested_mode
-            if routed_mode == "auto" and not self.options.moe_enabled:
-                routed_mode = "uci"
-
-            generation_mode = "engine" if routed_mode in ("uci", "auto") else routed_mode
-            self._last_generation_metadata = {
-                "requested_mode": requested_mode,
-                "routed_mode": routed_mode,
-                "generation_mode": generation_mode,
-            }
-
-            # Primary: Use LC0 hybrid engine for UCI moves (much more reliable than LLM)
-            if routed_mode in ("uci", "auto"):
-                try:
-                    engine_result = self.inference.analyze_with_engine(fen)
-                    uci_move = engine_result.get('best_move')
-                    if uci_move:
-                        # Validate the move is legal
-                        try:
-                            move_obj = chess.Move.from_uci(uci_move)
-                            if board.is_legal(move_obj):
-                                logger.info(f"LC0 hybrid engine generated valid UCI move: {uci_move}")
-                                return uci_move
-                        except (ValueError, chess.InvalidMoveError):
-                            logger.warning(f"LC0 generated invalid UCI move: {uci_move}")
-                except Exception as e:
-                    logger.warning(f"LC0 hybrid engine failed, falling back to LLM: {e}")
-
-            # Fallback: Use LLM model for tutor/director modes or when engine fails
-            if routed_mode != "uci":
-                prompt = create_tutor_prompt_with_uci(fen, "Analyze this position step by step")
-            else:
-                prompt = create_engine_prompt_strict(fen)
-
-            # Generate response using ChessGemma LLM
-            response_dict = self.inference.generate_response(
-                prompt,
-                mode=generation_mode,
-                max_new_tokens=8,  # Limit for UCI moves
-                temperature=0.0,   # Deterministic for engine mode
-                top_p=1.0
-            )
-
-            response = response_dict.get('response', '')
-            if not response:
-                logger.warning("Empty response from ChessGemma LLM")
+            if self.hybrid_engine is None:
                 return None
-
-            # Use enhanced post-processing with strict validation
-            uci_move = post_process_uci_response(
-                response,
-                board,
-                fallback_to_stockfish=self.options.use_stockfish_fallback
-            )
-
-            if uci_move:
-                logger.info(f"ChessGemma LLM generated valid UCI move: {uci_move}")
+            result = self.hybrid_engine.analyze(board.fen())
+            uci_move = result.best_move
+            if not uci_move:
+                return None
+            move_obj = chess.Move.from_uci(uci_move)
+            if move_obj in board.legal_moves:
                 return uci_move
-            else:
-                logger.warning(f"ChessGemma LLM failed to generate valid UCI move from: {response[:100]}...")
-                return None
-
+            return None
         except Exception as e:
-            logger.error(f"Error generating ChessGemma move: {e}")
+            logger.error(f"Error generating engine move: {e}")
             return None
 
     def _generate_stockfish_move(self, board: chess.Board, depth: int, time_limit: int) -> Optional[chess.Move]:
-        """Deprecated: HybridEngine manages fallback to Stockfish internally."""
+        """All Stockfish usage is handled internally by HybridEngine."""
         return None
 
     
-    def _create_engine_prompt(self, board: chess.Board) -> str:
-        """Deprecated: use build_engine_prompt instead."""
-        return build_engine_prompt(board.fen())
-    
-    def _create_tutor_prompt(self, board: chess.Board) -> str:
-        """Create a prompt for tutor mode (with explanations)"""
-        fen = board.fen()
-        style = self.options.style
-        
-        prompt = f"""FEN: {fen}
-Question: Analyze this position step by step.
-Style: {style}
-Mode: Tutor
-
-1. Evaluate the current position
-2. Identify key threats and opportunities
-3. Consider candidate moves
-4. Choose the best move with reasoning
-
-Respond with the best move in UCI format at the end."""
-        
-        return prompt
+    # Prompt construction is no longer part of UCIBridge; prompts are handled by inference utilities
     
     def _parse_move_from_response(self, response: str, board: chess.Board) -> Optional[chess.Move]:
-        """Deprecated: use extract_first_legal_move instead."""
-        return extract_first_legal_move(response, board)
+        return extract_and_validate_uci(response, board)
 
 def main():
     """Main UCI loop"""

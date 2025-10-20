@@ -38,24 +38,23 @@ def test_clear_model_cache_without_torch(caplog, error_handler):
     assert "PyTorch not available" in caplog.text
 
 
-def test_clear_model_cache_with_torch_cuda(monkeypatch):
-    """Ensure GPU cache clearing is attempted when CUDA is available."""
-    cuda_calls = {"empty_cache": 0}
+def test_clear_model_cache_with_torch_mps(monkeypatch):
+    """Ensure MPS cache clearing is attempted when MPS is available."""
+    mps_calls = {"empty_cache": 0}
 
-    def fake_is_available():
-        return True
+    class _DummyMPS:
+        @staticmethod
+        def empty_cache():
+            mps_calls["empty_cache"] += 1
 
-    def fake_empty_cache():
-        cuda_calls["empty_cache"] += 1
-
-    dummy_cuda = types.SimpleNamespace(
-        is_available=fake_is_available,
-        empty_cache=fake_empty_cache,
-    )
+    class _DummyBackendsMPS:
+        @staticmethod
+        def is_available():
+            return True
 
     dummy_torch = types.SimpleNamespace(
-        cuda=dummy_cuda,
-        backends=types.SimpleNamespace(),
+        mps=_DummyMPS,
+        backends=types.SimpleNamespace(mps=_DummyBackendsMPS),
     )
 
     monkeypatch.setattr(error_handler_module, "torch", dummy_torch)
@@ -66,4 +65,4 @@ def test_clear_model_cache_with_torch_cuda(monkeypatch):
         result = handler._clear_model_cache(None)
 
     assert result["success"] is True
-    assert cuda_calls["empty_cache"] == 1
+    assert mps_calls["empty_cache"] == 1

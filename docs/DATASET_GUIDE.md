@@ -1,8 +1,8 @@
-# ChessGemma Dataset Guide
+# GemmaFischer Dataset Guide
 
 ## Overview
 
-ChessGemma uses standardized training datasets for fine-tuning specialized expert models. All datasets are validated for quality and formatted consistently.
+GemmaFischer uses standardized training datasets for fine-tuning specialized expert models. All datasets are validated for quality and formatted consistently.
 
 **Current Status**: 150K validated, placeholder-free training samples across three expert domains.
 
@@ -34,7 +34,8 @@ ChessGemma uses standardized training datasets for fine-tuning specialized exper
 Regenerate the evaluation artifacts after dataset updates:
 
 ```bash
-python scripts/generate_evaluation_data.py
+# Generate and validate datasets (consolidated)
+python scripts/validate_and_repair_datasets.py --generate --datasets-dir data/standardized --repair
 ```
 
 

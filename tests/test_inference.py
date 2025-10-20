@@ -129,8 +129,7 @@ class TestChessGemmaInference:
         assert result is False
         assert inference.is_loaded is False
 
-    @patch('src.inference.inference.torch')
-    def test_unload_model(self, mock_torch):
+    def test_unload_model(self):
         """Test unloading frees resources and resets state."""
         inference = ChessGemmaInference()
         inference.model = Mock()
@@ -140,8 +139,6 @@ class TestChessGemmaInference:
         inference._logical_to_physical = {'a': 'a@1'}
         inference._adapter_loaded_from = {'a': Path('path')}
         inference._engine_cache['x'] = 'y'
-        mock_torch.cuda.is_available.return_value = True
-        mock_torch.cuda.empty_cache = Mock()
 
         inference.unload_model()
 
@@ -152,7 +149,7 @@ class TestChessGemmaInference:
         assert inference._logical_to_physical == {}
         assert inference._adapter_loaded_from == {}
         assert inference._engine_cache == {}
-        mock_torch.cuda.empty_cache.assert_called_once()
+        # No CUDA calls on MPS-only configuration
     
     @patch('src.inference.inference.AutoTokenizer')
     @patch('src.inference.inference.AutoModelForCausalLM')

@@ -78,16 +78,22 @@ class HybridEngine:
         primary_key = cfg.primary.lower()
         if primary_key == "lc0" and cfg.lc0.enabled:
             try:
-                # Use the LC0 pool instead of creating new instances
                 lc0_config = asdict(cfg.lc0)
-                manager = lc0_pool.get_engine("primary", lc0_config)
+                use_pool = lc0_config.pop("use_pool", True)
+                if use_pool:
+                    manager = lc0_pool.get_engine("primary", lc0_config)
+                else:
+                    manager = create_lc0_manager(lc0_config)
                 self.primary = EngineSelection(
                     name="LC0",
                     manager=manager,
                     time_limit=cfg.lc0.time_limit,
                     depth=cfg.lc0.depth,
                 )
-                logger.info("✅ LC0 primary engine initialized from pool")
+                if use_pool:
+                    logger.info("LC0 primary engine initialized from pool")
+                else:
+                    logger.info("LC0 primary engine initialized (direct)")
             except Exception as exc:
                 logger.warning("Failed to initialize LC0 from pool: %s", exc)
                 self.primary = None
@@ -143,7 +149,7 @@ class HybridEngine:
             used_selection = self.fallback
 
         # Use engine best only; LC0 multipv may be unavailable/expensive
-        pv = []
+        pv = analysis.principal_variation if analysis.principal_variation else []
         nodes = analysis.evaluation.get('nodes', 0)
         depth = analysis.evaluation.get('depth', 0)
 

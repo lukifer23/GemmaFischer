@@ -10,6 +10,7 @@ This script provides comprehensive evaluation of chess understanding including:
 
 import argparse
 import os
+import shutil
 import json
 import re
 import torch
@@ -107,8 +108,11 @@ class ChessEvaluator:
         ]
 
         for path in common_paths:
-            if os.path.exists(path) or (os.system(f"which {path} > /dev/null 2>&1") == 0):
+            if os.path.isabs(path) and os.path.exists(path):
                 return path
+            resolved = shutil.which(path)
+            if resolved:
+                return resolved
         return None
 
     def extract_moves_from_response(self, response: str) -> List[str]:
@@ -249,7 +253,7 @@ Respond with the best move in UCI format at the end."""
             'detailed_results': results
         }
 
-        print("\n📊 Evaluation Summary:")
+        print("\nEvaluation Summary:")
         print(f"   Move syntax accuracy: {summary['average_move_syntax_accuracy']:.3f}")
         print(f"   Chess relevance: {summary['average_chess_relevance']:.3f}")
         print(f"   Total moves mentioned: {summary['total_moves_mentioned']}")
@@ -403,7 +407,7 @@ def main():
         output_file = report_dir / 'chess_evaluation_results.json'
         results = evaluator.evaluate_test_set(questions, str(output_file))
 
-        print(f"\n🎯 Chess Evaluation Complete!")
+        print(f"\nChess Evaluation Complete!")
         print(f"   Move syntax accuracy: {results['average_move_syntax_accuracy']:.1%}")
         print(f"   Chess relevance: {results['average_chess_relevance']:.1%}")
         print(f"   Report saved to: {output_file}")

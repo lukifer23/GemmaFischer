@@ -31,7 +31,7 @@ export CHESSGEMMA_MODEL_ID="google/gemma-3-270m"   # use Hugging Face cache
 ## Dataset Preparation
 
 ### Available Datasets
-ChessGemma uses standardized training data across three expert domains:
+GemmaFischer uses standardized training data across three expert domains:
 
 ```bash
 # Current dataset sizes (validated and processed)
@@ -48,7 +48,7 @@ data/standardized/standardized_cot_reasoning_repaired.jsonl: 2,000 samples (CoT 
 - **Quality**: All samples validated with automated repair pipelines
 - **Coverage**: Comprehensive chess positions and strategic scenarios
 - **Integrity**: Real-time validation and corruption detection
-- **Stockfish Labels**: UCI corpus refreshed with depth-14 best moves and depth-6 top-3 alternatives via `python scripts/refresh_uci_dataset.py`
+- **Stockfish Labels**: Use the consolidated validator/generator first to ensure clean inputs: `python scripts/validate_and_repair_datasets.py --generate --repair`. If you need to relabel UCI-specific data, `python scripts/refresh_uci_dataset.py` remains available.
 
 ## Training Commands
 

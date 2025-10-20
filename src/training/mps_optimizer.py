@@ -56,7 +56,7 @@ class MPSMemoryOptimizer:
         self.peak_memory_used = 0
         self.current_memory_used = 0
 
-        logger.info(f"🔧 MPS Memory Optimizer initialized")
+        logger.info(f"MPS Memory Optimizer initialized")
         logger.info(f"   Device: {self.device}")
         logger.info(f"   System Memory: {self.system_memory / (1024**3):.1f}GB")
         logger.info(f"   Available Memory: {self.available_memory / (1024**3):.1f}GB")
@@ -90,7 +90,7 @@ class MPSMemoryOptimizer:
             Dict with batch size recommendations and memory estimates
         """
 
-        logger.info("🔧 Calculating optimal MPS batch size with memory profiling")
+        logger.info("Calculating optimal MPS batch size with memory profiling")
 
         # More aggressive but safe settings for MPS
         if self.is_mps:
@@ -120,7 +120,7 @@ class MPSMemoryOptimizer:
             'device': self.device.type
         }
 
-        logger.info("📊 Optimized batch size settings:")
+        logger.info("Optimized batch size settings:")
         logger.info(f"   Recommended batch size: {recommended_batch_size}")
         logger.info(f"   Gradient accumulation: {gradient_accumulation_steps}")
         logger.info(f"   Effective batch size: {result['effective_batch_size']}")
@@ -154,7 +154,7 @@ class MPSMemoryOptimizer:
                 logger.warning(f"Batch size profiling failed for size {batch_size}: {e}")
                 break
 
-        logger.info(f"📏 Profiled optimal batch size: {optimal_batch_size}")
+        logger.info(f"Profiled optimal batch size: {optimal_batch_size}")
         return optimal_batch_size
 
     def _test_batch_memory_usage(self, model, tokenizer, sequence_length: int, batch_size: int) -> int:
@@ -215,7 +215,7 @@ class MPSMemoryOptimizer:
 
         total_per_sample = param_memory + activation_memory + optimizer_memory
 
-        logger.info(f"💾 Memory estimate per sample: {total_per_sample / (1024*1024):.1f}MB")
+        logger.info(f"Memory estimate per sample: {total_per_sample / (1024*1024):.1f}MB")
         logger.info(f"   Model params: {param_memory / (1024*1024):.1f}MB")
         logger.info(f"   Activations: {activation_memory / (1024*1024):.1f}MB")
         logger.info(f"   Optimizer: {optimizer_memory / (1024*1024):.1f}MB")
@@ -252,7 +252,7 @@ class MPSMemoryOptimizer:
                         'per_device_train_batch_size': batch_recommendations['recommended_batch_size'],
                         'gradient_accumulation_steps': batch_recommendations['gradient_accumulation_steps'],
                     }
-                    logger.info(f"📊 Applied profiled batch config: {batch_config}")
+                    logger.info(f"Applied profiled batch config: {batch_config}")
                 except Exception as e:
                     logger.warning(f"Batch profiling failed, using defaults: {e}")
                     batch_config = {
@@ -312,7 +312,7 @@ class MPSMemoryOptimizer:
         # Note: remove_unused_columns and dataloader_timeout are handled in base config
         # to avoid conflicts with TrainingArguments validation
 
-        logger.info("⚡ Enhanced MPS-optimized training configuration:")
+        logger.info("Enhanced MPS-optimized training configuration:")
         for key, value in optimized_config.items():
             if key in ['learning_rate', 'per_device_train_batch_size', 'gradient_accumulation_steps',
                       'bf16', 'fp16', 'gradient_checkpointing', 'warmup_steps']:
@@ -519,13 +519,13 @@ class MPSTrainingMonitor:
             self.last_memory_check = self.step_count
 
             if health['status'] == 'warning':
-                print(f"⚠️  Step {step}: {', '.join(health['warnings'])}")
+                print(f"Warning: Step {step}: {', '.join(health['warnings'])}")
                 if self.should_clear_cache():
-                    print("🧹 Clearing MPS cache to free memory...")
+                    print("Clearing MPS cache to free memory...")
                     torch.mps.empty_cache()
 
             elif health['status'] == 'ok' and loss is not None:
-                print(f"✅ Step {step}: Loss={loss:.4f}, Memory={health['current_memory_gb']:.1f}GB")
+                print(f"Step {step}: Loss={loss:.4f}, Memory={health['current_memory_gb']:.1f}GB")
 
 
 class MPSDataLoaderOptimizer:
@@ -602,9 +602,9 @@ def setup_mps_environment():
     os.environ.setdefault('PYTORCH_ENABLE_MPS_FALLBACK', '1')  # Enable CPU fallback for unsupported ops
 
     if torch.backends.mps.is_available():
-        logger.info("✅ MPS environment configured for optimal performance")
+        logger.info("MPS environment configured for optimal performance")
     else:
-        logger.warning("⚠️  MPS not available, using CPU fallback")
+        logger.warning("MPS not available, using CPU fallback")
 
 
 # Initialize MPS environment on import

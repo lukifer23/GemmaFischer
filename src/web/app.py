@@ -129,18 +129,18 @@ def log_performance_stats(question, response_time, response_length, context_leng
         
         # Log to terminal
         print(f"\n{'='*60}")
-        print(f"📊 PERFORMANCE METRICS - Request #{performance_stats['request_count']}")
+        print(f"PERFORMANCE METRICS - Request #{performance_stats['request_count']}")
         print(f"{'='*60}")
-        print(f"⏱️  Response Time: {response_time:.3f}s")
-        print(f"📈 Avg Response Time: {performance_stats['avg_response_time']:.3f}s")
-        print(f"⚡ Min/Max Response Time: {performance_stats['min_response_time']:.3f}s / {performance_stats['max_response_time']:.3f}s")
-        print(f"🧠 Memory Usage: {performance_stats['memory_usage_mb']:.1f} MB")
-        print(f"💻 CPU Usage: {performance_stats['cpu_usage_percent']:.1f}%")
-        print(f"🚀 Tokens/Second: {performance_stats['tokens_per_second']:.1f}")
-        print(f"📝 Context Length: {context_length} chars")
-        print(f"📏 Response Length: {len(response_length)} chars")
-        print(f"❓ Question: {question[:100]}{'...' if len(question) > 100 else ''}")
-        print(f"⏰ Timestamp: {performance_stats['last_request_time']}")
+        print(f"Response Time: {response_time:.3f}s")
+        print(f"Avg Response Time: {performance_stats['avg_response_time']:.3f}s")
+        print(f"Min/Max Response Time: {performance_stats['min_response_time']:.3f}s / {performance_stats['max_response_time']:.3f}s")
+        print(f"Memory Usage: {performance_stats['memory_usage_mb']:.1f} MB")
+        print(f"CPU Usage: {performance_stats['cpu_usage_percent']:.1f}%")
+        print(f"Tokens/Second: {performance_stats['tokens_per_second']:.1f}")
+        print(f"Context Length: {context_length} chars")
+        print(f"Response Length: {len(response_length)} chars")
+        print(f"Question: {question[:100]}{'...' if len(question) > 100 else ''}")
+        print(f"Timestamp: {performance_stats['last_request_time']}")
         print(f"{'='*60}\n")
 
 
@@ -251,7 +251,7 @@ class ChessModelInterface:
                     except Exception:
                         pass
         except Exception as err:
-            print(f"⚠️ Stockfish analysis failed: {err}")
+            print(f"Stockfish analysis failed: {err}")
             return None
 
         if not best_entries:
@@ -290,7 +290,7 @@ class ChessModelInterface:
             move = to_san(move_uci) if move_uci else None
             if not move:
                 continue
-            alt_lines.append(f"• {move} (eval {format_score(entry)})")
+            alt_lines.append(f"- {move} (eval {format_score(entry)})")
 
         text_lines = [
             "Stockfish analysis:",
@@ -308,7 +308,7 @@ class ChessModelInterface:
         return ok
 
     def generate_response(self, question: str, context: Optional[str] = None, mode: str = 'tutor', max_length: int = 200) -> Dict[str, Any]:
-        print(f"🎯 ChessModel.generate_response called with mode: {mode}")
+        print(f"ChessModel.generate_response called with mode: {mode}")
         from src.inference.uci_utils import extract_fen
 
         fen_in_prompt = extract_fen(question) or extract_fen(context or "")
@@ -353,7 +353,7 @@ class ChessModelInterface:
 
         # Ensure model is loaded on first request
         if not self.is_loaded:
-            print("🔄 Loading model on-demand for web request...")
+            print("Loading model on-demand for web request...")
             if not self.load_model():
                 return {
                     'error': 'Model not loaded',
@@ -377,8 +377,8 @@ class ChessModelInterface:
         if isinstance(result, dict):
             result.setdefault('active_adapter', getattr(self._inference, '_active_adapter', None))
             # Debug: Log what we're actually returning
-            print(f"🔍 Web response: confidence={result.get('confidence', 'N/A')}, response_length={len(result.get('response', ''))}")
-            print(f"🔍 Response preview: '{result.get('response', '')[:100]}...'")
+            print(f"Web response: confidence={result.get('confidence', 'N/A')}, response_length={len(result.get('response', ''))}")
+            print(f"Response preview: '{result.get('response', '')[:100]}...'")
         return result
 
     def analyze_with_engine(self, fen: str, intent: Optional[str] = None, explanation_mode: str = "tutor") -> Dict[str, Any]:
@@ -390,10 +390,10 @@ class ChessModelInterface:
     def generate_parallel_responses(self, question: str, context: Optional[str] = None,
                                    experts: List[str] = None, max_length: int = 200) -> Dict[str, Dict[str, Any]]:
         """Generate responses from multiple experts in parallel."""
-        print(f"🎯 ChessModel.generate_parallel_responses called for experts: {experts or ['uci', 'tutor', 'director']}")
+        print(f"ChessModel.generate_parallel_responses called for experts: {experts or ['uci', 'tutor', 'director']}")
         # Ensure model is loaded on first request
         if not self.is_loaded:
-            print("🔄 Loading model on-demand for parallel web request...")
+            print("Loading model on-demand for parallel web request...")
             if not self.load_model():
                 # Return error responses only for requested experts
                 error_response = {'error': 'Model not loaded', 'response': '', 'confidence': 0.0, 'generation_time': 0.0, 'cached': False, 'cache_hit_rate': 0.0, 'model_loaded': False, 'mode': None}
@@ -970,17 +970,17 @@ def ask_question():
                 'confidence': 0.0
             })
 
-        print(f"\n🎯 NEW REQUEST RECEIVED")
-        print(f"📝 Question: {question}")
-        print(f"📋 Context: {context if context else 'None'}")
-        print(f"⏰ Start Time: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
+        print(f"\nNEW REQUEST RECEIVED")
+        print(f"Question: {question}")
+        print(f"Context: {context if context else 'None'}")
+        print(f"Start Time: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
 
         # Get RAG knowledge for the question
         rag_knowledge = chess_rag.get_relevant_knowledge(question)
         rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
         enhanced_context = f"{rag_context}{context}" if context else rag_context
         
-        print(f"🧠 RAG Knowledge: {rag_knowledge}")
+        print(f"RAG Knowledge: {rag_knowledge}")
 
         # Extract FEN once and prefer HybridEngine (LC0) for move-focused requests
         from src.inference.uci_utils import extract_fen
@@ -1017,12 +1017,12 @@ def ask_question():
                 }
                 return jsonify(response_payload)
             except Exception as hybrid_exc:
-                print(f"⚠️ WEB: Hybrid engine analysis failed ({hybrid_exc}), falling back to model/MoE")
+                print(f"WEB: Hybrid engine analysis failed ({hybrid_exc}), falling back to model/MoE")
 
         # Handle expert selection with MoE routing support (only when no FEN-driven hybrid path)
         if expert == 'auto' and chess_model._inference.moe_enabled and chess_model._inference.moe_manager and not fen_for_hybrid:
             # Use MoE intelligent routing
-            print("🎯 WEB: Using MoE intelligent routing for 'auto' mode")
+            print("WEB: Using MoE intelligent routing for 'auto' mode")
             # Extract FEN for MoE routing
             fen = extract_fen(question) or extract_fen(enhanced_context)
             if fen:
@@ -1048,10 +1048,10 @@ def ask_question():
                         'context': context
                     })
                 except Exception as moe_err:
-                    print(f"⚠️ WEB: MoE routing failed, falling back to single expert: {moe_err}")
+                    print(f"WEB: MoE routing failed, falling back to single expert: {moe_err}")
                     # Fall through to single expert mode
             else:
-                print("⚠️ WEB: No FEN found for MoE routing, falling back to single expert")
+                print("WEB: No FEN found for MoE routing, falling back to single expert")
                 # Fall through to single expert mode
 
         # (MoE may have handled the request above; otherwise continue to single-expert path)
@@ -1071,13 +1071,13 @@ def ask_question():
         # Switch adapter explicitly by expert
         try:
             if expert in ('uci', 'tutor', 'director'):
-                print(f"🔄 WEB: Setting active adapter to: {expert}")
+                print(f"WEB: Setting active adapter to: {expert}")
                 result = chess_model._inference.set_active_adapter(expert)
-                print(f"🔧 WEB: Adapter set result: {result}")
+                print(f"WEB: Adapter set result: {result}")
                 active_adapter = getattr(chess_model._inference, '_active_adapter', None)
-                print(f"🔍 WEB: Currently active adapter: {active_adapter}")
+                print(f"WEB: Currently active adapter: {active_adapter}")
         except Exception as e:
-            print(f"❌ WEB: Adapter switching failed: {e}")
+            print(f"WEB: Adapter switching failed: {e}")
 
         # Strengthen chess context for all questions
         chess_keywords = ['chess', 'fen', 'position', 'move', 'tactics', 'strategy', 'opening', 'endgame', 'pawn', 'rook', 'knight', 'bishop', 'queen', 'king', 'check', 'mate', 'castl']
@@ -1101,8 +1101,8 @@ def ask_question():
         # Detailed routing + context diagnostics
         try:
             info = chess_model._inference.get_model_info()
-            print(f"🔧 Active adapter: {info.get('active_adapter')} | Available: {list(info.get('available_adapters', {}).keys())}")
-            print(f"🧵 Prompt chars: {result.get('prompt_len_chars')} | Answer chars: {result.get('answer_len_chars')}")
+            print(f"Active adapter: {info.get('active_adapter')} | Available: {list(info.get('available_adapters', {}).keys())}")
+            print(f"Prompt chars: {result.get('prompt_len_chars')} | Answer chars: {result.get('answer_len_chars')}")
         except Exception:
             pass
         
@@ -1112,11 +1112,11 @@ def ask_question():
         tokens_per_second = len(response_text.split()) / response_time if response_time > 0 else 0
         context_length = len(enhanced_context) if enhanced_context else 0
         
-        print(f"⏱️  Response Time: {response_time:.2f}s")
-        print(f"🚀 Tokens/Second: {tokens_per_second:.1f}")
-        print(f"📊 Response Length: {len(response_text)} chars")
-        print(f"📋 Context Length: {context_length} chars")
-        print(f"🎯 Confidence: {result.get('confidence', 0.0):.2f}")
+        print(f"Response Time: {response_time:.2f}s")
+        print(f"Tokens/Second: {tokens_per_second:.1f}")
+        print(f"Response Length: {len(response_text)} chars")
+        print(f"Context Length: {context_length} chars")
+        print(f"Confidence: {result.get('confidence', 0.0):.2f}")
         
         # Log performance stats
         response_text = result.get('response', '')
@@ -1130,7 +1130,7 @@ def ask_question():
 
     except Exception as e:
         response_time = time.time() - start_time
-        print(f"\n❌ API ERROR after {response_time:.3f}s")
+        print(f"\nAPI ERROR after {response_time:.3f}s")
         print(f"Error: {e}")
         traceback.print_exc()
         
@@ -1169,18 +1169,18 @@ def ask_parallel():
                 'director': {'response': 'Please ask a chess-related question.', 'confidence': 0.0, 'generation_time': 0.0, 'cached': False, 'cache_hit_rate': 0.0, 'model_loaded': False, 'mode': 'director'}
             })
 
-        print(f"\n🎯 NEW PARALLEL REQUEST RECEIVED")
-        print(f"📝 Question: {question}")
-        print(f"📋 Context: {context if context else 'None'}")
-        print(f"👥 Experts: {experts or ['uci', 'tutor', 'director']}")
-        print(f"⏰ Start Time: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
+        print(f"\nNEW PARALLEL REQUEST RECEIVED")
+        print(f"Question: {question}")
+        print(f"Context: {context if context else 'None'}")
+        print(f"Experts: {experts or ['uci', 'tutor', 'director']}")
+        print(f"Start Time: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}")
 
         # Get RAG knowledge for the question
         rag_knowledge = chess_rag.get_relevant_knowledge(question)
         rag_context = f"Chess Knowledge: {rag_knowledge}\n\n" if rag_knowledge else ""
         enhanced_context = f"{rag_context}{context}" if context else rag_context
 
-        print(f"🧠 RAG Knowledge: {rag_knowledge}")
+        print(f"RAG Knowledge: {rag_knowledge}")
 
         # Generate parallel responses from all experts
         parallel_results = chess_model.generate_parallel_responses(
@@ -1201,9 +1201,9 @@ def ask_parallel():
             if 'response' in result:
                 expert_lengths[expert] = len(result['response'])
 
-        print(f"⏱️  Total Parallel Time: {total_time:.2f}s")
-        print(f"👥 Expert Times: {expert_times}")
-        print(f"📊 Response Lengths: {expert_lengths}")
+        print(f"Total Parallel Time: {total_time:.2f}s")
+        print(f"Expert Times: {expert_times}")
+        print(f"Response Lengths: {expert_lengths}")
 
         # Log performance stats for each expert
         for expert, result in parallel_results.items():
@@ -1223,7 +1223,7 @@ def ask_parallel():
 
     except Exception as e:
         total_time = time.time() - start_time
-        print(f"\n❌ PARALLEL API ERROR after {total_time:.3f}s")
+        print(f"\nPARALLEL API ERROR after {total_time:.3f}s")
         print(f"Error: {e}")
         traceback.print_exc()
 
@@ -1408,7 +1408,7 @@ def make_move():
         result = chess_game.make_move(move_uci)
         
         # Log the move
-        print(f"\n🎯 CHESS MOVE: {move_uci}")
+        print(f"\nCHESS MOVE: {move_uci}")
         print(f"Success: {result['success']}")
         if result['success']:
             print(f"Game State: {result['game_state']}")
@@ -1440,7 +1440,7 @@ def game_analyze_position():
         rag_advice = chess_rag.get_position_specific_advice(fen, square)
         analysis['rag_advice'] = rag_advice
         
-        print(f"\n🔍 POSITION ANALYSIS: {square}")
+        print(f"\nPOSITION ANALYSIS: {square}")
         print(f"Piece: {analysis['piece_name']}")
         print(f"Legal Moves: {analysis['legal_moves']}")
         print(f"RAG Advice: {rag_advice}")
@@ -1572,11 +1572,11 @@ def stockfish_top_moves():
 def test_stockfish():
     """Test if Stockfish is available and working."""
     try:
-        print(f"\n🔍 TESTING STOCKFISH AVAILABILITY")
+        print(f"\nTESTING STOCKFISH AVAILABILITY")
         
         # Try to find Stockfish
         match = StockfishMatch()
-        print(f"📍 Stockfish path: {match.stockfish_path}")
+        print(f"Stockfish path: {match.stockfish_path}")
         
         # Try to start engine
         if match.start_engine():
@@ -1585,7 +1585,7 @@ def test_stockfish():
             result = match.engine.play(test_board, chess.engine.Limit(time=1.0))
             match.stop_engine()
             
-            print(f"✅ Stockfish test successful - played: {result.move}")
+            print(f"Stockfish test successful - played: {result.move}")
             return jsonify({
                 'success': True,
                 'message': 'Stockfish is working correctly',
@@ -1609,9 +1609,9 @@ def start_stockfish_match():
         model_plays_white = data.get('model_plays_white', True)
         time_control = data.get('time_control', '10+0.1')  # 10 seconds + 0.1s increment
         
-        print(f"\n🎮 STARTING STOCKFISH MATCH")
-        print(f"📋 Model plays: {'White' if model_plays_white else 'Black'}")
-        print(f"⏰ Time control: {time_control}")
+        print(f"\nSTARTING STOCKFISH MATCH")
+        print(f"Model plays: {'White' if model_plays_white else 'Black'}")
+        print(f"Time control: {time_control}")
         
         # Initialize match
         stockfish_match = StockfishMatch(time_control=time_control)
@@ -1685,7 +1685,7 @@ def play_match_move():
             'game_result': stockfish_match._determine_result() if stockfish_match.board.is_game_over() else None
         }
         if payload['is_game_over']:
-            print("\n🏁 GAME OVER DETECTED")
+            print("\nGAME OVER DETECTED")
             print(f"Winner/Reason: {payload['game_result']}")
         return jsonify(payload)
         
@@ -1759,7 +1759,7 @@ def stop_match():
         if stockfish_match:
             stockfish_match.stop_engine()
             stockfish_match = None
-            print("🛑 Match stopped")
+            print("Match stopped")
         
         return jsonify({'success': True, 'message': 'Match stopped'})
         
@@ -1773,7 +1773,7 @@ def reset_game():
     """Reset the chess game to starting position."""
     try:
         chess_game.reset_game()
-        print("\n🔄 GAME RESET")
+        print("\nGAME RESET")
         return jsonify({'success': True, 'message': 'Game reset to starting position'})
         
     except Exception as e:
@@ -1796,7 +1796,7 @@ def get_ai_move():
 
         strategic_intent = (data.get('strategic_intent') or 'positional').strip().lower()
         start_time = time.time()
-        print(f"\n🤖 AI MOVE REQUEST | Player: {current_player} | FEN: {fen}")
+        print(f"\nAI MOVE REQUEST | Player: {current_player} | FEN: {fen}")
 
         if not legal_moves:
             return jsonify({'success': False, 'error': 'No legal moves available', 'game_state': chess_game.game_state})
@@ -1815,7 +1815,7 @@ def get_ai_move():
                     'evaluation_cp': engine_payload.get('evaluation_cp'),
                     'fallback_used': engine_payload.get('fallback_used')
                 }
-                print(f"✅ LC0 move: {move_uci} | time {engine_payload.get('engine_time')}s")
+                print(f"LC0 move: {move_uci} | time {engine_payload.get('engine_time')}s")
                 return jsonify(move_result)
         except Exception as e:
             print(f"LC0 hybrid error: {e}")
@@ -1831,7 +1831,7 @@ def get_ai_move():
                         move_result = chess_game.make_move(fallback_move)
                         move_result['ai_response'] = f"engine fallback: {fallback_move}"
                         move_result['ai_confidence'] = 0.6
-                        print(f"⚙️  Fallback move: {fallback_move}")
+                        print(f"Fallback move: {fallback_move}")
                         return jsonify(move_result)
         except Exception as e:
             print(f"Engine fallback error: {e}")
@@ -1842,7 +1842,7 @@ def get_ai_move():
         move_result = chess_game.make_move(fallback_move)
         move_result['ai_response'] = f"random fallback: {fallback_move}"
         move_result['ai_confidence'] = 0.3
-        print(f"🔁 Random fallback move: {fallback_move}")
+        print(f"Random fallback move: {fallback_move}")
         return jsonify(move_result)
     except Exception as e:
         print(f"AI move error: {e}")
@@ -1864,13 +1864,13 @@ def extract_move_from_response(response: str, legal_moves: List[str]) -> Optiona
     
     for match in matches:
         if match in legal_moves:
-            print(f"✅ Found legal UCI move: {match}")
+            print(f"Found legal UCI move: {match}")
             return match
     
     # Look for partial matches (e.g., if AI says "e2e4" but we have "e2e4" in legal moves)
     for move in legal_moves:
         if move.lower() in response.lower():
-            print(f"✅ Found partial UCI match: {move}")
+            print(f"Found partial UCI match: {move}")
             return move
     
     # Look for SAN format moves and try to convert (simplified)
@@ -1887,10 +1887,10 @@ def extract_move_from_response(response: str, legal_moves: List[str]) -> Optiona
     # Check explanation matches
     for move in explanation_matches:
         if move in legal_moves:
-            print(f"✅ Found move in explanation: {move}")
+            print(f"Found move in explanation: {move}")
             return move
     
-    print("❌ No valid move found in response")
+    print("No valid move found in response")
     return None
 
 
@@ -1972,29 +1972,29 @@ def handle_generic_exception(error):
 
 
 if __name__ == '__main__':
-    print("🚀 Starting ChessGemma Web Interface...")
+    print("Starting ChessGemma Web Interface...")
     print("="*60)
     
     # Show initial system stats
     initial_stats = get_system_stats()
-    print(f"💻 Initial System Stats:")
+    print(f"Initial System Stats:")
     print(f"   Memory: {initial_stats['memory_mb']:.1f} MB")
     print(f"   CPU: {initial_stats['cpu_percent']:.1f}%")
     print(f"   Time: {initial_stats['timestamp']}")
     print("="*60)
 
     # Try to preload the model
-    print("🔄 Preloading model...")
+    print("Preloading model...")
     model_start_time = time.time()
     preload_success = chess_model.load_model()
     model_load_time = time.time() - model_start_time
     
     if preload_success:
-        print(f"✅ Model preloaded successfully in {model_load_time:.3f}s")
+        print(f"Model preloaded successfully in {model_load_time:.3f}s")
         
         # Show model info
         model_info = chess_model._inference.get_model_info()
-        print(f"📊 Model Info:")
+        print(f"Model Info:")
         print(f"   Device: {model_info.get('device', 'unknown')}")
         print(f"   Base Model: {model_info.get('base_model', 'unknown')}")
         print(f"   Adapter: {model_info.get('adapter_path', 'none')}")
@@ -2004,18 +2004,18 @@ if __name__ == '__main__':
         if hasattr(chess_model._inference.model, 'device'):
             print(f"   Model Device: {chess_model._inference.model.device}")
     else:
-        print(f"⚠️  Model preloading failed after {model_load_time:.3f}s - will load on first request")
+        print(f"Model preloading failed after {model_load_time:.3f}s - will load on first request")
 
     # Find an available port
     try:
         port = find_free_port()
         print("="*60)
-        print(f"🌐 Web Interface Ready!")
-        print(f"📍 URL: http://localhost:{port}")
-        print(f"📊 Performance Stats: http://localhost:{port}/api/stats")
-        print(f"🔍 Health Check: http://localhost:{port}/api/health")
+    print(f"Web Interface Ready!")
+    print(f"URL: http://localhost:{port}")
+    print(f"Performance Stats: http://localhost:{port}/api/stats")
+    print(f"Health Check: http://localhost:{port}/api/health")
         print("="*60)
-        print("🎯 Ready to accept chess questions!")
+    print("Ready to accept chess questions!")
         print("="*60)
         
         app.run(
@@ -2025,5 +2025,5 @@ if __name__ == '__main__':
             threaded=True
         )
     except RuntimeError as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         print("Please free up some ports or try again later.")
