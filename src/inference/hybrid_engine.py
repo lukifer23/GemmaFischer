@@ -107,7 +107,7 @@ class HybridEngine:
                     depth=cfg.fallback.depth,
                 )
             except Exception as exc:
-                from ..utils.common import get_logger
+                from src.utils.common import get_logger
                 get_logger(__name__).warning("Failed to initialize Stockfish primary: %s", exc)
                 self.primary = None
 
@@ -122,7 +122,7 @@ class HybridEngine:
                     depth=cfg.fallback.depth,
                 )
             except Exception as exc:
-                from ..utils.common import get_logger
+                from src.utils.common import get_logger
                 get_logger(__name__).warning("Failed to initialize fallback engine: %s", exc)
                 self.fallback = None
 

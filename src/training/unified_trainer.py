@@ -12,7 +12,7 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
-from ..config.config_manager import ConfigManager
+from src.config.config_manager import ConfigManager
 
 
 def _resolve_config_path(path: Optional[str]) -> Path:
@@ -148,8 +148,8 @@ class UnifiedChessTrainer:
     """Unified trainer class for testing purposes."""
 
     def __init__(self):
-        from ..utils.model_validator import ModelValidator
-        from ..data.dataset import ChessDataset
+        from src.utils.model_validator import ModelValidator
+        from src.data.dataset import ChessDataset
 
         self.model_validator = ModelValidator("models", "checkpoints")
         self.eval_datasets = {"test": ChessDataset([])}

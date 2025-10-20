@@ -155,9 +155,11 @@ class TestDataQuality:
             # Basic validation - should be 2-6 characters
             assert 2 <= len(move) <= 6, f"Move {move} has invalid length"
         
+        from src.inference.uci_utils import validate_uci_syntax
+
         for move in invalid_moves:
-            # These should be caught by validation
-            assert len(move) < 2 or len(move) > 6 or not move.isalnum(), f"Move {move} should be invalid"
+            # Use strict UCI syntax validator to catch invalid tokens
+            assert not validate_uci_syntax(move), f"Move {move} should be invalid"
     
     def test_conversation_quality(self):
         """Test conversation quality metrics."""

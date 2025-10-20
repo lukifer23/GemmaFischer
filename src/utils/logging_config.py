@@ -11,6 +11,7 @@ Provides structured logging with:
 """
 
 import logging
+import os
 import logging.handlers
 import json
 import sys
@@ -28,7 +29,11 @@ class StructuredLogger:
     def __init__(self, name: str, log_level: str = "INFO", log_file: Optional[Path] = None):
         self.name = name
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(getattr(logging, log_level.upper()))
+        # Honor CHESSGEMMA_DEBUG to enable verbose debug logs across modules
+        env_debug = os.environ.get("CHESSGEMMA_DEBUG", "0")
+        is_debug = env_debug not in ("0", "false", "False")
+        target_level = "DEBUG" if is_debug else log_level
+        self.logger.setLevel(getattr(logging, target_level.upper()))
 
         # Remove existing handlers to avoid duplicates
         self.logger.handlers.clear()
@@ -46,7 +51,7 @@ class StructuredLogger:
 
         # Console handler
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, log_level.upper()))
+        console_handler.setLevel(getattr(logging, target_level.upper()))
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
 

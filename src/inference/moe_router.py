@@ -177,14 +177,17 @@ class MoEInferenceManager:
             "expert_used": routing_decision.primary_expert
         }
 
-    def analyze_position(self, fen: str, query_type: str = "auto") -> Dict[str, Any]:
-        """Route a position-focused query and expose routing metadata."""
+    def analyze_position(self, fen: str, query_type: str = "auto", question_text: str = "") -> Dict[str, Any]:
+        """Route a position-focused query and expose routing metadata.
+
+        Accepts optional question_text for keyword routing/context features.
+        """
         start_time = time.time()
 
         routing_decision = self.router.route_query(
             fen,
             query_type=query_type,
-            question_text="",
+            question_text=question_text or "",
         )
 
         response_time = time.time() - start_time
@@ -269,8 +272,8 @@ class MoEInferenceManager:
             if hasattr(self.inference_system, "generate_response"):
                 return self.inference_system.generate_response(
                     question,
-                    position_fen=position_fen,
-                    context=context
+                    context=context,
+                    mode='engine' if expert_name == 'uci' else expert_name
                 )
             else:
                 return f"Expert {expert_name} response generation not implemented."

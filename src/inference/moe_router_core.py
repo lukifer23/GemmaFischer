@@ -133,6 +133,26 @@ class ChessMoERouter(nn.Module):
         # The router is used purely for inference; ensure dropout layers are disabled
         self.eval()
 
+    def load_router(self, checkpoint_path: str) -> None:
+        """Load router weights from a checkpoint path.
+
+        Supports PyTorch .pt/.pth binaries and ignores unknown fields. If the
+        file cannot be loaded as a standard state_dict payload, the method
+        fails with a ValueError to signal improper checkpoint format.
+        """
+        try:
+            import torch
+            state = torch.load(checkpoint_path, map_location="cpu")
+            # Some checkpoints store under a nested key
+            if isinstance(state, dict) and "state_dict" in state and isinstance(state["state_dict"], dict):
+                state = state["state_dict"]
+            # Be lenient with unexpected keys
+            self.load_state_dict(state, strict=False)
+            self.eval()
+            logger.info("Loaded MoE router checkpoint: %s", checkpoint_path)
+        except Exception as exc:
+            raise ValueError(f"Unable to load router checkpoint '{checkpoint_path}': {exc}")
+
     def _fen_to_board(self, fen: str) -> chess.Board:
         """Convert a FEN string to a Board with defensive fallback."""
         try:
@@ -588,14 +608,14 @@ class ChessMoERouter(nn.Module):
         """Log routing decision for offline analysis."""
         try:
             log_entry = {
-                "timestamp": time.time(),
+                "timestamp": float(time.time()),
                 "position_fen": position_fen[:100] + "..." if len(position_fen) > 100 else position_fen,
                 "question": question_text[:200] + "..." if len(question_text) > 200 else question_text,
                 "primary_expert": decision.primary_expert,
-                "confidence": decision.confidence_score,
-                "ensemble_mode": decision.ensemble_mode,
-                "fallback_used": decision.fallback_used,
-                "expert_weights": decision.expert_weights
+                "confidence": float(decision.confidence_score) if hasattr(decision.confidence_score, "__float__") else decision.confidence_score,
+                "ensemble_mode": bool(decision.ensemble_mode),
+                "fallback_used": bool(decision.fallback_used),
+                "expert_weights": {k: float(v) if hasattr(v, "__float__") else v for k, v in (decision.expert_weights or {}).items()}
             }
 
             with self._decision_log_lock:

@@ -35,8 +35,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 try:
-    from ..inference.inference import get_inference_instance, analyze_chess_position, generate_best_move
-    from ..inference.chess_engine import ChessEngineManager
+    from src.inference.inference import get_inference_instance, analyze_chess_position, generate_best_move
+    from src.inference.chess_engine import ChessEngineManager
     import chess
 except ImportError:
     logger.warning("Inference not available, using fallback")

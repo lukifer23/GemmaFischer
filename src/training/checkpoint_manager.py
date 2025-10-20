@@ -32,7 +32,7 @@ import sys
 sys.path.insert(0, str(project_root))
 
 try:
-    from ..utils.logging_config import get_logger
+    from src.utils.logging_config import get_logger
     logger = get_logger(__name__)
 except ImportError:
     import logging

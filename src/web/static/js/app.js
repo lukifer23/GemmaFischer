@@ -1768,7 +1768,13 @@ function updateBoardFromFEN(fen) {
 }
 
 function getPieceSymbol(fenChar) {
-  return fenChar || '';
+  // Map FEN characters to Unicode chess glyphs for clear rendering.
+  // Keep the raw letter as an aria-label via title for accessibility elsewhere.
+  const map = {
+    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+  };
+  return map[fenChar] || '';
 }
 
 function updateGameStateDisplay(currentPlayer) {

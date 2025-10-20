@@ -134,7 +134,7 @@ class TestChessGemmaInference:
             assert inference.model is not None
             assert inference.tokenizer is not None
     
-    @patch('src.inference.inference.AutoTokenizer')
+    @patch('src.inference.core_engine.AutoTokenizer')
     def test_load_model_failure(self, mock_tokenizer):
         """Test model loading failure."""
         mock_tokenizer.from_pretrained.side_effect = Exception("Load failed")
@@ -197,8 +197,8 @@ class TestChessGemmaInference:
         assert "confidence" in result
         assert result["model_loaded"] is True
 
-    @patch('src.inference.inference.AutoTokenizer')
-    @patch('src.inference.inference.AutoModelForCausalLM')
+    @patch('src.inference.core_engine.AutoTokenizer')
+    @patch('src.inference.core_engine.AutoModelForCausalLM')
     def test_generate_response_debug_logging(self, mock_model, mock_tokenizer, caplog, monkeypatch):
         """Ensure debug logs are emitted when CHESSGEMMA_DEBUG is set."""
         monkeypatch.setenv('CHESSGEMMA_DEBUG', '1')

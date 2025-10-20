@@ -128,13 +128,13 @@ class ChessGemmaCoreEngine:
                 trust_remote_code=True,
             )
 
-            torch_dtype = torch.float16
+            dtype = torch.float16
             device_map = "auto"
             if torch.backends.mps.is_available():
-                torch_dtype = torch.float32
+                dtype = torch.float32
                 device_map = None
             else:
-                torch_dtype = torch.float32
+                dtype = torch.float32
 
             base_model = AutoModelForCausalLM.from_pretrained(
                 model_ref,
@@ -142,7 +142,7 @@ class ChessGemmaCoreEngine:
                 device_map=device_map,
                 attn_implementation="eager",
                 trust_remote_code=True,
-                torch_dtype=torch_dtype,
+                dtype=dtype,
             )
 
             # Apply adapter if available
