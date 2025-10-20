@@ -377,21 +377,21 @@ class ChessGemmaInference:
 
             if router_checkpoint is None:
                 router_dir = checkpoints_root / "moe_router"
-            router_patterns = [
-                str(router_dir / "router*.pt"),
-                str(router_dir / "router*.bin"),
-                str(router_dir / "router*.safetensors"),
-                str(router_dir / "checkpoint-*" / "router*.pt"),
-                str(router_dir / "checkpoint-*" / "*.pt"),
-                str(router_dir / "checkpoint-*" / "*.bin"),
-                str(router_dir / "checkpoint-*" / "*.safetensors"),
-                str(router_dir / "final_checkpoint.pth"),
-                str(router_dir / "best_checkpoint.pth"),
-                str(router_dir / "*.pt"),
-                str(router_dir / "*.bin"),
-                str(router_dir / "*.safetensors"),
-            ]
-            router_checkpoint = _find_latest_file(router_patterns)
+                router_patterns = [
+                    str(router_dir / "router*.pt"),
+                    str(router_dir / "router*.bin"),
+                    str(router_dir / "router*.safetensors"),
+                    str(router_dir / "checkpoint-*" / "router*.pt"),
+                    str(router_dir / "checkpoint-*" / "*.pt"),
+                    str(router_dir / "checkpoint-*" / "*.bin"),
+                    str(router_dir / "checkpoint-*" / "*.safetensors"),
+                    str(router_dir / "final_checkpoint.pth"),
+                    str(router_dir / "best_checkpoint.pth"),
+                    str(router_dir / "*.pt"),
+                    str(router_dir / "*.bin"),
+                    str(router_dir / "*.safetensors"),
+                ]
+                router_checkpoint = _find_latest_file(router_patterns)
 
             if router_checkpoint is None:
                 _disable_moe(
