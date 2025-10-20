@@ -269,7 +269,7 @@ class ChessGemmaErrorHandler:
             try:
                 result = strategy(error_record)
                 if result.get('success', False):
-                    logger.info(f"✅ Recovery successful using {strategy.__name__}")
+                    logger.info(f"Recovery successful using {strategy.__name__}")
                     error_record.recovery_attempts.append({
                         'strategy': strategy.__name__,
                         'success': True,

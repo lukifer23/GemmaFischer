@@ -17,8 +17,8 @@ from .chess_engine import (
     PositionAnalysis,
     lc0_pool,
 )
-from ..config.config_manager import ChessEngineConfig
-from ..utils.common import get_config_manager, get_logger
+from src.config.config_manager import ChessEngineConfig
+from src.utils.common import get_config_manager, get_logger
 
 # Module logger
 logger = get_logger(__name__)

@@ -70,23 +70,23 @@ Enhanced evaluation with statistical analysis and regression detection:
 
 ```bash
 # Advanced Benchmarking Results
-Accuracy: 85.2% (±2.1% confidence interval)
+Accuracy: 85.2% (+/-2.1% confidence interval)
 Precision: 87.3% | Recall: 83.1% | F1-Score: 85.2%
-Response Time: 0.45s mean (±0.12s std, 95th percentile: 0.67s)
+Response Time: 0.45s mean (+/-0.12s std, 95th percentile: 0.67s)
 Throughput: 2.2 queries/second
 Quality Score: 0.82 (consistency: 0.91)
 Cache Hit Rate: 73.4%
 
 # Regression Detection Status
-Baseline Comparisons: ✓ Active (statistical significance testing)
-Performance Trends: ✓ Monitored (historical analysis)
-Anomaly Detection: ✓ Working (automated alerts)
-Confidence Intervals: ✓ Calculated (95% confidence level)
+Baseline Comparisons: Active (statistical significance testing)
+Performance Trends: Monitored (historical analysis)
+Anomaly Detection: Working (automated alerts)
+Confidence Intervals: Calculated (95% confidence level)
 
 # Stockfish Match Evaluation
 Top Move Match: 45.2% (vs Stockfish depth 12)
 Top 3 Match: 72.8%
-Evaluation Accuracy: ±180 centipawns average deviation
+Evaluation Accuracy: +/-180 centipawns average deviation
 Legal Move Rate: 100% (Stockfish validation working)
 ```
 

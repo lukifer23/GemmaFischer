@@ -21,7 +21,7 @@ from peft import PeftModel
 import threading
 
 # Import common utilities
-from ..utils.common import (
+from src.utils.common import (
     get_logger, get_error_handler, get_config_manager,
     find_latest_dir, resolve_model_path, resolve_adapter_path,
     safe_import, conditional_import
@@ -204,7 +204,7 @@ class ChessGemmaCoreEngine:
                     else:
                         print("Model validation passed")
                 except Exception as val_e:
-                    print(f"⚠️  Model validation error: {val_e}")
+                    print(f"Warning: Model validation error: {val_e}")
 
             self.is_loaded = True
             self._model_loading = False  # Reset loading flag

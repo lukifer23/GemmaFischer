@@ -570,12 +570,12 @@ class ComprehensiveChessEvaluator:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
-        logger.info(f"📄 Evaluation report saved to: {output_path}")
+        logger.info(f"Evaluation report saved to: {output_path}")
 
     def run_benchmark_comparison(self, models_to_compare: List[str],
                                 test_dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Run benchmark comparison between different models."""
-        logger.info(f"🏁 Running benchmark comparison for {len(models_to_compare)} models")
+        logger.info(f"Running benchmark comparison for {len(models_to_compare)} models")
 
         benchmark_results = {}
 
@@ -687,7 +687,7 @@ def main():
 
     if args.benchmark:
         # Run benchmark comparison
-        print(f"🏁 Running benchmark comparison: {args.benchmark}")
+        print(f"Running benchmark comparison: {args.benchmark}")
         results = evaluator.run_benchmark_comparison(args.benchmark, test_dataset)
     else:
         # Run single comprehensive evaluation

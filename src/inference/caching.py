@@ -17,7 +17,7 @@ from collections import OrderedDict
 from typing import Dict, Any, Optional, Tuple
 
 # Import common utilities
-from ..utils.common import get_logger, get_config_manager
+from src.utils.common import get_logger, get_config_manager
 
 # Get utility functions
 logger = get_logger(__name__)
@@ -470,7 +470,7 @@ class ChessInferenceCache:
             self._response_cache.clear()
             self._cache_hits = 0
         self._kv_cache.clear()
-        logger.info("🧹 Inference caches cleared")
+        logger.info("Inference caches cleared")
 
     def get_cache_info(self) -> Dict[str, Any]:
         """Get detailed cache information."""

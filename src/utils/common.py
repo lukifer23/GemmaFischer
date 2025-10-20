@@ -60,7 +60,7 @@ def get_error_handler():
 def get_config_manager():
     """Get configuration manager with fallback."""
     try:
-        from ..config.config_manager import get_config
+        from src.config.config_manager import get_config, get_environment_config
         return get_config
     except ImportError:
         return None
@@ -154,57 +154,11 @@ def resolve_adapter_path(project_root: Optional[Path] = None) -> Optional[Path]:
 
 def get_environment_config() -> Dict[str, Any]:
     """Get configuration from environment variables."""
-    config = {}
-
-    # Model configuration
-    if model_id := os.environ.get("CHESSGEMMA_MODEL_ID"):
-        config['model_id'] = model_id
-    if model_path := os.environ.get("CHESSGEMMA_MODEL_PATH"):
-        config['model_path'] = model_path
-
-    # System configuration
-    if debug := os.environ.get('CHESSGEMMA_DEBUG'):
-        config['debug_mode'] = debug.lower() not in ('0', 'false', 'False')
-
-    if timeout := os.environ.get('CHESSGEMMA_TIMEOUT_MINUTES'):
-        try:
-            config['timeout_minutes'] = int(timeout)
-        except ValueError:
-            pass
-
-    if cache_size := os.environ.get('CHESSGEMMA_CACHE_SIZE'):
-        try:
-            config['cache_size'] = int(cache_size)
-        except ValueError:
-            pass
-
-    # Engine configuration
-    if engine_primary := os.environ.get("CHESSGEMMA_ENGINE_PRIMARY"):
-        config['engine_primary'] = engine_primary.lower()
-
-    if lc0_path := os.environ.get("CHESSGEMMA_LC0_PATH"):
-        config['lc0_path'] = lc0_path
-
-    if lc0_weights := os.environ.get("CHESSGEMMA_LC0_WEIGHTS"):
-        config['lc0_weights'] = lc0_weights
-
-    if lc0_backend := os.environ.get("CHESSGEMMA_LC0_BACKEND"):
-        config['lc0_backend'] = lc0_backend
-
-    if lc0_threads := os.environ.get("CHESSGEMMA_LC0_THREADS"):
-        config['lc0_threads'] = lc0_threads
-
-    if lc0_use_pool := os.environ.get("CHESSGEMMA_LC0_USE_POOL"):
-        config['lc0_use_pool'] = lc0_use_pool
-
-    # LC0 optional time limit (seconds)
-    if lc0_time_limit := os.environ.get("CHESSGEMMA_LC0_TIME_LIMIT"):
-        config['lc0_time_limit'] = lc0_time_limit
-
-    if fallback_engine := os.environ.get("CHESSGEMMA_FALLBACK_ENGINE_PATH"):
-        config['fallback_engine_path'] = fallback_engine
-
-    return config
+    try:
+        from src.config.config_manager import get_environment_config as _get_env_config
+        return _get_env_config()
+    except ImportError:
+        return {}
 
 
 def safe_file_read(filepath: Union[str, Path], default_content: str = "") -> str:

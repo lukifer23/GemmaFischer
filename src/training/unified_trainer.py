@@ -144,6 +144,17 @@ def main() -> int:
     return 0
 
 
+class UnifiedChessTrainer:
+    """Unified trainer class for testing purposes."""
+
+    def __init__(self):
+        from ..utils.model_validator import ModelValidator
+        from ..data.dataset import ChessDataset
+
+        self.model_validator = ModelValidator("models", "checkpoints")
+        self.eval_datasets = {"test": ChessDataset([])}
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
 

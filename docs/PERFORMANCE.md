@@ -49,7 +49,7 @@ This document provides comprehensive performance metrics for GemmaFischer's hybr
 | **Parallel ensemble** | 6.0s | 8GB | Disabled by default after router retrain |
 
 **Performance Insights:**
-- **Scalability**: Sub-linear time scaling (3 experts ≠ 3x time)
+- **Scalability**: Sub-linear time scaling (3 experts != 3x time)
 - **Efficiency**: ~25-30% time overhead for 3x richer analysis
 - **Memory**: Linear scaling with expert count
 - **Concurrency**: Thread-safe with proper synchronization
@@ -66,7 +66,7 @@ This document provides comprehensive performance metrics for GemmaFischer's hybr
 - **Move Quality**: 50%+ Stockfish agreement vs 15% for LLM-only
 - **Educational Value**: Strategic explanations enhance move understanding
 - **Performance**: 1.8s average response time with comprehensive analysis
-- **Reliability**: LC0 → LLM → Stockfish fallback chain
+- **Reliability**: LC0 -> LLM -> Stockfish fallback chain
 
 ## Cache Performance
 
@@ -113,12 +113,12 @@ cache_metrics = {
 - **Environment overrides** (CHESSGEMMA_* environment variables)
 - **Expert-specific configs** (uci, tutor, director with different hyperparameters)
 
-**Inference Performance Snapshot (Oct 2025):**
-- Average UCI move latency: **2.28 s** (20-position parity run, depth 6)
-- Legal move rate: **100 %**; Stockfish top-1 agreement: **15 %** (needs further LoRA tuning)
-- MoE routing accuracy: **37 %** (format compliance 82.9 %)
+**Inference Performance Snapshot (Oct 2025):**
+- Average UCI move latency: **2.28 s** (20-position parity run, depth 6)
+- Legal move rate: **100 %**; Stockfish top-1 agreement: **15 %** (needs further LoRA tuning)
+- MoE routing accuracy: **37 %** (format compliance 82.9 %)
 - Cache operations remain sub-microsecond (see benchmark JSON)
-- **2025-10-13 offline regression run** (LC0 enabled, model load skipped via `CHESSGEMMA_SKIP_MODEL_LOAD`): module imports completed in ~9.45 s while cache key/storage operations remained at ≲3.72 µs per op and mock text generation overhead averaged 0.13 ms.【F:inference_performance_benchmark.json†L6-L30】
+- **2025-10-13 offline regression run** (LC0 enabled, model load skipped via `CHESSGEMMA_SKIP_MODEL_LOAD`): module imports completed in ~9.45 s while cache key/storage operations remained at <=3.72 us per op and mock text generation overhead averaged 0.13 ms.
 - **Stockfish parity sanity check (depth 6, offline mode)**: zero legal LC0+LLM moves were produced because the language model was unavailable; Stockfish still analyzed all 100 positions for baseline comparison (report archived under `reports/stockfish_parity_depth6.json`).【F:reports/stockfish_parity_depth6.json†L1-L11】【065372†L1-L101】
 
 ## System Resource Usage
@@ -172,14 +172,14 @@ cache_metrics = {
 parallel_results = benchmark_parallel_execution(num_runs=100)
 sequential_results = benchmark_sequential_execution(num_runs=100)
 
-print(f"Parallel: {parallel_results['avg_time']:.2f}s ± {parallel_results['std_time']:.2f}s")
-print(f"Sequential: {sequential_results['avg_time']:.2f}s ± {sequential_results['std_time']:.2f}s")
+print(f"Parallel: {parallel_results['avg_time']:.2f}s +/- {parallel_results['std_time']:.2f}s")
+print(f"Sequential: {sequential_results['avg_time']:.2f}s +/- {sequential_results['std_time']:.2f}s")
 print(f"Overhead: {parallel_results['avg_time']/sequential_results['avg_time']:.2f}x")
 ```
 
 **Typical Results:**
-- Parallel: 3.15s ± 0.25s
-- Sequential: 6.85s ± 0.35s
+- Parallel: 3.15s +/- 0.25s
+- Sequential: 6.85s +/- 0.35s
 - Overhead: 0.46x (54% faster than 3x sequential)
 
 ### Concurrent Request Handling

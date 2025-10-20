@@ -18,6 +18,12 @@ def convert_to_chat_format(example):
     }
 
 
+# Make load_dataset available at module level for testing
+def load_dataset(*args, **kwargs):
+    from datasets import load_dataset
+    return load_dataset(*args, **kwargs)
+
+
 def convert_and_save(output_dir: str, full: bool = False):
     from datasets import load_dataset
 

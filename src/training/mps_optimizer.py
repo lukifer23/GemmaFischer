@@ -382,9 +382,9 @@ class MPSMemoryOptimizer:
             # Safe gradient checkpointing for MPS
             if hasattr(model, 'gradient_checkpointing_enable'):
                 model.gradient_checkpointing_enable()
-                logger.info("✅ Gradient checkpointing enabled for memory efficiency")
+                logger.info("Gradient checkpointing enabled for memory efficiency")
         except Exception as e:
-            logger.warning(f"⚠️  Gradient checkpointing failed: {e}")
+            logger.warning(f"Gradient checkpointing failed: {e}")
             # Continue without gradient checkpointing
 
         # MPS-specific optimizations
@@ -394,7 +394,7 @@ class MPSMemoryOptimizer:
                     # Ensure all parameters are on MPS
                     module.to(self.device)
         except Exception as e:
-            logger.warning(f"⚠️  Module device placement failed: {e}")
+            logger.warning(f"Module device placement failed: {e}")
 
         # Additional MPS optimizations
         try:
@@ -403,9 +403,9 @@ class MPSMemoryOptimizer:
             # Enable training mode when needed
             model.train()
         except Exception as e:
-            logger.warning(f"⚠️  Model mode switching failed: {e}")
+            logger.warning(f"Model mode switching failed: {e}")
 
-        logger.info("🔧 Model optimized for MPS training with enhanced stability")
+        logger.info("Model optimized for MPS training with enhanced stability")
         return model
 
     def apply_safe_gradient_checkpointing(self, model):
@@ -416,15 +416,15 @@ class MPSMemoryOptimizer:
         try:
             # Check if gradient checkpointing is already enabled
             if hasattr(model, 'is_gradient_checkpointing') and model.is_gradient_checkpointing:
-                logger.info("ℹ️  Gradient checkpointing already enabled")
+                logger.info("Gradient checkpointing already enabled")
                 return True
 
             # Enable gradient checkpointing with error handling
             model.gradient_checkpointing_enable()
-            logger.info("✅ Gradient checkpointing enabled successfully")
+            logger.info("Gradient checkpointing enabled successfully")
             return True
         except Exception as e:
-            logger.warning(f"⚠️  Failed to enable gradient checkpointing: {e}")
+            logger.warning(f"Failed to enable gradient checkpointing: {e}")
             return False
 
     def get_memory_optimization_tips(self) -> List[str]:

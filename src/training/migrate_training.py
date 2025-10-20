@@ -179,13 +179,13 @@ The unified trainer uses built-in expert configurations that can be overridden w
 
 | Feature | Old Scripts | Unified Trainer |
 |---------|-------------|-----------------|
-| Individual expert training | ✅ train_lora_poc.py | ✅ --expert option |
-| Multi-expert training | ✅ train_chessgemmma.py | ✅ --expert all |
-| Curriculum learning | ✅ curriculum_trainer.py | ✅ Built-in support |
-| Checkpoint management | ✅ Multiple scripts | ✅ Unified system |
-| Error handling | ✅ Basic | ✅ Comprehensive |
-| Monitoring | ✅ Basic | ✅ Advanced |
-| Validation | ✅ Manual | ✅ Automatic |
+| Individual expert training | Yes (train_lora_poc.py) | Yes (--expert option) |
+| Multi-expert training | Yes (train_chessgemmma.py) | Yes (--expert all) |
+| Curriculum learning | Yes (curriculum_trainer.py) | Yes (Built-in support) |
+| Checkpoint management | Multiple scripts | Unified system |
+| Error handling | Basic | Comprehensive |
+| Monitoring | Basic | Advanced |
+| Validation | Manual | Automatic |
 
 ## Benefits of Migration
 
@@ -211,29 +211,29 @@ If you encounter issues during migration, check the unified trainer logs and ref
         with open(output_path, 'w') as f:
             f.write(guide_content)
         
-        print(f"📝 Migration guide created: {output_path}")
+        print(f"Migration guide created: {output_path}")
     
     def test_unified_trainer(self) -> bool:
         """Test if the unified trainer works correctly."""
         try:
-            print("🧪 Testing unified trainer...")
+            print("Testing unified trainer...")
             
             # Test initialization
             trainer = UnifiedChessTrainer()
-            print("✅ Unified trainer initialized successfully")
+            print("Unified trainer initialized successfully")
             
             # Test expert configs
             configs = trainer.expert_configs
-            print(f"✅ Found {len(configs)} expert configurations")
+            print(f"Found {len(configs)} expert configurations")
             
             for expert_name, config in configs.items():
                 print(f"   - {expert_name}: {config.description}")
             
-            print("✅ Unified trainer test passed")
+            print("Unified trainer test passed")
             return True
             
         except Exception as e:
-            print(f"❌ Unified trainer test failed: {e}")
+            print(f"Unified trainer test failed: {e}")
             return False
     
     def archive_old_scripts(self, archive_dir: str = "archive/training_scripts") -> None:
@@ -249,7 +249,7 @@ If you encounter issues during migration, check the unified trainer logs and ref
                 # Copy to archive
                 archive_script_path = archive_path / script_name
                 shutil.copy2(script_path, archive_script_path)
-                print(f"📦 Archived {script_name} to {archive_script_path}")
+                print(f"Archived {script_name} to {archive_script_path}")
                 
                 # Add deprecation notice
                 with open(script_path, 'r') as f:
@@ -269,7 +269,7 @@ For migration help, see TRAINING_MIGRATION_GUIDE.md
                 with open(script_path, 'w') as f:
                     f.write(deprecation_notice + content)
                 
-                print(f"⚠️  Added deprecation notice to {script_name}")
+                print(f"Added deprecation notice to {script_name}")
 
 
 def main():
@@ -305,25 +305,25 @@ Examples:
         parser.print_help()
         return
     
-    print("🔄 ChessGemma Training Migration Helper")
+    print("ChessGemma Training Migration Helper")
     print("=" * 50)
     
     helper = TrainingMigrationHelper()
     
     if args.analyze or args.migrate:
-        print("🔍 Analyzing old training scripts...")
+        print("Analyzing old training scripts...")
         analysis = helper.analyze_old_scripts()
         
-        print(f"\n📊 Analysis Results:")
+        print(f"\nAnalysis Results:")
         print(f"   Found scripts: {len(analysis['found_scripts'])}")
         print(f"   Missing scripts: {len(analysis['missing_scripts'])}")
         
         if analysis['found_scripts']:
-            print(f"\n📝 Found old scripts:")
+            print(f"\nFound old scripts:")
             for script in analysis['found_scripts']:
                 print(f"   - {script['name']}: {script['description']}")
         
-        print(f"\n📋 Migration recommendations:")
+        print(f"\nMigration recommendations:")
         for rec in analysis['migration_recommendations']:
             print(f"   {rec}")
         
@@ -331,20 +331,20 @@ Examples:
         helper.create_migration_guide(args.guide)
     
     if args.test or args.migrate:
-        print("\n🧪 Testing unified trainer...")
+        print("\nTesting unified trainer...")
         success = helper.test_unified_trainer()
         if not success:
-            print("❌ Migration test failed - please fix issues before proceeding")
+            print("Migration test failed - please fix issues before proceeding")
             sys.exit(1)
     
     if args.archive or args.migrate:
-        print("\n📦 Archiving old training scripts...")
+        print("\nArchiving old training scripts...")
         helper.archive_old_scripts()
     
     if args.migrate:
-        print("\n✅ Migration completed successfully!")
-        print("📝 See TRAINING_MIGRATION_GUIDE.md for detailed instructions")
-        print("🚀 You can now use: python -m src.training.unified_trainer")
+        print("\nMigration completed successfully!")
+        print("See TRAINING_MIGRATION_GUIDE.md for detailed instructions")
+        print("You can now use: python -m src.training.unified_trainer")
 
 
 if __name__ == "__main__":

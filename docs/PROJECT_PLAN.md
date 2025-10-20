@@ -1,4 +1,4 @@
-# Project Plan: GemmaFischer — Hybrid Chess LLM/LC0 System
+# Project Plan: GemmaFischer - Hybrid Chess LLM/LC0 System
 
 ## Summary
 
@@ -9,7 +9,7 @@
 
 The system uses LoRA adaptation on Apple Silicon with MPS acceleration and features intelligent routing between LC0's neural engine capabilities and the LLM's educational functions.
 
-**Platform**: Mac-only (M3 Pro) with MPS acceleration and Metal backend optimization - no CUDA/CPU fallbacks.
+**Platform**: Mac-only (M3 Pro) with MPS acceleration and Metal backend optimization - no CUDA or CPU fallbacks.
 
 ---
 
@@ -17,9 +17,9 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 
 ### Core LLM Development
 
-- [x] Start from *ChessGemma* (fine-tuned on PGNs) → evolve as `GemmaFischer`
+- [x] Start from *ChessGemma* (fine-tuned on PGNs) -> evolve as `GemmaFischer`
 - [x] Add **Chain-of-Thought (CoT)** reasoning capability
-  - Format: `[Position] → Think step-by-step → Evaluate threats → Suggest best move`
+  - Format: `[Position] -> Think step-by-step -> Evaluate threats -> Suggest best move`
 - [x] Train dual-purpose outputs:
   - `Tutor:` Mode with rich explanations
   - `Engine:` Mode with minimal fast UCI-style outputs
@@ -41,7 +41,7 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 - [x] **Tactical Awareness**
   - [x] Train on Lichess tactics DB + custom puzzles (5,133 tactical examples with CoT reasoning)
 - [ ] **Position Evaluation**
-  - Fine-tune on FEN → Eval scores (from SF or Leela)
+  - Fine-tune on FEN -> Eval scores (from SF or Leela)
 - [ ] **Style Conditioning (optional)**
   - Prompt tokens: `Style[Fischer]`, `Style[Aggressive]`, etc.
 
@@ -50,12 +50,12 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 ### UCI Backend Interfacing
 
 - [x] Implement adapter for UCI protocol compatibility
-  - Input: UCI-style moves → Output: bestmove
+  - Input: UCI-style moves -> Output: bestmove
 - [x] Format board state for prompt injection
-  - SAN/UCI → FEN → parsed prompt
+  - SAN/UCI -> FEN -> parsed prompt
 - [x] Optional: fallback mode with Stockfish API or `python-chess`
 - [x] Build bridge module:
-  - `LLM_UCI.py` → handles I/O to command line UCI loop
+  - `LLM_UCI.py` -> handles I/O to command line UCI loop
 
 ---
 
@@ -81,27 +81,27 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 ### Routing Policy (deterministic v1)
 
 - [ ] UCI expert triggers:
-  - UCI protocol or `Mode=engine` or prompts requesting “best move”/move-only.
+  - UCI protocol or `Mode=engine` or prompts requesting "best move"/move-only.
   - FEN present with explicit move intent.
 - [ ] Tutor expert triggers:
-  - FEN present with “analyze/explain/why”, or `Mode=tutor`.
+  - FEN present with "analyze/explain/why", or `Mode=tutor`.
 - [ ] Director expert triggers:
   - No FEN; rules, opening names/plans, strategy, history, concepts.
 - [ ] Ambiguity resolution:
-  - FEN present without explicit intent → Tutor.
-  - Move-only requests with prose allowed → UCI.
-  - If user asks “explain but only output the move”, prefer UCI and suppress prose.
+  - FEN present without explicit intent -> Tutor.
+  - Move-only requests with prose allowed -> UCI.
+  - If user asks "explain but only output the move", prefer UCI and suppress prose.
 
 ### Datasets (by expert)
 
 - [ ] UCI dataset
   - [ ] Lichess puzzles first-move; Stockfish-labeled random FENs; self-play slices.
-  - [ ] Format: `FEN: <fen>\nMode: Engine\nStyle: <style>\nMove:` → response is single UCI token.
+  - [ ] Format: `FEN: <fen>\nMode: Engine\nStyle: <style>\nMove:` -> response is single UCI token.
   - [ ] Corner cases: castling, promotions (incl. under-promo), en passant, checks/mates.
 - [ ] Tutor dataset
   - [ ] Puzzles + explanations; commentary snippets; curated CoT.
   - [ ] Format: stepwise bullets; final line `Best move: <uci>`.
-  - [ ] Ensure final UCI is legal/top-1/top-2 at depth 8–12.
+  - [ ] Ensure final UCI is legal/top-1/top-2 at depth 8-12.
 - [ ] Director dataset
   - [ ] Rules/concepts, opening theory (ECO), endgames, strategy Q&A.
   - [ ] No mandatory UCI unless asked; emphasize factual grounding.
@@ -112,23 +112,23 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 ### Training (MPS-only)
 
 - [ ] Base: `google/gemma-3-270m` (local snapshot or HF cache).
-- [ ] LoRA per expert: r=16–32, alpha=32–64, dropout ≤0.05, targets `q,k,v,o,(gate,up,down)` as needed.
-- [ ] Seq length: 512–1024 (start 512 for MPS headroom).
-- [ ] Optim: cosine, 10% warmup, LR 1e-4–2e-4, batch 1, grad-accum as required.
+- [ ] LoRA per expert: r=16-32, alpha=32-64, dropout <=0.05, targets `q,k,v,o,(gate,up,down)` as needed.
+- [ ] Seq length: 512-1024 (start 512 for MPS headroom).
+- [ ] Optim: cosine, 10% warmup, LR 1e-4-2e-4, batch 1, grad-accum as required.
 - [ ] Checkpointing: save every 200–400 steps; keep last 3.
 - [ ] Label masking: instruction-style (mask prompt, supervise response only).
 - [ ] Curriculum per expert:
-  - [ ] UCI: basics → tactics → edge cases.
-  - [ ] Tutor: structured analysis → multi-move puzzles.
-  - [ ] Director: rules → openings → endgames → strategy.
+  - [ ] UCI: basics -> tactics -> edge cases.
+  - [ ] Tutor: structured analysis -> multi-move puzzles.
+  - [ ] Director: rules -> openings -> endgames -> strategy.
 
 ### Inference & UCI Bridge
 
 - [x] Multi-adapter lifecycle: load once, `set_adapter(name)` per request.
 - [ ] Expert-specific decoding defaults:
-  - [ ] UCI: do_sample=false, temperature=0, top_p=1, max_new_tokens=4–5.
-  - [ ] Tutor: temperature 0.6–0.8, top_p 0.85–0.9.
-  - [ ] Director: temperature 0.5–0.7, top_p 0.9.
+- [ ] UCI: do_sample=false, temperature=0, top_p=1, max_new_tokens=4-5.
+  - [ ] Tutor: temperature 0.6-0.8, top_p 0.85-0.9.
+  - [ ] Director: temperature 0.5-0.7, top_p 0.9.
 - [ ] Post-processing:
   - [ ] UCI: extract first `^[a-h][1-8][a-h][1-8][qrbn]?$`; validate on FEN; fallback to Stockfish if missing/illegal.
   - [ ] Tutor: extract final `Best move: <uci>`; validate; if illegal, replace with Stockfish best and note correction.
@@ -172,7 +172,7 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 ### Optional: Embedding Search Functions
 
 - [ ] Generate embeddings for:
-  - Openings (ECO code → vector)
+  - Openings (ECO code -> vector)
   - Endgame patterns
   - Historical game similarity
 - [ ] Use vector search (e.g., FAISS, qdrant) for:
@@ -184,7 +184,7 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 ### Visual Understanding Layer (Optional)
 
 - [ ] Train vision model:
-  - Board image → FEN parsing
+  - Board image -> FEN parsing
   - Use CNN or ViT encoder + FEN tokenizer
 - [ ] Combine with LLM:
   ```plaintext
@@ -219,7 +219,7 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 | CoT Prompting            | Instruction tuning / FLAN-style prompts             |
 | UCI Interfacing          | `python-chess`, custom subprocess or socket bridge  |
 | Embeddings               | SentenceTransformers with MPS acceleration          |
-| Vision Module            | CNN → encoder → decoder (ViT or CLIP-style) + MPS   |
+| Vision Module            | CNN -> encoder -> decoder (ViT or CLIP-style) + MPS   |
 | Evaluation               | Elo tests, Stockfish comparisons, tutor accuracy    |
 | Platform                 | Mac-only (M3 Pro), MPS acceleration, no CUDA/CPU    |
 
@@ -229,12 +229,12 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 
 - [ ] **UCI Output Validity**
   - Move legality, SAN/UCI parsing, legal follow-ups
-- [ ] **Prompt→Move Benchmarking**
+- [ ] **Prompt->Move Benchmarking**
   - Compare to Stockfish or LeelaZero on test sets
 - [ ] **Explanation Accuracy**
   - Chain-of-thought scoring vs annotated data
 - [ ] **Style Emulation Tests**
-  - "Play like [Fischer]" → style match against real Fischer game
+  - "Play like [Fischer]" -> style match against real Fischer game
 
 ---
 
@@ -247,16 +247,16 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 ### Immediate Steps (Data)
 
 - [ ] Create dedicated UCI supervision datasets with explicit instruction schema:
-  - [ ] PGN-derived next-move pairs: walk through games and emit (FEN → next move in UCI).
+  - [ ] PGN-derived next-move pairs: walk through games and emit (FEN -> next move in UCI).
   - [ ] Puzzles first-move supervision: use the first move of the puzzle solution.
-  - [ ] Stockfish-labeled random positions: sample diverse FENs and label best move at depth 8–12.
+  - [ ] Stockfish-labeled random positions: sample diverse FENs and label best move at depth 8-12.
   - [x] Standardize JSONL schema: `{task, prompt, response, meta}` where:
     - `task`: `engine_uci` | `engine_pv` | `tutor_explain`
     - `prompt`: for engine `FEN: <fen>\nMove:`; for tutor `FEN: <fen>\nQuestion: <q>`
     - `response`: for engine exactly one UCI move (e.g., `e2e4`)
     - `meta`: `{fen, side, source, rating, label_source}`
 - [ ] Implement/upgrade data scripts:
-  - [ ] `scripts/extract_pgn_uci_pairs.py` (PGN → FEN/UCI pairs)
+  - [ ] `scripts/extract_pgn_uci_pairs.py` (PGN -> FEN/UCI pairs)
   - [ ] `scripts/build_engine_uci_supervision.py` (SF-labeled random FENs)
   - [ ] Extend `scripts/ingest_lichess_puzzles.py` to optionally emit the instruction schema above
 
@@ -267,10 +267,10 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
   - [x] Update `train_lora_poc.py` to consume `{prompt, response, task}` (instruction collator pending)
   - [x] Extend `dataset_mixer.py` to accept both `text` and `{prompt/response/task}` schemas without forcing a `text` field
 - [ ] Curriculum emphasizing engine formatting first, then difficulty:
-  - [ ] Phase A: easy UCI (openings, mates-in-1, simple captures) — 80–90% engine
-  - [ ] Phase B: general middlegame FENs (SF-labeled) — 70% engine
-  - [ ] Phase C: tactics (puzzles 1200–2000) — 60% engine
-  - [ ] Phase D: tutor explanations — 20–40% tutor
+  - [ ] Phase A: easy UCI (openings, mates-in-1, simple captures) - 80-90% engine
+  - [ ] Phase B: general middlegame FENs (SF-labeled) - 70% engine
+  - [ ] Phase C: tactics (puzzles 1200-2000) - 60% engine
+  - [ ] Phase D: tutor explanations - 20-40% tutor
   - [ ] Add `configs/engine_tutor_curriculum.yaml` reflecting above ratios
 
 ### Immediate Steps (Inference/UCI)
@@ -296,15 +296,15 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 
 - [ ] Add special tokens for squares/promotions:
   - [ ] 64 square tokens `<sq_a1>.. <sq_h8>` and 4 promotion tokens `<promo_q|r|b|n>`
-  - [ ] Emit 2–3 tokens per move (`from`, `to`, optional `promo`), post-process to canonical UCI
+  - [ ] Emit 2-3 tokens per move (`from`, `to`, optional `promo`), post-process to canonical UCI
   - [ ] Resize embeddings safely with LoRA
 
 ### Milestones / KPIs
 
 - [ ] Engine-mode (greedy) on 200 mixed FENs:
-  - [ ] `uci_syntax_rate` ≥ 0.98
-  - [ ] `uci_legal_rate` ≥ 0.95
-- [ ] Stockfish top-1 match (depth 8) ≥ 0.25–0.35 on the same FEN set
+  - [ ] `uci_syntax_rate` >= 0.98
+  - [ ] `uci_legal_rate` >= 0.95
+- [ ] Stockfish top-1 match (depth 8) >= 0.25-0.35 on the same FEN set
 - [ ] Tutor-mode remains coherent; no UCI artifacts in prose
 
 ---
@@ -315,7 +315,7 @@ The system uses LoRA adaptation on Apple Silicon with MPS acceleration and featu
 - Voice assistant mode ("Coach Fischer, what's next?")
 - Lichess or Chess.com API interface
 - Export annotated PGNs or printable lessons
-- Detect and critique user style: "Your midgame is often rushed…"
+- Detect and critique user style: "Your midgame is often rushed..."
 
 ---
 

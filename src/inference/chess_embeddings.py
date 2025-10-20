@@ -27,7 +27,7 @@ project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 try:
-    from ..utils.logging_config import get_logger
+    from src.utils.logging_config import get_logger
     logger = get_logger(__name__)
 except ImportError:
     import logging
@@ -635,31 +635,12 @@ class ChessPositionRetriever:
 
             logger.info(f"Loaded position index with {len(self.index)} positions from {filepath}")
             return True
-        except Exception:
-            # Migration fallback: attempt to read legacy pickle and convert
-            try:
-                with open(filepath, 'rb') as f:
-                    legacy = pickle.load(f)
-                embedder_config = legacy.get('embedder_config', {})
-                self.embedder = ChessPositionEmbedder(**embedder_config)
-                self.index.clear()
-                self.position_hashes.clear()
-                for pos_data in legacy.get('positions', []):
-                    embedding_array = np.array(pos_data['embedding'])
-                    pos_data['embedding'] = embedding_array
-                    embedding = PositionEmbedding(**pos_data)
-                    self.index[embedding.position_hash] = embedding
-                    self.position_hashes.add(embedding.position_hash)
-                # Write JSON sidecar for future loads
-                try:
-                    self.save_index(filepath)
-                except Exception:
-                    pass
-                logger.info(f"Loaded legacy pickle index with {len(self.index)} positions from {filepath}")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to load index from {filepath}: {e}")
-                return False
+        except Exception as e:
+            logger.error(
+                f"Failed to load index from {filepath} as JSON: {e}. "
+                "Legacy pickle indices are no longer supported; please convert the file to JSON before use."
+            )
+            return False
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics about the position index."""

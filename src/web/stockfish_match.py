@@ -61,13 +61,13 @@ class StockfishMatch:
         
         for path in possible_paths:
             if os.path.exists(path) or shutil.which(path):
-                print(f"✅ Found Stockfish at: {path}")
+                print(f"Found Stockfish at: {path}")
                 return path
         
         # If not found, try to find it in PATH
         stockfish_path = shutil.which("stockfish")
         if stockfish_path:
-            print(f"✅ Found Stockfish in PATH: {stockfish_path}")
+            print(f"Found Stockfish in PATH: {stockfish_path}")
             return stockfish_path
         
         raise RuntimeError("Stockfish not found. Please install it with: brew install stockfish")
@@ -76,10 +76,10 @@ class StockfishMatch:
         """Start Stockfish engine."""
         try:
             self.engine = chess.engine.SimpleEngine.popen_uci(self.stockfish_path)
-            print(f"✅ Stockfish engine started successfully")
+            print(f"Stockfish engine started successfully")
             return True
         except Exception as e:
-            print(f"❌ Failed to start Stockfish: {e}")
+            print(f"Error: Failed to start Stockfish: {e}")
             return False
     
     def stop_engine(self):
@@ -87,14 +87,14 @@ class StockfishMatch:
         if self.engine:
             self.engine.quit()
             self.engine = None
-            print("🛑 Stockfish engine stopped")
+            print("Stockfish engine stopped")
     
     def reset_game(self):
         """Reset the game to starting position."""
         self.board = chess.Board()
         self.moves = []
         self.start_time = None
-        print("🔄 Game reset to starting position")
+        print("Game reset to starting position")
     
     def get_stockfish_move(self) -> MoveResult:
         """Get Stockfish's move with time control."""
@@ -136,7 +136,7 @@ class StockfishMatch:
                 elif hasattr(score_obj, 'score'):
                     evaluation = score_obj.score(mate_score=10000) / 100.0
             except Exception as e:
-                print(f"⚠️  Evaluation error: {e}")
+                print(f"Warning: Evaluation error: {e}")
                 evaluation = 0.0
         
         if hasattr(result, 'info') and 'depth' in result.info:
@@ -156,12 +156,12 @@ class StockfishMatch:
         
         self.moves.append(move_result)
         
-        print(f"🏆 Stockfish played: {san} ({move_uci})")
-        print(f"⏱️  Time: {move_time:.2f}s")
+        print(f"Stockfish played: {san} ({move_uci})")
+        print(f"Time: {move_time:.2f}s")
         if evaluation is not None:
-            print(f"📊 Evaluation: {evaluation:+.2f}")
+            print(f"Evaluation: {evaluation:+.2f}")
         if depth is not None:
-            print(f"🔍 Depth: {depth}")
+            print(f"Depth: {depth}")
         
         return move_result
     
@@ -169,7 +169,7 @@ class StockfishMatch:
         """Get model's move (no time limit)."""
         start_time = time.time()
         
-        print(f"\n🤖 MODEL MOVE REQUEST")
+        print(f"\nMODEL MOVE REQUEST")
         print(f"Position: {self.board.fen()}")
         print(f"Legal moves: {legal_moves}")
         print(f"Turn: {'White' if self.board.turn else 'Black'}")
@@ -177,7 +177,7 @@ class StockfishMatch:
         if self.moves:
             print(f"Last move: {self.moves[-1].san}")
         if self.board.is_check():
-            print("⚠️  CHECK!")
+            print("Warning: CHECK!")
         
         # Get RAG knowledge for the current position
         rag_context = ""
@@ -186,9 +186,9 @@ class StockfishMatch:
                 rag_knowledge = rag_system.get_relevant_knowledge(f"Chess position: {self.board.fen()}")
                 if rag_knowledge:
                     rag_context = f"\n\nChess Knowledge: {rag_knowledge}"
-                    print(f"🧠 RAG Knowledge: {rag_knowledge}")
+                    print(f"RAG Knowledge: {rag_knowledge}")
             except Exception as e:
-                print(f"⚠️  RAG error: {e}")
+                print(f"Warning: RAG error: {e}")
         
         # Create educational prompt for the model with current position analysis
         position_analysis = self._analyze_position()
@@ -209,7 +209,7 @@ Please:
 Respond with your chosen move first, then your analysis.{rag_context}"""
         
         # Get model response using ENGINE mode for Stockfish matches
-        print(f"\n🧠 MODEL THINKING:")
+        print(f"\nMODEL THINKING:")
         print(f"Question: {question[:200]}...")
         print(f"RAG Context: {rag_context[:100] if rag_context else 'None'}...")
         
@@ -217,7 +217,7 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
         result = model_generator(question, f"Current position: {self.board.fen()}", "engine")
         response_text = result.get('response', '')
         
-        print(f"🤖 MODEL RESPONSE:")
+        print(f"MODEL RESPONSE:")
         print(f"Raw Response: {response_text[:300]}...")
         print(f"Response Length: {len(response_text)} chars")
         
@@ -228,7 +228,7 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
             # Fallback to random move
             import random
             move_uci = random.choice(legal_moves)
-            print(f"⚠️  Using fallback move: {move_uci}")
+            print(f"Warning: Using fallback move: {move_uci}")
         
         # Make the move
         move = chess.Move.from_uci(move_uci)
@@ -246,9 +246,9 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
         
         self.moves.append(move_result)
         
-        print(f"🤖 Model played: {san} ({move_uci})")
-        print(f"⏱️  Time: {move_time:.2f}s")
-        print(f"💭 Response: {response_text[:200]}...")
+        print(f"Model played: {san} ({move_uci})")
+        print(f"Time: {move_time:.2f}s")
+        print(f"Response: {response_text[:200]}...")
         
         return move_result
     
@@ -364,10 +364,10 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
         self.reset_game()
         self.start_time = time.time()
         
-        print(f"\n🎮 STARTING STOCKFISH vs MODEL MATCH")
-        print(f"📋 Model plays: {'White' if model_plays_white else 'Black'}")
-        print(f"⏰ Stockfish time control: {self.time_control}")
-        print(f"🎯 Max moves: {max_moves}")
+        print(f"\nSTARTING STOCKFISH vs MODEL MATCH")
+        print(f"Model plays: {'White' if model_plays_white else 'Black'}")
+        print(f"Stockfish time control: {self.time_control}")
+        print(f"Max moves: {max_moves}")
         print("=" * 60)
         
         move_count = 0
@@ -431,16 +431,16 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
     def _print_game_summary(self, result: GameResult):
         """Print game summary."""
         print("\n" + "=" * 60)
-        print("🏁 GAME SUMMARY")
+        print("GAME SUMMARY")
         print("=" * 60)
-        print(f"🏆 Winner: {result.winner.upper()}")
-        print(f"📋 Reason: {result.reason}")
-        print(f"🎯 Total moves: {result.total_moves}")
-        print(f"⏱️  Game duration: {result.game_duration:.1f}s")
-        print(f"📊 Final position: {result.final_fen}")
+        print(f"Winner: {result.winner.upper()}")
+        print(f"Reason: {result.reason}")
+        print(f"Total moves: {result.total_moves}")
+        print(f"Game duration: {result.game_duration:.1f}s")
+        print(f"Final position: {result.final_fen}")
         
         # Print move list
-        print("\n📝 Move List:")
+        print("\nMove List:")
         for i, move in enumerate(result.moves, 1):
             player = "Model" if i % 2 == 1 else "Stockfish"
             print(f"{i:2d}. {player:8s}: {move.san:6s} ({move.time_taken:.2f}s)")
@@ -468,9 +468,9 @@ Respond with your chosen move first, then your analysis.{rag_context}"""
             with open(filename, 'w') as f:
                 print(game, file=f)
             
-            print(f"💾 Game saved to {filename}")
+            print(f"Game saved to {filename}")
         except Exception as e:
-            print(f"❌ Failed to save game: {e}")
+            print(f"Error: Failed to save game: {e}")
 
 def main():
     """Example usage of StockfishMatch."""

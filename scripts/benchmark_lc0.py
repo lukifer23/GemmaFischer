@@ -12,10 +12,12 @@ from statistics import mean
 import chess
 
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+# Add project root to path
+project_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(project_root))
 
-from inference.inference import get_inference_instance
-from inference.hybrid_engine import HybridEngine
+from src.inference.inference import get_inference_instance
+from src.inference.hybrid_engine import HybridEngine
 
 
 DEFAULT_POSITIONS = Path('data/validation/eval_mixed_positions_200.jsonl')

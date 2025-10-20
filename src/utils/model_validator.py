@@ -67,7 +67,7 @@ class ChessGemmaModelValidator:
             "8/8/8/8/8/8/8/K7 w - - 0 1"  # Endgame
         ]
 
-        logger.info("🔍 ChessGemma Model Validator initialized")
+        logger.info("ChessGemma Model Validator initialized")
 
     def validate_model_integrity(self, model_path: Optional[str] = None,
                                adapter_path: Optional[str] = None) -> ModelValidationResult:
@@ -132,7 +132,7 @@ class ChessGemmaModelValidator:
         with self.lock:
             self.validation_cache[cache_key] = result
 
-        logger.info(f"✅ Model validation completed: {'VALID' if result.is_valid else 'INVALID'}")
+        logger.info(f"Model validation completed: {'VALID' if result.is_valid else 'INVALID'}")
         return result
 
     def validate_adapter_integrity(self, adapter_path: str) -> AdapterIntegrityResult:
@@ -473,7 +473,7 @@ class ChessGemmaModelValidator:
             self.validation_cache.clear()
             self.integrity_cache.clear()
             self.checksum_cache.clear()
-        logger.info("🧹 Validation caches cleared")
+        logger.info("Validation caches cleared")
 
 
 # Global validator instance
@@ -503,3 +503,7 @@ def validate_adapter(adapter_path: str) -> AdapterIntegrityResult:
     """Convenience function to validate an adapter."""
     validator = get_model_validator()
     return validator.validate_adapter_integrity(adapter_path)
+
+
+# Alias for backward compatibility with tests
+ModelValidator = ChessGemmaModelValidator

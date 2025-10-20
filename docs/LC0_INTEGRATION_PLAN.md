@@ -143,13 +143,13 @@ def generate_strategy_guidance(self, fen: str, user_intent: str = None):
 
 #### 2.1 Strategic Guidance Module
 - [ ] LLM strategy analysis prompts
-- [ ] Intent mapping (aggressive → search parameters)
+- [ ] Intent mapping (aggressive -> search parameters)
 - [ ] Position context extraction
 - [ ] Guidance validation and refinement
 
 #### 2.2 Hybrid Engine Integration
 - [ ] HybridChessEngine class implementation
-- [ ] LLM → LC0 communication protocol
+- [ ] LLM -> LC0 communication protocol
 - [ ] Result interpretation and explanation
 - [ ] Confidence scoring and validation
 
@@ -317,7 +317,7 @@ chess_engine:
 
 The LC0 integration represents a strategic upgrade that transforms the UCI expert from a weak LoRA adapter into a hybrid system combining LLM strategic intelligence with LC0's proven chess strength. This approach maintains the educational and interactive nature of the MoE system while dramatically improving move quality and analysis capabilities.
 
-The hybrid architecture (LLM orders → LC0 executes → LLM explains) creates a unique, powerful chess assistant that leverages the complementary strengths of language models and neural chess engines.
+The hybrid architecture (LLM orders -> LC0 executes -> LLM explains) creates a unique chess assistant that leverages the complementary strengths of language models and neural chess engines.
 
 ## Next Steps
 

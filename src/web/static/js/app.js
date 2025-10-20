@@ -923,7 +923,7 @@ function questionLikelyHasFen(text) {
 }
 
 function formatStockfishScore(entry) {
-  if (!entry) return '—';
+  if (!entry) return '-';
   if (typeof entry.mate === 'number' && entry.mate !== 0) {
     const mateAbs = Math.abs(entry.mate);
     return entry.mate > 0 ? `M${mateAbs}` : `M-${mateAbs}`;
@@ -932,7 +932,7 @@ function formatStockfishScore(entry) {
     const value = (entry.score_cp / 100).toFixed(2);
     return entry.score_cp >= 0 ? `+${value}` : value;
   }
-  return '—';
+  return '-';
 }
 
 function renderStockfishInsights(payload) {
@@ -1182,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadGameState();
 
     // Welcome
-    showMessage('🎮 **ChessGemma Ready!**\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
+    showMessage('ChessGemma Ready!\n\nClick squares to analyze positions or toggle Play Mode to start a game!', 'success');
 
     setStockfishInsightsPlaceholder();
     const analyzeBtn = document.getElementById('stockfish-analyze-btn');
@@ -1504,7 +1504,7 @@ function handlePlayModeClick(square, squareIndex) {
     // Promotion handling
     const fromPiece = squares[selectedSquareIndex]?.textContent;
     const destRank = parseInt(square[1]);
-    if ((fromPiece === '♙' && destRank === 8) || (fromPiece === '♟' && destRank === 1)) {
+    if ((fromPiece === 'P' && destRank === 8) || (fromPiece === 'p' && destRank === 1)) {
       let promo = (window.prompt('Promote to (q,r,b,n)?', 'q') || 'q').toLowerCase();
       if (!['q','r','b','n'].includes(promo)) promo = 'q';
       move = `${move}${promo}`;
@@ -1525,10 +1525,10 @@ function getCurrentBoardFEN() {
 
 function getPieceName(piece) {
   const pieceNames = {
-    '♜': 'Black Rook', '♞': 'Black Knight', '♝': 'Black Bishop',
-    '♛': 'Black Queen', '♚': 'Black King', '♟': 'Black Pawn',
-    '♖': 'White Rook', '♘': 'White Knight', '♗': 'White Bishop',
-    '♕': 'White Queen', '♔': 'White King', '♙': 'White Pawn'
+    'r': 'Black Rook', 'n': 'Black Knight', 'b': 'Black Bishop',
+    'q': 'Black Queen', 'k': 'Black King', 'p': 'Black Pawn',
+    'R': 'White Rook', 'N': 'White Knight', 'B': 'White Bishop',
+    'Q': 'White Queen', 'K': 'White King', 'P': 'White Pawn'
   };
   return pieceNames[piece] || 'Unknown Piece';
 }
@@ -1554,7 +1554,7 @@ async function loadGameState() {
       const infoResp = await fetch('/api/model_info');
       const info = await infoResp.json();
       const banner = document.querySelector('#modelStatusBanner');
-      const loadedText = info.loaded ? '✅ Model loaded' : '⚠️ Model not loaded';
+      const loadedText = info.loaded ? 'Model loaded' : 'Warning: Model not loaded';
       if (banner) {
         banner.textContent = loadedText;
       } else {
@@ -1586,7 +1586,7 @@ async function makeMove(moveUCI) {
     if (result.success) {
       const moveText = result.san || result.move;
       const playerText = result.current_player === 'white' ? 'White' : 'Black';
-      showMessage(`✅ ${playerText} played: ${moveText}`, 'success');
+      showMessage(`${playerText} played: ${moveText}`, 'success');
       updateBoardFromFEN(result.fen);
       gameState = result;
       selectedSquare = null;
@@ -1594,15 +1594,15 @@ async function makeMove(moveUCI) {
       const squares = document.querySelectorAll('.chess-square');
       squares.forEach(sq => sq.classList.remove('selected', 'legal-move'));
       if (result.current_player === 'black' && gameMode === 'play') {
-        showMessage('🤖 AI is thinking...', 'info', 3000);
+        showMessage('AI is thinking...', 'info', 3000);
         setTimeout(() => getAIMove(), 2000);
       }
     } else {
-      showMessage(`❌ Invalid move: ${result.error}`, 'danger');
+      showMessage(`Error: Invalid move: ${result.error}`, 'danger');
     }
   } catch (error) {
     console.error('Move error:', error);
-    showMessage('❌ Error making move', 'danger');
+    showMessage('Error making move', 'danger');
   }
 }
 
@@ -1617,42 +1617,42 @@ async function getAIMove() {
     const result = await response.json();
     if (result.success) {
       const moveText = result.san || result.move;
-      let aiMessage = `🤖 **AI played: ${moveText}**`;
+      let aiMessage = `AI played: ${moveText}`;
       if (result.ai_response) {
-        aiMessage += `\n\n💭 **AI Reasoning:**\n${result.ai_response}`;
+        aiMessage += `\n\nAI Reasoning:\n${result.ai_response}`;
       }
       showMessage(aiMessage, 'info');
       updateBoardFromFEN(result.fen);
       gameState = result;
     } else {
-      showMessage(`❌ AI error: ${result.error}`, 'danger');
+      showMessage(`Error: AI error: ${result.error}`, 'danger');
     }
   } catch (error) {
     console.error('AI move error:', error);
-    showMessage('❌ Error getting AI move', 'danger');
+    showMessage('Error getting AI move', 'danger');
   }
 }
 
 async function makeHybridAIMove() {
   if (gameMode !== 'play') {
-    showMessage('🤖 Hybrid AI moves only available in Play Mode', 'warning');
+    showMessage('Hybrid AI moves only available in Play Mode', 'warning');
     return;
   }
 
   if (isLoading) {
-    showMessage('⏳ AI is already thinking...', 'warning');
+    showMessage('AI is already thinking...', 'warning');
     return;
   }
 
   try {
     isLoading = true;
-    showMessage('🤖 Hybrid AI is analyzing position...', 'info');
+  showMessage('Hybrid AI is analyzing position...', 'info');
 
     // Get selected strategic intent
     const intentSelect = document.getElementById('strategic-intent');
     const strategicIntent = intentSelect ? intentSelect.value : 'positional';
 
-    showMessage(`🎯 AI analyzing with ${strategicIntent} strategy...`, 'info', 3000);
+    showMessage(`AI analyzing with ${strategicIntent} strategy...`, 'info', 3000);
 
     const response = await fetch('/api/game/ai_move', {
       method: 'POST',
@@ -1669,13 +1669,13 @@ async function makeHybridAIMove() {
       const moveText = result.san || result.move;
 
       // Enhanced hybrid response display
-      let aiMessage = `🤖 **AI played: ${moveText}**\n\n`;
+      let aiMessage = `AI played: ${moveText}\n\n`;
 
       if (result.hybrid_analysis) {
         const analysis = result.hybrid_analysis;
-        aiMessage += `🎯 **Strategy**: ${analysis.strategic_guidance?.intent || strategicIntent}\n`;
-        aiMessage += `🎚️ **Confidence**: ${((analysis.confidence || 0) * 100).toFixed(0)}%\n`;
-        aiMessage += `⏱️ **Analysis**: ${(analysis.total_time || 0).toFixed(1)}s `;
+        aiMessage += `Strategy: ${analysis.strategic_guidance?.intent || strategicIntent}\n`;
+        aiMessage += `Confidence: ${((analysis.confidence || 0) * 100).toFixed(0)}%\n`;
+        aiMessage += `Analysis time: ${(analysis.total_time || 0).toFixed(1)}s `;
 
         if (analysis.llm_time && analysis.lc0_time) {
           aiMessage += `(LLM: ${(analysis.llm_time).toFixed(1)}s, LC0: ${(analysis.lc0_time).toFixed(1)}s)`;
@@ -1684,18 +1684,18 @@ async function makeHybridAIMove() {
       }
 
       if (result.ai_response) {
-        aiMessage += `💭 **Analysis**:\n${result.ai_response}`;
+        aiMessage += `Analysis:\n${result.ai_response}`;
       }
 
       showMessage(aiMessage, 'success');
       updateBoardFromFEN(result.fen);
       gameState = result;
     } else {
-      showMessage(`❌ Hybrid AI error: ${result.error}`, 'danger');
+      showMessage(`Error: Hybrid AI error: ${result.error}`, 'danger');
     }
 
   } catch (error) {
-    showMessage(`❌ Hybrid AI error: ${error}`, 'danger');
+    showMessage(`Error: Hybrid AI error: ${error}`, 'danger');
   } finally {
     isLoading = false;
   }
@@ -1710,10 +1710,10 @@ async function getLegalMoves(square) {
     });
     const analysis = await response.json();
     highlightLegalMoves(analysis.legal_moves);
-    let message = `🔍 **${analysis.piece_name} on ${square}**\n`;
+    let message = `${analysis.piece_name} on ${square}\n`;
     message += `**Legal moves:** ${analysis.legal_moves.join(', ')}`;
     if (analysis.rag_advice && analysis.rag_advice.length > 0) {
-      message += `\n\n📚 **Chess Knowledge:**\n${analysis.rag_advice.join('\n')}`;
+      message += `\n\nChess Knowledge:\n${analysis.rag_advice.join('\n')}`;
     }
     showMessage(message, 'info');
   } catch (error) {
@@ -1768,11 +1768,7 @@ function updateBoardFromFEN(fen) {
 }
 
 function getPieceSymbol(fenChar) {
-  const pieceMap = {
-    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
-  };
-  return pieceMap[fenChar] || '';
+  return fenChar || '';
 }
 
 function updateGameStateDisplay(currentPlayer) {
@@ -1783,8 +1779,7 @@ function updateGameStateDisplay(currentPlayer) {
 function toggleGameMode() {
   gameMode = gameMode === 'analysis' ? 'play' : 'analysis';
   const modeText = gameMode === 'play' ? 'Play Mode' : 'Analysis Mode';
-  const modeIcon = gameMode === 'play' ? '🎮' : '🔍';
-  showMessage(`${modeIcon} Switched to ${modeText}`, 'info', 3000);
+  showMessage(`Switched to ${modeText}`, 'info', 3000);
   const toggleButton = document.querySelector('button[onclick="toggleGameMode()"]');
   if (toggleButton) {
     toggleButton.classList.remove('play-mode-active', 'analysis-mode-active');
@@ -1813,7 +1808,7 @@ async function resetGame() {
     const response = await fetch('/api/game/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const result = await response.json();
     if (result.success) {
-      showMessage('🔄 Game reset to starting position', 'success');
+      showMessage('Game reset to starting position', 'success');
       selectedSquare = null;
       selectedSquareIndex = null;
       const squares = document.querySelectorAll('.chess-square');
@@ -1831,17 +1826,17 @@ async function resetGame() {
 // Stockfish match helpers
 async function testStockfish() {
   try {
-    showMessage('🔍 Testing Stockfish availability...', 'info');
+  showMessage('Testing Stockfish availability...', 'info');
     const response = await fetch('/api/match/test');
     const result = await response.json();
     if (result.success) {
-      showMessage(`✅ ${result.message}\n📍 Path: ${result.path}\n🎯 Test move: ${result.test_move}`, 'success');
+      showMessage(`${result.message}\nPath: ${result.path}\nTest move: ${result.test_move}`, 'success');
     } else {
-      showMessage(`❌ Stockfish test failed: ${result.error}`, 'danger');
+      showMessage(`Error: Stockfish test failed: ${result.error}`, 'danger');
     }
   } catch (error) {
     console.error('Stockfish test error:', error);
-    showMessage('❌ Error testing Stockfish', 'danger');
+    showMessage('Error testing Stockfish', 'danger');
   }
 }
 
@@ -1851,7 +1846,7 @@ async function toggleStockfishMatch() {
 
 async function startStockfishMatch() {
   try {
-    showMessage('🎮 Starting Stockfish vs Model match...', 'info');
+  showMessage('Starting Stockfish vs Model match...', 'info');
     const response = await fetch('/api/match/start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model_plays_white: true, time_control: '10+0.1' })
@@ -1860,7 +1855,7 @@ async function startStockfishMatch() {
     if (result.success) {
       matchActive = true;
       stockfishMatch = result;
-      showMessage(`🏆 ${result.message}`, 'success');
+      showMessage(`${result.message}`, 'success');
       const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
       if (button) {
         button.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Match';
@@ -1868,11 +1863,11 @@ async function startStockfishMatch() {
       }
       playMatchMoves();
     } else {
-      showMessage(`❌ Failed to start match: ${result.error}`, 'danger');
+      showMessage(`Error: Failed to start match: ${result.error}`, 'danger');
     }
   } catch (error) {
     console.error('Match start error:', error);
-    showMessage('❌ Error starting match', 'danger');
+    showMessage('Error starting match', 'danger');
   }
 }
 
@@ -1883,7 +1878,7 @@ async function stopStockfishMatch() {
     if (result.success) {
       matchActive = false;
       stockfishMatch = null;
-      showMessage('🛑 Match stopped', 'info');
+      showMessage('Match stopped', 'info');
       const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
       if (button) {
         button.innerHTML = '<i class="fas fa-chess me-1"></i>Stockfish Match';
@@ -1907,11 +1902,11 @@ async function playMatchMoves() {
       const player = result.player;
       const move = result.san;
       const time = result.time_taken.toFixed(2);
-      showMessage(`🏆 ${player} played: ${move} (${time}s)`, 'info');
+      showMessage(`${player} played: ${move} (${time}s)`, 'info');
       updateBoardFromFEN(result.fen);
       if (result.is_game_over) {
         const gameResult = result.game_result;
-        showMessage(`🏁 Game Over! Winner: ${gameResult[0].toUpperCase()}, Reason: ${gameResult[1]}`, 'success');
+        showMessage(`Game Over! Winner: ${gameResult[0].toUpperCase()}, Reason: ${gameResult[1]}`, 'success');
         matchActive = false;
         const button = document.querySelector('button[onclick="toggleStockfishMatch()"]');
         if (button) {
@@ -1922,12 +1917,12 @@ async function playMatchMoves() {
         setTimeout(() => playMatchMoves(), 1000);
       }
     } else {
-      showMessage(`❌ Match error: ${result.error}`, 'danger');
+      showMessage(`Error: Match error: ${result.error}`, 'danger');
       matchActive = false;
     }
   } catch (error) {
     console.error('Match play error:', error);
-    showMessage('❌ Error playing match', 'danger');
+    showMessage('Error playing match', 'danger');
     matchActive = false;
   }
 }
@@ -2088,7 +2083,7 @@ async function updateSystemStatus() {
     const statsData = await safeFetch('/api/stats');
     if (statsData && statsData.performance) {
       const perf = statsData.performance;
-      console.log(`📊 System Status: ${perf.total_requests} requests, ${perf.avg_response_time?.toFixed(2)}s avg response time`);
+      console.log(`System Status: ${perf.total_requests} requests, ${perf.avg_response_time?.toFixed(2)}s avg response time`);
     }
   } catch (error) {
     console.warn('Stats update failed:', error);

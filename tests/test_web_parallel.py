@@ -57,35 +57,46 @@ class TestParallelWebAPI:
             'explanation_adapter': 'tutor',
         }
         chess_model.analyze_with_engine = Mock(return_value=self.sample_hybrid_result)
-        chess_model.generate_parallel_responses = Mock(return_value={
-            'uci': {
-                'response': 'e2e4',
-                'confidence': 0.9,
-                'generation_time': 1.0,
-                'model_loaded': True,
-                'mode': 'uci',
-                'cached': False,
-                'cache_hit_rate': 0.0
-            },
-            'tutor': {
-                'response': 'Opening move tutorial...',
-                'confidence': 0.85,
-                'generation_time': 1.5,
-                'model_loaded': True,
-                'mode': 'tutor',
-                'cached': False,
-                'cache_hit_rate': 0.0
-            },
-            'director': {
-                'response': 'Strategic analysis...',
-                'confidence': 0.8,
-                'generation_time': 1.2,
-                'model_loaded': True,
-                'mode': 'director',
-                'cached': False,
-                'cache_hit_rate': 0.0
+
+        # Mock that returns only requested experts
+        def mock_generate_parallel_responses(question=None, context=None, experts=None, **kwargs):
+            all_responses = {
+                'uci': {
+                    'response': 'e2e4',
+                    'confidence': 0.9,
+                    'generation_time': 1.0,
+                    'model_loaded': True,
+                    'mode': 'uci',
+                    'cached': False,
+                    'cache_hit_rate': 0.0
+                },
+                'tutor': {
+                    'response': 'Opening move tutorial...',
+                    'confidence': 0.85,
+                    'generation_time': 1.5,
+                    'model_loaded': True,
+                    'mode': 'tutor',
+                    'cached': False,
+                    'cache_hit_rate': 0.0
+                },
+                'director': {
+                    'response': 'Strategic analysis...',
+                    'confidence': 0.8,
+                    'generation_time': 1.2,
+                    'model_loaded': True,
+                    'mode': 'director',
+                    'cached': False,
+                    'cache_hit_rate': 0.0
+                }
             }
-        })
+
+            # Return only requested experts, default to all if none specified
+            if experts is None or len(experts) == 0:
+                experts = ['uci', 'tutor', 'director']
+
+            return {expert: all_responses[expert] for expert in experts if expert in all_responses}
+
+        chess_model.generate_parallel_responses = Mock(side_effect=mock_generate_parallel_responses)
 
         # Mock RAG system
         chess_rag.get_relevant_knowledge = Mock(return_value="Mock chess knowledge")

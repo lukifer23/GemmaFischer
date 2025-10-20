@@ -161,7 +161,7 @@ class ExpertScorecardEvaluator:
     
     def _load_evaluation_datasets(self):
         """Load evaluation datasets."""
-        logger.info("📚 Loading evaluation datasets")
+        logger.info("Loading evaluation datasets")
         
         # UCI evaluation data
         self.evaluation_data["uci_fens"] = self._load_uci_evaluation_data()
@@ -175,7 +175,7 @@ class ExpertScorecardEvaluator:
         # Router evaluation data
         self.evaluation_data["router_queries"] = self._load_router_evaluation_data()
         
-        logger.info("✅ Evaluation datasets loaded successfully")
+        logger.info("Evaluation datasets loaded successfully")
     
     def _load_uci_evaluation_data(self) -> List[Dict[str, Any]]:
         """Load UCI evaluation data."""
@@ -236,7 +236,7 @@ class ExpertScorecardEvaluator:
     def initialize_inference(self) -> bool:
         """Initialize inference system."""
         try:
-            logger.info("🤖 Initializing inference system")
+            logger.info("Initializing inference system")
             self.inference = ChessGemmaInference(self.model_path, self.adapter_path)
             
             if not self.inference.load_model():
@@ -246,7 +246,7 @@ class ExpertScorecardEvaluator:
             # Initialize chess engine
             self.chess_engine = ChessEngineManager()
             
-            logger.info("✅ Inference system initialized successfully")
+            logger.info("Inference system initialized successfully")
             return True
             
         except Exception as e:
@@ -255,7 +255,7 @@ class ExpertScorecardEvaluator:
     
     def evaluate_uci_expert(self, max_positions: int = 100) -> ExpertScorecard:
         """Evaluate UCI expert with comprehensive metrics."""
-        logger.info("🎯 Evaluating UCI expert")
+        logger.info("Evaluating UCI expert")
         
         scorecard = ExpertScorecard(
             expert_name="uci",
@@ -353,7 +353,7 @@ class ExpertScorecardEvaluator:
         scorecard.passed_tests = syntax_valid
         scorecard.calculate_overall_metrics()
         
-        logger.info(f"✅ UCI expert evaluation completed")
+        logger.info(f"UCI expert evaluation completed")
         logger.info(f"   Syntax rate: {scorecard.uci_syntax_rate:.3f}")
         logger.info(f"   Legality rate: {scorecard.uci_legality_rate:.3f}")
         logger.info(f"   Stockfish top-1: {scorecard.uci_stockfish_top1:.3f}")
@@ -362,7 +362,7 @@ class ExpertScorecardEvaluator:
     
     def evaluate_tutor_expert(self, max_puzzles: int = 50) -> ExpertScorecard:
         """Evaluate tutor expert with comprehensive metrics."""
-        logger.info("🎓 Evaluating tutor expert")
+        logger.info("Evaluating tutor expert")
         
         scorecard = ExpertScorecard(
             expert_name="tutor",
@@ -469,7 +469,7 @@ class ExpertScorecardEvaluator:
         scorecard.passed_tests = first_move_correct
         scorecard.calculate_overall_metrics()
         
-        logger.info(f"✅ Tutor expert evaluation completed")
+        logger.info(f"Tutor expert evaluation completed")
         logger.info(f"   First move accuracy: {scorecard.tutor_first_move_accuracy:.3f}")
         logger.info(f"   CoT structure: {scorecard.tutor_cot_structure_adherence:.3f}")
         logger.info(f"   UCI extraction: {scorecard.tutor_uci_extraction_rate:.3f}")
@@ -478,7 +478,7 @@ class ExpertScorecardEvaluator:
     
     def evaluate_director_expert(self, max_questions: int = 50) -> ExpertScorecard:
         """Evaluate director expert with comprehensive metrics."""
-        logger.info("🎭 Evaluating director expert")
+        logger.info("Evaluating director expert")
         
         scorecard = ExpertScorecard(
             expert_name="director",
@@ -572,7 +572,7 @@ class ExpertScorecardEvaluator:
         scorecard.passed_tests = rules_correct + opening_correct
         scorecard.calculate_overall_metrics()
         
-        logger.info(f"✅ Director expert evaluation completed")
+        logger.info(f"Director expert evaluation completed")
         logger.info(f"   Rules accuracy: {scorecard.director_rules_accuracy:.3f}")
         logger.info(f"   Opening accuracy: {scorecard.director_opening_accuracy:.3f}")
         logger.info(f"   Factual consistency: {scorecard.director_factual_consistency:.3f}")
@@ -581,7 +581,7 @@ class ExpertScorecardEvaluator:
     
     def evaluate_router(self, max_queries: int = 100) -> Dict[str, Any]:
         """Evaluate router performance."""
-        logger.info("🧭 Evaluating router performance")
+        logger.info("Evaluating router performance")
         
         queries = self.evaluation_data["router_queries"][:max_queries]
         if not queries:
@@ -627,7 +627,7 @@ class ExpertScorecardEvaluator:
     
     def run_comprehensive_evaluation(self, max_positions: int = 100) -> EvaluationReport:
         """Run comprehensive evaluation for all experts."""
-        logger.info("🎯 Starting comprehensive evaluation")
+        logger.info("Starting comprehensive evaluation")
         
         # Initialize inference system
         if not self.initialize_inference():
@@ -645,7 +645,7 @@ class ExpertScorecardEvaluator:
         
         for expert_name in experts:
             try:
-                logger.info(f"🔄 Evaluating {expert_name} expert...")
+                logger.info(f"Evaluating {expert_name} expert...")
                 
                 if expert_name == "uci":
                     scorecard = self.evaluate_uci_expert(max_positions)
@@ -675,7 +675,7 @@ class ExpertScorecardEvaluator:
         # Generate recommendations
         report.recommendations = self._generate_recommendations(report)
         
-        logger.info("✅ Comprehensive evaluation completed")
+        logger.info("Comprehensive evaluation completed")
         logger.info(f"   Successful experts: {report.successful_experts}/{report.total_experts}")
         
         return report
@@ -752,7 +752,7 @@ class ExpertScorecardEvaluator:
         with open(output_path, 'w') as f:
             json.dump(report_data, f, indent=2)
         
-        logger.info(f"📊 Evaluation report saved: {output_path}")
+        logger.info(f"Evaluation report saved: {output_path}")
 
 
 def main():
@@ -784,7 +784,7 @@ Examples:
     
     args = parser.parse_args()
     
-    print("🎯 Expert Scorecard Evaluation System")
+    print("Expert Scorecard Evaluation System")
     print("=" * 50)
     
     try:
@@ -800,7 +800,7 @@ Examples:
             
             # Print summary
             summary = report.generate_summary()
-            print(f"\n📊 Evaluation Summary:")
+            print(f"\nEvaluation Summary:")
             print(f"   Total experts: {summary['total_experts']}")
             print(f"   Successful: {summary['successful_experts']}")
             print(f"   Failed: {summary['failed_experts']}")
@@ -809,14 +809,14 @@ Examples:
             print(f"   Average quality: {summary['average_quality']:.3f}")
             
             if report.recommendations:
-                print(f"\n💡 Recommendations:")
+                print(f"\nRecommendations:")
                 for rec in report.recommendations:
                     print(f"   - {rec}")
         
         else:
             # Evaluate specific expert
             if not evaluator.initialize_inference():
-                print("❌ Failed to initialize inference system")
+                print("Error: Failed to initialize inference system")
                 return
             
             if args.expert == 'uci':
@@ -837,17 +837,17 @@ Examples:
             
             evaluator.save_report(report, args.output)
             
-            print(f"\n📊 {args.expert.upper()} Expert Results:")
+            print(f"\n{args.expert.upper()} Expert Results:")
             print(f"   Overall accuracy: {scorecard.overall_accuracy:.3f}")
             print(f"   Overall quality: {scorecard.overall_quality_score:.3f}")
             print(f"   Response time: {scorecard.overall_response_time:.3f}s")
             print(f"   Error rate: {scorecard.error_rate:.3f}")
         
-        print(f"\n✅ Evaluation completed successfully!")
-        print(f"📄 Report saved: {args.output}")
+        print(f"\nEvaluation completed successfully!")
+        print(f"Report saved: {args.output}")
     
     except Exception as e:
-        print(f"❌ Evaluation failed: {e}")
+        print(f"Error: Evaluation failed: {e}")
         logger.error(f"Evaluation failed: {e}", exc_info=True)
 
 

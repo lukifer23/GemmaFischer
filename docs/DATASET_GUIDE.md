@@ -18,7 +18,7 @@ GemmaFischer uses standardized training datasets for fine-tuning specialized exp
 
 ### Dataset Quality
 - **Validation**: 100% move legality verification with Stockfish
-- **Stockfish**: Depth-14 best move plus depth-6 “top-3” alternatives captured in metadata
+- **Stockfish**: Depth-14 best move plus depth-6 "top-3" alternatives captured in metadata
 - **Format**: Standardized JSONL schema
 - **Quality**: All samples validated for correctness
 - **Metadata**: Includes FEN positions, ratings, and quality scores

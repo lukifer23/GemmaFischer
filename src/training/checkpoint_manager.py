@@ -247,7 +247,7 @@ class CheckpointManager:
                 with open(trainer_state_file, 'w') as f:
                     json.dump(trainer_state, f, indent=2, default=str)
 
-            logger.info(f"💾 Created checkpoint: {checkpoint_dir}")
+            logger.info(f"Created checkpoint: {checkpoint_dir}")
             logger.info(f"   Step: {global_step}, Loss: {training_loss:.4f}")
 
             # Cleanup old checkpoints
@@ -307,7 +307,7 @@ class CheckpointManager:
                 except Exception as e:
                     logger.warning(f"Failed to load trainer state: {e}")
 
-            logger.info(f"📂 Resuming from checkpoint: {checkpoint_dir}")
+            logger.info(f"Resuming from checkpoint: {checkpoint_dir}")
             logger.info(f"   Global step: {metadata.global_step}, Loss: {metadata.training_loss:.4f}")
 
             return checkpoint_dir, metadata, trainer_state
@@ -396,7 +396,7 @@ class CheckpointManager:
             if checkpoint_dir not in to_keep:
                 try:
                     shutil.rmtree(checkpoint_dir)
-                    logger.info(f"🗑️  Removed old checkpoint: {checkpoint_dir}")
+                    logger.info(f"Removed old checkpoint: {checkpoint_dir}")
                 except Exception as e:
                     logger.warning(f"Failed to remove checkpoint {checkpoint_dir}: {e}")
 
@@ -511,7 +511,7 @@ class CheckpointManager:
         with open(output_file, 'w') as f:
             json.dump(summary, f, indent=2, default=str)
 
-        logger.info(f"📊 Checkpoint summary exported to: {output_file}")
+        logger.info(f"Checkpoint summary exported to: {output_file}")
 
 
 def main():

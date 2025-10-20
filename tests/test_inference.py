@@ -67,6 +67,7 @@ def _verify_lc0_networks():
 
 from src.inference.inference import (
     ChessGemmaInference,
+    EnhancedChessInference,
     run_inference,
     load_model,
     unload_model,
@@ -74,6 +75,21 @@ from src.inference.inference import (
 )
 from src.inference.hybrid_engine import HybridEngineResult
 from src.inference.moe_router import RoutingDecision, MoEInferenceManager
+from src.config.config_manager import InferenceConfig
+from transformers.generation.logits_process import LogitsProcessor
+
+
+class ChessWhitelistLogitsProcessor(LogitsProcessor):
+    """Test logits processor that masks invalid tokens to -inf."""
+
+    def __init__(self, allowed_token_ids: set):
+        self.allowed_token_ids = allowed_token_ids
+
+    def __call__(self, input_ids, scores):
+        for token_id in range(scores.shape[-1]):
+            if token_id not in self.allowed_token_ids:
+                scores[..., token_id] = float('-inf')
+        return scores
 
 
 class TestChessGemmaInference:

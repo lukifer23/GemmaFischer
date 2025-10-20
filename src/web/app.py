@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import sys
 import time
+import traceback
 from typing import Dict, List, Any, Optional
 import psutil
 import threading
@@ -1182,12 +1183,28 @@ def ask_parallel():
 
         print(f"RAG Knowledge: {rag_knowledge}")
 
-        # Generate parallel responses from all experts
-        parallel_results = chess_model.generate_parallel_responses(
-            question=question,
-            context=enhanced_context,
-            experts=experts
-        )
+        # Check if model is loaded before generating responses
+        if not chess_model.is_loaded:
+            # Return error responses for all requested experts
+            parallel_results = {}
+            for expert in experts:
+                parallel_results[expert] = {
+                    'response': '',
+                    'confidence': 0.0,
+                    'generation_time': 0.0,
+                    'model_loaded': False,
+                    'mode': expert,
+                    'cached': False,
+                    'cache_hit_rate': 0.0,
+                    'error': 'Model not loaded'
+                }
+        else:
+            # Generate parallel responses from all experts
+            parallel_results = chess_model.generate_parallel_responses(
+                question=question,
+                context=enhanced_context,
+                experts=experts
+            )
 
         # Calculate total execution time
         total_time = time.time() - start_time
@@ -2010,12 +2027,12 @@ if __name__ == '__main__':
     try:
         port = find_free_port()
         print("="*60)
-    print(f"Web Interface Ready!")
-    print(f"URL: http://localhost:{port}")
-    print(f"Performance Stats: http://localhost:{port}/api/stats")
-    print(f"Health Check: http://localhost:{port}/api/health")
+        print(f"Web Interface Ready!")
+        print(f"URL: http://localhost:{port}")
+        print(f"Performance Stats: http://localhost:{port}/api/stats")
+        print(f"Health Check: http://localhost:{port}/api/health")
         print("="*60)
-    print("Ready to accept chess questions!")
+        print("Ready to accept chess questions!")
         print("="*60)
         
         app.run(

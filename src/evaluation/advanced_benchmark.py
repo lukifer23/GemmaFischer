@@ -82,14 +82,14 @@ class ChessGemmaBenchmarker:
         self.significance_level = 0.05    # 95% confidence
         self.min_samples = 10             # Minimum samples for statistical analysis
 
-        logger.info("📊 Advanced ChessGemma Benchmarker initialized")
+        logger.info("Advanced ChessGemma Benchmarker initialized")
 
     def run_comprehensive_benchmark(self, model_name: str, inference_func: Callable,
                                   test_dataset: List[Dict[str, Any]],
                                   metadata: Optional[Dict[str, Any]] = None) -> BenchmarkResult:
         """Run comprehensive benchmark with statistical analysis."""
 
-        logger.info(f"🏃 Running comprehensive benchmark for {model_name}")
+        logger.info(f"Running comprehensive benchmark for {model_name}")
 
         start_time = time.time()
         results = []
@@ -154,7 +154,7 @@ class ChessGemmaBenchmarker:
         # Check for regressions
         regression_analysis = self._analyze_regression(benchmark_result)
         if regression_analysis.is_regression:
-            logger.warning("⚠️  Performance regression detected!")
+            logger.warning("Performance regression detected!")
             self._log_regression_alert(benchmark_result, regression_analysis)
 
         total_time = time.time() - start_time
@@ -494,22 +494,19 @@ class ChessGemmaBenchmarker:
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2, default=str)
 
-        logger.info(f"💾 Benchmark result saved to {filepath}")
+        logger.info(f"Benchmark result saved to {filepath}")
 
     def _log_regression_alert(self, result: BenchmarkResult, analysis: RegressionAnalysis):
         """Log regression alert with details."""
-        alert_msg = ".1f"".2f"f"""
-⚠️  PERFORMANCE REGRESSION ALERT ⚠️
-
-Model: {result.model_name}
-Timestamp: {result.timestamp}
-Confidence: {analysis.confidence_level:.1%}
-Magnitude: {analysis.regression_magnitude:.1%}
-Affected Metrics: {', '.join(analysis.affected_metrics)}
-
-Recommended Actions:
-{chr(10).join(f"- {action}" for action in analysis.recommended_actions)}
-"""
+        alert_msg = (
+            "PERFORMANCE REGRESSION ALERT\n\n"
+            f"Model: {result.model_name}\n"
+            f"Timestamp: {result.timestamp}\n"
+            f"Confidence: {analysis.confidence_level:.1%}\n"
+            f"Magnitude: {analysis.regression_magnitude:.1%}\n"
+            f"Affected Metrics: {', '.join(analysis.affected_metrics)}\n\n"
+            "Recommended Actions:\n" + "\n".join(f"- {action}" for action in analysis.recommended_actions)
+        )
         logger.warning(alert_msg)
 
         # Save regression report
@@ -562,9 +559,9 @@ Recommended Actions:
 
                 self.baseline_results[model_name] = result
 
-            logger.info(f"📊 Loaded baseline results for {len(self.baseline_results)} models")
+            logger.info(f"Loaded baseline results for {len(self.baseline_results)} models")
         else:
-            logger.warning("⚠️  No baseline results found")
+            logger.warning("No baseline results found")
 
     def save_baseline_results(self, filename: Optional[str] = None):
         """Save current results as baseline."""
@@ -597,7 +594,7 @@ Recommended Actions:
         with open(baseline_path, 'w') as f:
             json.dump(baseline_data, f, indent=2)
 
-        logger.info(f"💾 Baseline results saved to {baseline_path}")
+        logger.info(f"Baseline results saved to {baseline_path}")
 
     def get_performance_report(self) -> Dict[str, Any]:
         """Generate comprehensive performance report."""

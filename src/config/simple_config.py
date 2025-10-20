@@ -121,6 +121,26 @@ class InferenceConfig(BaseModel):
     pad_token_id: Optional[int] = Field(default=None)
     eos_token_id: Optional[int] = Field(default=None)
 
+    # Expert-specific overrides
+    engine_temperature: float = Field(default=0.0, ge=0)
+    engine_top_p: float = Field(default=1.0, gt=0, le=1)
+    engine_do_sample: bool = Field(default=False)
+    engine_max_new_tokens: int = Field(default=8, ge=1)
+
+    tutor_temperature: float = Field(default=0.7, gt=0)
+    tutor_top_p: float = Field(default=0.9, gt=0, le=1)
+    tutor_do_sample: bool = Field(default=True)
+    tutor_max_new_tokens: int = Field(default=150, ge=1)
+
+    director_temperature: float = Field(default=0.6, gt=0)
+    director_top_p: float = Field(default=0.9, gt=0, le=1)
+    director_do_sample: bool = Field(default=True)
+    director_max_new_tokens: int = Field(default=200, ge=1)
+
+    # Chess-aware decoding settings
+    chess_aware_decoding: bool = Field(default=True)
+    tutor_chess_aware_decoding: bool = Field(default=True)
+
 
 class CacheConfig(BaseModel):
     """Cache configuration settings."""

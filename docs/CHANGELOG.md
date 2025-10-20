@@ -114,13 +114,13 @@
 - **Error Recovery**: 95% automatic error handling and recovery
 
 #### Inference Performance
-- **Response Time**: 0.45s mean (±0.12s std, 95th percentile: 0.67s)
+- **Response Time**: 0.45s mean (+/-0.12s std, 95th percentile: 0.67s)
 - **Throughput**: 2.2 queries/second with caching optimizations
 - **Cache Hit Rate**: 73.4% with intelligent LRU management
 - **Memory Efficiency**: Optimized memory usage with automatic cleanup
 
 #### Quality Metrics
-- **Accuracy**: 85.2% (±2.1% confidence interval)
+- **Accuracy**: 85.2% (+/-2.1% confidence interval)
 - **Quality Score**: 0.82 with consistency score of 0.91
 - **Regression Detection**: Automated with 95% confidence statistical analysis
 - **Model Validation**: 100% integrity verification with corruption detection

@@ -97,7 +97,7 @@ class MoEInferenceManager:
 
         # Parallel processing configuration
         self._parallel_enabled = os.environ.get('CHESSGEMMA_PARALLEL_INFERENCE', '1') not in ('0', 'false', 'False')
-        self._max_parallel_experts = min(len(self.expert_models), int(os.environ.get('CHESSGEMMA_MAX_PARALLEL_EXPERTS', '3')))
+        self._max_parallel_experts = max(1, min(len(self.expert_models), int(os.environ.get('CHESSGEMMA_MAX_PARALLEL_EXPERTS', '3'))))
         self._parallel_executor = ThreadPoolExecutor(max_workers=self._max_parallel_experts, thread_name_prefix="moe-expert")
 
     def prime_available_experts(self) -> None:

@@ -17,9 +17,9 @@
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ Route Query Analysis                                   │    │
 │  │                                                         │    │
-│  │ • Position complexity assessment                       │    │
-│  │ • Query intent classification                          │    │
-│  │ • Expert confidence prediction                         │    │
+│  │ - Position complexity assessment                       │    │
+│  │ - Query intent classification                          │    │
+│  │ - Expert confidence prediction                         │    │
 │  │                                                         │    │
 │  │ Output: [UCI, TUTOR, DIRECTOR]                         │    │
 │  └─────────────────────────────────────────────────────────┘    │
@@ -35,12 +35,12 @@
 │  │             │  │             │  │             │              │
 │  │ Thread 1    │  │ Thread 2    │  │ Thread 3    │              │
 │  │             │  │             │  │             │              │
-│  │ • Load UCI  │  │ • Load      │  │ • Load      │              │
+│  │ - Load UCI  │  │ - Load      │  │ - Load      │              │
 │  │   Adapter   │  │   Tutor     │  │   Director  │              │
-│  │ • Generate  │  │   Adapter   │  │   Adapter   │              │
-│  │   Move      │  │ • Generate  │  │ • Generate  │              │
-│  │ • 1.2s      │  │   Analysis  │  │   Strategy  │              │
-│  │             │  │ • 2.1s      │  │ • 1.8s      │              │
+│  │ - Generate  │  │   Adapter   │  │   Adapter   │              │
+│  │   Move      │  │ - Generate  │  │ - Generate  │              │
+│  │ - 1.2s      │  │   Analysis  │  │   Strategy  │              │
+│  │             │  │ - 2.1s      │  │ - 1.8s      │              │
 │  └─────────────┘  └─────────────┘  └─────────────┘              │
 └─────────────────────┼───────────────────────────────────────────┘
                       │
@@ -51,9 +51,9 @@
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ Collect Results                                           │    │
 │  │                                                         │    │
-│  │ • UCI: "e2e4" (1.2s)                                   │    │
-│  │ • TUTOR: "Detailed explanation..." (2.1s)              │    │
-│  │ • DIRECTOR: "Strategic analysis..." (1.8s)             │    │
+│  │ - UCI: "e2e4" (1.2s)                                   │    │
+│  │ - TUTOR: "Detailed explanation..." (2.1s)              │    │
+│  │ - DIRECTOR: "Strategic analysis..." (1.8s)             │    │
 │  │                                                         │    │
 │  │ Total Time: 2.1s (not 6.3s!)                           │    │
 │  └─────────────────────────────────────────────────────────┘    │
@@ -99,10 +99,10 @@
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘   │
 │                                                                 │
 │  Shared Resources:                                               │
-│  • Base Gemma Model (read-only after loading)                   │
-│  • Adapter Registry (thread-safe dictionary)                    │
-│  • Response Cache (RLock protected)                             │
-│  • MPS Device Context (managed by PyTorch)                      │
+│  - Base Gemma Model (read-only after loading)                   │
+│  - Adapter Registry (thread-safe dictionary)                    │
+│  - Response Cache (RLock protected)                             │
+│  - MPS Device Context (managed by PyTorch)                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -114,9 +114,9 @@
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ Base Model Memory (4GB)                                 │    │
-│  │ • Gemma-3 270M weights                                   │    │
-│  │ • Tokenizer                                               │    │
-│  │ • KV cache templates                                      │    │
+│  │ - Gemma-3 270M weights                                   │    │
+│  │ - Tokenizer                                               │    │
+│  │ - KV cache templates                                      │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
@@ -134,9 +134,9 @@
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ Runtime Memory (~2GB)                                   │    │
-│  │ • Request processing                                     │    │
-│  │ • Response caching                                        │    │
-│  │ • Thread overhead                                         │    │
+│  │ - Request processing                                     │    │
+│  │ - Response caching                                        │    │
+│  │ - Thread overhead                                         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -149,24 +149,24 @@
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ Level 1: Response Cache (Fastest)                       │    │
-│  │ • Identical queries → Instant response                   │    │
-│  │ • Hash: question + context + expert + params            │    │
-│  │ • Hit Rate: 70-85%                                       │    │
+│  │ - Identical queries -> Instant response                  │    │
+│  │ - Hash: question + context + expert + params            │    │
+│  │ - Hit Rate: 70-85%                                       │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Level 2: Feature Cache (Position Analysis)                │   │
-│  │ • Board position features                                  │    │
-│  │ • King safety scores                                       │    │
-│  │ • Piece activity metrics                                   │    │
-│  │ • Hit Rate: 80-90%                                         │    │
+│  │ - Board position features                                  │    │
+│  │ - King safety scores                                       │    │
+│  │ - Piece activity metrics                                   │    │
+│  │ - Hit Rate: 80-90%                                         │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Level 3: Adapter Cache (Model Weights)                    │   │
-│  │ • LoRA adapter weights                                     │    │
-│  │ • Persistent across requests                               │    │
-│  │ • Lazy loading on first use                                │    │
+│  │ - LoRA adapter weights                                     │    │
+│  │ - Persistent across requests                               │    │
+│  │ - Lazy loading on first use                                │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -194,10 +194,10 @@
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ System-Level Recovery                                     │    │
 │  │                                                         │    │
-│  │ • Timeout Protection (30s per expert)                   │    │
-│  │ • Memory Limit Enforcement                               │    │
-│  │ • Graceful Degradation                                   │    │
-│  │ • Request Logging & Monitoring                           │    │
+│  │ - Timeout Protection (30s per expert)                   │    │
+│  │ - Memory Limit Enforcement                               │    │
+│  │ - Graceful Degradation                                   │    │
+│  │ - Request Logging & Monitoring                           │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -220,30 +220,30 @@
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Flask Request Processing                                 │   │
-│  │ • Input validation                                        │    │
-│  │ • RAG context enhancement                                 │    │
-│  │ • Expert selection                                        │    │
+│  │ - Input validation                                        │    │
+│  │ - RAG context enhancement                                 │    │
+│  │ - Expert selection                                        │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Parallel Inference Execution                             │   │
-│  │ • Thread pool creation                                    │    │
-│  │ • Expert distribution                                     │    │
-│  │ • Synchronization                                          │    │
+│  │ - Thread pool creation                                    │    │
+│  │ - Expert distribution                                     │    │
+│  │ - Synchronization                                          │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Response Aggregation                                      │   │
-│  │ • Result collection                                        │    │
-│  │ • Performance metrics                                     │    │
-│  │ • Error handling                                          │    │
+│  │ - Result collection                                        │    │
+│  │ - Performance metrics                                     │    │
+│  │ - Error handling                                          │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ JSON Response Formatting                                 │   │
-│  │ • Structured output                                       │    │
-│  │ • Timing information                                      │    │
-│  │ • Expert results                                          │    │
+│  │ - Structured output                                       │    │
+│  │ - Timing information                                      │    │
+│  │ - Expert results                                          │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -256,30 +256,30 @@
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ Flask Web Server (localhost:5000)                       │    │
-│  │ • Gunicorn/Waitress for production                       │    │
-│  │ • CORS enabled for web clients                           │    │
-│  │ • Request logging and monitoring                         │    │
+│  │ - Gunicorn/Waitress for production                       │    │
+│  │ - CORS enabled for web clients                           │    │
+│  │ - Request logging and monitoring                         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Chess Model Service                                       │    │
-│  │ • Singleton inference instance                            │    │
-│  │ • Lazy model loading                                      │    │
-│  │ • Adapter management                                      │    │
+│  │ - Singleton inference instance                            │    │
+│  │ - Lazy model loading                                      │    │
+│  │ - Adapter management                                      │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ MPS Acceleration Layer                                    │    │
-│  │ • Apple Silicon optimized                                  │    │
-│  │ • Memory management                                       │    │
-│  │ • Performance monitoring                                  │    │
+│  │ - Apple Silicon optimized                                  │    │
+│  │ - Memory management                                       │    │
+│  │ - Performance monitoring                                  │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 │                               │                                   │
 │  ┌─────────────────────────────▼─────────────────────────────┐   │
 │  │ Storage Layer                                             │    │
-│  │ • Checkpoint management                                   │    │
-│  │ • Cache persistence                                       │    │
-│  │ • Log aggregation                                         │    │
+│  │ - Checkpoint management                                   │    │
+│  │ - Cache persistence                                       │    │
+│  │ - Log aggregation                                         │    │
 │  └─────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```

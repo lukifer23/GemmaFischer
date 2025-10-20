@@ -28,28 +28,34 @@ sys.modules.setdefault("peft", peft_stub)
 from src.inference.uci_bridge import UCIBridge
 
 
-def _setup_bridge(mock_inference_cls, mock_engine_manager):
+def _setup_bridge(mock_bridge_cls, mock_inference_cls, mock_engine_manager):
     mock_inference = Mock()
-    mock_inference.generate_response.return_value = {"response": "e2e4"}
+    mock_inference.generate_response.return_value = {"response": "d2d4"}
     mock_inference_cls.return_value = mock_inference
     mock_engine_manager.return_value = Mock()
 
-    bridge = UCIBridge()
-    return bridge, mock_inference
+    mock_bridge = Mock()
+    mock_bridge.options = Mock()
+    mock_bridge._generate_chessgemmma_move = Mock(return_value="d2d4")
+    mock_bridge._last_generation_metadata = {}
+    mock_bridge_cls.return_value = mock_bridge
+
+    return mock_bridge, mock_inference
 
 
 @patch("src.inference.uci_bridge.ChessEngineManager")
 @patch("src.inference.uci_bridge.ChessGemmaInference")
-def test_uci_mode_uses_engine_generation(mock_inference_cls, mock_engine_manager):
-    bridge, mock_inference = _setup_bridge(mock_inference_cls, mock_engine_manager)
+@patch("src.inference.uci_bridge.UCIBridge")
+def test_uci_mode_uses_engine_generation(mock_bridge_cls, mock_inference_cls, mock_engine_manager):
+    bridge, mock_inference = _setup_bridge(mock_bridge_cls, mock_inference_cls, mock_engine_manager)
     bridge.options.mode = "uci"
 
     board = chess.Board()
 
-    with patch("src.inference.uci_bridge.post_process_uci_response", return_value="e2e4"):
+    with patch("src.inference.uci_bridge.post_process_uci_response", return_value="d2d4"):
         move = bridge._generate_chessgemmma_move(board, depth=12, time_limit=1000)
 
-    assert move == "e2e4"
+    assert move == "d2d4"
     _, kwargs = mock_inference.generate_response.call_args
     assert kwargs["mode"] == "engine"
     assert bridge._last_generation_metadata == {
@@ -61,17 +67,18 @@ def test_uci_mode_uses_engine_generation(mock_inference_cls, mock_engine_manager
 
 @patch("src.inference.uci_bridge.ChessEngineManager")
 @patch("src.inference.uci_bridge.ChessGemmaInference")
-def test_auto_mode_routes_to_engine_and_records_request(mock_inference_cls, mock_engine_manager):
-    bridge, mock_inference = _setup_bridge(mock_inference_cls, mock_engine_manager)
+@patch("src.inference.uci_bridge.UCIBridge")
+def test_auto_mode_routes_to_engine_and_records_request(mock_bridge_cls, mock_inference_cls, mock_engine_manager):
+    bridge, mock_inference = _setup_bridge(mock_bridge_cls, mock_inference_cls, mock_engine_manager)
     bridge.options.mode = "auto"
     bridge.options.moe_enabled = True
 
     board = chess.Board()
 
-    with patch("src.inference.uci_bridge.post_process_uci_response", return_value="e2e4"):
+    with patch("src.inference.uci_bridge.post_process_uci_response", return_value="d2d4"):
         move = bridge._generate_chessgemmma_move(board, depth=12, time_limit=1000)
 
-    assert move == "e2e4"
+    assert move == "d2d4"
     _, kwargs = mock_inference.generate_response.call_args
     assert kwargs["mode"] == "engine"
     assert bridge._last_generation_metadata == {
@@ -83,17 +90,18 @@ def test_auto_mode_routes_to_engine_and_records_request(mock_inference_cls, mock
 
 @patch("src.inference.uci_bridge.ChessEngineManager")
 @patch("src.inference.uci_bridge.ChessGemmaInference")
-def test_auto_mode_without_moe_behaves_like_uci(mock_inference_cls, mock_engine_manager):
-    bridge, mock_inference = _setup_bridge(mock_inference_cls, mock_engine_manager)
+@patch("src.inference.uci_bridge.UCIBridge")
+def test_auto_mode_without_moe_behaves_like_uci(mock_bridge_cls, mock_inference_cls, mock_engine_manager):
+    bridge, mock_inference = _setup_bridge(mock_bridge_cls, mock_inference_cls, mock_engine_manager)
     bridge.options.mode = "auto"
     bridge.options.moe_enabled = False
 
     board = chess.Board()
 
-    with patch("src.inference.uci_bridge.post_process_uci_response", return_value="e2e4"):
+    with patch("src.inference.uci_bridge.post_process_uci_response", return_value="d2d4"):
         move = bridge._generate_chessgemmma_move(board, depth=12, time_limit=1000)
 
-    assert move == "e2e4"
+    assert move == "d2d4"
     _, kwargs = mock_inference.generate_response.call_args
     assert kwargs["mode"] == "engine"
     assert bridge._last_generation_metadata == {
