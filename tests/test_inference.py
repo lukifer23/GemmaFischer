@@ -109,7 +109,44 @@ class TestChessGemmaInference:
         inference = ChessGemmaInference(model_path, adapter_path)
         assert inference.model_path == model_path
         assert inference.adapter_path == adapter_path
-    
+
+    @patch("src.inference.inference.HybridEngine")
+    def test_expert_manager_uci_uses_hybrid_engine(self, mock_hybrid_engine):
+        """Ensure UCI expert mode routes analysis requests to the hybrid engine."""
+
+        stub_engine = Mock()
+        hybrid_result = HybridEngineResult(
+            fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            engine_name="LC0",
+            best_move="e2e4",
+            principal_variation=["e2e4", "e7e5"],
+            evaluation_cp=12,
+            mate_in=None,
+            depth=20,
+            nodes=1024,
+            engine_time=0.25,
+        )
+        stub_engine.analyze.return_value = hybrid_result
+        mock_hybrid_engine.return_value = stub_engine
+
+        inference = ChessGemmaInference()
+
+        assert inference._expert_manager is not None
+        assert inference._expert_manager.chess_engine is stub_engine
+
+        starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        result = inference._expert_manager.generate_expert_response(
+            question=f"FEN: {starting_fen}",
+            expert_mode="uci",
+        )
+
+        stub_engine.analyze.assert_called_once()
+        analyzed_fen = stub_engine.analyze.call_args[0][0]
+        assert analyzed_fen == chess.Board(starting_fen).fen()
+        assert result["response"] == hybrid_result.best_move
+        assert result["engine_used"] is True
+        assert result.get("engine_name") == hybrid_result.engine_name
+
     @patch('src.inference.core_engine.AutoTokenizer')
     @patch('src.inference.core_engine.AutoModelForCausalLM')
     def test_load_model_success(self, mock_model, mock_tokenizer, tmp_path):
