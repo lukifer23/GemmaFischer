@@ -168,6 +168,30 @@ class ChessGemmaInference:
     def __init__(self, model_path: Optional[str] = None, adapter_path: Optional[str] = None):
         self.project_root = Path(__file__).resolve().parents[2]
 
+        # Hybrid LC0 engine integration (configured before expert manager wiring)
+        self._config_manager = get_config_manager()
+        self._hybrid_engine_enabled = True
+        self._hybrid_engine: Optional[HybridEngine] = None
+        self._chess_engine: Optional[HybridEngine] = None
+
+        try:
+            engine_config = None
+            if self._config_manager:
+                try:
+                    engine_config = self._config_manager().chess_engine
+                except Exception:
+                    engine_config = None
+            self._hybrid_engine = HybridEngine(engine_config)
+            self._chess_engine = self._hybrid_engine
+            logger.info("Hybrid engine ready for LC0-powered analysis")
+        except Exception as e:
+            logger.warning(f"Hybrid engine disabled: {e}")
+            self._hybrid_engine_enabled = False
+            self._hybrid_engine = None
+            self._chess_engine = None
+
+        self._expert_manager: Optional["ChessExpertManager"] = None
+
         # Use new modular architecture internally
         try:
             from .core_engine import ChessGemmaCoreEngine
@@ -176,8 +200,6 @@ class ChessGemmaInference:
 
             self._core_engine = ChessGemmaCoreEngine(model_path, adapter_path)
             self._cache = ChessInferenceCache()
-            # Pass the hybrid engine to expert manager for UCI mode
-            self._expert_manager = ChessExpertManager(self._core_engine, self._chess_engine if hasattr(self, '_chess_engine') else None)
 
             # Maintain backward compatibility
             self.model_path = self._core_engine.model_path
@@ -186,6 +208,10 @@ class ChessGemmaInference:
             self.model = self._core_engine.model
             self.is_loaded = self._core_engine.is_loaded
             self.debug = self._core_engine.debug
+
+            # Wire expert manager with hybrid engine when available
+            chess_engine_backend = self._chess_engine if self._hybrid_engine_enabled else None
+            self._expert_manager = ChessExpertManager(self._core_engine, chess_engine_backend)
 
         except ImportError:
             # Fallback to legacy implementation if new modules aren't available
@@ -210,24 +236,6 @@ class ChessGemmaInference:
 
         # Adapter management
         self._adapter_paths: Dict[str, Path] = {}
-
-        # Hybrid LC0 engine integration
-        self._config_manager = get_config_manager()
-        self._hybrid_engine_enabled = True
-        self._hybrid_engine: Optional[HybridEngine] = None
-        try:
-            engine_config = None
-            if self._config_manager:
-                try:
-                    engine_config = self._config_manager().chess_engine
-                except Exception:
-                    engine_config = None
-            self._hybrid_engine = HybridEngine(engine_config)
-            logger.info("Hybrid engine ready for LC0-powered analysis")
-        except Exception as e:
-            logger.warning(f"Hybrid engine disabled: {e}")
-            self._hybrid_engine_enabled = False
-            self._hybrid_engine = None
 
         self._last_engine_analysis: Optional[HybridEngineResult] = None
         self._last_engine_explanation: Optional[str] = None

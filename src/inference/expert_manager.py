@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List, Tuple, Union, TYPE_CHECKING
 import threading
 
 # Import common utilities
@@ -31,11 +31,23 @@ except ImportError:
     # Fallback for standalone testing
     ChessGemmaCoreEngine = None
 
+from .hybrid_engine import HybridEngine, HybridEngineResult
+
+if TYPE_CHECKING:  # pragma: no cover - for type checkers only
+    from .chess_engine import ChessEngineManager
+
+
+EngineBackend = Union["ChessEngineManager", HybridEngine]
+
 
 class ChessExpertManager:
     """Manages UCI, Tutor, and Director expert adapters."""
 
-    def __init__(self, core_engine: Optional[ChessGemmaCoreEngine] = None, chess_engine: Optional[ChessEngineManager] = None):
+    def __init__(
+        self,
+        core_engine: Optional[ChessGemmaCoreEngine] = None,
+        chess_engine: Optional[EngineBackend] = None,
+    ):
         self.core_engine = core_engine or ChessGemmaCoreEngine()
         self.chess_engine = chess_engine  # For UCI mode hybrid engine usage
         self.project_root = Path(__file__).resolve().parents[2]
@@ -290,22 +302,47 @@ class ChessExpertManager:
         # For UCI mode, try hybrid engine first if available
         if expert_mode == "uci" and self.chess_engine:
             try:
-                # Use hybrid engine for UCI moves
-                import chess
                 # Extract FEN from context or question if possible
-                fen = context or question
-                if "FEN:" in fen:
-                    fen = fen.split("FEN:")[1].split("\n")[0].strip()
+                import chess
+
+                fen_source = context or question
+                if "FEN:" in fen_source:
+                    fen = fen_source.split("FEN:")[1].split("\n")[0].strip()
+                else:
+                    fen = fen_source.strip()
+
                 board = chess.Board(fen)
-                result = self.chess_engine.get_best_move(board, depth=12, time_limit_ms=5000)
-                if result:
-                    return {
-                        "response": result.uci(),
-                        "expert": expert_mode,
-                        "mode": mode,
-                        "engine_used": True,
-                        "confidence": 1.0
-                    }
+                normalized_fen = board.fen()
+
+                if hasattr(self.chess_engine, "analyze"):
+                    analysis: HybridEngineResult = self.chess_engine.analyze(normalized_fen)
+                    best_move = analysis.best_move
+                    if best_move:
+                        move_text = best_move if isinstance(best_move, str) else str(best_move)
+                        return {
+                            "response": move_text,
+                            "expert": expert_mode,
+                            "mode": mode,
+                            "engine_used": True,
+                            "engine_name": getattr(analysis, "engine_name", None),
+                            "confidence": 1.0,
+                        }
+
+                if hasattr(self.chess_engine, "get_best_move"):
+                    result = self.chess_engine.get_best_move(
+                        board,
+                        depth=12,
+                        time_limit_ms=5000,
+                    )
+                    if result:
+                        move_text = result.uci() if hasattr(result, "uci") else str(result)
+                        return {
+                            "response": move_text,
+                            "expert": expert_mode,
+                            "mode": mode,
+                            "engine_used": True,
+                            "confidence": 1.0,
+                        }
             except Exception as e:
                 # Log error but continue to LLM fallback
                 import logging
