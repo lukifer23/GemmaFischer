@@ -16,6 +16,8 @@ from unittest.mock import Mock, patch
 import re
 
 import torch
+import threading
+import time
 
 import chess
 
@@ -73,6 +75,7 @@ from src.inference.inference import (
     unload_model,
     get_model_info,
 )
+from src.inference.core_engine import ChessGemmaCoreEngine
 from src.inference.hybrid_engine import HybridEngineResult
 from src.inference.moe_router import RoutingDecision, MoEInferenceManager
 from src.config.config_manager import InferenceConfig
@@ -138,12 +141,75 @@ class TestChessGemmaInference:
     def test_load_model_failure(self, mock_tokenizer):
         """Test model loading failure."""
         mock_tokenizer.from_pretrained.side_effect = Exception("Load failed")
-        
+
         inference = ChessGemmaInference()
         result = inference.load_model()
-        
+
         assert result is False
         assert inference.is_loaded is False
+
+
+@patch('src.inference.core_engine.AutoTokenizer')
+@patch('src.inference.core_engine.AutoModelForCausalLM')
+def test_concurrent_model_load(mock_model_cls, mock_tokenizer_cls):
+    """Ensure concurrent load requests wait without spinning and finish safely."""
+
+    load_started = threading.Event()
+    continue_event = threading.Event()
+
+    mock_tokenizer_instance = Mock()
+
+    def slow_tokenizer(*args, **kwargs):
+        load_started.set()
+        continue_event.wait(timeout=5)
+        return mock_tokenizer_instance
+
+    mock_tokenizer_cls.from_pretrained.side_effect = slow_tokenizer
+
+    mock_model_instance = Mock()
+    mock_model_instance.to.return_value = None
+    mock_model_instance.eval.return_value = None
+    mock_model_instance.parameters.return_value = iter([Mock(device=torch.device("cpu"))])
+    mock_model_cls.from_pretrained.return_value = mock_model_instance
+
+    engine = ChessGemmaCoreEngine(model_path="mock-repo")
+
+    results = []
+
+    def loader():
+        results.append(engine.load_model())
+
+    # Start primary loader thread
+    threads = [threading.Thread(target=loader)]
+    threads[0].start()
+
+    # Wait until loading sequence has begun
+    assert load_started.wait(timeout=1), "Primary loader did not start in time"
+
+    # Start additional concurrent loaders that should block until loading completes
+    for _ in range(3):
+        t = threading.Thread(target=loader)
+        threads.append(t)
+        t.start()
+
+    # Give threads time to block on the loading event
+    time.sleep(0.1)
+    for t in threads[1:]:
+        assert t.is_alive(), "Concurrent loader thread did not wait for completion"
+
+    # Allow loading to finish
+    continue_event.set()
+
+    for t in threads:
+        t.join(timeout=2)
+        assert not t.is_alive(), "Loader thread did not terminate"
+
+    assert all(results), "All load attempts should report success"
+    assert mock_tokenizer_cls.from_pretrained.call_count == 1
+    assert mock_model_cls.from_pretrained.call_count == 1
+    assert engine.is_loaded is True
+    assert engine._model_loading is False
+    assert engine._model_loaded_event.is_set()
 
     def test_unload_model(self):
         """Test unloading frees resources and resets state."""

@@ -67,6 +67,8 @@ class ChessGemmaCoreEngine:
         # Thread safety for model loading - use faster Lock for better performance
         self._model_load_lock = threading.Lock()
         self._model_loading = False
+        self._model_loaded_event = threading.Event()
+        self._model_loaded_event.set()
 
         # Performance monitoring - reduced overhead
         self._generation_stats = {
@@ -85,9 +87,7 @@ class ChessGemmaCoreEngine:
 
         # Thread-safe model loading - optimized double-check
         if self._model_loading:
-            # Simple busy wait for better performance
-            while self._model_loading and not self.is_loaded:
-                pass
+            self._model_loaded_event.wait()
             return self.is_loaded
 
         with self._model_load_lock:
@@ -96,19 +96,19 @@ class ChessGemmaCoreEngine:
                 return True
 
             self._model_loading = True
+            self._model_loaded_event.clear()
 
         # Allow offline benchmarking or environments without model access to
         # skip the heavyweight model loading sequence. This prevents the
         # benchmarking harness from repeatedly attempting to download weights
         # when network access is unavailable.
-        if os.environ.get("CHESSGEMMA_SKIP_MODEL_LOAD", "0") not in ("0", "false", "False"):
-            logger.warning(
-                "Skipping Gemma model load because CHESSGEMMA_SKIP_MODEL_LOAD is set."
-            )
-            self._model_loading = False
-            return False
-
         try:
+            if os.environ.get("CHESSGEMMA_SKIP_MODEL_LOAD", "0") not in ("0", "false", "False"):
+                logger.warning(
+                    "Skipping Gemma model load because CHESSGEMMA_SKIP_MODEL_LOAD is set."
+                )
+                return False
+
             if not self.model_path:
                 print("Model path not configured. Set CHESSGEMMA_MODEL_ID or CHESSGEMMA_MODEL_PATH.")
                 return False
@@ -207,16 +207,15 @@ class ChessGemmaCoreEngine:
                     print(f"Warning: Model validation error: {val_e}")
 
             self.is_loaded = True
-            self._model_loading = False  # Reset loading flag
             return True
         except Exception as e:
             print(f"Error loading model: {e}")
             self.is_loaded = False
-            self._model_loading = False  # Reset loading flag
             return False
         finally:
-            # Ensure loading flag is always reset
+            # Ensure loading flag and waiters are always reset/notified
             self._model_loading = False
+            self._model_loaded_event.set()
 
     def unload_model(self) -> None:
         """Free model resources and reset state."""
