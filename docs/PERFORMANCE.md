@@ -1,4 +1,6 @@
-# Performance Benchmarks & Metrics
+# Performance Benchmarks & Metrics (Historical v2)
+
+> **Historical and unverified.** These numbers are contradicted by later reports and are not current release evidence.
 
 ## Overview
 

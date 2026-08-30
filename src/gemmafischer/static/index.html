@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GemmaFischer Position Coach</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">Experimental local research preview</p>
+      <h1>GemmaFischer</h1>
+    </div>
+    <p class="privacy">Runs locally · positions stay on this Mac</p>
+  </header>
+
+  <main>
+    <section class="task-picker" aria-labelledby="task-title">
+      <h2 id="task-title">What would you like to understand?</h2>
+      <div class="task-options">
+        <label><input type="radio" name="mode" value="position" checked> <span><strong>Explain this position</strong><small>Find the key move and lesson.</small></span></label>
+        <label><input type="radio" name="mode" value="compare"> <span><strong>Compare a move I considered</strong><small>See what it misses or gets right.</small></span></label>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <section class="input-pane" aria-labelledby="position-title">
+        <div class="section-heading">
+          <div><p class="step">1 · Position</p><h2 id="position-title">Set the board</h2></div>
+          <button id="flip" class="quiet" type="button">Flip board</button>
+        </div>
+        <div id="board" class="board" role="grid" aria-label="Chess position"></div>
+        <label for="fen">FEN</label>
+        <textarea id="fen" rows="3" spellcheck="false">r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3</textarea>
+        <button id="load-example" class="text-button" type="button">Load example position</button>
+
+        <div id="consider-wrap" hidden>
+          <label for="consider">Move you considered <span>(UCI, such as f1b5)</span></label>
+          <input id="consider" maxlength="5" autocomplete="off" placeholder="f1b5">
+          <p class="field-help">You can also select an origin and destination square on the board.</p>
+        </div>
+
+        <label for="rating">Your playing level</label>
+        <select id="rating">
+          <option>1000-1199</option><option>1200-1399</option>
+          <option selected>1400-1599</option><option>1600-1800</option>
+        </select>
+        <p id="input-error" class="error" role="alert" hidden></p>
+        <div class="actions">
+          <button id="analyze" class="primary" type="button">Analyze position</button>
+          <button id="cancel" class="quiet" type="button" hidden>Cancel</button>
+        </div>
+      </section>
+
+      <section class="result-pane" aria-labelledby="result-title">
+        <p class="step">2 · Lesson</p>
+        <h2 id="result-title" tabindex="-1">Your explanation will appear here</h2>
+        <div id="status" class="status" role="status" aria-live="polite">Choose a task and analyze the position.</div>
+        <div id="result" hidden>
+          <p id="degraded" class="notice" hidden></p>
+          <p id="summary" class="summary"></p>
+          <div id="claims" class="claims"></div>
+          <details class="evidence">
+            <summary>Verified engine evidence</summary>
+            <div id="evidence"></div>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+name: Bug report
+description: Report reproducible vNext behavior
+body:
+  - type: textarea
+    attributes: {label: Outcome, description: What happened and what should have happened?}
+    validations: {required: true}
+  - type: textarea
+    attributes: {label: Reproduction, description: Provide exact commands or browser steps.}
+    validations: {required: true}
+  - type: textarea
+    attributes: {label: Diagnostics, description: Paste redacted version and doctor JSON.}
+    validations: {required: true}
+

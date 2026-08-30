@@ -1,4 +1,6 @@
-# GemmaFischer Dataset Guide
+# GemmaFischer Dataset Guide (Historical v2)
+
+> **Historical and unverified.** All referenced datasets are quarantined pending provenance, semantic, and leakage review.
 
 ## Overview
 

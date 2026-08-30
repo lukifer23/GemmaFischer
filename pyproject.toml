@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gemmafischer"
+version = "0.1.0"
+description = "A local, evidence-grounded chess position coach"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { file = "LICENSE" }
+dependencies = [
+  "fastapi>=0.116,<0.117",
+  "pydantic>=2.11,<3",
+  "python-chess>=1.999,<2",
+  "rfc8785>=0.1.4,<0.2",
+  "uvicorn>=0.35,<0.36",
+]
+
+[project.optional-dependencies]
+deterministic = []
+full = ["mlx-lm>=0.28,<0.29", "psutil>=7,<8"]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<0.29",
+  "mypy>=1.17,<2",
+  "pytest>=8.4,<9",
+  "pytest-cov>=6.2,<7",
+  "ruff>=0.12,<0.13",
+]
+
+[project.scripts]
+gemmafischer = "gemmafischer.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gemmafischer"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/gemmafischer", "README.md", "LICENSE", "assets"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers"
+testpaths = ["tests_vnext"]
+markers = [
+  "hardware: requires a real chess engine or Apple Silicon runtime",
+  "model: requires downloaded model assets",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["gemmafischer"]
+
+[[tool.mypy.overrides]]
+module = ["mlx_lm", "mlx_lm.*"]
+ignore_missing_imports = true

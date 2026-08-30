@@ -1,4 +1,6 @@
-# LC0 Integration Plan for GemmaFischer MoE System
+# LC0 Integration Plan for GemmaFischer MoE System (Historical v2)
+
+> **Historical and unverified.** LC0 is outside the first trusted vNext player path.
 
 ## Executive Summary
 

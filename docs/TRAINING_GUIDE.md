@@ -1,4 +1,6 @@
-# GemmaFischer Training Guide
+# GemmaFischer Training Guide (Historical v2)
+
+> **Historical and unverified.** The referenced training path and datasets are quarantined; vNext exposes no training command.
 
 ## Overview
 

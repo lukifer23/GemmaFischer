@@ -1,4 +1,6 @@
-# GemmaFischer Architecture
+# GemmaFischer Architecture (Historical v2)
+
+> **Historical and unverified.** This describes the quarantined Flask/MoE/LC0 system. See `docs/architecture-vnext.md` for the supported boundary.
 
 ## System Overview
 

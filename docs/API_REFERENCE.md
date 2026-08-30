@@ -1,4 +1,6 @@
-# GemmaFischer API Reference
+# GemmaFischer API Reference (Historical v2)
+
+> **Historical and unverified.** This describes the quarantined Flask/MoE application, not the supported vNext API. See `docs/evidence-contract.md` and generated `docs/openapi.json`.
 
 ## Overview
 

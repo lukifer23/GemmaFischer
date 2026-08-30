@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-08-30",
+  "policy": "Only entries marked verified may support current release claims.",
+  "entries": [
+    {"scope": "src/gemmafischer and tests_vnext", "status": "verified", "reason": "Portable lint, type, contract, security, and API gates are defined for vNext."},
+    {"scope": "src/web, src/inference, src/training and tests", "status": "quarantined", "reason": "Legacy runtime contains unsafe controls, silent fallbacks, incorrect engine semantics, and stale interfaces."},
+    {"scope": "data and validation", "status": "quarantined", "reason": "Current corpora and evaluation sets fail provenance, semantic consistency, or train-eval separation gates."},
+    {"scope": "models and checkpoints", "status": "quarantined", "reason": "Legacy assets have not passed vNext provenance, integrity, compatibility, or quality qualification."},
+    {"scope": "reports, training_reports and root benchmark JSON files", "status": "historical", "reason": "Preserved as research history; not reproducible vNext evidence."},
+    {"scope": "uppercase docs and LC0 reports", "status": "historical", "reason": "Describe the superseded v2 MoE and LC0 architecture."},
+    {"scope": "Stockfish 18 target-host qualification", "status": "unverified", "reason": "Exact binary, NNUE, clean-machine, and 100-request evidence are not yet recorded."},
+    {"scope": "Gemma 4 E2B Q4 full profile", "status": "unverified", "reason": "Runtime feasibility is implemented; hardware, grounding, and human-value gates remain open."}
+  ]
+}
+

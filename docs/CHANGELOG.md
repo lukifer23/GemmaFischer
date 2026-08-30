@@ -1,4 +1,6 @@
-# Changelog
+# Changelog (Historical v2)
+
+> **Historical and unverified.** These claims have not passed vNext evidence gates.
 ## [2.4.0] - 2025-10-08
 
 ### Major Feature Addition: Parallel Multi-Expert Execution

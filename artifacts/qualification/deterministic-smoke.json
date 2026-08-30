@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "status": "target-host-repeatability-only",
+  "generated_at": "2026-08-30T21:20:29.124163+00:00",
+  "commit": "2eee284147d4c431c4e4b8cc76a4ce4e9b1a70d1",
+  "working_tree_clean": false,
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.12.12",
+  "fixture_path": "data/evaluation/diagnostic_positions.jsonl",
+  "fixture_sha256": "414ab708422fb6e3e8e7e259d47b6266463f9c7af40b1ad2846433ec8cc02ae7",
+  "engine_path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish",
+  "engine_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+  "node_budget": 250000,
+  "request_count": 5,
+  "latency_seconds": {
+    "mean": 0.5776813497970579,
+    "p50": 0.8188997079996625,
+    "p95": 0.8676403749996098,
+    "max": 0.8676403749996098
+  },
+  "process_max_rss_raw": 53166080,
+  "raw": [
+    {
+      "index": 0,
+      "fixture_id": "opening-ruy",
+      "workflow": "compare",
+      "latency_seconds": 0.8484832499962067,
+      "position_id": "b40d14bddb19dcbc62579e2fa2ef4a0aba5147530850439b8cece57fe2355109",
+      "candidate_moves": [
+        "f1b5",
+        "d2d4",
+        "f1c4"
+      ],
+      "candidate_scores_cp": [
+        44,
+        37,
+        29
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 1,
+      "fixture_id": "initial-position",
+      "workflow": "compare",
+      "latency_seconds": 0.8188997079996625,
+      "position_id": "cf574bd864a626e34d626ed953bc01cd9e3f24fc9ed44567426eb5eca5110f43",
+      "candidate_moves": [
+        "e2e4",
+        "d2d4",
+        "g1f3"
+      ],
+      "candidate_scores_cp": [
+        37,
+        34,
+        34
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 2,
+      "fixture_id": "terminal-mate",
+      "workflow": "position",
+      "latency_seconds": 0.0001729159994283691,
+      "position_id": "67a9c5f17d03c85af75186f709f80b5ecd5c9c465c11dcc0439d3195ad703cf6",
+      "candidate_moves": [],
+      "candidate_scores_cp": [],
+      "terminal_reason": "checkmate"
+    },
+    {
+      "index": 3,
+      "fixture_id": "pawn-endgame",
+      "workflow": "compare",
+      "latency_seconds": 0.35321049999038223,
+      "position_id": "b68539ed8a0dff7208ff8afb5301c6f423f2bf2fc5fa97bc5c79fa6932126efc",
+      "candidate_moves": [
+        "d4e3",
+        "d4e5",
+        "d4d5"
+      ],
+      "candidate_scores_cp": [
+        -752,
+        -765,
+        -751
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 4,
+      "fixture_id": "middlegame-castle",
+      "workflow": "compare",
+      "latency_seconds": 0.8676403749996098,
+      "position_id": "3a819cb7fcf89cbbef15decac89d15cbacd1d972ad05e24cb407679e8b51a875",
+      "candidate_moves": [
+        "e1c1",
+        "f3d4",
+        "d2f4"
+      ],
+      "candidate_scores_cp": [
+        65,
+        47,
+        37
+      ],
+      "terminal_reason": null
+    }
+  ]
+}

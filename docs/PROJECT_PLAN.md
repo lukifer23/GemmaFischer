@@ -1,4 +1,6 @@
-# Project Plan: GemmaFischer - Hybrid Chess LLM/LC0 System
+# Project Plan: Hybrid Chess LLM/LC0 System (Historical v2)
+
+> **Historical and unverified.** The current plan is the isolated grounded vNext architecture.
 
 ## Summary
 

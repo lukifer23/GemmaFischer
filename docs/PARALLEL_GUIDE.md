@@ -1,4 +1,6 @@
-# Parallel Multi-Expert Analysis Guide
+# Parallel Multi-Expert Analysis Guide (Historical v2)
+
+> **Historical and unverified.** Multi-expert execution is quarantined and unsupported in vNext.
 
 ## Overview
 

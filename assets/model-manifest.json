@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "status": "blocked_runtime_incompatible",
+  "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+  "upstream_model": "google/gemma-4-E2B-it",
+  "runtime": "mlx-lm",
+  "quantization": "4bit",
+  "revision": null,
+  "file_hashes": {},
+  "tokenizer_hash": null,
+  "chat_template_hash": null,
+  "license": "Apache-2.0",
+  "release_blocker": "MLX-LM 0.28.4 reports model type gemma4 unsupported. Select and pin a compatible runtime before qualification."
+}

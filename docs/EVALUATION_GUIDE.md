@@ -1,4 +1,6 @@
-# GemmaFischer Evaluation Guide
+# GemmaFischer Evaluation Guide (Historical v2)
+
+> **Historical and unverified.** The referenced evaluation sets and results are not vNext release evidence.
 
 ## Overview
 

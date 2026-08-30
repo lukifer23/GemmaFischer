@@ -1,4 +1,6 @@
-# Research Inspirations and Prior Art
+# Research Inspirations and Prior Art (Historical v2)
+
+> **Historical reference.** Ideas here require new provenance and product evidence before migration.
 
 ## Overview
 

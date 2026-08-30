@@ -1,0 +1,6 @@
+{"id":"opening-ruy","source":"GemmaFischer constructed fixture","license":"CC0-1.0","fen":"r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3","considered_move_uci":"f1b5","category":"opening development"}
+{"id":"initial-position","source":"Standard chess initial position","license":"CC0-1.0","fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","considered_move_uci":"e2e4","category":"opening choice"}
+{"id":"terminal-mate","source":"GemmaFischer constructed fixture","license":"CC0-1.0","fen":"7k/7Q/7K/8/8/8/8/8 b - - 0 1","considered_move_uci":null,"category":"terminal"}
+{"id":"pawn-endgame","source":"GemmaFischer constructed fixture","license":"CC0-1.0","fen":"8/5pk1/7p/8/3K4/8/8/8 w - - 0 1","considered_move_uci":"d4e5","category":"endgame"}
+{"id":"middlegame-castle","source":"GemmaFischer constructed fixture","license":"CC0-1.0","fen":"r1bq1rk1/ppp2ppp/2np1n2/8/2B1P3/2N2N2/PPPQ1PPP/R3K2R w KQ - 0 10","considered_move_uci":"e1c1","category":"king safety"}
+
