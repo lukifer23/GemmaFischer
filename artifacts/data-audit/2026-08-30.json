@@ -1,0 +1,714 @@
+{
+  "schema_version": "1.0",
+  "status": "blocked",
+  "generated_at": "2026-08-30T22:02:40.031894+00:00",
+  "training": {
+    "files": [
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "sha256": "126a4dd58f182d1490f704ff825c432f819b94d8babb1cade51e2a922f418752",
+        "records": 3800,
+        "missing_license": 3800,
+        "records_with_fen": 3000,
+        "records_with_best_move": 2270,
+        "invalid_fens": 730,
+        "duplicates_within_file": 3562,
+        "duplicates_across_files": 3562,
+        "illegal_best_moves": 304,
+        "tasks": {
+          "uci_pure_move": 1500,
+          "tutor_analysis_move": 1500,
+          "director_strategy": 800
+        },
+        "sources": {
+          "evaluation_aligned": 3800
+        }
+      },
+      {
+        "path": "data/standardized/standardized_cot_reasoning_repaired.jsonl",
+        "sha256": "0cb265f07985ea272187ca14c6f5b06dd286722123ade0aa0682bb2ce47ee908",
+        "records": 2000,
+        "missing_license": 2000,
+        "tasks": {
+          "director_qa": 2000
+        },
+        "sources": {
+          "generated_cot": 2000
+        }
+      },
+      {
+        "path": "data/standardized/standardized_director_expert_v3.jsonl",
+        "sha256": "a360beacadb0fe9316b7ad05c8e081747cecbcf633713c42a4c4dc83f21f744b",
+        "records": 49999,
+        "missing_license": 49999,
+        "records_with_fen": 49999,
+        "records_with_best_move": 49999,
+        "tasks": {
+          "director_qa": 49999
+        },
+        "sources": {
+          "lichess_puzzles_1000_2000.jsonl": 49999
+        }
+      },
+      {
+        "path": "data/standardized/standardized_tutor_expert_v2.jsonl",
+        "sha256": "9d2c39426de3307e4eb6f510bec43bf9a1504cb5995139d6076c5137ce71977c",
+        "records": 49999,
+        "missing_license": 49999,
+        "records_with_fen": 49999,
+        "records_with_best_move": 49999,
+        "tasks": {
+          "tutor_explain": 49999
+        },
+        "sources": {
+          "lichess_puzzles_1000_2000.jsonl": 49999
+        }
+      },
+      {
+        "path": "data/standardized/standardized_uci_expert_v2.jsonl",
+        "sha256": "1197992bdde4d4b2be8b06f646ffced02d609a845011981dcdcee779df3e0ea6",
+        "records": 49999,
+        "missing_license": 49999,
+        "records_with_fen": 49999,
+        "records_with_best_move": 49999,
+        "tasks": {
+          "engine_uci": 49999
+        },
+        "sources": {
+          "lichess_puzzles_1000_2000.jsonl": 49999
+        }
+      }
+    ],
+    "totals": {
+      "records": 155797,
+      "missing_license": 155797,
+      "records_with_fen": 152997,
+      "records_with_best_move": 152267,
+      "invalid_fens": 730,
+      "duplicates_within_file": 3562,
+      "duplicates_across_files": 3562,
+      "illegal_best_moves": 304
+    },
+    "unique_records": 152235,
+    "unique_fens": 50006,
+    "issue_samples": [
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 2,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 4,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 10,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 11,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 15,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 18,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 20,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 21,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 24,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 34,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 35,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 37,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 39,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 40,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 42,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 45,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 51,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 53,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 55,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 56,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 65,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 69,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 70,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 76,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 83,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 84,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 85,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 86,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 88,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 89,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 93,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 94,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 99,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 100,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 102,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 107,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 111,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 118,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 119,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 120,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 123,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 129,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 139,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 140,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 141,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 142,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 147,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 151,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 155,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/ppp2ppp/8/3pp3/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 0 3\\nWhat is the best move?'"
+      },
+      {
+        "path": "data/standardized/evaluation_aligned_training.jsonl",
+        "line": 156,
+        "code": "invalid_fen",
+        "detail": "fen string has more parts than expected: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1\\nWhat is the best move?'"
+      }
+    ]
+  },
+  "evaluation": {
+    "files": [
+      {
+        "path": "data/evaluation/diagnostic_positions.jsonl",
+        "sha256": "414ab708422fb6e3e8e7e259d47b6266463f9c7af40b1ad2846433ec8cc02ae7",
+        "records": 5,
+        "missing_provenance": 5,
+        "tasks": {
+          "unknown": 5
+        },
+        "sources": {}
+      },
+      {
+        "path": "data/validation/eval_mixed_positions_200.jsonl",
+        "sha256": "ecda3d6db9772d195e0de2fdb8abfd6a96dd6be2699fa573595cde543fcf8370",
+        "records": 200,
+        "missing_provenance": 200,
+        "missing_license": 200,
+        "tasks": {
+          "unknown": 200
+        },
+        "sources": {}
+      },
+      {
+        "path": "data/validation/eval_suite.jsonl",
+        "sha256": "6a7b0f85a2a54d66128b3034bc4acfa32078d923dcc5a1edcda926de9d9627af",
+        "records": 35,
+        "missing_provenance": 35,
+        "missing_license": 35,
+        "records_with_fen": 20,
+        "invalid_fens": 2,
+        "tasks": {
+          "tutor": 15,
+          "director": 15,
+          "uci": 5
+        },
+        "sources": {}
+      },
+      {
+        "path": "data/validation/expanded_eval_suite.jsonl",
+        "sha256": "4044330d3e229e24de79d698bd0526c0bc484a42166ab08106a0eff6164e41ee",
+        "records": 100,
+        "missing_provenance": 100,
+        "missing_license": 100,
+        "records_with_fen": 70,
+        "invalid_fens": 5,
+        "tasks": {
+          "director": 40,
+          "uci": 31,
+          "tutor": 29
+        },
+        "sources": {}
+      }
+    ],
+    "totals": {
+      "records": 340,
+      "missing_provenance": 340,
+      "missing_license": 335,
+      "records_with_fen": 90,
+      "invalid_fens": 7
+    },
+    "unique_records": 340,
+    "unique_fens": 21,
+    "issue_samples": [
+      {
+        "path": "data/validation/eval_suite.jsonl",
+        "line": 6,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      },
+      {
+        "path": "data/validation/eval_suite.jsonl",
+        "line": 27,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      },
+      {
+        "path": "data/validation/expanded_eval_suite.jsonl",
+        "line": 21,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      },
+      {
+        "path": "data/validation/expanded_eval_suite.jsonl",
+        "line": 67,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      },
+      {
+        "path": "data/validation/expanded_eval_suite.jsonl",
+        "line": 84,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      },
+      {
+        "path": "data/validation/expanded_eval_suite.jsonl",
+        "line": 86,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      },
+      {
+        "path": "data/validation/expanded_eval_suite.jsonl",
+        "line": 96,
+        "code": "invalid_fen",
+        "detail": "status=72"
+      }
+    ]
+  },
+  "cross_dataset": {
+    "conflicting_best_move_fens": 48546,
+    "conflict_samples": [
+      {
+        "fen": "1B1R3k/1b3rpp/4Qbn1/8/2P5/1P6/2r3PP/5R1K b - - 1 27",
+        "best_moves": [
+          "f6d8",
+          "f7f8"
+        ]
+      },
+      {
+        "fen": "1B1R4/8/4b3/4rkp1/8/5PK1/8/8 w - - 15 55",
+        "best_moves": [
+          "d8f8",
+          "d8g8"
+        ]
+      },
+      {
+        "fen": "1B1k2r1/p3p1b1/6Qp/2pP4/4N2P/4PN2/Pq3P2/3RK3 w - - 1 28",
+        "best_moves": [
+          "b8c7",
+          "d5d6"
+        ]
+      },
+      {
+        "fen": "1B1qnrk1/1b1rppbp/p5p1/8/1pPp4/1P1B1N1P/P3NPP1/R2QK2R w KQ - 2 17",
+        "best_moves": [
+          "b8e5",
+          "b8h2"
+        ]
+      },
+      {
+        "fen": "1B2B2k/3RP1pp/8/8/1q6/8/4Q1PP/1q5K w - - 0 38",
+        "best_moves": [
+          "d7d1",
+          "e2d1"
+        ]
+      },
+      {
+        "fen": "1B2k1nr/1Q1b1ppp/pq2p3/8/3b4/P1N5/1P3PPP/R4RK1 w k - 1 17",
+        "best_moves": [
+          "b7a8",
+          "b7b6"
+        ]
+      },
+      {
+        "fen": "1B3Q2/kp6/p1p5/3p4/5Pr1/P7/1P3q2/7K b - - 3 42",
+        "best_moves": [
+          "a7a8",
+          "a7b6"
+        ]
+      },
+      {
+        "fen": "1B3R2/pr6/1p5p/1Bp1bkp1/8/6P1/Pn2P2P/7K b - - 11 37",
+        "best_moves": [
+          "e5f6",
+          "f5e6"
+        ]
+      },
+      {
+        "fen": "1B4k1/1p3p2/4q1p1/2b1P2p/8/2r4P/P4QP1/3R1R1K w - - 2 32",
+        "best_moves": [
+          "d1d8",
+          "f2f6"
+        ]
+      },
+      {
+        "fen": "1B4k1/6p1/3Pp2p/8/8/1r6/1n4PP/2R3K1 b - - 0 35",
+        "best_moves": [
+          "b3b8",
+          "b3d3"
+        ]
+      },
+      {
+        "fen": "1B5k/p4Bpp/4P3/4Rp2/3P1n2/8/PPr2P1P/6K1 w - - 3 32",
+        "best_moves": [
+          "e6e7",
+          "h2h4"
+        ]
+      },
+      {
+        "fen": "1B6/3k1p2/8/p3Prp1/1pP5/1P2KPP1/P7/8 b - - 2 44",
+        "best_moves": [
+          "d7c6",
+          "g5g4"
+        ]
+      },
+      {
+        "fen": "1B6/4b3/p1k1p1p1/4P3/P2K2P1/8/8/8 w - - 7 36",
+        "best_moves": [
+          "b8a7",
+          "d4c4"
+        ]
+      },
+      {
+        "fen": "1B6/4k3/1R3b1p/1p1r2pP/6P1/5PK1/8/8 w - - 5 40",
+        "best_moves": [
+          "f3f4",
+          "g3f2"
+        ]
+      },
+      {
+        "fen": "1B6/8/1P5K/5p2/1P2k1p1/P2r4/8/8 b - - 0 47",
+        "best_moves": [
+          "d3d7",
+          "g4g3"
+        ]
+      },
+      {
+        "fen": "1B6/8/6p1/p5P1/2K1k1n1/5N1p/8/8 w - - 2 65",
+        "best_moves": [
+          "f3g1",
+          "f3h4"
+        ]
+      },
+      {
+        "fen": "1B6/8/8/3k1p1p/1p1bp3/1P4PP/6K1/8 b - - 11 51",
+        "best_moves": [
+          "d4c5",
+          "e4e3"
+        ]
+      },
+      {
+        "fen": "1B6/8/8/8/5P2/3kb2R/6r1/4K3 w - - 36 67",
+        "best_moves": [
+          "e1f1",
+          "h3e3"
+        ]
+      },
+      {
+        "fen": "1B6/8/pK3p1p/1p6/6k1/6P1/7P/8 w - - 4 51",
+        "best_moves": [
+          "b8d6",
+          "h2h4"
+        ]
+      },
+      {
+        "fen": "1B6/P6p/3K2k1/8/2r1b3/8/5R2/8 b - - 6 56",
+        "best_moves": [
+          "c4d4",
+          "e4a8"
+        ]
+      },
+      {
+        "fen": "1B6/p1Q5/6qk/3p2b1/2pPb1P1/P3P3/1P1K4/8 b - - 1 38",
+        "best_moves": [
+          "g6b6",
+          "g6g7"
+        ]
+      },
+      {
+        "fen": "1B6/p2q2p1/Q1p2pkp/2P5/P7/2n4P/5PP1/6K1 w - - 5 34",
+        "best_moves": [
+          "b8a7",
+          "g1h2"
+        ]
+      },
+      {
+        "fen": "1B6/p3bp2/Pp4k1/2p3p1/8/4Pp2/1PP2P2/6K1 b - - 1 42",
+        "best_moves": [
+          "c5c4",
+          "e7d8"
+        ]
+      },
+      {
+        "fen": "1B6/p7/1pB3b1/1P3k2/P7/4b2p/7P/7K b - - 1 46",
+        "best_moves": [
+          "f5e6",
+          "g6f7"
+        ]
+      },
+      {
+        "fen": "1B6/pp2b2r/2k1p2p/2pr2p1/5p2/2P2P2/PP3P1P/3RR1K1 b - - 3 23",
+        "best_moves": [
+          "a7a6",
+          "e7d6"
+        ]
+      }
+    ],
+    "train_evaluation_fen_overlap": 14,
+    "leakage_samples": [
+      "4r3/1k6/pp3r2/1b2P2p/3R1p2/P1R2P2/1P4PP/6K1 w - - 0 35",
+      "5rk1/1p3ppp/pq3b2/8/8/1P1Q1N2/P4PPP/3R2K1 w - - 2 27",
+      "5rk1/p5p1/3bpr1p/1Pp4q/3pR3/1P1Q1N2/P4PPP/4R1K1 w - - 4 22",
+      "6k1/5p1p/4p3/4q3/3nN3/2Q3P1/PP3P1P/6K1 w - - 2 37",
+      "8/4R3/1p2P3/p4r2/P6p/1P3Pk1/4K3/8 w - - 1 64",
+      "8/8/4k1p1/2KpP2p/5PP1/8/8/8 w - - 0 53",
+      "r1bqk2r/pp1nbNp1/2p1p2p/8/2BP4/1PN3P1/P3QP1P/3R1RK1 b kq - 0 19",
+      "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 1",
+      "r2qr1k1/b1p2ppp/pp4n1/P1P1p3/4P1n1/B2P2Pb/3NBP1P/RN1QR1K1 b - - 1 16",
+      "r4rk1/pp3ppp/2n1b3/q1pp2B1/8/P1Q2NP1/1PP1PP1P/2KR3R w - - 0 15",
+      "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK2R b KQkq - 1 2",
+      "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+      "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    ]
+  },
+  "gate": {
+    "ready_for_training": false,
+    "requirements": {
+      "malformed_records": 0,
+      "invalid_fens": 0,
+      "illegal_best_moves": 0,
+      "missing_provenance": 0,
+      "missing_license": 0,
+      "conflicting_best_move_fens": 0,
+      "train_evaluation_fen_overlap": 0
+    }
+  }
+}
