@@ -31,26 +31,30 @@
           <div><p class="step">1 · Position</p><h2 id="position-title">Set the board</h2></div>
           <button id="flip" class="quiet" type="button">Flip board</button>
         </div>
-        <div id="board" class="board" role="grid" aria-label="Chess position"></div>
-        <label for="fen">FEN</label>
-        <textarea id="fen" rows="3" spellcheck="false">r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3</textarea>
-        <button id="load-example" class="text-button" type="button">Load example position</button>
+        <div class="position-workspace">
+          <div id="board" class="board" role="grid" aria-label="Chess position"></div>
+          <div class="position-controls">
+            <label for="fen">FEN</label>
+            <textarea id="fen" rows="4" spellcheck="false">r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3</textarea>
+            <button id="load-example" class="text-button" type="button">Load example position</button>
 
-        <div id="consider-wrap" hidden>
-          <label for="consider">Move you considered <span>(UCI, such as f1b5)</span></label>
-          <input id="consider" maxlength="5" autocomplete="off" placeholder="f1b5">
-          <p class="field-help">You can also select an origin and destination square on the board.</p>
-        </div>
+            <div id="consider-wrap" hidden>
+              <label for="consider">Move you considered <span>(UCI, such as f1b5)</span></label>
+              <input id="consider" maxlength="5" autocomplete="off" placeholder="f1b5">
+              <p class="field-help">Or select its two squares on the board.</p>
+            </div>
 
-        <label for="rating">Your playing level</label>
-        <select id="rating">
-          <option>1000-1199</option><option>1200-1399</option>
-          <option selected>1400-1599</option><option>1600-1800</option>
-        </select>
-        <p id="input-error" class="error" role="alert" hidden></p>
-        <div class="actions">
-          <button id="analyze" class="primary" type="button">Analyze position</button>
-          <button id="cancel" class="quiet" type="button" hidden>Cancel</button>
+            <label for="rating">Your playing level</label>
+            <select id="rating">
+              <option>1000-1199</option><option>1200-1399</option>
+              <option selected>1400-1599</option><option>1600-1800</option>
+            </select>
+            <p id="input-error" class="error" role="alert" hidden></p>
+            <div class="actions">
+              <button id="analyze" class="primary" type="button">Analyze position</button>
+              <button id="cancel" class="quiet" type="button" hidden>Cancel</button>
+            </div>
+          </div>
         </div>
       </section>
 
