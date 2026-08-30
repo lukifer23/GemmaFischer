@@ -105,11 +105,24 @@ def run_full_profile_benchmark(
         engine_elapsed = time.perf_counter() - engine_started
         rating = RatingBucket.CLUB
         baseline = deterministic_coach(evidence, rating, considered)
-        model_started = time.perf_counter()
-        claims = runtime.claims(evidence, rating)
-        model_elapsed = time.perf_counter() - model_started
-        valid, removed = validate_model_claims(evidence, claims)
-        merged = merge_model_claims(valid, baseline.claims) if len(valid) >= 2 else baseline.claims
+        if evidence.candidates:
+            model_started = time.perf_counter()
+            claims = runtime.claims(evidence, rating)
+            model_elapsed = time.perf_counter() - model_started
+            valid, removed = validate_model_claims(evidence, claims)
+            merged = (
+                merge_model_claims(valid, baseline.claims)
+                if len(valid) >= 2
+                else baseline.claims
+            )
+            result_source = "gemma" if len(valid) >= 2 else "deterministic"
+        else:
+            claims = ()
+            valid = ()
+            removed = ()
+            merged = baseline.claims
+            model_elapsed = 0.0
+            result_source = "terminal"
         raw.append(
             {
                 "index": index,
@@ -123,7 +136,7 @@ def run_full_profile_benchmark(
                 "model_claims_valid": len(valid),
                 "claims_served": len(merged),
                 "removed_claim_codes": list(removed),
-                "result_source": "gemma" if len(valid) >= 2 else "deterministic",
+                "result_source": result_source,
                 "rss_bytes": process.memory_info().rss,
                 "system_available_bytes": psutil.virtual_memory().available,
             }
@@ -150,6 +163,7 @@ def run_full_profile_benchmark(
         "deterministic_fallback_count": sum(
             item["result_source"] == "deterministic" for item in raw
         ),
+        "terminal_count": sum(item["result_source"] == "terminal" for item in raw),
         "engine_latency_seconds": _latency_summary(engine_latencies),
         "model_latency_seconds": _latency_summary(model_latencies),
         "total_latency_seconds": _latency_summary(total_latencies),
