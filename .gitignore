@@ -171,3 +171,4 @@ Thumbs.db
 ehthumbs.db
 Desktop.inidata/raw/lichess/games/*.zst
 models/chessgpt-base-v1/
+.gstack/
