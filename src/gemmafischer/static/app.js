@@ -181,5 +181,5 @@ $('session-mode').addEventListener('change',()=>{const exhibition=$('session-mod
 $('exhibition').addEventListener('click',()=>{if(state.exhibitionRunning){state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').textContent='Start exhibition';setStatus('Engine exhibition paused.');renderBoard();return;}state.exhibitionRunning=true;const token=++state.exhibitionToken;$('exhibition').textContent='Pause exhibition';renderBoard();void runExhibition(token);});
 $('difficulty').addEventListener('change',persistSession);$('rating').addEventListener('change',persistSession);
 
-async function loadHealth(){try{const response=await fetch('/api/v1/health'),health=await response.json();$('coach-mode').textContent=health.model_profile==='full'?'Gemma 4 coaching':'Deterministic coaching';}catch{$('coach-mode').textContent='Coach unavailable';}}
+async function loadHealth(){try{const response=await fetch('/api/v1/health'),health=await response.json();$('coach-mode').textContent=health.model_profile==='full'?'Gemma 4 + safe fallback':'Deterministic coaching';}catch{$('coach-mode').textContent='Coach unavailable';}}
 initializeBoard();parseFen($('fen').value);const restored=restoreSession();renderMoveList();renderBoard();if(restored)setStatus('Session restored. Continue from the current position.');void loadHealth();

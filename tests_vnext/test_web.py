@@ -9,7 +9,10 @@ TOKEN = "test-capability-token"
 
 def test_health_and_player_are_local_and_self_hosted() -> None:
     with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
-        assert client.get("/api/v1/health").status_code == 200
+        health = client.get("/api/v1/health")
+        assert health.status_code == 200
+        assert isinstance(health.json()["engine_available"], bool)
+        assert health.json()["history_enabled"] is False
         page = client.get("/")
         assert page.status_code == 200
         assert "Explain this position" in page.text

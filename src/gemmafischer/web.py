@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from . import __version__
 from .domain import AnalysisRequest, BoardMoveRequest, EngineTurnRequest, LegalMovesRequest
-from .engine import legal_moves_for_square
+from .engine import EngineUnavailable, legal_moves_for_square, resolve_stockfish
 from .service import AnalysisService
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -91,6 +91,7 @@ def create_app(
     @app.get("/", include_in_schema=False)
     async def index() -> FileResponse:
         response = FileResponse(STATIC_DIR / "index.html")
+        response.headers["Cache-Control"] = "no-store"
         response.set_cookie(
             "gemmafischer_token",
             token,
@@ -102,19 +103,32 @@ def create_app(
 
     @app.get("/app.css", include_in_schema=False)
     async def css() -> FileResponse:
-        return FileResponse(STATIC_DIR / "app.css", media_type="text/css")
+        return FileResponse(
+            STATIC_DIR / "app.css", media_type="text/css", headers={"Cache-Control": "no-store"}
+        )
 
     @app.get("/app.js", include_in_schema=False)
     async def js() -> FileResponse:
-        return FileResponse(STATIC_DIR / "app.js", media_type="text/javascript")
+        return FileResponse(
+            STATIC_DIR / "app.js",
+            media_type="text/javascript",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/api/v1/health")
     async def health(request: Request) -> dict[str, object]:
+        try:
+            resolved_engine = str(resolve_stockfish(request.app.state.service.engine_path))
+        except EngineUnavailable:
+            resolved_engine = None
         return {
             "ok": True,
             "version": __version__,
             "engine_configured": request.app.state.service.engine_path is not None,
+            "engine_available": resolved_engine is not None,
+            "engine_path": resolved_engine,
             "model_profile": "full" if full_profile else "deterministic",
+            "history_enabled": request.app.state.service.history_enabled,
         }
 
     @app.post("/api/v1/analyses", status_code=202)

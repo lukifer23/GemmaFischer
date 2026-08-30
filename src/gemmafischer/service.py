@@ -77,6 +77,10 @@ class AnalysisService:
             self._condition.notify()
             return snapshot
 
+    @property
+    def history_enabled(self) -> bool:
+        return self._store is not None
+
     def get(self, analysis_id: str) -> AnalysisSnapshot | None:
         with self._condition:
             job = self._jobs.get(analysis_id)
