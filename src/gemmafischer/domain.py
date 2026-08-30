@@ -44,6 +44,17 @@ class AnalysisState(StrEnum):
     FAILED = "failed"
 
 
+class SessionMode(StrEnum):
+    PLAYER = "player"
+    EXHIBITION = "exhibition"
+
+
+class SessionStatus(StrEnum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETE = "complete"
+
+
 TERMINAL_STATES = {
     AnalysisState.COMPLETE,
     AnalysisState.ENGINE_ONLY,
@@ -126,6 +137,7 @@ class EngineMetadata(StrictModel):
     binary_sha256: str
     options: dict[str, int | str | bool | None]
     node_budget: int
+    started_at: datetime | None = None
 
 
 class WDL(StrictModel):
@@ -161,6 +173,36 @@ class CandidateEvidence(StrictModel):
         return self
 
 
+class CandidateSet(StrictModel):
+    evidence_id: str
+    position_id: str
+    candidates: tuple[CandidateEvidence, ...] = Field(min_length=1, max_length=3)
+
+    @model_validator(mode="after")
+    def ranks_are_ordered(self) -> CandidateSet:
+        if tuple(item.rank for item in self.candidates) != tuple(
+            range(1, len(self.candidates) + 1)
+        ):
+            raise ValueError("candidate ranks must be ordered and contiguous")
+        if len({item.move_uci for item in self.candidates}) != len(self.candidates):
+            raise ValueError("candidate moves must be unique")
+        return self
+
+
+class MoveComparisonEvidence(StrictModel):
+    evidence_id: str
+    position_id: str
+    engine_move_uci: str
+    considered_move_uci: str
+    engine_score_cp: int | None = None
+    engine_mate_in: int | None = None
+    considered_score_cp: int | None = None
+    considered_mate_in: int | None = None
+    outcome: Literal["equal", "engine_better", "considered_better"]
+    tolerance_cp: int = Field(default=15, ge=0)
+    node_budget_each: int = Field(gt=0)
+
+
 class BoardFact(StrictModel):
     evidence_id: str
     fact_type: Literal[
@@ -173,22 +215,77 @@ class BoardFact(StrictModel):
     value: bool | int | str
 
 
+class ConceptEvidence(StrictModel):
+    evidence_id: str
+    position_id: str
+    candidate_id: str
+    concept: Literal[
+        "check",
+        "capture",
+        "promotion",
+        "castling",
+        "material_change",
+        "opponent_check",
+        "development",
+    ]
+    value: bool | int
+
+
 class EngineEvidence(StrictModel):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["2.0"] = "2.0"
     position_id: str
     fen: str
     side_to_move: Literal["white", "black"]
     engine: EngineMetadata
     terminal_reason: str | None = None
-    candidates: tuple[CandidateEvidence, ...] = Field(max_length=3)
+    candidate_set: CandidateSet | None = None
+    move_comparison: MoveComparisonEvidence | None = None
     board_facts: tuple[BoardFact, ...]
+    concepts: tuple[ConceptEvidence, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_schema_one(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        migrated = dict(value)
+        migrated["schema_version"] = "2.0"
+        candidates = migrated.pop("candidates", None)
+        if candidates and not migrated.get("candidate_set"):
+            position_id = str(migrated.get("position_id", "legacy-position"))
+            candidate_ids = [
+                str(
+                    item.get("evidence_id")
+                    if isinstance(item, dict)
+                    else item.evidence_id
+                )
+                for item in candidates
+            ]
+            migrated["candidate_set"] = {
+                "evidence_id": canonical_hash(
+                    {
+                        "schema_version": "legacy-1.0",
+                        "position_id": position_id,
+                        "candidate_ids": candidate_ids,
+                    }
+                ),
+                "position_id": position_id,
+                "candidates": candidates,
+            }
+        return migrated
+
+    @property
+    def candidates(self) -> tuple[CandidateEvidence, ...]:
+        return self.candidate_set.candidates if self.candidate_set else ()
 
     @model_validator(mode="after")
     def candidate_count_matches_terminal_state(self) -> EngineEvidence:
-        if self.terminal_reason is None and not self.candidates:
+        if self.terminal_reason is None and self.candidate_set is None:
             raise ValueError("non-terminal evidence requires at least one candidate")
-        if self.terminal_reason is not None and self.candidates:
+        if self.terminal_reason is not None and self.candidate_set is not None:
             raise ValueError("terminal evidence cannot contain candidates")
+        if self.move_comparison and self.candidate_set is None:
+            raise ValueError("move comparison requires a candidate set")
         return self
 
 
@@ -215,8 +312,7 @@ class ScoreClaim(StrictModel):
 class ComparisonClaim(StrictModel):
     kind: Literal["comparison"] = "comparison"
     evidence_ids: tuple[str, ...]
-    better_candidate_id: str
-    considered_candidate_id: str
+    comparison_id: str
 
 
 class GuidanceClaim(StrictModel):
@@ -231,12 +327,40 @@ CoachingClaim = Annotated[
 ]
 
 
-class CoachingResult(StrictModel):
+class LessonStep(StrictModel):
+    concept_id: str
+    template_id: Literal[
+        "notice_check",
+        "notice_capture",
+        "notice_promotion",
+        "notice_castling",
+        "notice_material_change",
+        "notice_opponent_check",
+        "notice_development",
+    ]
+    text: str
+
+
+class LessonPlan(StrictModel):
     schema_version: Literal["1.0"] = "1.0"
+    title: str
+    steps: tuple[LessonStep, ...] = Field(max_length=4)
+
+
+class CoachingResult(StrictModel):
+    schema_version: Literal["2.0"] = "2.0"
     summary: str
-    claims: tuple[CoachingClaim, ...] = Field(min_length=2, max_length=5)
+    claims: tuple[CoachingClaim, ...] = Field(max_length=5)
     removed_claim_codes: tuple[str, ...] = ()
     source: Literal["deterministic", "gemma"]
+    lesson_plan: LessonPlan | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_schema_one(cls, value: Any) -> Any:
+        if isinstance(value, dict) and value.get("schema_version") == "1.0":
+            return {**value, "schema_version": "2.0"}
+        return value
 
 
 class ErrorDetail(StrictModel):
@@ -249,8 +373,23 @@ class ErrorDetail(StrictModel):
     request_id: str
 
 
+class ErrorEnvelope(StrictModel):
+    error: ErrorDetail
+
+
+class AnalysisAccepted(StrictModel):
+    analysis_id: str
+    state: AnalysisState
+    generation: int
+
+
+class AnalysisList(StrictModel):
+    items: tuple[AnalysisSnapshot, ...]
+    count: int = Field(ge=0)
+
+
 class AnalysisSnapshot(StrictModel):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["2.0"] = "2.0"
     analysis_id: str
     generation: int
     state: AnalysisState
@@ -260,6 +399,90 @@ class AnalysisSnapshot(StrictModel):
     evidence: EngineEvidence | None = None
     coaching: CoachingResult | None = None
     error: ErrorDetail | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_schema_one(cls, value: Any) -> Any:
+        if isinstance(value, dict) and value.get("schema_version") == "1.0":
+            return {**value, "schema_version": "2.0"}
+        return value
+
+
+class Ply(StrictModel):
+    ply: int = Field(ge=1)
+    move_uci: str
+    move_san: str
+    fen_before: str
+    fen_after: str
+    actor: Literal["player", "engine_white", "engine_black"]
+    analysis_id: str | None = None
+
+
+class Session(StrictModel):
+    schema_version: Literal["2.0"] = "2.0"
+    session_id: str
+    revision: int = Field(ge=0)
+    mode: SessionMode
+    status: SessionStatus
+    initial_fen: str
+    fen: str
+    turn: Literal["white", "black"]
+    player_color: Literal["white", "black"] | None = None
+    white_difficulty: GameDifficulty = GameDifficulty.CLUB
+    black_difficulty: GameDifficulty = GameDifficulty.CLUB
+    rating_bucket: RatingBucket = RatingBucket.CLUB
+    plies: tuple[Ply, ...] = ()
+    created_at: datetime
+    updated_at: datetime
+    outcome: str | None = None
+
+
+class CreateSessionRequest(StrictModel):
+    mode: SessionMode = SessionMode.PLAYER
+    fen: str = chess.STARTING_FEN
+    player_color: Literal["white", "black"] | None = "white"
+    white_difficulty: GameDifficulty = GameDifficulty.CLUB
+    black_difficulty: GameDifficulty = GameDifficulty.CLUB
+    rating_bucket: RatingBucket = RatingBucket.CLUB
+
+    @model_validator(mode="after")
+    def mode_matches_player(self) -> CreateSessionRequest:
+        if self.mode is SessionMode.PLAYER and self.player_color is None:
+            raise ValueError("player_color is required in player mode")
+        if self.mode is SessionMode.EXHIBITION and self.player_color is not None:
+            raise ValueError("player_color must be null in exhibition mode")
+        return self
+
+
+class SessionCommandRequest(StrictModel):
+    expected_revision: int = Field(ge=0)
+    action: Literal["player_move", "engine_move", "undo", "pause", "resume"]
+    move_uci: str | None = Field(default=None, min_length=4, max_length=5)
+
+    @model_validator(mode="after")
+    def move_required(self) -> SessionCommandRequest:
+        if self.action == "player_move" and self.move_uci is None:
+            raise ValueError("move_uci is required for player_move")
+        if self.action != "player_move" and self.move_uci is not None:
+            raise ValueError("move_uci is only accepted for player_move")
+        return self
+
+
+class RuntimeCapabilities(StrictModel):
+    schema_version: Literal["2.0"] = "2.0"
+    engine_status: Literal["ready", "missing", "failed"]
+    model_status: Literal["disabled", "loading", "ready", "missing", "corrupt", "degraded"]
+    history_enabled: bool
+    evidence_schema: Literal["2.0"] = "2.0"
+
+
+class SessionList(StrictModel):
+    items: tuple[Session, ...]
+    count: int = Field(ge=0)
+
+
+class DeleteResult(StrictModel):
+    deleted: Literal[True] = True
 
 
 def canonical_hash(payload: object) -> str:

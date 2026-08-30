@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "as_of": "2026-08-30",
+  "sources": [
+    {
+      "id": "lichess-puzzles-2026-08-02",
+      "url": "https://database.lichess.org/lichess_db_puzzle.csv.zst",
+      "sha256": "a0ea9129c6b6434dfb34a9ac4ec660c9cfff22b2de465e01854f018fc847f073",
+      "format": "lichess-puzzle-csv-zstd",
+      "published": "2026-08-02",
+      "license": "CC0-1.0",
+      "license_url": "https://database.lichess.org/",
+      "provenance_url": "https://database.lichess.org/"
+    },
+    {
+      "id": "lichess-evaluations-2026-08-02",
+      "url": "https://database.lichess.org/lichess_db_eval.jsonl.zst",
+      "sha256": "a5c9f6d64d8a183ed2becc6cfcd09913a13bf117ae2460395609cc5feff54b08",
+      "format": "lichess-evaluation-jsonl-zstd",
+      "published": "2026-08-02",
+      "license": "CC0-1.0",
+      "license_url": "https://database.lichess.org/",
+      "provenance_url": "https://database.lichess.org/"
+    }
+  ]
+}

@@ -138,16 +138,11 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Model files and checkpoints are now tracked via Git LFS
-# See .gitattributes for LFS configuration
-
-# Optimizer states are too large for GitHub (>2GB limit)
-checkpoints/**/optimizer.pt
-checkpoints/**/optimizer.bin
-
-# Data files (too large for git)
+# Acquired and derived data stay outside Git; manifests and audits are tracked.
 data/datasets/*.jsonl
 data/raw/*.json
+data/raw/*.zst
+data/derived/
 
 # Logs
 *.log

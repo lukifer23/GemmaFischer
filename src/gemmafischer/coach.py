@@ -6,11 +6,60 @@ from .domain import (
     ComparisonClaim,
     EngineEvidence,
     GuidanceClaim,
+    LessonPlan,
+    LessonStep,
     LineClaim,
     MoveClaim,
     RatingBucket,
     ScoreClaim,
 )
+
+
+def _lesson_plan(evidence: EngineEvidence) -> LessonPlan:
+    if not evidence.candidates:
+        return LessonPlan(title="Game complete", steps=())
+    best = evidence.candidates[0]
+    templates = {
+        "check": ("notice_check", f"Notice that {best.move_san} gives check."),
+        "capture": ("notice_capture", f"Calculate the capture after {best.move_san}."),
+        "promotion": ("notice_promotion", f"{best.move_san} promotes a pawn."),
+        "castling": ("notice_castling", f"{best.move_san} castles the king."),
+        "material_change": (
+            "notice_material_change",
+            f"Track the material change created by {best.move_san}.",
+        ),
+        "opponent_check": (
+            "notice_opponent_check",
+            "The principal variation includes a checking reply; calculate it first.",
+        ),
+        "development": (
+            "notice_development",
+            f"{best.move_san} develops a minor piece from its starting square.",
+        ),
+    }
+    steps: list[LessonStep] = []
+    for concept in evidence.concepts:
+        if concept.candidate_id != best.evidence_id:
+            continue
+        template, text = templates[concept.concept]
+        steps.append(
+            LessonStep(
+                concept_id=concept.evidence_id,
+                template_id=template,  # type: ignore[arg-type]
+                text=text,
+            )
+        )
+    return LessonPlan(title=f"Why {best.move_san}?", steps=tuple(steps[:4]))
+
+
+def order_lesson_plan(plan: LessonPlan | None, concept_ids: tuple[str, ...]) -> LessonPlan | None:
+    if plan is None or not concept_ids:
+        return plan
+    order = {concept_id: index for index, concept_id in enumerate(concept_ids)}
+    steps = tuple(
+        sorted(plan.steps, key=lambda step: order.get(step.concept_id, len(order)))
+    )
+    return plan.model_copy(update={"steps": steps})
 
 
 def _score_text(evidence: EngineEvidence, candidate_id: str) -> str:
@@ -36,11 +85,9 @@ def deterministic_coach(
         reason = (evidence.terminal_reason or "game over").replace("_", " ")
         return CoachingResult(
             summary=f"This position is terminal: {reason}.",
-            claims=(
-                GuidanceClaim(template_id="calculate_forcing_moves"),
-                GuidanceClaim(template_id="compare_candidate_moves"),
-            ),
+            claims=(),
             source="deterministic",
+            lesson_plan=_lesson_plan(evidence),
         )
 
     best = evidence.candidates[0]
@@ -59,19 +106,18 @@ def deterministic_coach(
             )
         )
 
-    compared = None
-    if considered_move_uci:
-        compared = next(
-            (item for item in evidence.candidates if item.move_uci == considered_move_uci), None
-        )
-        if compared:
-            claims.append(
-                ComparisonClaim(
-                    evidence_ids=(best.evidence_id, compared.evidence_id),
-                    better_candidate_id=best.evidence_id,
-                    considered_candidate_id=compared.evidence_id,
-                )
+    if (
+        considered_move_uci
+        and evidence.move_comparison
+        and evidence.move_comparison.considered_move_uci == considered_move_uci
+    ):
+        comparison = evidence.move_comparison
+        claims.append(
+            ComparisonClaim(
+                evidence_ids=(comparison.evidence_id,),
+                comparison_id=comparison.evidence_id,
             )
+        )
     claims.append(
         GuidanceClaim(
             template_id=(
@@ -80,7 +126,12 @@ def deterministic_coach(
         )
     )
     summary = f"Start with {best.move_san}. {_score_text(evidence, best.evidence_id)}"
-    return CoachingResult(summary=summary, claims=tuple(claims[:5]), source="deterministic")  # type: ignore[arg-type]
+    return CoachingResult(
+        summary=summary,
+        claims=tuple(claims[:5]),  # type: ignore[arg-type]
+        source="deterministic",
+        lesson_plan=_lesson_plan(evidence),
+    )
 
 
 def validate_model_claims(
@@ -89,6 +140,7 @@ def validate_model_claims(
     evidence_ids = {
         *(item.evidence_id for item in evidence.candidates),
         *(item.evidence_id for item in evidence.board_facts),
+        *((evidence.move_comparison.evidence_id,) if evidence.move_comparison else ()),
     }
     candidate_ids = {item.evidence_id for item in evidence.candidates}
     valid: list[CoachingClaim] = []
@@ -97,11 +149,11 @@ def validate_model_claims(
         if any(item not in evidence_ids for item in claim.evidence_ids):
             removed.append("UNKNOWN_EVIDENCE_ID")
             continue
-        referenced = [
-            getattr(claim, key)
-            for key in ("candidate_id", "better_candidate_id", "considered_candidate_id")
-            if hasattr(claim, key)
-        ]
+        referenced = (
+            [claim.candidate_id]
+            if isinstance(claim, MoveClaim | LineClaim | ScoreClaim)
+            else []
+        )
         if any(item not in candidate_ids for item in referenced):
             removed.append("UNKNOWN_CANDIDATE_ID")
             continue
@@ -142,17 +194,20 @@ def render_claim(evidence: EngineEvidence, claim: object) -> str:
         item = candidates[claim.candidate_id]
         return "Principal variation: " + " ".join(item.pv_uci[claim.start_ply : claim.end_ply])
     if isinstance(claim, ComparisonClaim):
-        best = candidates[claim.better_candidate_id]
-        considered = candidates[claim.considered_candidate_id]
-        if best.evidence_id == considered.evidence_id:
-            return f"Your considered move {considered.move_san} matches the engine's first choice."
-        if best.score_cp is not None and considered.score_cp is not None:
-            delta = best.score_cp - considered.score_cp
+        comparison = evidence.move_comparison
+        if comparison is None or comparison.evidence_id != claim.comparison_id:
+            raise ValueError("Comparison claim does not match the evidence bundle")
+        if comparison.outcome == "equal":
             return (
-                f"{best.move_san} evaluates {delta / 100:.2f} pawns better than "
-                f"the considered move {considered.move_san}."
+                f"{comparison.considered_move_uci} is effectively equal to "
+                f"{comparison.engine_move_uci} within {comparison.tolerance_cp} centipawns."
             )
-        return f"The engine prefers {best.move_san} to {considered.move_san} by mate outcome."
+        favored = (
+            comparison.engine_move_uci
+            if comparison.outcome == "engine_better"
+            else comparison.considered_move_uci
+        )
+        return f"The matched-budget comparison favors {favored}."
     if isinstance(claim, GuidanceClaim):
         return {
             "calculate_forcing_moves": "Before choosing, calculate checks, captures, and threats.",

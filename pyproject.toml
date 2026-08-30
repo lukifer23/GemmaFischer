@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gemmafischer"
-version = "0.1.0"
+version = "0.2.0"
 description = "A local, evidence-grounded chess position coach"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 deterministic = []
 full = ["mlx-lm>=0.31.3,<0.32", "psutil>=7,<8"]
+data = ["zstandard>=0.23,<0.24"]
 
 [dependency-groups]
 dev = [
@@ -41,7 +42,7 @@ include = ["src/gemmafischer", "README.md", "LICENSE", "assets"]
 
 [tool.pytest.ini_options]
 addopts = "-q --strict-markers"
-testpaths = ["tests_vnext"]
+testpaths = ["tests"]
 markers = [
   "hardware: requires a real chess engine or Apple Silicon runtime",
   "model: requires downloaded model assets",
@@ -61,5 +62,5 @@ strict = true
 packages = ["gemmafischer"]
 
 [[tool.mypy.overrides]]
-module = ["mlx_lm", "mlx_lm.*"]
+module = ["mlx_lm", "mlx_lm.*", "zstandard"]
 ignore_missing_imports = true

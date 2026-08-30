@@ -79,6 +79,7 @@ def run_deterministic_benchmark(
     temporary = output_path.with_suffix(output_path.suffix + ".tmp")
     temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     temporary.replace(output_path)
+    provider.close()
     return payload
 
 
@@ -199,6 +200,7 @@ def run_full_profile_benchmark(
     temporary = output_path.with_suffix(output_path.suffix + ".tmp")
     temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     temporary.replace(output_path)
+    provider.close()
     return payload
 
 

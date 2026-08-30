@@ -1,103 +1,93 @@
 # GemmaFischer
 
-GemmaFischer is an experimental, local-first chess coaching research preview. Play, analysis, tutoring, and reviewed engine exhibitions now share one board instead of separate screens. The current session supports:
+GemmaFischer 0.2 is an experimental, local-first chess learning session. Play, Stockfish replies, move review, position explanation, and engine-v-engine study all stay on one board.
 
-- click-to-move play against Stockfish with legal-destination highlighting;
-- automatic comparison of every player move with verified Stockfish evidence;
-- position explanations without leaving the game;
-- Stockfish-vs-Stockfish exhibitions with a review after every move;
-- local board/session restore and bounded SQLite analysis history.
+The supported product is intentionally narrow and real:
 
-The supported vNext path is `src/gemmafischer`. Stockfish owns legality, candidate moves, evaluation, WDL, and principal variations. The deterministic coach turns that evidence into a concise lesson. An optional Gemma 4 E2B Q4 path may select typed, evidence-citing claims, but it is not required and silently substituted models are forbidden.
+- the server owns the session FEN, revision, move history, undo state, and review-to-ply link;
+- Stockfish is the only chess authority and runs as one supervised, reusable local process;
+- every comparison uses separate, equal-budget searches and never rewrites MultiPV ranking;
+- evidence IDs include position, engine binary, and analysis configuration;
+- visible factual coaching is rendered from typed evidence and deterministic concept facts;
+- optional Gemma 4 E2B may select typed lesson claims, but never invent moves, scores, or prose;
+- sessions and bounded analysis history persist in local SQLite;
+- mutations require a per-launch capability token and the server accepts loopback traffic only.
 
-> **Legacy quarantine:** The old Flask/MoE/LC0 application, checkpoints, datasets, reports, performance claims, and uppercase guides remain historical research inputs. They are not verified vNext release evidence. See [the evidence ledger](assets/evidence-status.json).
-
-## Status
-
-- The board, Stockfish replies, engine exhibitions, move review, secure loopback API, and local persistence are implemented and exercised in a real browser.
-- Stockfish 18 and the pinned Gemma 4 E2B Q4 model load on the M3 Pro/18 GB target. The latest five-position schema profile served valid grounded Gemma claims for all 4 nonterminal positions and handled mate deterministically. This is a passing schema smoke, not a broad correctness or tutoring-quality gate.
-- The real 155,797-record historical corpus is blocked from training: the current audit found invalid positions, illegal labels, duplicate records, conflicting labels, train/eval overlap, and no per-record license fields.
-- Portable lint, strict typing, API/security tests, a model smoke, runtime profiles, and machine-readable evidence are available. Broader held-out, cancellation, long-run, device, accessibility, and human coaching gates remain open. The project is not production-ready.
+The pre-recovery application, datasets, adapters, models, and reports were removed from `main` after being preserved in the remote tag `archive/pre-recovery-2026-08-30` (commit `ddff9f2d4ccb0d1d3aacb7f90c385266164c0e87`, tree `6c522a0938165c8d5631b8010fce7071cd8f5a8f`, 51 LFS paths).
 
 ## Quickstart
 
-Requirements: macOS or Linux, Git, [`uv`](https://docs.astral.sh/uv/), and Stockfish 18. The current hardware qualification target is Apple Silicon with Python 3.12.
+Requirements: macOS or Linux, Python 3.12 through [`uv`](https://docs.astral.sh/uv/), and Stockfish 18.
 
 ```bash
 git clone https://github.com/lukifer23/GemmaFischer.git
 cd GemmaFischer
-uv sync --frozen --extra deterministic
-brew install stockfish
+uv sync --frozen --group dev
+brew install stockfish                 # macOS; use your package manager on Linux
 export GEMMAFISCHER_STOCKFISH="$(command -v stockfish)"
-uv run gemmafischer setup --profile deterministic --plan
 uv run gemmafischer doctor --profile deterministic
+uv run gemmafischer launch
+```
+
+`launch` starts exactly one background instance, waits for health, and opens the browser. Lifecycle commands are explicit:
+
+```bash
+uv run gemmafischer status
+uv run gemmafischer stop
+```
+
+For a foreground server, use `uv run gemmafischer serve --open`. The default URL is `http://127.0.0.1:8765`.
+
+Analyze without the browser:
+
+```bash
 uv run gemmafischer analyze --example
-uv run gemmafischer serve --open
-```
-
-The server binds only `127.0.0.1` by default. Open `http://127.0.0.1:8765` if the browser does not open automatically.
-
-Compare a considered move:
-
-```bash
-uv run gemmafischer analyze \
-  --mode compare \
+uv run gemmafischer analyze --offline --mode compare \
   --fen 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3' \
-  --consider f1b5 \
-  --rating 1400-1599
-```
-
-JSON automation:
-
-```bash
-uv run gemmafischer analyze --example --format json
-uv run gemmafischer version --json
+  --consider f1b5 --rating 1400-1599
 ```
 
 ## Profiles
 
-- `deterministic`: FastAPI, Pydantic, python-chess, Stockfish evidence, deterministic coaching. This is the default and release baseline.
-- `full`: Adds MLX-LM 0.31.3 and pinned Gemma 4 E2B Q4 claims. It fits the target host and passed the five-position schema smoke; deterministic fallback remains mandatory until larger correctness and human-quality gates pass.
-- `dev`: Portable contributor tooling. It requires no engine, model, credentials, or LFS asset.
+- `deterministic` is the baseline: FastAPI, python-chess, persistent Stockfish, evidence schema 2.0, and typed deterministic lessons.
+- `full` adds MLX-LM 0.31.3 and the revision-pinned `mlx-community/gemma-4-e2b-it-4bit`. Runtime loading is offline-only; missing or corrupt assets degrade explicitly to deterministic coaching.
+- `dev` checks portable contributor prerequisites without requiring Stockfish or model assets.
 
-No training command exists in the player CLI. Research/training work must consume frozen, licensed, leakage-checked datasets through a separate future boundary.
+No training command exists in the player. Training is blocked until a newly acquired corpus has complete license and lineage metadata, zero invalid or conflicting labels, and frozen leakage-free evaluation splits. Historical data was audited, found unsafe for training, and archived rather than silently repaired.
 
-Reproduce the current gates:
+The repository pins the official Lichess puzzle and evaluation exports by URL, publication date, CC0 license, and SHA-256 in `data/sources.json`. Acquisition and lesson-record construction are executable but deliberately separate from training:
 
 ```bash
-uv run gemmafischer benchmark --profile deterministic --requests 20 \
+uv run gemmafischer acquire-data
+uv sync --all-extras
+uv run gemmafischer build-dataset --limit 1000 --nodes 50000
+uv run gemmafischer audit-data
+```
+
+The builder verifies the archive hash, applies the documented Lichess setup move, rejects illegal or repeated positions, creates Stockfish-backed concept evidence and typed lesson targets, and assigns whole puzzle lineages deterministically to train or evaluation. `audit-data` also blocks duplicates, incomplete chess records, corpora below 10,000 training and 1,000 evaluation records, or any license, provenance, legality, conflict, or leakage failure.
+
+## Verification
+
+```bash
+uv run gemmafischer verify
+uv run gemmafischer repo-audit
+uv run gemmafischer benchmark --profile deterministic --requests 100 \
   --output artifacts/qualification/deterministic-local.json
-uv run gemmafischer benchmark --profile full --requests 5 \
-  --output artifacts/qualification/full-local.json
-uv run gemmafischer audit-data --output artifacts/data-audit/local.json
 ```
 
-`audit-data` currently exits nonzero by design because the quarantined corpus fails the training gate.
+`verify` runs Ruff, strict mypy, and all non-model tests. The suite includes real Stockfish qualification, API security, session revision conflicts, SQLite restart persistence, evidence migration, and data-gate behavior. The generated OpenAPI contract is checked in CI.
 
-## Verify
-
-```bash
-uv sync --frozen --group dev
-uv run gemmafischer doctor --profile dev
-uv run ruff check src/gemmafischer tests_vnext
-uv run mypy
-uv run pytest -m "not hardware and not model"
-```
-
-Tests under `tests_vnext/` are the supported portable gate. Tests under `tests/` exercise quarantined v2 behavior and are not release evidence until individually migrated.
+The latest implementation pass also ran the actual browser at 900×600: no horizontal overflow, the complete 336 px board remained in the first viewport, only one square was tabbable, f3 highlighted e5/g5/d4/h4/g1, Stockfish completed the reply, and the console stayed clean. Treat that as local evidence, not universal device acceptance.
 
 ## Documentation
 
-- [Architecture](docs/architecture-vnext.md)
-- [Evidence and API contracts](docs/evidence-contract.md)
+- [Architecture and data flow](docs/architecture-vnext.md)
+- [Evidence and HTTP contracts](docs/evidence-contract.md)
+- [Model runtime and qualification](docs/model-card.md)
+- [Training and data policy](docs/data-provenance.md)
+- [Performance targets and evidence](docs/performance-vnext.md)
 - [Security model](docs/security-model.md)
-- [Data provenance and evaluation](docs/data-provenance.md)
-- [Model card and qualification](docs/model-card.md)
-- [Measured target-host performance](docs/performance-vnext.md)
-- [Compatibility and migration](docs/compatibility.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security reporting](SECURITY.md)
+- [Compatibility and archive recovery](docs/compatibility.md)
+- [Third-party notices](docs/third-party-notices.md)
 
-## License
-
-GemmaFischer source code is MIT licensed. Stockfish, model, dataset, font, and future packaged-asset obligations are tracked separately in [third-party notices](docs/third-party-notices.md). Bundling or distributing an asset is blocked until its manifest and license fields are complete.
+GemmaFischer source is MIT licensed. Stockfish, Gemma, and any future dataset retain their own terms; see the third-party notices before redistribution.

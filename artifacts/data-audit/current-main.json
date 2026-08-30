@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "status": "blocked",
+  "generated_at": "2026-08-30T23:22:59.306507+00:00",
+  "training": {
+    "files": [
+      {
+        "path": "data/derived/train.jsonl",
+        "sha256": "a9eb17b5c32ed90cd311a76e0eb0c7041104b91c48074266bd5bc86af17edd99",
+        "records": 94,
+        "records_with_fen": 94,
+        "records_with_best_move": 94,
+        "tasks": {
+          "grounded_lesson_plan": 94
+        },
+        "sources": {
+          "lichess-puzzles-2026-08-02": 94
+        }
+      }
+    ],
+    "totals": {
+      "records": 94,
+      "records_with_fen": 94,
+      "records_with_best_move": 94
+    },
+    "unique_records": 94,
+    "unique_fens": 94,
+    "issue_samples": []
+  },
+  "evaluation": {
+    "files": [
+      {
+        "path": "data/derived/evaluation.jsonl",
+        "sha256": "f7ec08828f1e4dfb544bc8b6baae61d321d80c0b5c9f6db3d456440efbd96e18",
+        "records": 6,
+        "records_with_fen": 6,
+        "records_with_best_move": 6,
+        "tasks": {
+          "grounded_lesson_plan": 6
+        },
+        "sources": {
+          "lichess-puzzles-2026-08-02": 6
+        }
+      }
+    ],
+    "totals": {
+      "records": 6,
+      "records_with_fen": 6,
+      "records_with_best_move": 6
+    },
+    "unique_records": 6,
+    "unique_fens": 6,
+    "issue_samples": []
+  },
+  "cross_dataset": {
+    "conflicting_best_move_fens": 0,
+    "conflict_samples": [],
+    "train_evaluation_fen_overlap": 0,
+    "leakage_samples": []
+  },
+  "gate": {
+    "ready_for_training": false,
+    "requirements": {
+      "minimum_training_records": 10000,
+      "minimum_evaluation_records": 1000,
+      "malformed_records": 0,
+      "invalid_fens": 0,
+      "illegal_best_moves": 0,
+      "missing_fens": 0,
+      "missing_best_moves": 0,
+      "missing_provenance": 0,
+      "missing_license": 0,
+      "duplicates_within_file": 0,
+      "duplicates_across_files": 0,
+      "conflicting_best_move_fens": 0,
+      "train_evaluation_fen_overlap": 0
+    }
+  }
+}

@@ -3,6 +3,9 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import threading
+from contextlib import suppress
+from datetime import UTC, datetime
 from pathlib import Path
 
 import chess
@@ -13,11 +16,14 @@ from .domain import (
     BoardFact,
     BoardMoveResult,
     CandidateEvidence,
+    CandidateSet,
+    ConceptEvidence,
     EngineEvidence,
     EngineMetadata,
     EngineTurnResult,
     GameDifficulty,
     LegalMovesResult,
+    MoveComparisonEvidence,
     canonical_hash,
     normalize_fen,
 )
@@ -25,7 +31,7 @@ from .domain import (
 NODE_BUDGET = 250_000
 ENGINE_OPTIONS: dict[str, int | bool] = {
     "Threads": 1,
-    "Hash": 256,
+    "Hash": 64,
     "UCI_ShowWDL": True,
 }
 GAME_SKILL_LEVEL = {
@@ -38,6 +44,7 @@ GAME_NODE_RATIO = {
     GameDifficulty.CLUB: 0.32,
     GameDifficulty.STRONG: 1.0,
 }
+ANALYSIS_SKILL_LEVEL = 20
 
 
 class EngineUnavailable(RuntimeError):
@@ -64,12 +71,18 @@ def resolve_stockfish(explicit: str | None = None) -> Path:
     )
 
 
-def _fact(fact_type: str, value: bool | int | str) -> BoardFact:
-    payload = {"fact_type": fact_type, "value": value, "source": "python-chess"}
+def _fact(position_id: str, fact_type: str, value: bool | int | str) -> BoardFact:
+    payload = {
+        "schema_version": "2.0",
+        "position_id": position_id,
+        "fact_type": fact_type,
+        "value": value,
+        "source": "python-chess",
+    }
     return BoardFact(evidence_id=canonical_hash(payload), fact_type=fact_type, value=value)  # type: ignore[arg-type]
 
 
-def extract_board_facts(board: chess.Board) -> tuple[BoardFact, ...]:
+def extract_board_facts(board: chess.Board, position_id: str) -> tuple[BoardFact, ...]:
     values = {
         chess.PAWN: 100,
         chess.KNIGHT: 320,
@@ -95,11 +108,11 @@ def extract_board_facts(board: chess.Board) -> tuple[BoardFact, ...]:
         or "-"
     )
     return (
-        _fact("side_to_move", "white" if board.turn else "black"),
-        _fact("in_check", board.is_check()),
-        _fact("legal_move_count", board.legal_moves.count()),
-        _fact("material_balance_cp", material),
-        _fact("castling_rights", castling),
+        _fact(position_id, "side_to_move", "white" if board.turn else "black"),
+        _fact(position_id, "in_check", board.is_check()),
+        _fact(position_id, "legal_move_count", board.legal_moves.count()),
+        _fact(position_id, "material_balance_cp", material),
+        _fact(position_id, "castling_rights", castling),
     )
 
 
@@ -115,15 +128,132 @@ def legal_moves_for_square(fen: str, from_square: str) -> LegalMovesResult:
     )
 
 
+def extract_concepts(
+    board: chess.Board,
+    position_id: str,
+    candidates: list[CandidateEvidence],
+) -> tuple[ConceptEvidence, ...]:
+    concepts: list[ConceptEvidence] = []
+    piece_values = {
+        chess.PAWN: 100,
+        chess.KNIGHT: 320,
+        chess.BISHOP: 330,
+        chess.ROOK: 500,
+        chess.QUEEN: 900,
+    }
+    for candidate in candidates:
+        move = chess.Move.from_uci(candidate.move_uci)
+        captured = board.piece_at(move.to_square)
+        if board.is_en_passant(move):
+            captured = chess.Piece(chess.PAWN, not board.turn)
+        raw: list[tuple[str, bool | int]] = [
+            ("capture", board.is_capture(move)),
+            ("promotion", move.promotion is not None),
+            ("castling", board.is_castling(move)),
+        ]
+        moving = board.piece_at(move.from_square)
+        home_rank = chess.square_rank(move.from_square) in ({0} if board.turn else {7})
+        raw.append(
+            (
+                "development",
+                bool(
+                    moving
+                    and moving.piece_type in {chess.KNIGHT, chess.BISHOP}
+                    and home_rank
+                ),
+            )
+        )
+        if captured is not None:
+            raw.append(("material_change", piece_values.get(captured.piece_type, 0)))
+        after = board.copy(stack=False)
+        after.push(move)
+        raw.append(("check", after.is_check()))
+        if len(candidate.pv_uci) > 1:
+            reply = chess.Move.from_uci(candidate.pv_uci[1])
+            if reply in after.legal_moves:
+                after.push(reply)
+                raw.append(("opponent_check", after.is_check()))
+        for concept, value in raw:
+            if value is False or value == 0:
+                continue
+            payload = {
+                "schema_version": "2.0",
+                "position_id": position_id,
+                "candidate_id": candidate.evidence_id,
+                "concept": concept,
+                "value": value,
+            }
+            concepts.append(
+                ConceptEvidence(
+                    evidence_id=canonical_hash(payload),
+                    position_id=position_id,
+                    candidate_id=candidate.evidence_id,
+                    concept=concept,  # type: ignore[arg-type]
+                    value=value,
+                )
+            )
+    return tuple(concepts)
+
+
 class StockfishProvider:
     def __init__(self, path: str | None = None, node_budget: int = NODE_BUDGET) -> None:
         self.path = resolve_stockfish(path)
         self.node_budget = node_budget
         self.binary_sha256 = sha256_file(self.path)
+        self._engine: chess.engine.SimpleEngine | None = None
+        self._lock = threading.RLock()
+        self._started_at: datetime | None = None
+        self._applied_options: dict[str, int | str | bool | None] = {}
+
+    def __enter__(self) -> StockfishProvider:
+        with self._lock:
+            self._ensure_engine()
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self.close()
+
+    def __del__(self) -> None:
+        # Explicit service ownership/context managers are preferred. This is a
+        # final guard for abandoned short-lived callers so python-chess does not
+        # leave its transport thread and Stockfish child alive.
+        with suppress(Exception):
+            self.close()
+
+    def close(self) -> None:
+        with self._lock:
+            engine, self._engine = self._engine, None
+            if engine is not None:
+                try:
+                    engine.quit()
+                except (BrokenPipeError, TimeoutError, chess.engine.EngineTerminatedError):
+                    engine.close()
+
+    def interrupt(self) -> None:
+        """Terminate an active UCI command; the next request starts a clean engine."""
+        engine = self._engine
+        self._engine = None
+        if engine is not None:
+            engine.close()
+
+    def _ensure_engine(self) -> chess.engine.SimpleEngine:
+        if self._engine is None:
+            self._engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
+            applied = {
+                key: value for key, value in ENGINE_OPTIONS.items() if key in self._engine.options
+            }
+            # Gameplay deliberately lowers Stockfish's Skill Level. Analysis must
+            # always restore full strength when this persistent process is reused.
+            if "Skill Level" in self._engine.options:
+                applied["Skill Level"] = ANALYSIS_SKILL_LEVEL
+            self._engine.configure(applied)
+            self._applied_options = dict(applied)
+            self._started_at = datetime.now(UTC)
+        return self._engine
 
     def analyze(self, fen: str, considered_move_uci: str | None = None) -> EngineEvidence:
         board, normalized_fen = normalize_fen(fen)
-        position_id = canonical_hash({"schema_version": "1.0", "normalized_fen": normalized_fen})
+        position_id = canonical_hash({"schema_version": "2.0", "normalized_fen": normalized_fen})
         if board.is_game_over(claim_draw=False):
             return EngineEvidence(
                 position_id=position_id,
@@ -131,8 +261,8 @@ class StockfishProvider:
                 side_to_move="white" if board.turn else "black",
                 engine=self._metadata(name="Stockfish", author=None),
                 terminal_reason=board.outcome(claim_draw=False).termination.name.lower(),  # type: ignore[union-attr]
-                candidates=(),
-                board_facts=extract_board_facts(board),
+                candidate_set=None,
+                board_facts=extract_board_facts(board, position_id),
             )
 
         considered = None
@@ -144,11 +274,17 @@ class StockfishProvider:
             if considered not in board.legal_moves:
                 raise ValueError("The considered move is illegal in this position")
 
-        engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
-        try:
-            supported = engine.options
-            applied = {key: value for key, value in ENGINE_OPTIONS.items() if key in supported}
-            engine.configure(applied)
+        with self._lock:
+            engine = self._ensure_engine()
+            analysis_options = {
+                key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options
+            }
+            if "Skill Level" in engine.options:
+                analysis_options["Skill Level"] = ANALYSIS_SKILL_LEVEL
+            engine.configure(analysis_options)
+            self._applied_options = dict(analysis_options)
+            if "Clear Hash" in engine.options:
+                engine.configure({"Clear Hash": None})
             identity = engine.id
             infos = engine.analyse(
                 board,
@@ -156,7 +292,11 @@ class StockfishProvider:
                 multipv=min(3, board.legal_moves.count()),
                 info=chess.engine.INFO_ALL,
             )
-            candidates = [self._candidate(board, info, rank) for rank, info in enumerate(infos, 1)]
+            candidates = [
+                self._candidate(board, info, rank, position_id)
+                for rank, info in enumerate(infos, 1)
+            ]
+            comparison = None
             if considered is not None:
                 best_move = chess.Move.from_uci(candidates[0].move_uci)
                 best_constrained = engine.analyse(
@@ -165,46 +305,44 @@ class StockfishProvider:
                     root_moves=[best_move],
                     info=chess.engine.INFO_ALL,
                 )
-                candidates[0] = self._candidate(board, best_constrained, 1)
-                if considered != best_move:
-                    considered_rank = next(
-                        (
-                            index
-                            for index, item in enumerate(candidates, 1)
-                            if item.move_uci == considered.uci()
-                        ),
-                        min(3, len(candidates) + 1),
-                    )
-                    considered_info = engine.analyse(
+                considered_info = (
+                    best_constrained
+                    if considered == best_move
+                    else engine.analyse(
                         board,
                         chess.engine.Limit(nodes=self.node_budget),
                         root_moves=[considered],
                         info=chess.engine.INFO_ALL,
                     )
-                    compared = self._candidate(board, considered_info, considered_rank)
-                    existing = next(
-                        (
-                            index
-                            for index, item in enumerate(candidates)
-                            if item.move_uci == considered.uci()
-                        ),
-                        None,
-                    )
-                    if existing is None:
-                        candidates = (candidates[:2] + [compared])[:3]
-                    else:
-                        candidates[existing] = compared
+                )
+                comparison = self._comparison(
+                    board, position_id, best_move, best_constrained, considered, considered_info
+                )
             metadata = self._metadata(identity.get("name", "Stockfish"), identity.get("author"))
-        finally:
-            engine.quit()
+
+        candidate_set_id = canonical_hash(
+            {
+                "schema_version": "2.0",
+                "position_id": position_id,
+                "engine_sha256": self.binary_sha256,
+                "node_budget": self.node_budget,
+                "candidate_ids": [item.evidence_id for item in candidates],
+            }
+        )
 
         return EngineEvidence(
             position_id=position_id,
             fen=normalized_fen,
             side_to_move="white" if board.turn else "black",
             engine=metadata,
-            candidates=tuple(candidates),
-            board_facts=extract_board_facts(board),
+            candidate_set=CandidateSet(
+                evidence_id=candidate_set_id,
+                position_id=position_id,
+                candidates=tuple(candidates),
+            ),
+            move_comparison=comparison,
+            board_facts=extract_board_facts(board, position_id),
+            concepts=extract_concepts(board, position_id, candidates),
         )
 
     def play_move(
@@ -237,14 +375,13 @@ class StockfishProvider:
 
         if engine_reply and not board.is_game_over(claim_draw=True):
             engine_nodes = max(1, round(self.node_budget * GAME_NODE_RATIO[difficulty]))
-            engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
-            try:
-                applied = {
-                    key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options
-                }
+            with self._lock:
+                engine = self._ensure_engine()
+                applied = dict(self._applied_options)
                 if "Skill Level" in engine.options:
                     applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
                 engine.configure(applied)
+                self._applied_options = applied
                 engine_name = engine.id.get("name", "Stockfish")
                 reply = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
                 if reply is None:
@@ -252,8 +389,6 @@ class StockfishProvider:
                 engine_move_uci = reply.uci()
                 engine_move_san = board.san(reply)
                 board.push(reply)
-            finally:
-                engine.quit()
 
         outcome = board.outcome(claim_draw=True)
         return BoardMoveResult(
@@ -281,9 +416,9 @@ class StockfishProvider:
         if board.is_game_over(claim_draw=True):
             raise ValueError("The game is already over")
         engine_nodes = max(1, round(self.node_budget * GAME_NODE_RATIO[difficulty]))
-        engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
-        try:
-            applied = {key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options}
+        with self._lock:
+            engine = self._ensure_engine()
+            applied = dict(self._applied_options)
             if "Skill Level" in engine.options:
                 applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
             engine.configure(applied)
@@ -294,8 +429,6 @@ class StockfishProvider:
             move_uci = move.uci()
             move_san = board.san(move)
             board.push(move)
-        finally:
-            engine.quit()
         outcome = board.outcome(claim_draw=True)
         return EngineTurnResult(
             fen_before=normalized_fen,
@@ -328,12 +461,13 @@ class StockfishProvider:
             name=name,
             author=author,
             binary_sha256=self.binary_sha256,
-            options={**ENGINE_OPTIONS, "MultiPV": 3, "nodes": self.node_budget},
+            options={**self._applied_options, "MultiPV": 3, "nodes": self.node_budget},
             node_budget=self.node_budget,
+            started_at=self._started_at,
         )
 
     def _candidate(
-        self, board: chess.Board, info: chess.engine.InfoDict, rank: int
+        self, board: chess.Board, info: chess.engine.InfoDict, rank: int, position_id: str
     ) -> CandidateEvidence:
         pv = info.get("pv") or []
         if not pv:
@@ -348,6 +482,10 @@ class StockfishProvider:
             relative = wdl_value.pov(board.turn)
             wdl = WDL(win=relative.wins, draw=relative.draws, loss=relative.losses)
         payload = {
+            "schema_version": "2.0",
+            "position_id": position_id,
+            "engine_sha256": self.binary_sha256,
+            "node_budget": self.node_budget,
             "rank": rank,
             "move_uci": first.uci(),
             "score_cp": cp,
@@ -367,4 +505,53 @@ class StockfishProvider:
             seldepth=info.get("seldepth"),
             nodes=int(info.get("nodes", self.node_budget)),
             pv_uci=tuple(move.uci() for move in pv[:16]),
+        )
+
+    def _comparison(
+        self,
+        board: chess.Board,
+        position_id: str,
+        engine_move: chess.Move,
+        engine_info: chess.engine.InfoDict,
+        considered_move: chess.Move,
+        considered_info: chess.engine.InfoDict,
+    ) -> MoveComparisonEvidence:
+        engine_score = engine_info["score"].pov(board.turn)
+        considered_score = considered_info["score"].pov(board.turn)
+        engine_mate = engine_score.mate()
+        considered_mate = considered_score.mate()
+        engine_cp = None if engine_mate is not None else engine_score.score(mate_score=100_000)
+        considered_cp = (
+            None if considered_mate is not None else considered_score.score(mate_score=100_000)
+        )
+        engine_value = engine_score.score(mate_score=100_000)
+        considered_value = considered_score.score(mate_score=100_000)
+        assert engine_value is not None and considered_value is not None
+        delta = engine_value - considered_value
+        outcome: str = "equal" if abs(delta) <= 15 else (
+            "engine_better" if delta > 0 else "considered_better"
+        )
+        payload = {
+            "schema_version": "2.0",
+            "position_id": position_id,
+            "engine_sha256": self.binary_sha256,
+            "node_budget_each": self.node_budget,
+            "engine_move_uci": engine_move.uci(),
+            "considered_move_uci": considered_move.uci(),
+            "engine_score_cp": engine_cp,
+            "engine_mate_in": engine_mate,
+            "considered_score_cp": considered_cp,
+            "considered_mate_in": considered_mate,
+        }
+        return MoveComparisonEvidence(
+            evidence_id=canonical_hash(payload),
+            position_id=position_id,
+            engine_move_uci=engine_move.uci(),
+            considered_move_uci=considered_move.uci(),
+            engine_score_cp=engine_cp,
+            engine_mate_in=engine_mate,
+            considered_score_cp=considered_cp,
+            considered_mate_in=considered_mate,
+            outcome=outcome,  # type: ignore[arg-type]
+            node_budget_each=self.node_budget,
         )

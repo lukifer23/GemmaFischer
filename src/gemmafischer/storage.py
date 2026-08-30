@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from .domain import AnalysisSnapshot, AnalysisState, ErrorDetail, now_utc
+from .domain import AnalysisSnapshot, AnalysisState, ErrorDetail, Session, now_utc
 
 ACTIVE_STATES = (
     AnalysisState.QUEUED,
@@ -23,7 +23,7 @@ class AnalysisStore:
 
     def __init__(self, path: Path, retention: int = 250) -> None:
         self.path = path
-        self.retention = retention
+        self.retention = max(1, retention)
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as connection:
             connection.execute("PRAGMA journal_mode=WAL")
@@ -38,6 +38,18 @@ class AnalysisStore:
                     snapshot_json TEXT NOT NULL
                 )
                 """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    updated_at TEXT NOT NULL,
+                    session_json TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS sessions_updated_idx ON sessions(updated_at DESC)"
             )
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS analyses_updated_idx ON analyses(updated_at DESC)"
@@ -91,6 +103,50 @@ class AnalysisStore:
                 (bounded_limit,),
             ).fetchall()
         return tuple(AnalysisSnapshot.model_validate_json(row[0]) for row in rows)
+
+    def save_session(self, session: Session) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO sessions (session_id, updated_at, session_json) VALUES (?, ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    updated_at=excluded.updated_at,
+                    session_json=excluded.session_json
+                """,
+                (session.session_id, session.updated_at.isoformat(), session.model_dump_json()),
+            )
+            connection.execute(
+                """
+                DELETE FROM sessions WHERE session_id IN (
+                    SELECT session_id FROM sessions
+                    ORDER BY updated_at DESC LIMIT -1 OFFSET ?
+                )
+                """,
+                (self.retention,),
+            )
+
+    def get_session(self, session_id: str) -> Session | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT session_json FROM sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
+        return Session.model_validate_json(row[0]) if row else None
+
+    def recent_sessions(self, limit: int = 20) -> tuple[Session, ...]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT session_json FROM sessions ORDER BY updated_at DESC LIMIT ?",
+                (bounded_limit,),
+            ).fetchall()
+        return tuple(Session.model_validate_json(row[0]) for row in rows)
+
+    def delete_session(self, session_id: str) -> bool:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM sessions WHERE session_id = ?", (session_id,)
+            )
+        return cursor.rowcount > 0
 
     def _recover_interrupted(self) -> None:
         placeholders = ",".join("?" for _ in ACTIVE_STATES)

@@ -4,8 +4,11 @@ import argparse
 import json
 import os
 import platform
+import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -14,9 +17,19 @@ import uvicorn
 from . import __version__
 from .coach import render_claim
 from .data_audit import audit_data
+from .dataset import acquire_source, build_puzzle_dataset, load_source
 from .domain import AnalysisRequest, AnalysisState, RatingBucket, Workflow
 from .engine import EngineUnavailable, StockfishProvider, resolve_stockfish
+from .lifecycle import (
+    InstanceAlreadyRunning,
+    InstanceLock,
+    instance_status,
+    runtime_dir,
+    stop_instance,
+)
 from .qualification import run_deterministic_benchmark, run_full_profile_benchmark
+from .repo_audit import audit_repository
+from .runtime import ModelUnavailable, inspect_model_assets
 from .service import AnalysisService
 from .storage import default_history_path
 from .web import create_app
@@ -68,6 +81,16 @@ def parser() -> argparse.ArgumentParser:
     serve.add_argument("--open", action="store_true")
     serve.add_argument("--print-token", action="store_true")
 
+    launch = commands.add_parser("launch", help="Start one local instance and open the player")
+    launch.add_argument("--port", type=int, default=8765)
+    launch.add_argument("--profile", choices=("deterministic", "full"), default="deterministic")
+    launch.add_argument("--no-open", action="store_true")
+    launch.add_argument("--timeout", type=float, default=15.0)
+
+    commands.add_parser("status", help="Show the verified local server process")
+    stop = commands.add_parser("stop", help="Stop the verified local server process")
+    stop.add_argument("--timeout", type=float, default=10.0)
+
     commands.add_parser("version", help="Print version metadata").add_argument(
         "--json", action="store_true"
     )
@@ -78,6 +101,23 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/data-audit/latest.json"),
     )
+    acquire = commands.add_parser("acquire-data", help="Download and verify a pinned source")
+    acquire.add_argument("--manifest", type=Path, default=Path("data/sources.json"))
+    acquire.add_argument("--source", default="lichess-puzzles-2026-08-02")
+    acquire.add_argument(
+        "--output", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst")
+    )
+    build_data = commands.add_parser(
+        "build-dataset", help="Build typed, lineage-isolated lesson records"
+    )
+    build_data.add_argument("--manifest", type=Path, default=Path("data/sources.json"))
+    build_data.add_argument("--source", default="lichess-puzzles-2026-08-02")
+    build_data.add_argument(
+        "--archive", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst")
+    )
+    build_data.add_argument("--output-dir", type=Path, default=Path("data/derived"))
+    build_data.add_argument("--limit", type=int, default=1000)
+    build_data.add_argument("--nodes", type=int, default=50_000)
     benchmark = commands.add_parser(
         "benchmark", help="Run the deterministic qualification benchmark"
     )
@@ -96,6 +136,7 @@ def parser() -> argparse.ArgumentParser:
         default=Path("artifacts/qualification/deterministic-latest.json"),
     )
     commands.add_parser("verify", help="Run the documented portable verification command")
+    commands.add_parser("repo-audit", help="Detect duplicate and unsupported repository content")
     return root
 
 
@@ -170,8 +211,11 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         try:
             import mlx_lm  # noqa: F401
             checks.append({"code": "MLX_LM", "ok": True})
+            checks.append({"code": "MODEL_ASSETS", "ok": True, **inspect_model_assets()})
         except ImportError:
             checks.append({"code": "MLX_LM", "ok": False, "message": "Run uv sync --extra full"})
+        except ModelUnavailable as exc:
+            checks.append({"code": "MODEL_ASSETS", "ok": False, "message": str(exc)})
     payload = {
         "profile": args.profile,
         "ok": all(bool(item["ok"]) for item in checks),
@@ -182,6 +226,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
+    if args.offline:
+        os.environ["HF_HUB_OFFLINE"] = "1"
     fen = EXAMPLE_FEN if args.example else (sys.stdin.read().strip() if args.stdin else args.fen)
     assert fen is not None
     request = AnalysisRequest(
@@ -234,21 +280,83 @@ def cmd_serve(args: argparse.Namespace) -> int:
     url = f"http://{args.host}:{args.port}"
     if args.open:
         webbrowser.open(url)
-    uvicorn.run(
-        create_app(
-            full_profile=args.profile == "full",
-            capability_token=token,
-            history_path=default_history_path(),
-        ),
-        host=args.host,
-        port=args.port,
-        log_level="info",
-    )
+    try:
+        with InstanceLock(args.host, args.port, args.profile):
+            uvicorn.run(
+                create_app(
+                    full_profile=args.profile == "full",
+                    capability_token=token,
+                    history_path=default_history_path(),
+                ),
+                host=args.host,
+                port=args.port,
+                log_level="info",
+            )
+    except InstanceAlreadyRunning as exc:
+        print(f"INSTANCE_ALREADY_RUNNING: {exc}", file=sys.stderr)
+        return 6
     return 0
 
 
+def cmd_launch(args: argparse.Namespace) -> int:
+    current = instance_status()
+    if current.get("running"):
+        url = f"http://{current['host']}:{current['port']}"
+        if not args.no_open:
+            webbrowser.open(url)
+        _emit({"status": "already_running", "url": url, "pid": current["pid"]}, "human")
+        return 0
+    runtime_dir().mkdir(parents=True, exist_ok=True)
+    log_path = runtime_dir() / "server.log"
+    with log_path.open("ab") as log:
+        subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "gemmafischer.cli",
+                "serve",
+                "--profile",
+                args.profile,
+                "--port",
+                str(args.port),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            close_fds=True,
+        )
+    url = f"http://127.0.0.1:{args.port}"
+    deadline = time.monotonic() + args.timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"{url}/api/v1/health", timeout=0.5) as response:
+                if response.status == 200:
+                    if not args.no_open:
+                        webbrowser.open(url)
+                    status = instance_status()
+                    _emit({"status": "running", "url": url, "pid": status.get("pid")}, "human")
+                    return 0
+        except (urllib.error.URLError, TimeoutError):
+            time.sleep(0.1)
+    print(f"LAUNCH_TIMEOUT: inspect {log_path}", file=sys.stderr)
+    return 5
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    status = instance_status()
+    _emit(status, "human")
+    return 0 if status.get("running") else 3
+
+
+def cmd_stop(args: argparse.Namespace) -> int:
+    result = stop_instance(args.timeout)
+    _emit(result, "human")
+    return 0 if result.get("stopped") or not result.get("running") else 5
+
+
 def cmd_version(args: argparse.Namespace) -> int:
-    payload = {"application": __version__, "api": "v1", "evidence_schema": "1.0"}
+    payload = {"application": __version__, "api": "v1", "evidence_schema": "2.0"}
     _emit(payload, "json" if args.json else "human")
     return 0
 
@@ -260,10 +368,8 @@ def cmd_audit_legacy(args: argparse.Namespace) -> int:
 
 
 def cmd_audit_data(args: argparse.Namespace) -> int:
-    training_paths = sorted(Path("data/standardized").glob("*.jsonl"))
-    evaluation_paths = sorted(Path("data/evaluation").glob("*.jsonl")) + sorted(
-        Path("data/validation").glob("*eval*.jsonl")
-    )
+    training_paths = sorted(Path("data/derived").glob("train*.jsonl"))
+    evaluation_paths = sorted(Path("data/derived").glob("evaluation*.jsonl"))
     payload = audit_data(training_paths, evaluation_paths, args.output)
     _emit(
         {
@@ -281,6 +387,26 @@ def cmd_audit_data(args: argparse.Namespace) -> int:
         "human",
     )
     return 0 if payload["gate"]["ready_for_training"] else 4
+
+
+def cmd_acquire_data(args: argparse.Namespace) -> int:
+    source = load_source(args.manifest, args.source)
+    payload = acquire_source(source, args.output)
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def cmd_build_dataset(args: argparse.Namespace) -> int:
+    source = load_source(args.manifest, args.source)
+    payload = build_puzzle_dataset(
+        args.archive,
+        args.output_dir,
+        source,
+        limit=args.limit,
+        node_budget=args.nodes,
+    )
+    print(json.dumps(payload, indent=2))
+    return 0
 
 
 def cmd_benchmark(args: argparse.Namespace) -> int:
@@ -308,11 +434,23 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    print(
-        "Run: uv run ruff check src/gemmafischer tests_vnext && uv run mypy && "
-        "uv run pytest -m 'not hardware and not model'"
+    commands = (
+        ["uv", "run", "ruff", "check", "src/gemmafischer", "tests"],
+        ["uv", "run", "mypy"],
+        ["uv", "run", "pytest", "-m", "not model", "tests"],
     )
+    for command in commands:
+        print("+ " + " ".join(command), flush=True)
+        completed = subprocess.run(command, check=False)
+        if completed.returncode:
+            return completed.returncode
     return 0
+
+
+def cmd_repo_audit(args: argparse.Namespace) -> int:
+    payload = audit_repository(Path.cwd())
+    print(json.dumps(payload, indent=2))
+    return 0 if payload["status"] == "passed" else 4
 
 
 if __name__ == "__main__":

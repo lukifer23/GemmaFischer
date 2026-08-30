@@ -1,1 +1,0 @@
-# ChessGemma Web Application Package

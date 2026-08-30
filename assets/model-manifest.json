@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "status": "target_host_smoke_passed",
+  "schema_version": "2.0",
+  "status": "historical_smoke_current_commit_unqualified",
   "model_id": "mlx-community/gemma-4-e2b-it-4bit",
   "upstream_model": "google/gemma-4-E2B-it",
   "runtime": "mlx-lm",
@@ -18,6 +18,13 @@
   },
   "tokenizer_hash": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
   "chat_template_hash": "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082",
-  "license": "Apache-2.0",
-  "release_blocker": "One target-host schema smoke passed. Multi-position quality, latency, memory-pressure, cancellation, restart, offline, and human coaching gates remain open."
+  "license": "Gemma terms; verify exact upstream terms before redistribution",
+  "qualification": {
+    "smoke_commit": "7e3f0d2",
+    "contract_at_smoke": "evidence-1.0",
+    "current_contract": "evidence-2.0",
+    "current_commit_qualified": false,
+    "network_resolution_allowed": false
+  },
+  "release_blocker": "The recorded target-host smoke predates application 0.2 and evidence 2.0. Run current-commit offline cold/warm, grounding, correctness, cancellation, restart, memory-pressure, endurance, and blind human-value qualification before making a model release claim."
 }

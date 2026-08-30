@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GemmaFischer Position Coach</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/app.css?v=20260830">
+  <link rel="stylesheet" href="/app.css?v=20260830-2">
 </head>
 <body>
   <header class="site-header">
@@ -85,15 +85,6 @@
         <p class="step">2 · Session review</p>
         <h2 id="result-title" tabindex="-1">Coach and move history</h2>
         <div id="status" class="status" role="status" aria-live="polite">White to move. Select a piece.</div>
-        <div id="empty-guide" class="empty-guide" aria-hidden="true">
-          <p class="empty-kicker">Make a move. Get the reply and the lesson.</p>
-          <ol>
-            <li><span>01</span><div><strong>Play naturally</strong><small>Legal destinations appear after piece selection.</small></div></li>
-            <li><span>02</span><div><strong>Automatic review</strong><small>Your move is compared after Stockfish replies.</small></div></li>
-            <li><span>03</span><div><strong>Proof on demand</strong><small>Every position-specific claim opens its evidence.</small></div></li>
-          </ol>
-          <p class="engine-note">Stockfish 18 · 250,000 nodes · local processing</p>
-        </div>
         <div id="game-panel" class="game-panel">
           <p id="game-kicker" class="game-kicker">You move first from the position shown.</p>
           <ol id="move-list" class="move-list"></ol>
@@ -109,9 +100,18 @@
             <div id="evidence"></div>
           </details>
         </div>
+        <div id="empty-guide" class="empty-guide" aria-hidden="true">
+          <p class="empty-kicker">Make a move. Get the reply and the lesson.</p>
+          <ol>
+            <li><span>01</span><div><strong>Play naturally</strong><small>Legal destinations appear after piece selection.</small></div></li>
+            <li><span>02</span><div><strong>Automatic review</strong><small>Your move is compared after Stockfish replies.</small></div></li>
+            <li><span>03</span><div><strong>Proof on demand</strong><small>Every position-specific claim opens its evidence.</small></div></li>
+          </ol>
+          <p class="engine-note">Stockfish 18 · 250,000 nodes · local processing</p>
+        </div>
       </section>
     </div>
   </main>
-  <script type="module" src="/app.js?v=20260830"></script>
+  <script type="module" src="/app.js?v=20260830-2"></script>
 </body>
 </html>

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "status": "development_worktree_partial_qualification",
+  "measured_at": "2026-08-30",
+  "target": {
+    "hardware": "Apple M3 Pro, 18 GB unified memory",
+    "python": "3.12.12",
+    "stockfish": "18",
+    "node_budget": 250000,
+    "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
+  },
+  "deterministic_warm_100": {
+    "scope": "position-only API soak",
+    "completed": 100,
+    "failed": 0,
+    "mean_ms": 345.99,
+    "p50_ms": 335.99,
+    "p95_ms": 394.14,
+    "max_ms": 470.20,
+    "post_warm_growth_kib": 1328
+  },
+  "deterministic_mixed_diagnostic_100": {
+    "scope": "80 compare requests and 20 terminal positions",
+    "artifact": "artifacts/qualification/deterministic-0.2-local.json",
+    "mean_ms": 668.40,
+    "p50_ms": 742.92,
+    "p95_ms": 1478.39,
+    "max_ms": 1696.89
+  },
+  "player_reply": {
+    "before_fix_ms": [899, 1120.18],
+    "after_fix_ms": 289.77,
+    "target_ms": 500,
+    "pass_after_fix": true
+  },
+  "full_profile_single_request": {
+    "state": "complete",
+    "wall_seconds_observed": [11.64, 14.07],
+    "coaching_source": "gemma",
+    "best_move_uci": "f1b5",
+    "lesson_concept": "development",
+    "peak_rss_bytes_observed": [1414889472, 2282405888],
+    "orphan_processes": 0
+  },
+  "browser": {
+    "page_load_ms": 47.8,
+    "fcp_ms": 40,
+    "transfer_bytes": 31325,
+    "horizontal_overflow_viewports": [],
+    "tested_viewports": ["375x812", "768x1024", "900x600", "1280x720"],
+    "pre_fix_post_input_layout_shift": 0.04666,
+    "post_fix_cls_retest": "open"
+  },
+  "release_scale_open": [
+    "five cold starts",
+    "100-ply exhibition",
+    "1000-analysis soak",
+    "200-ply persisted session",
+    "post-fix instrumented CLS capture",
+    "keyboard traversal browser pass"
+  ]
+}

@@ -10,9 +10,25 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import __version__
-from .domain import AnalysisRequest, BoardMoveRequest, EngineTurnRequest, LegalMovesRequest
+from .domain import (
+    AnalysisAccepted,
+    AnalysisList,
+    AnalysisRequest,
+    AnalysisSnapshot,
+    BoardMoveRequest,
+    CreateSessionRequest,
+    DeleteResult,
+    EngineTurnRequest,
+    ErrorEnvelope,
+    LegalMovesRequest,
+    LegalMovesResult,
+    RuntimeCapabilities,
+    Session,
+    SessionCommandRequest,
+    SessionList,
+)
 from .engine import EngineUnavailable, legal_moves_for_square, resolve_stockfish
-from .service import AnalysisService
+from .service import AnalysisService, SessionConflict
 
 STATIC_DIR = Path(__file__).with_name("static")
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
@@ -131,7 +147,25 @@ def create_app(
             "history_enabled": request.app.state.service.history_enabled,
         }
 
-    @app.post("/api/v1/analyses", status_code=202)
+    @app.get("/api/v1/capabilities", response_model=RuntimeCapabilities)
+    async def capabilities(request: Request) -> RuntimeCapabilities:
+        try:
+            resolve_stockfish(request.app.state.service.engine_path)
+            engine_status = "ready"
+        except EngineUnavailable:
+            engine_status = "missing"
+        return RuntimeCapabilities(
+            engine_status=engine_status,  # type: ignore[arg-type]
+            model_status=request.app.state.service.model_status,
+            history_enabled=request.app.state.service.history_enabled,
+        )
+
+    @app.post(
+        "/api/v1/analyses",
+        status_code=202,
+        response_model=AnalysisAccepted,
+        responses={422: {"model": ErrorEnvelope}},
+    )
     async def create_analysis(payload: AnalysisRequest, request: Request) -> JSONResponse:
         snapshot = request.app.state.service.submit(payload)
         location = f"/api/v1/analyses/{snapshot.analysis_id}"
@@ -145,7 +179,7 @@ def create_app(
             headers={"Location": location, "Retry-After": "1"},
         )
 
-    @app.get("/api/v1/analyses")
+    @app.get("/api/v1/analyses", response_model=AnalysisList)
     async def list_analyses(
         request: Request, limit: int = Query(default=20, ge=1, le=100)
     ) -> JSONResponse:
@@ -157,21 +191,29 @@ def create_app(
             }
         )
 
-    @app.get("/api/v1/analyses/{analysis_id}")
+    @app.get(
+        "/api/v1/analyses/{analysis_id}",
+        response_model=AnalysisSnapshot,
+        responses={404: {"model": ErrorEnvelope}},
+    )
     async def get_analysis(analysis_id: str, request: Request) -> JSONResponse:
         snapshot = request.app.state.service.get(analysis_id)
         if snapshot is None:
             return _error("ANALYSIS_NOT_FOUND", "No analysis has this ID.", "lookup", 404)
         return JSONResponse(content=snapshot.model_dump(mode="json"))
 
-    @app.delete("/api/v1/analyses/{analysis_id}")
+    @app.delete(
+        "/api/v1/analyses/{analysis_id}",
+        response_model=AnalysisSnapshot,
+        responses={404: {"model": ErrorEnvelope}},
+    )
     async def cancel_analysis(analysis_id: str, request: Request) -> JSONResponse:
         snapshot = request.app.state.service.cancel(analysis_id)
         if snapshot is None:
             return _error("ANALYSIS_NOT_FOUND", "No analysis has this ID.", "lookup", 404)
         return JSONResponse(content=snapshot.model_dump(mode="json"))
 
-    @app.post("/api/v1/board/moves")
+    @app.post("/api/v1/board/moves", deprecated=True)
     def play_board_move(payload: BoardMoveRequest, request: Request) -> JSONResponse:
         try:
             result = request.app.state.service.play_move(payload)
@@ -181,7 +223,7 @@ def create_app(
             return _error("ENGINE_FAILURE", str(exc), "engine", 503)
         return JSONResponse(content=result.model_dump(mode="json"))
 
-    @app.post("/api/v1/board/legal-moves")
+    @app.post("/api/v1/board/legal-moves", deprecated=True)
     def board_legal_moves(payload: LegalMovesRequest) -> JSONResponse:
         try:
             result = legal_moves_for_square(payload.fen, payload.from_square)
@@ -189,7 +231,7 @@ def create_app(
             return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
         return JSONResponse(content=result.model_dump(mode="json"))
 
-    @app.post("/api/v1/board/engine-turn")
+    @app.post("/api/v1/board/engine-turn", deprecated=True)
     def board_engine_turn(payload: EngineTurnRequest, request: Request) -> JSONResponse:
         try:
             result = request.app.state.service.play_engine_turn(payload)
@@ -198,6 +240,85 @@ def create_app(
         except Exception as exc:
             return _error("ENGINE_FAILURE", str(exc), "engine", 503)
         return JSONResponse(content=result.model_dump(mode="json"))
+
+    @app.post(
+        "/api/v1/sessions",
+        response_model=Session,
+        status_code=201,
+        responses={422: {"model": ErrorEnvelope}},
+    )
+    async def create_session(payload: CreateSessionRequest, request: Request) -> Session:
+        service: AnalysisService = request.app.state.service
+        return service.create_session(payload)
+
+    @app.get("/api/v1/sessions", response_model=SessionList)
+    async def list_sessions(
+        request: Request, limit: int = Query(default=20, ge=1, le=100)
+    ) -> SessionList:
+        sessions = request.app.state.service.recent_sessions(limit)
+        return SessionList(items=sessions, count=len(sessions))
+
+    @app.get(
+        "/api/v1/sessions/{session_id}",
+        response_model=Session,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    async def get_session(session_id: str, request: Request) -> Session | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        session = service.get_session(session_id)
+        if session is None:
+            return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        return session
+
+    @app.get(
+        "/api/v1/sessions/{session_id}/legal-moves",
+        response_model=LegalMovesResult,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    async def session_legal_moves(
+        session_id: str,
+        from_square: str,
+        request: Request,
+    ) -> JSONResponse:
+        service: AnalysisService = request.app.state.service
+        session = service.get_session(session_id)
+        if session is None:
+            return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        try:
+            result = legal_moves_for_square(session.fen, from_square)
+        except ValueError as exc:
+            return _error("INVALID_POSITION", str(exc), "move_validation", 422)
+        return JSONResponse(content=result.model_dump(mode="json"))
+
+    @app.post(
+        "/api/v1/sessions/{session_id}/commands",
+        response_model=Session,
+        responses={404: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}},
+    )
+    async def command_session(
+        session_id: str, payload: SessionCommandRequest, request: Request
+    ) -> Session | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        try:
+            return service.command_session(session_id, payload)
+        except KeyError:
+            return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        except SessionConflict as exc:
+            return _error("REVISION_CONFLICT", str(exc), "session", 409)
+        except ValueError as exc:
+            return _error("INVALID_SESSION_COMMAND", str(exc), "session", 422)
+        except Exception as exc:
+            return _error("ENGINE_FAILURE", str(exc), "engine", 503)
+
+    @app.delete(
+        "/api/v1/sessions/{session_id}",
+        response_model=DeleteResult,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    async def delete_session(session_id: str, request: Request) -> DeleteResult | JSONResponse:
+        if not request.app.state.service.delete_session(session_id):
+            return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        return DeleteResult()
 
     return app
 

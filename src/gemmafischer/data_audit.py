@@ -11,6 +11,8 @@ from typing import Any
 import chess
 
 UCI_PATTERN = re.compile(r"^[a-h][1-8][a-h][1-8][qrbn]?$", re.IGNORECASE)
+MINIMUM_TRAINING_RECORDS = 10_000
+MINIMUM_EVALUATION_RECORDS = 1_000
 FEN_PATTERN = re.compile(
     r"(?:FEN|Position):\s*([^\n]+)",
     re.IGNORECASE,
@@ -21,6 +23,9 @@ def audit_data(
     training_paths: list[Path],
     evaluation_paths: list[Path],
     output_path: Path,
+    *,
+    minimum_training_records: int = MINIMUM_TRAINING_RECORDS,
+    minimum_evaluation_records: int = MINIMUM_EVALUATION_RECORDS,
 ) -> dict[str, Any]:
     training = _scan(training_paths)
     evaluation = _scan(evaluation_paths)
@@ -37,7 +42,18 @@ def audit_data(
     leaked_fens = sorted(train_fens & evaluation_fens)
     payload = {
         "schema_version": "1.0",
-        "status": "blocked" if _blocked(training, conflicts, leaked_fens) else "passed",
+        "status": (
+            "blocked"
+            if _blocked(
+                training,
+                evaluation,
+                conflicts,
+                leaked_fens,
+                minimum_training_records,
+                minimum_evaluation_records,
+            )
+            else "passed"
+        ),
         "generated_at": datetime.now(UTC).isoformat(),
         "training": training,
         "evaluation": evaluation,
@@ -48,13 +64,26 @@ def audit_data(
             "leakage_samples": leaked_fens[:25],
         },
         "gate": {
-            "ready_for_training": not _blocked(training, conflicts, leaked_fens),
+            "ready_for_training": not _blocked(
+                training,
+                evaluation,
+                conflicts,
+                leaked_fens,
+                minimum_training_records,
+                minimum_evaluation_records,
+            ),
             "requirements": {
+                "minimum_training_records": minimum_training_records,
+                "minimum_evaluation_records": minimum_evaluation_records,
                 "malformed_records": 0,
                 "invalid_fens": 0,
                 "illegal_best_moves": 0,
+                "missing_fens": 0,
+                "missing_best_moves": 0,
                 "missing_provenance": 0,
                 "missing_license": 0,
+                "duplicates_within_file": 0,
+                "duplicates_across_files": 0,
                 "conflicting_best_move_fens": 0,
                 "train_evaluation_fen_overlap": 0,
             },
@@ -67,15 +96,38 @@ def audit_data(
     return payload
 
 
-def _blocked(training: dict[str, Any], conflicts: list[dict[str, Any]], leaks: list[str]) -> bool:
-    totals = training["totals"]
+def _blocked(
+    training: dict[str, Any],
+    evaluation: dict[str, Any],
+    conflicts: list[dict[str, Any]],
+    leaks: list[str],
+    minimum_training_records: int,
+    minimum_evaluation_records: int,
+) -> bool:
+    training_totals = training["totals"]
+    evaluation_totals = evaluation["totals"]
     return any(
         (
-            totals.get("malformed_records", 0),
-            totals.get("invalid_fens", 0),
-            totals.get("illegal_best_moves", 0),
-            totals.get("missing_provenance", 0),
-            totals.get("missing_license", 0),
+            training_totals.get("records", 0) < minimum_training_records,
+            evaluation_totals.get("records", 0) < minimum_evaluation_records,
+            training_totals.get("malformed_records", 0),
+            training_totals.get("invalid_fens", 0),
+            training_totals.get("illegal_best_moves", 0),
+            training_totals.get("missing_fens", 0),
+            training_totals.get("missing_best_moves", 0),
+            training_totals.get("missing_provenance", 0),
+            training_totals.get("missing_license", 0),
+            training_totals.get("duplicates_within_file", 0),
+            training_totals.get("duplicates_across_files", 0),
+            evaluation_totals.get("malformed_records", 0),
+            evaluation_totals.get("invalid_fens", 0),
+            evaluation_totals.get("illegal_best_moves", 0),
+            evaluation_totals.get("missing_fens", 0),
+            evaluation_totals.get("missing_best_moves", 0),
+            evaluation_totals.get("missing_provenance", 0),
+            evaluation_totals.get("missing_license", 0),
+            evaluation_totals.get("duplicates_within_file", 0),
+            evaluation_totals.get("duplicates_across_files", 0),
             len(conflicts),
             len(leaks),
         )
@@ -92,6 +144,7 @@ def _scan(paths: list[Path]) -> dict[str, Any]:
     for path in paths:
         file_counts: Counter[str] = Counter()
         file_hashes: set[str] = set()
+        prior_file_hashes = set(all_hashes)
         sources: Counter[str] = Counter()
         tasks: Counter[str] = Counter()
         with path.open(encoding="utf-8") as handle:
@@ -120,10 +173,9 @@ def _scan(paths: list[Path]) -> dict[str, Any]:
                 ).hexdigest()
                 if digest in file_hashes:
                     file_counts["duplicates_within_file"] += 1
-                if digest in all_hashes:
+                if digest in prior_file_hashes:
                     file_counts["duplicates_across_files"] += 1
                 file_hashes.add(digest)
-                all_hashes.add(digest)
                 raw_meta: object = record.get("meta")
                 meta: dict[str, Any] = (
                     {str(key): value for key, value in raw_meta.items()}
@@ -160,9 +212,14 @@ def _scan(paths: list[Path]) -> dict[str, Any]:
                                 _sample(issue_samples, path, line_number, "illegal_best_move", move)
                             else:
                                 labels[normalized].add(move.lower())
+                        else:
+                            file_counts["missing_best_moves"] += 1
                     except ValueError as exc:
                         file_counts["invalid_fens"] += 1
                         _sample(issue_samples, path, line_number, "invalid_fen", str(exc))
+                else:
+                    file_counts["missing_fens"] += 1
+        all_hashes.update(file_hashes)
         totals.update(file_counts)
         files.append(
             {
