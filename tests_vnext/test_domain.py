@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from gemmafischer.domain import (
     WDL,
     AnalysisRequest,
+    BoardMoveRequest,
     RatingBucket,
     Workflow,
     canonical_hash,
@@ -42,6 +43,17 @@ def test_position_mode_rejects_considered_move() -> None:
         )
 
 
+def test_board_move_request_is_strict() -> None:
+    request = BoardMoveRequest(
+        fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        move_uci="e2e4",
+        engine_reply=True,
+        difficulty="club",
+    )
+    assert request.engine_reply is True
+    assert request.difficulty.value == "club"
+
+
 def test_wdl_must_total_one_thousand() -> None:
     with pytest.raises(ValidationError, match="total 1000"):
         WDL(win=300, draw=300, loss=300)
@@ -49,4 +61,3 @@ def test_wdl_must_total_one_thousand() -> None:
 
 def test_canonical_hash_is_order_independent() -> None:
     assert canonical_hash({"a": 1, "b": 2}) == canonical_hash({"b": 2, "a": 1})
-

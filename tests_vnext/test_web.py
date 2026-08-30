@@ -12,6 +12,7 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         assert page.status_code == 200
         assert "Explain this position" in page.text
         assert "Compare a move I considered" in page.text
+        assert "Play Stockfish" in page.text
         assert "https://" not in page.text
 
 
@@ -68,3 +69,32 @@ def test_legacy_control_plane_routes_do_not_exist() -> None:
         ):
             assert client.post(path, headers={"X-GemmaFischer-Token": TOKEN}).status_code == 404
 
+
+def test_board_move_rejects_illegal_move_without_starting_engine() -> None:
+    with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
+        response = client.post(
+            "/api/v1/board/moves",
+            headers={"X-GemmaFischer-Token": TOKEN},
+            json={
+                "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "move_uci": "e2e5",
+                "engine_reply": False,
+                "difficulty": "club",
+            },
+        )
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "ILLEGAL_MOVE"
+
+
+def test_legal_move_destinations_are_available_without_engine() -> None:
+    with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
+        response = client.post(
+            "/api/v1/board/legal-moves",
+            headers={"X-GemmaFischer-Token": TOKEN},
+            json={
+                "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                "from_square": "e2",
+            },
+        )
+        assert response.status_code == 200
+        assert set(response.json()["destinations"]) == {"e3", "e4"}

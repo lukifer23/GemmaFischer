@@ -26,6 +26,12 @@ class RatingBucket(StrEnum):
     ADVANCED = "1600-1800"
 
 
+class GameDifficulty(StrEnum):
+    CASUAL = "casual"
+    CLUB = "club"
+    STRONG = "strong"
+
+
 class AnalysisState(StrEnum):
     QUEUED = "queued"
     VALIDATING = "validating"
@@ -59,6 +65,41 @@ class AnalysisRequest(StrictModel):
         if self.mode is Workflow.POSITION and self.considered_move_uci is not None:
             raise ValueError("considered_move_uci is only accepted in compare mode")
         return self
+
+
+class BoardMoveRequest(StrictModel):
+    fen: str = Field(min_length=1, max_length=256)
+    move_uci: str = Field(min_length=4, max_length=5)
+    engine_reply: bool = False
+    difficulty: GameDifficulty = GameDifficulty.CLUB
+
+
+class LegalMovesRequest(StrictModel):
+    fen: str = Field(min_length=1, max_length=256)
+    from_square: str = Field(pattern=r"^[a-h][1-8]$")
+
+
+class LegalMovesResult(StrictModel):
+    schema_version: Literal["1.0"] = "1.0"
+    from_square: str
+    moves_uci: tuple[str, ...]
+    destinations: tuple[str, ...]
+
+
+class BoardMoveResult(StrictModel):
+    schema_version: Literal["1.0"] = "1.0"
+    fen_before: str
+    fen_after_human: str
+    fen: str
+    human_move_uci: str
+    human_move_san: str
+    engine_move_uci: str | None = None
+    engine_move_san: str | None = None
+    engine_name: str | None = None
+    engine_nodes: int = 0
+    game_over: bool
+    outcome: str | None = None
+    turn: Literal["white", "black"]
 
 
 class EngineMetadata(StrictModel):

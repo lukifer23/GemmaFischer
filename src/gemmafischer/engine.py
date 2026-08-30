@@ -11,9 +11,12 @@ import chess.engine
 from .domain import (
     WDL,
     BoardFact,
+    BoardMoveResult,
     CandidateEvidence,
     EngineEvidence,
     EngineMetadata,
+    GameDifficulty,
+    LegalMovesResult,
     canonical_hash,
     normalize_fen,
 )
@@ -23,6 +26,16 @@ ENGINE_OPTIONS: dict[str, int | bool] = {
     "Threads": 1,
     "Hash": 256,
     "UCI_ShowWDL": True,
+}
+GAME_SKILL_LEVEL = {
+    GameDifficulty.CASUAL: 4,
+    GameDifficulty.CLUB: 10,
+    GameDifficulty.STRONG: 18,
+}
+GAME_NODE_RATIO = {
+    GameDifficulty.CASUAL: 0.08,
+    GameDifficulty.CLUB: 0.32,
+    GameDifficulty.STRONG: 1.0,
 }
 
 
@@ -67,22 +80,37 @@ def extract_board_facts(board: chess.Board) -> tuple[BoardFact, ...]:
         value * (len(board.pieces(piece, chess.WHITE)) - len(board.pieces(piece, chess.BLACK)))
         for piece, value in values.items()
     )
-    castling = "".join(
-        symbol
-        for allowed, symbol in (
-            (board.has_kingside_castling_rights(chess.WHITE), "K"),
-            (board.has_queenside_castling_rights(chess.WHITE), "Q"),
-            (board.has_kingside_castling_rights(chess.BLACK), "k"),
-            (board.has_queenside_castling_rights(chess.BLACK), "q"),
+    castling = (
+        "".join(
+            symbol
+            for allowed, symbol in (
+                (board.has_kingside_castling_rights(chess.WHITE), "K"),
+                (board.has_queenside_castling_rights(chess.WHITE), "Q"),
+                (board.has_kingside_castling_rights(chess.BLACK), "k"),
+                (board.has_queenside_castling_rights(chess.BLACK), "q"),
+            )
+            if allowed
         )
-        if allowed
-    ) or "-"
+        or "-"
+    )
     return (
         _fact("side_to_move", "white" if board.turn else "black"),
         _fact("in_check", board.is_check()),
         _fact("legal_move_count", board.legal_moves.count()),
         _fact("material_balance_cp", material),
         _fact("castling_rights", castling),
+    )
+
+
+def legal_moves_for_square(fen: str, from_square: str) -> LegalMovesResult:
+    board, _ = normalize_fen(fen)
+    source = chess.parse_square(from_square)
+    moves = tuple(move.uci() for move in board.legal_moves if move.from_square == source)
+    destinations = tuple(dict.fromkeys(move[2:4] for move in moves))
+    return LegalMovesResult(
+        from_square=from_square,
+        moves_uci=moves,
+        destinations=destinations,
     )
 
 
@@ -177,6 +205,84 @@ class StockfishProvider:
             candidates=tuple(candidates),
             board_facts=extract_board_facts(board),
         )
+
+    def play_move(
+        self,
+        fen: str,
+        move_uci: str,
+        *,
+        engine_reply: bool,
+        difficulty: GameDifficulty,
+    ) -> BoardMoveResult:
+        board, normalized_fen = normalize_fen(fen)
+        if board.is_game_over(claim_draw=True):
+            raise ValueError("The game is already over")
+
+        normalized_move = self._normalize_promotion(board, move_uci.lower())
+        try:
+            human_move = chess.Move.from_uci(normalized_move)
+        except ValueError as exc:
+            raise ValueError("The move is not valid UCI notation") from exc
+        if human_move not in board.legal_moves:
+            raise ValueError("That move is illegal in this position")
+
+        human_san = board.san(human_move)
+        board.push(human_move)
+        fen_after_human = board.fen(en_passant="fen")
+        engine_move_uci: str | None = None
+        engine_move_san: str | None = None
+        engine_name: str | None = None
+        engine_nodes = 0
+
+        if engine_reply and not board.is_game_over(claim_draw=True):
+            engine_nodes = max(1, round(self.node_budget * GAME_NODE_RATIO[difficulty]))
+            engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
+            try:
+                applied = {
+                    key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options
+                }
+                if "Skill Level" in engine.options:
+                    applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
+                engine.configure(applied)
+                engine_name = engine.id.get("name", "Stockfish")
+                reply = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
+                if reply is None:
+                    raise RuntimeError("Stockfish returned no move")
+                engine_move_uci = reply.uci()
+                engine_move_san = board.san(reply)
+                board.push(reply)
+            finally:
+                engine.quit()
+
+        outcome = board.outcome(claim_draw=True)
+        return BoardMoveResult(
+            fen_before=normalized_fen,
+            fen_after_human=fen_after_human,
+            fen=board.fen(en_passant="fen"),
+            human_move_uci=normalized_move,
+            human_move_san=human_san,
+            engine_move_uci=engine_move_uci,
+            engine_move_san=engine_move_san,
+            engine_name=engine_name,
+            engine_nodes=engine_nodes,
+            game_over=outcome is not None,
+            outcome=outcome.result() if outcome else None,
+            turn="white" if board.turn else "black",
+        )
+
+    @staticmethod
+    def _normalize_promotion(board: chess.Board, move_uci: str) -> str:
+        if len(move_uci) != 4:
+            return move_uci
+        try:
+            source = chess.parse_square(move_uci[:2])
+            target = chess.parse_square(move_uci[2:])
+        except ValueError:
+            return move_uci
+        piece = board.piece_at(source)
+        if piece and piece.piece_type == chess.PAWN and chess.square_rank(target) in {0, 7}:
+            return f"{move_uci}q"
+        return move_uci
 
     def _metadata(self, name: str, author: str | None) -> EngineMetadata:
         return EngineMetadata(

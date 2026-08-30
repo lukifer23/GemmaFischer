@@ -10,6 +10,8 @@ from .domain import (
     AnalysisRequest,
     AnalysisSnapshot,
     AnalysisState,
+    BoardMoveRequest,
+    BoardMoveResult,
     CoachingResult,
     ErrorDetail,
     now_utc,
@@ -82,6 +84,15 @@ class AnalysisService:
             self._closed = True
             self._condition.notify_all()
         self._worker.join(timeout=2)
+
+    def play_move(self, request: BoardMoveRequest) -> BoardMoveResult:
+        provider = StockfishProvider(self.engine_path, self.node_budget)
+        return provider.play_move(
+            request.fen,
+            request.move_uci,
+            engine_reply=request.engine_reply,
+            difficulty=request.difficulty,
+        )
 
     def _cancel_locked(self, analysis_id: str) -> None:
         job = self._jobs[analysis_id]

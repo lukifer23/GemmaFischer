@@ -22,6 +22,7 @@
       <div class="task-options">
         <label><input type="radio" name="mode" value="position" checked> <span><strong>Explain this position</strong><small>Find the key move and lesson.</small></span></label>
         <label><input type="radio" name="mode" value="compare"> <span><strong>Compare a move I considered</strong><small>See what it misses or gets right.</small></span></label>
+        <label><input type="radio" name="mode" value="play"> <span><strong>Play Stockfish</strong><small>Make a move and get a real engine reply.</small></span></label>
       </div>
     </section>
 
@@ -38,17 +39,33 @@
             <textarea id="fen" rows="4" spellcheck="false">r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3</textarea>
             <button id="load-example" class="text-button" type="button">Load example position</button>
 
+            <div id="game-controls" hidden>
+              <label for="difficulty">Opponent strength</label>
+              <select id="difficulty">
+                <option value="casual">Casual</option>
+                <option value="club" selected>Club</option>
+                <option value="strong">Strong</option>
+              </select>
+              <div class="game-actions">
+                <button id="new-game" class="quiet" type="button">New game</button>
+                <button id="undo" class="quiet" type="button" disabled>Undo turn</button>
+              </div>
+              <p class="field-help">Select one of your pieces, then its destination. Promotions become queens.</p>
+            </div>
+
             <div id="consider-wrap" hidden>
               <label for="consider">Move you considered <span>(UCI, such as f1b5)</span></label>
               <input id="consider" maxlength="5" autocomplete="off" placeholder="f1b5">
               <p class="field-help">Or select its two squares on the board.</p>
             </div>
 
-            <label for="rating">Your playing level</label>
-            <select id="rating">
-              <option>1000-1199</option><option>1200-1399</option>
-              <option selected>1400-1599</option><option>1600-1800</option>
-            </select>
+            <div id="rating-wrap">
+              <label for="rating">Your playing level</label>
+              <select id="rating">
+                <option>1000-1199</option><option>1200-1399</option>
+                <option selected>1400-1599</option><option>1600-1800</option>
+              </select>
+            </div>
             <p id="input-error" class="error" role="alert" hidden></p>
             <div class="actions">
               <button id="analyze" class="primary" type="button">Analyze position</button>
@@ -70,6 +87,11 @@
             <li><span>03</span><div><strong>Proof on demand</strong><small>Every position-specific claim opens its evidence.</small></div></li>
           </ol>
           <p class="engine-note">Stockfish 18 · 250,000 nodes · local processing</p>
+        </div>
+        <div id="game-panel" class="game-panel" hidden>
+          <p class="game-kicker">You move first from the position shown.</p>
+          <ol id="move-list" class="move-list"></ol>
+          <p id="game-outcome" class="notice" hidden></p>
         </div>
         <div id="result" hidden>
           <p id="degraded" class="notice" hidden></p>

@@ -10,7 +10,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import __version__
-from .domain import AnalysisRequest
+from .domain import AnalysisRequest, BoardMoveRequest, LegalMovesRequest
+from .engine import legal_moves_for_square
 from .service import AnalysisService
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -140,6 +141,24 @@ def create_app(
         if snapshot is None:
             return _error("ANALYSIS_NOT_FOUND", "No analysis has this ID.", "lookup", 404)
         return JSONResponse(content=snapshot.model_dump(mode="json"))
+
+    @app.post("/api/v1/board/moves")
+    def play_board_move(payload: BoardMoveRequest, request: Request) -> JSONResponse:
+        try:
+            result = request.app.state.service.play_move(payload)
+        except ValueError as exc:
+            return _error("ILLEGAL_MOVE", str(exc), "move_validation", 422, field="move_uci")
+        except Exception as exc:
+            return _error("ENGINE_FAILURE", str(exc), "engine", 503)
+        return JSONResponse(content=result.model_dump(mode="json"))
+
+    @app.post("/api/v1/board/legal-moves")
+    def board_legal_moves(payload: LegalMovesRequest) -> JSONResponse:
+        try:
+            result = legal_moves_for_square(payload.fen, payload.from_square)
+        except ValueError as exc:
+            return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
+        return JSONResponse(content=result.model_dump(mode="json"))
 
     return app
 
