@@ -1,14 +1,23 @@
 {
   "schema_version": "1.0",
-  "status": "blocked_runtime_incompatible",
+  "status": "target_host_smoke_passed",
   "model_id": "mlx-community/gemma-4-e2b-it-4bit",
   "upstream_model": "google/gemma-4-E2B-it",
   "runtime": "mlx-lm",
   "quantization": "4bit",
-  "revision": null,
-  "file_hashes": {},
-  "tokenizer_hash": null,
-  "chat_template_hash": null,
+  "revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+  "runtime_version": "0.31.3",
+  "installed_size_bytes": 3583086498,
+  "file_hashes": {
+    "config.json": "6397cb6eca41b911d1dcab74e17941351057bd759284052a2331918ff6f9246c",
+    "generation_config.json": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+    "model.safetensors": "038e39a37a7667373d2c3991375446b10c96ae1d717a68674870343db376b76e",
+    "model.safetensors.index.json": "edb157dbf495e23f37377af4a628a9ad13c4ee7937f93ccb36ec9e9a19940f16",
+    "processor_config.json": "de3e580aebdc98272d4c4547daffe6525fcbae18a83a0e0bcf0d7444d4ee6f37",
+    "tokenizer_config.json": "080d9e1aff284e2f6043889cd05367966f7c7b80e025fbc0b06745e218158656"
+  },
+  "tokenizer_hash": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+  "chat_template_hash": "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082",
   "license": "Apache-2.0",
-  "release_blocker": "MLX-LM 0.28.4 reports model type gemma4 unsupported. Select and pin a compatible runtime before qualification."
+  "release_blocker": "One target-host schema smoke passed. Multi-position quality, latency, memory-pressure, cancellation, restart, offline, and human coaching gates remain open."
 }

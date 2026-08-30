@@ -152,7 +152,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.116,<0.117" },
-    { name = "mlx-lm", marker = "extra == 'full'", specifier = ">=0.28,<0.29" },
+    { name = "mlx-lm", marker = "extra == 'full'", specifier = ">=0.31.3,<0.32" },
     { name = "psutil", marker = "extra == 'full'", specifier = ">=7,<8" },
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "python-chess", specifier = ">=1.999,<2" },
@@ -351,7 +351,7 @@ wheels = [
 
 [[package]]
 name = "mlx-lm"
-version = "0.28.4"
+version = "0.31.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
@@ -362,9 +362,9 @@ dependencies = [
     { name = "sentencepiece" },
     { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/7f/94b3f7e00c4681a4fe2d47b519458245bd8a8f0506b1ce018d1850bbcf79/mlx_lm-0.28.4.tar.gz", hash = "sha256:3661d8ef5f0e2695d52993e0df1ed2c1f93ca1d094258146c18d9cec0c50514e", size = 232455, upload-time = "2025-12-03T22:39:59.122Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/84/94/9a38d6b0c6fcca995b9136c94eb7da1e9c5165652edf228b96b29960fa7a/mlx_lm-0.31.3.tar.gz", hash = "sha256:61eb0e3ba09444f77f874aff295401d7ccd20b39495cbbce0c782a15474ce733", size = 304318, upload-time = "2026-04-22T07:37:27.922Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/35/5767098993834582e8a34a0317d666ed53498f58940fad8bffa0a4662eb1/mlx_lm-0.28.4-py3-none-any.whl", hash = "sha256:64ff7bff02e902f1df7daafdbf27ffc836b9a7c9b332b9fc3ea40c19e31147ca", size = 323307, upload-time = "2025-12-03T22:39:57.711Z" },
+    { url = "https://files.pythonhosted.org/packages/90/02/9a67b8e4f87e3e2e5cd7b1ad79304b93c09a0db6af34bee75e6551c06c60/mlx_lm-0.31.3-py3-none-any.whl", hash = "sha256:758cfddf1180053b7613db76fad3d246a331a2a905808e1164a275621fc983b8", size = 408890, upload-time = "2026-04-22T07:37:25.965Z" },
 ]
 
 [[package]]
