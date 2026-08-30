@@ -108,15 +108,24 @@ def run_full_profile_benchmark(
         baseline = deterministic_coach(evidence, rating, considered)
         if evidence.candidates:
             model_started = time.perf_counter()
-            claims = runtime.claims(evidence, rating)
+            model_error = None
+            try:
+                claims = runtime.claims(evidence, rating)
+                valid, removed = validate_model_claims(evidence, claims)
+                merged = (
+                    merge_model_claims(valid, baseline.claims)
+                    if len(valid) >= 2
+                    else baseline.claims
+                )
+                result_source = "gemma" if len(valid) >= 2 else "deterministic"
+            except (ValueError, RuntimeError) as exc:
+                claims = ()
+                valid = ()
+                removed = ("MODEL_OUTPUT_INVALID",)
+                merged = baseline.claims
+                result_source = "deterministic"
+                model_error = str(exc)[:500]
             model_elapsed = time.perf_counter() - model_started
-            valid, removed = validate_model_claims(evidence, claims)
-            merged = (
-                merge_model_claims(valid, baseline.claims)
-                if len(valid) >= 2
-                else baseline.claims
-            )
-            result_source = "gemma" if len(valid) >= 2 else "deterministic"
         else:
             claims = ()
             valid = ()
@@ -124,6 +133,7 @@ def run_full_profile_benchmark(
             merged = baseline.claims
             model_elapsed = 0.0
             result_source = "terminal"
+            model_error = None
         raw.append(
             {
                 "index": index,
@@ -137,6 +147,7 @@ def run_full_profile_benchmark(
                 "model_claims_valid": len(valid),
                 "claims_served": len(merged),
                 "removed_claim_codes": list(removed),
+                "model_error": model_error,
                 "result_source": result_source,
                 "rss_bytes": process.memory_info().rss,
                 "mlx_active_memory_bytes": mx.get_active_memory(),
