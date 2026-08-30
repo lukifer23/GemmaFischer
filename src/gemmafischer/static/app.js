@@ -1,6 +1,7 @@
 const pieces={p:'♟',r:'♜',n:'♞',b:'♝',q:'♛',k:'♚',P:'♙',R:'♖',N:'♘',B:'♗',Q:'♕',K:'♔'};
 const START_FEN='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const EXAMPLE_FEN='r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+const SESSION_KEY='gemmafischer.session.v1';
 const state={
   flipped:false,selected:null,legalTargets:[],squares:{},turn:'w',busy:false,lastMove:[],
   history:[],moveRows:[],analysisId:null,reviewToken:0,exhibitionRunning:false,exhibitionToken:0,
@@ -8,6 +9,19 @@ const state={
 const squareNodes=new Map();
 const $=id=>document.getElementById(id);
 const wait=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
+
+function persistSession(){
+  try{localStorage.setItem(SESSION_KEY,JSON.stringify({schema:1,fen:$('fen').value,history:state.history,moveRows:state.moveRows,flipped:state.flipped,mode:$('session-mode').value,difficulty:$('difficulty').value,rating:$('rating').value}));}catch{/* A private browser may deny local storage. */}
+}
+function restoreSession(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');if(!saved||saved.schema!==1)return false;
+    parseFen(saved.fen);$('fen').value=saved.fen;state.history=Array.isArray(saved.history)?saved.history:[];state.moveRows=Array.isArray(saved.moveRows)?saved.moveRows:[];state.flipped=Boolean(saved.flipped);
+    if(['play','exhibition'].includes(saved.mode))$('session-mode').value=saved.mode;if(['casual','club','strong'].includes(saved.difficulty))$('difficulty').value=saved.difficulty;if(['1000-1199','1200-1399','1400-1599','1600-1800'].includes(saved.rating))$('rating').value=saved.rating;
+    const exhibition=$('session-mode').value==='exhibition';$('exhibition').hidden=!exhibition;$('game-kicker').textContent=exhibition?'Stockfish plays both sides. Every move is reviewed before the next.':'You move, Stockfish replies, and your move is reviewed automatically.';$('board-help').textContent=exhibition?'Start the exhibition to advance one reviewed engine move at a time.':'Select one of your pieces, then its destination. Promotions become queens.';
+    $('undo').disabled=state.history.length===0;return true;
+  }catch{localStorage.removeItem(SESSION_KEY);return false;}
+}
 
 function parseFen(fen){
   const fields=fen.trim().split(/\s+/);
@@ -52,7 +66,7 @@ async function showMove(fen,moveUci){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const movingPiece=destinationNode.querySelector('.piece');
   const animation=movingPiece.animate([{transform:`translate(${source.left-destination.left}px,${source.top-destination.top}px) scale(.94)`,zIndex:4},{transform:'translate(0,0) scale(1)',zIndex:4}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
-  try{await animation.finished;}catch{/* A newer move superseded the animation. */}
+  persistSession();try{await animation.finished;}catch{/* A newer move superseded the animation. */}
 }
 
 function pieceMatchesTurn(piece){return Boolean(piece)&&(state.turn==='w'?piece===piece.toUpperCase():piece===piece.toLowerCase());}
@@ -124,6 +138,7 @@ function showOutcome(outcome){$('game-outcome').textContent=`Game over · ${outc
 function resetSession(fen=START_FEN){
   state.exhibitionRunning=false;state.exhibitionToken++;$('exhibition').textContent='Start exhibition';cancelReview();$('fen').value=fen;parseFen(fen);state.selected=null;state.legalTargets=[];state.lastMove=[];state.history=[];state.moveRows=[];
   $('undo').disabled=true;$('game-outcome').hidden=true;$('result').hidden=true;$('empty-guide').hidden=false;renderMoveList();setError();setReviewStatus();renderBoard();setStatus(`${state.turn==='w'?'White':'Black'} to move. Select a piece.`);
+  persistSession();
 }
 
 async function reviewMove(fen,move,label){return submitAnalysis({mode:'compare',fen,rating_bucket:$('rating').value,considered_move_uci:move},label);}
@@ -155,15 +170,16 @@ function renderResult(data){
 }
 function claimText(claim,evidence){const candidates=Object.fromEntries(evidence.candidates.map(item=>[item.evidence_id,item]));if(claim.kind==='move')return`Recommended move: ${candidates[claim.candidate_id].move_san}.`;if(claim.kind==='score'){const item=candidates[claim.candidate_id];return item.mate_in!==null?`Mate evaluation: ${item.mate_in}.`:`Evaluation from the side to move: ${(item.score_cp/100).toFixed(2)} pawns.`;}if(claim.kind==='line')return`Line to calculate: ${candidates[claim.candidate_id].pv_uci.slice(claim.start_ply,claim.end_ply).join(' ')}.`;if(claim.kind==='comparison'){const best=candidates[claim.better_candidate_id],considered=candidates[claim.considered_candidate_id];if(best.evidence_id===considered.evidence_id)return`${considered.move_san} matches the engine's first choice.`;if(best.score_cp!==null&&considered.score_cp!==null)return`${best.move_san} evaluates ${((best.score_cp-considered.score_cp)/100).toFixed(2)} pawns better than ${considered.move_san}.`;return`The engine prefers ${best.move_san} to ${considered.move_san} by mate outcome.`;}return claim.template_id==='compare_candidate_moves'?'Compare the forcing replies to both moves.':'Calculate checks, captures, and threats first.';}
 
-$('flip').addEventListener('click',()=>{state.flipped=!state.flipped;renderBoard();});
+$('flip').addEventListener('click',()=>{state.flipped=!state.flipped;renderBoard();persistSession();});
 $('load-example').addEventListener('click',()=>resetSession(EXAMPLE_FEN));
 $('new-game').addEventListener('click',()=>resetSession());
-$('undo').addEventListener('click',()=>{const previous=state.history.pop();if(!previous)return;state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').textContent='Start exhibition';$('fen').value=previous.fen;parseFen(previous.fen);state.moveRows=previous.rows;state.lastMove=[];state.legalTargets=[];$('undo').disabled=state.history.length===0;$('game-outcome').hidden=true;renderMoveList();renderBoard();setStatus(`${state.turn==='w'?'White':'Black'} to move.`);});
+$('undo').addEventListener('click',()=>{const previous=state.history.pop();if(!previous)return;state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').textContent='Start exhibition';$('fen').value=previous.fen;parseFen(previous.fen);state.moveRows=previous.rows;state.lastMove=[];state.legalTargets=[];$('undo').disabled=state.history.length===0;$('game-outcome').hidden=true;renderMoveList();renderBoard();setStatus(`${state.turn==='w'?'White':'Black'} to move.`);persistSession();});
 $('fen').addEventListener('change',()=>{try{resetSession($('fen').value.trim());}catch(error){setError(error.message);}});
 $('analyze').addEventListener('click',explainPosition);
 $('cancel').addEventListener('click',()=>{cancelReview();setReviewStatus('Review cancelled.');});
-$('session-mode').addEventListener('change',()=>{const exhibition=$('session-mode').value==='exhibition';state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').hidden=!exhibition;$('exhibition').textContent='Start exhibition';$('game-kicker').textContent=exhibition?'Stockfish plays both sides. Every move is reviewed before the next.':'You move, Stockfish replies, and your move is reviewed automatically.';$('board-help').textContent=exhibition?'Start the exhibition to advance one reviewed engine move at a time.':'Select one of your pieces, then its destination. Promotions become queens.';renderBoard();setStatus(exhibition?'Engine exhibition ready.':'Select a piece to move.');});
+$('session-mode').addEventListener('change',()=>{const exhibition=$('session-mode').value==='exhibition';state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').hidden=!exhibition;$('exhibition').textContent='Start exhibition';$('game-kicker').textContent=exhibition?'Stockfish plays both sides. Every move is reviewed before the next.':'You move, Stockfish replies, and your move is reviewed automatically.';$('board-help').textContent=exhibition?'Start the exhibition to advance one reviewed engine move at a time.':'Select one of your pieces, then its destination. Promotions become queens.';renderBoard();setStatus(exhibition?'Engine exhibition ready.':'Select a piece to move.');persistSession();});
 $('exhibition').addEventListener('click',()=>{if(state.exhibitionRunning){state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').textContent='Start exhibition';setStatus('Engine exhibition paused.');renderBoard();return;}state.exhibitionRunning=true;const token=++state.exhibitionToken;$('exhibition').textContent='Pause exhibition';renderBoard();void runExhibition(token);});
+$('difficulty').addEventListener('change',persistSession);$('rating').addEventListener('change',persistSession);
 
 async function loadHealth(){try{const response=await fetch('/api/v1/health'),health=await response.json();$('coach-mode').textContent=health.model_profile==='full'?'Gemma 4 coaching':'Deterministic coaching';}catch{$('coach-mode').textContent='Coach unavailable';}}
-initializeBoard();parseFen($('fen').value);renderMoveList();renderBoard();void loadHealth();
+initializeBoard();parseFen($('fen').value);const restored=restoreSession();renderMoveList();renderBoard();if(restored)setStatus('Session restored. Continue from the current position.');void loadHealth();

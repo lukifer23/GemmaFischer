@@ -17,6 +17,7 @@ from .domain import AnalysisRequest, AnalysisState, RatingBucket, Workflow
 from .engine import EngineUnavailable, StockfishProvider, resolve_stockfish
 from .qualification import run_deterministic_benchmark
 from .service import AnalysisService
+from .storage import default_history_path
 from .web import create_app
 
 EXAMPLE_FEN = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
@@ -224,7 +225,11 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if args.open:
         webbrowser.open(url)
     uvicorn.run(
-        create_app(full_profile=args.profile == "full", capability_token=token),
+        create_app(
+            full_profile=args.profile == "full",
+            capability_token=token,
+            history_path=default_history_path(),
+        ),
         host=args.host,
         port=args.port,
         log_level="info",

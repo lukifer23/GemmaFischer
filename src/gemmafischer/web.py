@@ -24,12 +24,15 @@ def create_app(
     full_profile: bool = False,
     node_budget: int = 250_000,
     capability_token: str | None = None,
+    history_path: Path | None = None,
 ) -> FastAPI:
     token = capability_token or secrets.token_urlsafe(32)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        app.state.service = AnalysisService(engine_path, node_budget, full_profile)
+        app.state.service = AnalysisService(
+            engine_path, node_budget, full_profile, history_path=history_path
+        )
         yield
         app.state.service.close()
 
@@ -126,6 +129,16 @@ def create_app(
                 "generation": snapshot.generation,
             },
             headers={"Location": location, "Retry-After": "1"},
+        )
+
+    @app.get("/api/v1/analyses")
+    async def list_analyses(request: Request, limit: int = 20) -> JSONResponse:
+        snapshots = request.app.state.service.recent(limit)
+        return JSONResponse(
+            content={
+                "items": [snapshot.model_dump(mode="json") for snapshot in snapshots],
+                "count": len(snapshots),
+            }
         )
 
     @app.get("/api/v1/analyses/{analysis_id}")

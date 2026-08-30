@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
 from .coach import deterministic_coach, merge_model_claims, validate_model_claims
 from .domain import (
@@ -20,6 +21,7 @@ from .domain import (
 )
 from .engine import EngineUnavailable, StockfishProvider
 from .runtime import GemmaRuntime, ModelUnavailable
+from .storage import AnalysisStore
 
 
 @dataclass
@@ -36,10 +38,15 @@ class AnalysisService:
         engine_path: str | None = None,
         node_budget: int = 250_000,
         full_profile: bool = False,
+        history_path: Path | None = None,
+        history_retention: int = 250,
     ) -> None:
         self.engine_path = engine_path
         self.node_budget = node_budget
         self.full_profile = full_profile
+        self._store = (
+            AnalysisStore(history_path, retention=history_retention) if history_path else None
+        )
         self._model_runtime: GemmaRuntime | None = None
         self._jobs: dict[str, _Job] = {}
         self._pending_id: str | None = None
@@ -65,6 +72,7 @@ class AnalysisService:
             if self._pending_id:
                 self._cancel_locked(self._pending_id)
             self._jobs[analysis_id] = _Job(snapshot=snapshot)
+            self._persist(snapshot)
             self._pending_id = analysis_id
             self._condition.notify()
             return snapshot
@@ -72,7 +80,18 @@ class AnalysisService:
     def get(self, analysis_id: str) -> AnalysisSnapshot | None:
         with self._condition:
             job = self._jobs.get(analysis_id)
-            return job.snapshot if job else None
+            if job:
+                return job.snapshot
+            return self._store.get(analysis_id) if self._store else None
+
+    def recent(self, limit: int = 20) -> tuple[AnalysisSnapshot, ...]:
+        if self._store:
+            return self._store.recent(limit)
+        with self._condition:
+            snapshots = (job.snapshot for job in self._jobs.values())
+            return tuple(
+                sorted(snapshots, key=lambda item: item.updated_at, reverse=True)[:limit]
+            )
 
     def cancel(self, analysis_id: str) -> AnalysisSnapshot | None:
         with self._condition:
@@ -110,6 +129,7 @@ class AnalysisService:
             job.snapshot = job.snapshot.model_copy(
                 update={"state": AnalysisState.CANCELLED, "updated_at": now_utc()}
             )
+            self._persist(job.snapshot)
         if self._pending_id == analysis_id:
             self._pending_id = None
 
@@ -120,6 +140,11 @@ class AnalysisService:
             job.snapshot = job.snapshot.model_copy(
                 update={"state": state, "updated_at": now_utc(), **values}
             )
+            self._persist(job.snapshot)
+
+    def _persist(self, snapshot: AnalysisSnapshot) -> None:
+        if self._store:
+            self._store.save(snapshot)
 
     def _run(self) -> None:
         while True:

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from gemmafischer.web import create_app
@@ -56,6 +58,36 @@ def test_create_poll_and_idempotent_cancel() -> None:
         second = client.delete(location, headers={"X-GemmaFischer-Token": TOKEN})
         assert first.json()["state"] == "cancelled"
         assert second.json()["state"] == "cancelled"
+
+
+def test_analysis_history_survives_app_restart(tmp_path: Path) -> None:
+    history_path = tmp_path / "history.sqlite3"
+    app = create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/analyses",
+            headers={"X-GemmaFischer-Token": TOKEN},
+            json={
+                "mode": "position",
+                "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+                "rating_bucket": "1400-1599",
+            },
+        )
+        analysis_id = response.json()["analysis_id"]
+        client.delete(
+            f"/api/v1/analyses/{analysis_id}",
+            headers={"X-GemmaFischer-Token": TOKEN},
+        )
+
+    with TestClient(
+        create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    ) as client:
+        history = client.get("/api/v1/analyses").json()
+        restored = client.get(f"/api/v1/analyses/{analysis_id}")
+
+    assert history["count"] == 1
+    assert history["items"][0]["analysis_id"] == analysis_id
+    assert restored.json()["state"] == "cancelled"
 
 
 def test_legacy_control_plane_routes_do_not_exist() -> None:
