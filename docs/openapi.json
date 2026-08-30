@@ -38,6 +38,67 @@
         "title": "AnalysisRequest",
         "type": "object"
       },
+      "BoardMoveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "difficulty": {
+            "$ref": "#/components/schemas/GameDifficulty",
+            "default": "club"
+          },
+          "engine_reply": {
+            "default": false,
+            "title": "Engine Reply",
+            "type": "boolean"
+          },
+          "fen": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Fen",
+            "type": "string"
+          },
+          "move_uci": {
+            "maxLength": 5,
+            "minLength": 4,
+            "title": "Move Uci",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fen",
+          "move_uci"
+        ],
+        "title": "BoardMoveRequest",
+        "type": "object"
+      },
+      "EngineTurnRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "difficulty": {
+            "$ref": "#/components/schemas/GameDifficulty",
+            "default": "club"
+          },
+          "fen": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Fen",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fen"
+        ],
+        "title": "EngineTurnRequest",
+        "type": "object"
+      },
+      "GameDifficulty": {
+        "enum": [
+          "casual",
+          "club",
+          "strong"
+        ],
+        "title": "GameDifficulty",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -49,6 +110,28 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LegalMovesRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "fen": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Fen",
+            "type": "string"
+          },
+          "from_square": {
+            "pattern": "^[a-h][1-8]$",
+            "title": "From Square",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fen",
+          "from_square"
+        ],
+        "title": "LegalMovesRequest",
         "type": "object"
       },
       "RatingBucket": {
@@ -111,6 +194,44 @@
   "openapi": "3.1.0",
   "paths": {
     "/api/v1/analyses": {
+      "get": {
+        "operationId": "list_analyses_api_v1_analyses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Analyses"
+      },
       "post": {
         "operationId": "create_analysis_api_v1_analyses_post",
         "requestBody": {
@@ -216,6 +337,114 @@
           }
         },
         "summary": "Get Analysis"
+      }
+    },
+    "/api/v1/board/engine-turn": {
+      "post": {
+        "operationId": "board_engine_turn_api_v1_board_engine_turn_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngineTurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Board Engine Turn"
+      }
+    },
+    "/api/v1/board/legal-moves": {
+      "post": {
+        "operationId": "board_legal_moves_api_v1_board_legal_moves_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalMovesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Board Legal Moves"
+      }
+    },
+    "/api/v1/board/moves": {
+      "post": {
+        "operationId": "play_board_move_api_v1_board_moves_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Play Board Move"
       }
     },
     "/api/v1/health": {

@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -132,7 +132,9 @@ def create_app(
         )
 
     @app.get("/api/v1/analyses")
-    async def list_analyses(request: Request, limit: int = 20) -> JSONResponse:
+    async def list_analyses(
+        request: Request, limit: int = Query(default=20, ge=1, le=100)
+    ) -> JSONResponse:
         snapshots = request.app.state.service.recent(limit)
         return JSONResponse(
             content={

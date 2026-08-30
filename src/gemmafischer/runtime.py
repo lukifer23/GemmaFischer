@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
@@ -13,6 +14,12 @@ DEFAULT_MODEL_REVISION = "238767527555cb75a05732a84dff5d6ba0dd6809"
 
 class ModelUnavailable(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class ModelClaimSelection:
+    claims: tuple[CoachingClaim, ...]
+    removed_claim_codes: tuple[str, ...] = ()
 
 
 def extract_json_array(output: str) -> Any:
@@ -45,6 +52,14 @@ class GemmaRuntime:
         self.revision = revision
 
     def claims(self, evidence: EngineEvidence, rating: RatingBucket) -> tuple[CoachingClaim, ...]:
+        selection = self.select_claims(evidence, rating)
+        if not 2 <= len(selection.claims) <= 5:
+            raise ValueError("Gemma must return 2 to 5 valid coaching claims")
+        return selection.claims
+
+    def select_claims(
+        self, evidence: EngineEvidence, rating: RatingBucket
+    ) -> ModelClaimSelection:
         if not evidence.candidates:
             raise ValueError("Gemma coaching requires at least one engine candidate")
         best = evidence.candidates[0]
@@ -59,7 +74,6 @@ class GemmaRuntime:
             for item in evidence.candidates
         ]
         best_id = best.evidence_id
-        line_end = min(4, len(best.pv_uci))
         prompt = f"""Select a grounded lesson for a {rating.value} chess player.
 Return only one JSON array with 2 to 5 objects. Do not return evidence rows or prose.
 Candidate data: {json.dumps(candidates, separators=(",", ":"))}
@@ -67,14 +81,12 @@ Candidate data: {json.dumps(candidates, separators=(",", ":"))}
 Allowed object shapes, using only candidate_id values listed above:
 {{"kind":"move","evidence_ids":["ID"],"candidate_id":"ID"}}
 {{"kind":"score","evidence_ids":["ID"],"candidate_id":"ID"}}
-{{"kind":"line","evidence_ids":["ID"],"candidate_id":"ID","start_ply":0,"end_ply":N}}
 {{"kind":"guidance","evidence_ids":[],"template_id":"calculate_forcing_moves"}}
 
 Use this valid structure as your starting point, then select the most useful 2 to 5 claims:
 [
 {{"kind":"move","evidence_ids":["{best_id}"],"candidate_id":"{best_id}"}},
 {{"kind":"score","evidence_ids":["{best_id}"],"candidate_id":"{best_id}"}},
-{{"kind":"line","evidence_ids":["{best_id}"],"candidate_id":"{best_id}","start_ply":0,"end_ply":{line_end}}},
 {{"kind":"guidance","evidence_ids":[],"template_id":"calculate_forcing_moves"}}
 ]"""
         messages = [
@@ -96,9 +108,16 @@ Use this valid structure as your starting point, then select the most useful 2 t
         )
         try:
             raw = extract_json_array(output)
-            claims = TypeAdapter(list[CoachingClaim]).validate_python(raw)
-        except (ValueError, ValidationError) as exc:
+        except ValueError as exc:
             raise ValueError(f"Gemma returned invalid coaching claims: {exc}") from exc
-        if not 2 <= len(claims) <= 5:
-            raise ValueError("Gemma must return 2 to 5 coaching claims")
-        return tuple(claims)
+        if not isinstance(raw, list):
+            raise ValueError("Gemma coaching payload must be a JSON array")
+        adapter: TypeAdapter[CoachingClaim] = TypeAdapter(CoachingClaim)
+        claims: list[CoachingClaim] = []
+        removed: list[str] = []
+        for item in raw[:5]:
+            try:
+                claims.append(adapter.validate_python(item))
+            except ValidationError:
+                removed.append("MODEL_CLAIM_SCHEMA_INVALID")
+        return ModelClaimSelection(tuple(claims), tuple(removed))

@@ -110,8 +110,10 @@ def run_full_profile_benchmark(
             model_started = time.perf_counter()
             model_error = None
             try:
-                claims = runtime.claims(evidence, rating)
-                valid, removed = validate_model_claims(evidence, claims)
+                selection = runtime.select_claims(evidence, rating)
+                claims = selection.claims
+                valid, removed_evidence = validate_model_claims(evidence, claims)
+                removed = selection.removed_claim_codes + removed_evidence
                 merged = (
                     merge_model_claims(valid, baseline.claims)
                     if len(valid) >= 2

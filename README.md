@@ -1,9 +1,12 @@
 # GemmaFischer
 
-GemmaFischer is an experimental, local-first chess coaching research preview. It offers two equal workflows:
+GemmaFischer is an experimental, local-first chess coaching research preview. Play, analysis, tutoring, and reviewed engine exhibitions now share one board instead of separate screens. The current session supports:
 
-- explain a position using verified Stockfish evidence;
-- compare a legal move the player considered against the engine recommendation.
+- click-to-move play against Stockfish with legal-destination highlighting;
+- automatic comparison of every player move with verified Stockfish evidence;
+- position explanations without leaving the game;
+- Stockfish-vs-Stockfish exhibitions with a review after every move;
+- local board/session restore and bounded SQLite analysis history.
 
 The supported vNext path is `src/gemmafischer`. Stockfish owns legality, candidate moves, evaluation, WDL, and principal variations. The deterministic coach turns that evidence into a concise lesson. An optional Gemma 4 E2B Q4 path may select typed, evidence-citing claims, but it is not required and silently substituted models are forbidden.
 
@@ -11,10 +14,10 @@ The supported vNext path is `src/gemmafischer`. Stockfish owns legality, candida
 
 ## Status
 
-- vNext deterministic domain, Stockfish adapter, CLI, secure loopback API, and responsive player UI are implemented.
-- Portable lint, type, contract, security, and API tests are available.
-- This checkout does not currently contain a verified Stockfish binary or a qualified Gemma asset. `setup` and `doctor` report these honestly.
-- Hardware benchmarks, clean-machine reproduction, held-out evaluation, external-player testing, and Gemma qualification remain release gates. The project is not production-ready.
+- The board, Stockfish replies, engine exhibitions, move review, secure loopback API, and local persistence are implemented and exercised in a real browser.
+- Stockfish 18 and the pinned Gemma 4 E2B Q4 model load on the M3 Pro/18 GB target. The five-position full-profile run served valid Gemma claims for 2 of 4 nonterminal positions and safely fell back for 2. This is not yet a passing quality gate.
+- The real 155,797-record historical corpus is blocked from training: the current audit found invalid positions, illegal labels, duplicate records, conflicting labels, train/eval overlap, and no per-record license fields.
+- Portable lint, strict typing, API/security tests, a model smoke, runtime profiles, and machine-readable evidence are available. Broader held-out, cancellation, long-run, device, accessibility, and human coaching gates remain open. The project is not production-ready.
 
 ## Quickstart
 
@@ -54,10 +57,22 @@ uv run gemmafischer version --json
 ## Profiles
 
 - `deterministic`: FastAPI, Pydantic, python-chess, Stockfish evidence, deterministic coaching. This is the default and release baseline.
-- `full`: Adds MLX-LM and the pinned Gemma 4 E2B Q4 candidate. This profile remains unqualified until the hardware and human gates pass.
+- `full`: Adds MLX-LM 0.31.3 and pinned Gemma 4 E2B Q4 claims. It fits the target host, but current schema reliability is 2/4 nonterminal diagnostic positions, so deterministic fallback remains mandatory.
 - `dev`: Portable contributor tooling. It requires no engine, model, credentials, or LFS asset.
 
 No training command exists in the player CLI. Research/training work must consume frozen, licensed, leakage-checked datasets through a separate future boundary.
+
+Reproduce the current gates:
+
+```bash
+uv run gemmafischer benchmark --profile deterministic --requests 20 \
+  --output artifacts/qualification/deterministic-local.json
+uv run gemmafischer benchmark --profile full --requests 5 \
+  --output artifacts/qualification/full-local.json
+uv run gemmafischer audit-data --output artifacts/data-audit/local.json
+```
+
+`audit-data` currently exits nonzero by design because the quarantined corpus fails the training gate.
 
 ## Verify
 
@@ -78,6 +93,7 @@ Tests under `tests_vnext/` are the supported portable gate. Tests under `tests/`
 - [Security model](docs/security-model.md)
 - [Data provenance and evaluation](docs/data-provenance.md)
 - [Model card and qualification](docs/model-card.md)
+- [Measured target-host performance](docs/performance-vnext.md)
 - [Compatibility and migration](docs/compatibility.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security reporting](SECURITY.md)

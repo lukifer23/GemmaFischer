@@ -179,14 +179,16 @@ class AnalysisService:
                     try:
                         if self._model_runtime is None:
                             self._model_runtime = GemmaRuntime()
-                        model_claims = self._model_runtime.claims(evidence, request.rating_bucket)
-                        valid, removed = validate_model_claims(evidence, model_claims)
+                        selection = self._model_runtime.select_claims(
+                            evidence, request.rating_bucket
+                        )
+                        valid, removed = validate_model_claims(evidence, selection.claims)
                         if len(valid) >= 2:
                             merged = merge_model_claims(valid, baseline.claims)
                             coaching = CoachingResult(
                                 summary=baseline.summary,
                                 claims=merged,
-                                removed_claim_codes=removed,
+                                removed_claim_codes=selection.removed_claim_codes + removed,
                                 source="gemma",
                             )
                         else:
