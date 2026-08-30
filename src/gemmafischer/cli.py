@@ -13,9 +13,10 @@ import uvicorn
 
 from . import __version__
 from .coach import render_claim
+from .data_audit import audit_data
 from .domain import AnalysisRequest, AnalysisState, RatingBucket, Workflow
 from .engine import EngineUnavailable, StockfishProvider, resolve_stockfish
-from .qualification import run_deterministic_benchmark
+from .qualification import run_deterministic_benchmark, run_full_profile_benchmark
 from .service import AnalysisService
 from .storage import default_history_path
 from .web import create_app
@@ -71,6 +72,12 @@ def parser() -> argparse.ArgumentParser:
         "--json", action="store_true"
     )
     commands.add_parser("audit-legacy", help="Print the legacy evidence ledger status")
+    data_audit = commands.add_parser("audit-data", help="Audit training data and eval isolation")
+    data_audit.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/data-audit/latest.json"),
+    )
     benchmark = commands.add_parser(
         "benchmark", help="Run the deterministic qualification benchmark"
     )
@@ -78,6 +85,9 @@ def parser() -> argparse.ArgumentParser:
         "--fixtures",
         type=Path,
         default=Path("data/evaluation/diagnostic_positions.jsonl"),
+    )
+    benchmark.add_argument(
+        "--profile", choices=("deterministic", "full"), default="deterministic"
     )
     benchmark.add_argument("--requests", type=int, default=100)
     benchmark.add_argument(
@@ -249,16 +259,46 @@ def cmd_audit_legacy(args: argparse.Namespace) -> int:
     return 0 if ledger.exists() else 3
 
 
+def cmd_audit_data(args: argparse.Namespace) -> int:
+    training_paths = sorted(Path("data/standardized").glob("*.jsonl"))
+    evaluation_paths = sorted(Path("data/evaluation").glob("*.jsonl")) + sorted(
+        Path("data/validation").glob("*eval*.jsonl")
+    )
+    payload = audit_data(training_paths, evaluation_paths, args.output)
+    _emit(
+        {
+            "status": payload["status"],
+            "ready_for_training": payload["gate"]["ready_for_training"],
+            "training_records": payload["training"]["totals"].get("records", 0),
+            "conflicting_best_move_fens": payload["cross_dataset"][
+                "conflicting_best_move_fens"
+            ],
+            "train_evaluation_fen_overlap": payload["cross_dataset"][
+                "train_evaluation_fen_overlap"
+            ],
+            "output": str(args.output),
+        },
+        "human",
+    )
+    return 0 if payload["gate"]["ready_for_training"] else 4
+
+
 def cmd_benchmark(args: argparse.Namespace) -> int:
     if args.requests < 1:
         raise ValueError("--requests must be at least 1")
-    payload = run_deterministic_benchmark(args.fixtures, args.output, args.requests)
+    payload = (
+        run_full_profile_benchmark(args.fixtures, args.output, args.requests)
+        if args.profile == "full"
+        else run_deterministic_benchmark(args.fixtures, args.output, args.requests)
+    )
     print(
         json.dumps(
             {
                 "output": str(args.output),
                 "requests": payload["request_count"],
-                "latency_seconds": payload["latency_seconds"],
+                "latency_seconds": payload.get(
+                    "latency_seconds", payload.get("total_latency_seconds")
+                ),
                 "engine_sha256": payload["engine_sha256"],
             },
             indent=2,
