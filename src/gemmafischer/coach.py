@@ -116,6 +116,21 @@ def validate_model_claims(
     return tuple(valid), tuple(removed)
 
 
+def merge_model_claims(
+    model_claims: tuple[CoachingClaim, ...], baseline_claims: tuple[CoachingClaim, ...]
+) -> tuple[CoachingClaim, ...]:
+    required = tuple(claim for claim in baseline_claims if isinstance(claim, ComparisonClaim))
+    merged: list[CoachingClaim] = []
+    seen: set[str] = set()
+    for claim in (*required, *model_claims):
+        identity = claim.model_dump_json()
+        if identity in seen:
+            continue
+        seen.add(identity)
+        merged.append(claim)
+    return tuple(merged[:5])
+
+
 def render_claim(evidence: EngineEvidence, claim: object) -> str:
     candidates = {item.evidence_id: item for item in evidence.candidates}
     if isinstance(claim, MoveClaim):

@@ -102,6 +102,24 @@ class BoardMoveResult(StrictModel):
     turn: Literal["white", "black"]
 
 
+class EngineTurnRequest(StrictModel):
+    fen: str = Field(min_length=1, max_length=256)
+    difficulty: GameDifficulty = GameDifficulty.CLUB
+
+
+class EngineTurnResult(StrictModel):
+    schema_version: Literal["1.0"] = "1.0"
+    fen_before: str
+    fen: str
+    move_uci: str
+    move_san: str
+    engine_name: str
+    engine_nodes: int
+    game_over: bool
+    outcome: str | None = None
+    turn: Literal["white", "black"]
+
+
 class EngineMetadata(StrictModel):
     name: str
     author: str | None = None

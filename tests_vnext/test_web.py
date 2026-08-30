@@ -11,8 +11,8 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         page = client.get("/")
         assert page.status_code == 200
         assert "Explain this position" in page.text
-        assert "Compare a move I considered" in page.text
-        assert "Play Stockfish" in page.text
+        assert "Play, analyze, and learn in one session" in page.text
+        assert "Engine vs engine" in page.text
         assert "https://" not in page.text
 
 

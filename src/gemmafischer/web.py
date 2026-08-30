@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import __version__
-from .domain import AnalysisRequest, BoardMoveRequest, LegalMovesRequest
+from .domain import AnalysisRequest, BoardMoveRequest, EngineTurnRequest, LegalMovesRequest
 from .engine import legal_moves_for_square
 from .service import AnalysisService
 
@@ -158,6 +158,16 @@ def create_app(
             result = legal_moves_for_square(payload.fen, payload.from_square)
         except ValueError as exc:
             return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
+        return JSONResponse(content=result.model_dump(mode="json"))
+
+    @app.post("/api/v1/board/engine-turn")
+    def board_engine_turn(payload: EngineTurnRequest, request: Request) -> JSONResponse:
+        try:
+            result = request.app.state.service.play_engine_turn(payload)
+        except ValueError as exc:
+            return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
+        except Exception as exc:
+            return _error("ENGINE_FAILURE", str(exc), "engine", 503)
         return JSONResponse(content=result.model_dump(mode="json"))
 
     return app

@@ -4,7 +4,7 @@ import threading
 import uuid
 from dataclasses import dataclass
 
-from .coach import deterministic_coach, validate_model_claims
+from .coach import deterministic_coach, merge_model_claims, validate_model_claims
 from .domain import (
     TERMINAL_STATES,
     AnalysisRequest,
@@ -13,6 +13,8 @@ from .domain import (
     BoardMoveRequest,
     BoardMoveResult,
     CoachingResult,
+    EngineTurnRequest,
+    EngineTurnResult,
     ErrorDetail,
     now_utc,
 )
@@ -94,6 +96,13 @@ class AnalysisService:
             difficulty=request.difficulty,
         )
 
+    def play_engine_turn(self, request: EngineTurnRequest) -> EngineTurnResult:
+        provider = StockfishProvider(self.engine_path, self.node_budget)
+        return provider.play_engine_turn(
+            request.fen,
+            difficulty=request.difficulty,
+        )
+
     def _cancel_locked(self, analysis_id: str) -> None:
         job = self._jobs[analysis_id]
         job.cancelled = True
@@ -148,9 +157,10 @@ class AnalysisService:
                         model_claims = self._model_runtime.claims(evidence, request.rating_bucket)
                         valid, removed = validate_model_claims(evidence, model_claims)
                         if len(valid) >= 2:
+                            merged = merge_model_claims(valid, baseline.claims)
                             coaching = CoachingResult(
                                 summary=baseline.summary,
-                                claims=valid,
+                                claims=merged,
                                 removed_claim_codes=removed,
                                 source="gemma",
                             )

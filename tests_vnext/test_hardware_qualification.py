@@ -33,3 +33,14 @@ def test_stockfish_plays_a_real_legal_reply() -> None:
     assert result.engine_move_san is not None
     assert result.engine_name is not None and "Stockfish" in result.engine_name
     assert result.turn == "white"
+
+
+@pytest.mark.hardware
+def test_stockfish_engine_turn_updates_the_position() -> None:
+    result = StockfishProvider(node_budget=1_000).play_engine_turn(
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        difficulty=GameDifficulty.CLUB,
+    )
+    assert result.move_uci[:2] in {"a2", "b1", "b2", "c2", "d2", "e2", "f2", "g1", "g2", "h2"}
+    assert result.turn == "black"
+    assert result.fen != result.fen_before

@@ -1,218 +1,169 @@
-const pieces = {p:'♟',r:'♜',n:'♞',b:'♝',q:'♛',k:'♚',P:'♙',R:'♖',N:'♘',B:'♗',Q:'♕',K:'♔'};
-const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-const EXAMPLE_FEN = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
-const state = {
-  flipped:false, selected:null, legalTargets:[], squares:{}, turn:'w', busy:false, lastMove:[],
-  history:[], gameMoves:[], analysisId:null, generation:0, poll:null,
+const pieces={p:'♟',r:'♜',n:'♞',b:'♝',q:'♛',k:'♚',P:'♙',R:'♖',N:'♘',B:'♗',Q:'♕',K:'♔'};
+const START_FEN='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+const EXAMPLE_FEN='r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+const state={
+  flipped:false,selected:null,legalTargets:[],squares:{},turn:'w',busy:false,lastMove:[],
+  history:[],moveRows:[],analysisId:null,reviewToken:0,exhibitionRunning:false,exhibitionToken:0,
 };
-const $ = (id) => document.getElementById(id);
+const squareNodes=new Map();
+const $=id=>document.getElementById(id);
+const wait=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
 
-function parseFen(fen) {
-  const fields = fen.trim().split(/\s+/);
-  if (fields.length !== 6) throw new Error(`FEN requires six fields; received ${fields.length}.`);
-  const ranks = fields[0].split('/');
-  if (ranks.length !== 8) throw new Error('FEN board requires eight ranks.');
-  const squares = {};
-  ranks.forEach((rank, r) => {
-    let file = 0;
-    for (const char of rank) {
-      if (/\d/.test(char)) file += Number(char);
-      else {
-        if (!pieces[char] || file > 7) throw new Error('FEN contains an invalid piece placement.');
-        squares['abcdefgh'[file] + (8-r)] = char; file++;
-      }
-    }
-    if (file !== 8) throw new Error('Every FEN rank must describe eight squares.');
-  });
-  if (!['w','b'].includes(fields[1])) throw new Error('FEN side to move must be w or b.');
-  state.squares = squares; state.turn = fields[1];
-  return fields;
+function parseFen(fen){
+  const fields=fen.trim().split(/\s+/);
+  if(fields.length!==6)throw new Error(`FEN requires six fields; received ${fields.length}.`);
+  const ranks=fields[0].split('/');if(ranks.length!==8)throw new Error('FEN board requires eight ranks.');
+  const squares={};
+  ranks.forEach((rank,row)=>{let file=0;for(const char of rank){
+    if(/\d/.test(char))file+=Number(char);
+    else{if(!pieces[char]||file>7)throw new Error('FEN contains invalid piece placement.');squares['abcdefgh'[file]+(8-row)]=char;file++;}
+  }if(file!==8)throw new Error('Every FEN rank must describe eight squares.');});
+  if(!['w','b'].includes(fields[1]))throw new Error('FEN side to move must be w or b.');
+  state.squares=squares;state.turn=fields[1];return fields;
 }
 
-function renderBoard() {
-  const board = $('board'); board.replaceChildren(); board.classList.toggle('busy', state.busy);
-  board.setAttribute('aria-busy', String(state.busy));
-  const files = state.flipped ? [...'hgfedcba'] : [...'abcdefgh'];
-  const ranks = state.flipped ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
-  ranks.forEach((rank, row) => files.forEach((file, col) => {
-    const square = file + rank;
-    const button = document.createElement('button');
-    button.type = 'button'; button.className = `square ${(row+col)%2 ? 'dark':'light'}`;
-    button.setAttribute('role','gridcell'); button.dataset.square = square;
-    const piece = state.squares[square];
-    const legalTarget = state.legalTargets.includes(square);
-    button.setAttribute('aria-label', `${piece ? pieces[piece] + ' on ' : 'empty '}${square}${legalTarget ? ', legal destination' : ''}`);
-    button.innerHTML = `${piece ? `<span aria-hidden="true">${pieces[piece]}</span>` : ''}<span class="coordinate" aria-hidden="true">${square}</span>`;
-    if (state.selected === square) button.classList.add('selected');
-    if (state.lastMove.includes(square)) button.classList.add('last-move');
-    if (legalTarget) button.classList.add(piece ? 'legal-capture' : 'legal-target');
-    button.addEventListener('click', () => selectSquare(square));
-    button.addEventListener('keydown', boardKeydown);
-    board.append(button);
+function initializeBoard(){
+  for(const rank of [8,7,6,5,4,3,2,1])for(const file of 'abcdefgh'){
+    const square=file+rank,button=document.createElement('button'),piece=document.createElement('span'),coordinate=document.createElement('span');
+    button.type='button';button.dataset.square=square;button.setAttribute('role','gridcell');
+    piece.className='piece';piece.setAttribute('aria-hidden','true');coordinate.className='coordinate';coordinate.setAttribute('aria-hidden','true');coordinate.textContent=square;
+    button.append(piece,coordinate);button.addEventListener('click',()=>selectSquare(square));button.addEventListener('keydown',boardKeydown);squareNodes.set(square,button);
+  }
+}
+
+function renderBoard(){
+  const board=$('board'),files=state.flipped?[...'hgfedcba']:[...'abcdefgh'],ranks=state.flipped?[1,2,3,4,5,6,7,8]:[8,7,6,5,4,3,2,1];
+  board.classList.toggle('busy',state.busy);board.classList.toggle('automated',state.exhibitionRunning);board.setAttribute('aria-busy',String(state.busy));
+  const ordered=[];
+  ranks.forEach((rank,row)=>files.forEach((file,col)=>{
+    const square=file+rank,button=squareNodes.get(square),piece=state.squares[square],legal=state.legalTargets.includes(square);
+    button.className=`square ${(row+col)%2?'dark':'light'}`;
+    if(state.selected===square)button.classList.add('selected');if(state.lastMove.includes(square))button.classList.add('last-move');if(legal)button.classList.add(piece?'legal-capture':'legal-target');
+    button.querySelector('.piece').textContent=piece?pieces[piece]:'';
+    button.setAttribute('aria-label',`${piece?pieces[piece]+' on ':'empty '}${square}${legal?', legal destination':''}`);ordered.push(button);
   }));
+  const current=[...board.children];
+  if(current.length!==ordered.length||ordered.some((node,index)=>current[index]!==node))board.replaceChildren(...ordered);
 }
 
-function pieceMatchesTurn(piece) {
-  return Boolean(piece) && (state.turn === 'w' ? piece === piece.toUpperCase() : piece === piece.toLowerCase());
+async function showMove(fen,moveUci){
+  const source=squareNodes.get(moveUci.slice(0,2)).getBoundingClientRect(),destinationNode=squareNodes.get(moveUci.slice(2,4)),destination=destinationNode.getBoundingClientRect();
+  $('fen').value=fen;parseFen(fen);state.lastMove=[moveUci.slice(0,2),moveUci.slice(2,4)];renderBoard();
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const movingPiece=destinationNode.querySelector('.piece');
+  const animation=movingPiece.animate([{transform:`translate(${source.left-destination.left}px,${source.top-destination.top}px) scale(.94)`,zIndex:4},{transform:'translate(0,0) scale(1)',zIndex:4}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
+  try{await animation.finished;}catch{/* A newer move superseded the animation. */}
 }
 
-async function selectSquare(square) {
-  if (state.busy) return;
-  const piece = state.squares[square];
-  if (!state.selected) {
-    if (!pieceMatchesTurn(piece)) {
-      setError(`Select a ${state.turn === 'w' ? 'white' : 'black'} piece to move.`); return;
-    }
-    await selectSource(square); return;
-  }
-  if (pieceMatchesTurn(piece)) {
-    await selectSource(square); return;
-  }
-  if (!state.legalTargets.includes(square)) {
-    setError(`${square} is not a legal destination for ${state.selected}.`); return;
-  }
-  const move = state.selected + square;
-  state.selected = null; state.legalTargets=[]; renderBoard();
-  if (activeMode() === 'compare') {
-    $('consider').value = move; setStatus(`Selected ${move}. Compare it when ready.`); $('consider').focus(); return;
-  }
-  await applyBoardMove(move, activeMode() === 'play');
+function pieceMatchesTurn(piece){return Boolean(piece)&&(state.turn==='w'?piece===piece.toUpperCase():piece===piece.toLowerCase());}
+async function selectSquare(square){
+  if(state.busy||state.exhibitionRunning)return;
+  const piece=state.squares[square];
+  if(!state.selected){if(!pieceMatchesTurn(piece)){setError(`Select a ${state.turn==='w'?'white':'black'} piece to move.`);return;}await selectSource(square);return;}
+  if(pieceMatchesTurn(piece)){await selectSource(square);return;}
+  if(!state.legalTargets.includes(square)){setError(`${square} is not a legal destination for ${state.selected}.`);return;}
+  const move=state.selected+square;state.selected=null;state.legalTargets=[];renderBoard();await playPlayerTurn(move);
 }
 
-async function selectSource(square) {
-  setError(); state.selected=square; state.legalTargets=[]; renderBoard();
-  try {
+async function selectSource(square){
+  setError();state.selected=square;state.legalTargets=[];renderBoard();
+  try{
     const response=await fetch('/api/v1/board/legal-moves',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fen:$('fen').value.trim(),from_square:square})});
-    const data=await response.json();
-    if(state.selected!==square) return;
-    if(!response.ok){ state.selected=null; setError(data.error?.message || 'Legal moves could not be loaded.'); }
-    else { state.legalTargets=data.destinations; if(!data.destinations.length) setError(`${square} has no legal moves.`); }
-  } catch(error) {
-    if(state.selected===square){ state.selected=null; setError(`Legal moves could not be loaded: ${error.message}`); }
-  }
+    const data=await response.json();if(state.selected!==square)return;
+    if(!response.ok){state.selected=null;setError(data.error?.message||'Legal moves could not be loaded.');}
+    else{state.legalTargets=data.destinations;if(!data.destinations.length)setError(`${square} has no legal moves.`);}
+  }catch(error){if(state.selected===square){state.selected=null;setError(`Legal moves could not be loaded: ${error.message}`);}}
   renderBoard();
 }
 
-function boardKeydown(event) {
-  const keys = {ArrowLeft:-1,ArrowRight:1,ArrowUp:-8,ArrowDown:8};
-  if (!(event.key in keys)) return;
-  event.preventDefault();
-  const cells = [...document.querySelectorAll('.square')];
-  const next = Math.max(0, Math.min(63, cells.indexOf(event.currentTarget)+keys[event.key]));
-  cells[next].focus();
+function boardKeydown(event){const keys={ArrowLeft:-1,ArrowRight:1,ArrowUp:-8,ArrowDown:8};if(!(event.key in keys))return;event.preventDefault();const cells=[...document.querySelectorAll('.square')],next=Math.max(0,Math.min(63,cells.indexOf(event.currentTarget)+keys[event.key]));cells[next].focus();}
+function setError(message=''){$('input-error').textContent=message;$('input-error').hidden=!message;}
+function setStatus(message){$('status').textContent=message;}
+function setReviewStatus(message=''){$('review-status').textContent=message;$('review-status').hidden=!message;}
+
+function saveHistory(fen){state.history.push({fen,rows:structuredClone(state.moveRows)});$('undo').disabled=false;}
+function recordPly(fenBefore,san){
+  const fields=fenBefore.split(/\s+/),color=fields[1]==='w'?'white':'black',number=Number(fields[5]);let row=state.moveRows.find(item=>item.number===number);
+  if(!row){row={number,white:'',black:''};state.moveRows.push(row);}row[color]=san;renderMoveList();
+}
+function renderMoveList(){
+  $('move-list').replaceChildren(...state.moveRows.map(row=>{const item=document.createElement('li');[String(row.number).padStart(2,'0'),row.white||'…',row.black||'…'].forEach(value=>{const span=document.createElement('span');span.textContent=value;item.append(span);});return item;}));
+  $('game-panel').hidden=state.moveRows.length===0;
 }
 
-function setError(message='') { $('input-error').textContent=message; $('input-error').hidden=!message; }
-function activeMode() { return document.querySelector('input[name="mode"]:checked').value; }
-function setStatus(message){ $('status').textContent=message; }
-
-function resetGame(fen=START_FEN) {
-  $('fen').value=fen; parseFen(fen); state.selected=null; state.legalTargets=[]; state.lastMove=[]; state.history=[]; state.gameMoves=[];
-  $('undo').disabled=true; $('move-list').replaceChildren(); $('game-outcome').hidden=true; setError(); renderBoard();
+async function playPlayerTurn(move){
+  setError();state.busy=true;renderBoard();setStatus('Move submitted. Stockfish is thinking…');
+  try{
+    const response=await fetch('/api/v1/board/moves',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fen:$('fen').value.trim(),move_uci:move,engine_reply:true,difficulty:$('difficulty').value})});
+    const data=await response.json();if(!response.ok){setError(data.error?.message||'The move could not be played.');setStatus(`${state.turn==='w'?'White':'Black'} to move.`);return;}
+    saveHistory(data.fen_before);recordPly(data.fen_before,data.human_move_san);await showMove(data.fen_after_human,data.human_move_uci);
+    if(data.engine_move_uci){await wait(70);recordPly(data.fen_after_human,data.engine_move_san);await showMove(data.fen,data.engine_move_uci);}
+    if(data.game_over){showOutcome(data.outcome);setStatus(`Game over: ${data.outcome}.`);}
+    else setStatus(`You played ${data.human_move_san}. ${data.engine_name} replied ${data.engine_move_san}. ${data.turn==='white'?'White':'Black'} to move.`);
+    void reviewMove(data.fen_before,data.human_move_uci,'Reviewing your move');
+  }catch(error){setError(`The local service could not play the turn: ${error.message}`);}
+  finally{state.busy=false;renderBoard();}
 }
 
-function updateModeUI() {
-  const mode=activeMode(), playing=mode==='play';
-  $('consider-wrap').hidden = mode !== 'compare';
-  $('game-controls').hidden = !playing;
-  $('rating-wrap').hidden = playing;
-  $('analyze').hidden = playing;
-  $('game-panel').hidden = !playing;
-  $('empty-guide').hidden = playing;
-  $('result').hidden = true;
-  $('analyze').textContent = mode === 'compare' ? 'Compare my move' : 'Analyze position';
-  $('position-title').textContent = playing ? 'Play on the board' : 'Set the board';
-  $('result-title').textContent = playing ? 'Game in progress' : 'Your explanation will appear here';
-  state.selected=null; state.legalTargets=[]; renderBoard(); setError();
-  setStatus(playing ? `${state.turn === 'w' ? 'White' : 'Black'} to move. Select a piece.` : 'Choose a task and analyze the position.');
+async function runExhibition(token){
+  while(state.exhibitionRunning&&token===state.exhibitionToken){
+    state.busy=true;renderBoard();setStatus(`${state.turn==='w'?'White':'Black'} engine is thinking…`);
+    try{
+      const response=await fetch('/api/v1/board/engine-turn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fen:$('fen').value.trim(),difficulty:$('difficulty').value})});
+      const data=await response.json();if(!response.ok){setError(data.error?.message||'The engine turn failed.');break;}if(!state.exhibitionRunning||token!==state.exhibitionToken)break;
+      saveHistory(data.fen_before);recordPly(data.fen_before,data.move_san);await showMove(data.fen,data.move_uci);setStatus(`${data.engine_name} played ${data.move_san}.`);
+      state.busy=false;renderBoard();await reviewMove(data.fen_before,data.move_uci,`Reviewing ${data.move_san}`);
+      if(data.game_over){showOutcome(data.outcome);break;}await wait(450);
+    }catch(error){setError(`Engine exhibition stopped: ${error.message}`);break;}
+    finally{state.busy=false;renderBoard();}
+  }
+  if(token===state.exhibitionToken){state.exhibitionRunning=false;$('exhibition').textContent='Start exhibition';renderBoard();}
 }
 
-document.querySelectorAll('input[name="mode"]').forEach(input => input.addEventListener('change', updateModeUI));
-$('fen').addEventListener('change', () => {
-  try { parseFen($('fen').value); state.history=[]; state.gameMoves=[]; state.lastMove=[]; state.legalTargets=[]; setError(); renderBoard(); }
-  catch(e) { setError(e.message); }
-});
-$('flip').addEventListener('click', () => { state.flipped=!state.flipped; renderBoard(); });
-$('load-example').addEventListener('click', () => { resetGame(EXAMPLE_FEN); setStatus('Example position loaded. White to move.'); });
-$('new-game').addEventListener('click', () => { resetGame(); setStatus('New game. White to move.'); });
-$('undo').addEventListener('click', () => {
-  const previous=state.history.pop(); if(!previous) return;
-  $('fen').value=previous; parseFen(previous); state.gameMoves.pop(); state.lastMove=[]; state.legalTargets=[]; $('undo').disabled=state.history.length===0;
-  renderMoveList(); renderBoard(); $('game-outcome').hidden=true; setError(); setStatus(`${state.turn === 'w' ? 'White' : 'Black'} to move.`);
-});
-$('cancel').addEventListener('click', async () => { if(state.analysisId) await fetch(`/api/v1/analyses/${state.analysisId}`,{method:'DELETE'}); stopPolling(); setStatus('Analysis cancelled. Your position is preserved.'); });
-$('analyze').addEventListener('click', analyze);
+function showOutcome(outcome){$('game-outcome').textContent=`Game over · ${outcome}`;$('game-outcome').hidden=false;}
+function resetSession(fen=START_FEN){
+  state.exhibitionRunning=false;state.exhibitionToken++;$('exhibition').textContent='Start exhibition';cancelReview();$('fen').value=fen;parseFen(fen);state.selected=null;state.legalTargets=[];state.lastMove=[];state.history=[];state.moveRows=[];
+  $('undo').disabled=true;$('game-outcome').hidden=true;$('result').hidden=true;$('empty-guide').hidden=false;renderMoveList();setError();setReviewStatus();renderBoard();setStatus(`${state.turn==='w'?'White':'Black'} to move. Select a piece.`);
+}
 
-async function applyBoardMove(move, engineReply) {
-  setError(); state.busy=true; renderBoard();
-  setStatus(engineReply ? 'Move submitted. Stockfish is thinking…' : 'Checking move…');
-  try {
-    const response=await fetch('/api/v1/board/moves',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      fen:$('fen').value.trim(), move_uci:move, engine_reply:engineReply, difficulty:$('difficulty').value,
-    })});
-    const data=await response.json();
-    if(!response.ok){ setError(data.error?.message || 'The move could not be played.'); setStatus(`${state.turn === 'w' ? 'White' : 'Black'} to move.`); return; }
-    state.history.push(data.fen_before); state.lastMove=(data.engine_move_uci || data.human_move_uci).slice(0,4).match(/.{2}/g) || [];
-    $('fen').value=data.fen; parseFen(data.fen);
-    if(engineReply) {
-      state.gameMoves.push({human:data.human_move_san,engine:data.engine_move_san || '—'}); renderMoveList(); $('undo').disabled=false;
-      if(data.game_over) { $('game-outcome').textContent=`Game over · ${data.outcome}`; $('game-outcome').hidden=false; setStatus(`Game over: ${data.outcome}.`); }
-      else setStatus(`You played ${data.human_move_san}. ${data.engine_name} replied ${data.engine_move_san}. ${data.turn === 'white' ? 'White' : 'Black'} to move.`);
-    } else {
-      $('undo').disabled=false; setStatus(`Played ${data.human_move_san}. ${data.turn === 'white' ? 'White' : 'Black'} to move.`);
+async function reviewMove(fen,move,label){return submitAnalysis({mode:'compare',fen,rating_bucket:$('rating').value,considered_move_uci:move},label);}
+async function explainPosition(){
+  try{parseFen($('fen').value);renderBoard();}catch(error){setError(error.message);$('fen').focus();return;}
+  await submitAnalysis({mode:'position',fen:$('fen').value.trim(),rating_bucket:$('rating').value,considered_move_uci:null},'Explaining this position');
+}
+async function submitAnalysis(payload,label){
+  cancelReview();const token=++state.reviewToken;setReviewStatus(`${label}…`);$('cancel').hidden=false;$('analyze').disabled=true;
+  try{
+    const response=await fetch('/api/v1/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),created=await response.json();
+    if(!response.ok){setReviewStatus(created.error?.message||'The review could not start.');return null;}state.analysisId=created.analysis_id;
+    while(token===state.reviewToken){
+      const pollResponse=await fetch(`/api/v1/analyses/${created.analysis_id}`),data=await pollResponse.json();
+      const labels={queued:'Review queued.',validating:'Checking the position.',engine_running:'Stockfish is calculating.',comparison_running:'Comparing the move.',model_running:'Gemma is preparing the lesson.',complete:'Review complete.',engine_only:'Engine review complete. Gemma was unavailable.',cancelled:'Review cancelled.',failed:'Review failed.'};setReviewStatus(labels[data.state]||data.state);
+      if(['complete','engine_only','failed','cancelled'].includes(data.state)){if(data.state==='failed')setError(data.error?.message||'Review failed.');else if(data.evidence&&data.coaching)renderResult(data);return data;}await wait(750);
     }
-  } catch(error) {
-    setError(`The local service could not apply the move: ${error.message}`);
-  } finally {
-    state.busy=false; renderBoard();
-  }
+  }catch(error){setReviewStatus(`Review interrupted: ${error.message}`);}finally{if(token===state.reviewToken){$('cancel').hidden=true;$('analyze').disabled=false;state.analysisId=null;}}
+  return null;
 }
 
-function renderMoveList() {
-  $('move-list').replaceChildren(...state.gameMoves.map((turn,index)=>{
-    const item=document.createElement('li');
-    [String(index+1).padStart(2,'0'),turn.human,turn.engine].forEach(value=>{const span=document.createElement('span');span.textContent=value;item.append(span);});
-    return item;
-  }));
-}
-
-async function analyze() {
-  setError();
-  try { parseFen($('fen').value); renderBoard(); } catch(e) { setError(e.message); $('fen').focus(); return; }
-  const mode=activeMode(), considered=$('consider').value.trim().toLowerCase();
-  if(mode==='compare' && !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(considered)) { setError('Enter a considered move in UCI notation, such as f1b5.'); $('consider').focus(); return; }
-  const response=await fetch('/api/v1/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode,fen:$('fen').value.trim(),rating_bucket:$('rating').value,considered_move_uci:mode==='compare'?considered:null})});
-  const payload=await response.json();
-  if(!response.ok){ setError(payload.error?.message || 'The analysis could not start.'); return; }
-  state.analysisId=payload.analysis_id; state.generation=payload.generation;
-  $('result').hidden=true; $('empty-guide').hidden=true; $('cancel').hidden=false; $('analyze').disabled=true;
-  setStatus('Queued for local analysis.'); state.poll=setInterval(poll,500); await poll();
-}
-
-async function poll() {
-  const response=await fetch(`/api/v1/analyses/${state.analysisId}`); const data=await response.json();
-  if(data.generation!==state.generation) return;
-  const labels={queued:'Queued.',validating:'Checking the position.',engine_running:'Analyzing candidate moves.',comparison_running:'Comparing your move.',model_running:'Preparing the explanation.',complete:'Analysis complete.',engine_only:'Engine analysis complete; model coaching was unavailable.',cancelled:'Analysis cancelled.',failed:'Analysis failed.'};
-  setStatus(labels[data.state]||data.state);
-  if(['complete','engine_only','failed','cancelled'].includes(data.state)) {
-    stopPolling(); if(data.state==='failed'){ setError(data.error?.message||'Analysis failed.'); return; }
-    if(data.evidence&&data.coaching) renderResult(data);
-  }
-}
-function stopPolling(){ if(state.poll) clearInterval(state.poll); state.poll=null; $('cancel').hidden=true; $('analyze').disabled=false; }
-
-function renderResult(data) {
-  $('empty-guide').hidden=true; $('result').hidden=false; $('summary').textContent=data.coaching.summary;
-  $('degraded').hidden=data.state!=='engine_only'; $('degraded').textContent=data.state==='engine_only'?'Verified engine evidence is available. Gemma coaching was unavailable, so this result uses the deterministic coach.':'';
+function cancelReview(send=true){state.reviewToken++;if(send&&state.analysisId)void fetch(`/api/v1/analyses/${state.analysisId}`,{method:'DELETE'});state.analysisId=null;$('cancel').hidden=true;$('analyze').disabled=false;}
+function renderResult(data){
+  $('empty-guide').hidden=true;$('result').hidden=false;$('summary').textContent=data.coaching.summary;
+  $('degraded').hidden=data.state!=='engine_only';$('degraded').textContent=data.state==='engine_only'?'Verified engine evidence is available. Gemma coaching was unavailable, so this review uses the deterministic coach.':'';
   const byId=Object.fromEntries([...data.evidence.candidates,...data.evidence.board_facts].map(item=>[item.evidence_id,item]));
-  $('claims').replaceChildren(...data.coaching.claims.map(claim=>{
-    const wrap=document.createElement('div'); wrap.className='claim'; const text=document.createElement('p'); text.textContent=claimText(claim,data.evidence); wrap.append(text);
-    if(claim.evidence_ids.length){ const button=document.createElement('button'); button.type='button'; button.textContent='Show cited evidence'; button.setAttribute('aria-expanded','false'); const detail=document.createElement('div'); detail.className='claim-evidence'; detail.hidden=true; detail.textContent=claim.evidence_ids.map(id=>JSON.stringify(byId[id]||{missing:id},null,2)).join('\n'); button.addEventListener('click',()=>{detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));}); wrap.append(button,detail); }
-    return wrap;
-  }));
+  $('claims').replaceChildren(...data.coaching.claims.map(claim=>{const wrap=document.createElement('div'),text=document.createElement('p');wrap.className='claim';text.textContent=claimText(claim,data.evidence);wrap.append(text);if(claim.evidence_ids.length){const button=document.createElement('button'),detail=document.createElement('div');button.type='button';button.textContent='Show cited evidence';button.setAttribute('aria-expanded','false');detail.className='claim-evidence';detail.hidden=true;detail.textContent=claim.evidence_ids.map(id=>JSON.stringify(byId[id]||{missing:id},null,2)).join('\n');button.addEventListener('click',()=>{detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));});wrap.append(button,detail);}return wrap;}));
   $('evidence').replaceChildren(...data.evidence.candidates.map(item=>{const div=document.createElement('div');div.className='candidate';div.textContent=`${item.rank}. ${item.move_san} · ${item.score_cp!==null?(item.score_cp/100).toFixed(2):'mate '+item.mate_in} · ${item.pv_uci.slice(0,8).join(' ')}`;return div;}));
-  $('result-title').textContent=activeMode()==='compare'?'Your move comparison':'Your position lesson'; $('result-title').focus();
 }
-function claimText(claim,evidence){ const c=Object.fromEntries(evidence.candidates.map(x=>[x.evidence_id,x])); if(claim.kind==='move')return`Recommended move: ${c[claim.candidate_id].move_san}.`; if(claim.kind==='score'){const x=c[claim.candidate_id];return x.mate_in!==null?`Mate evaluation: ${x.mate_in}.`:`Evaluation from the side to move: ${(x.score_cp/100).toFixed(2)} pawns.`;} if(claim.kind==='line')return`Line to calculate: ${c[claim.candidate_id].pv_uci.slice(claim.start_ply,claim.end_ply).join(' ')}.`; if(claim.kind==='comparison'){const best=c[claim.better_candidate_id],considered=c[claim.considered_candidate_id];return best.evidence_id===considered.evidence_id?`Your move ${considered.move_san} matches the engine's first choice.`:`Compare ${best.move_san} with ${considered.move_san}.`;} return claim.template_id==='compare_candidate_moves'?'Compare the forcing replies to both moves.':'Calculate checks, captures, and threats first.'; }
+function claimText(claim,evidence){const candidates=Object.fromEntries(evidence.candidates.map(item=>[item.evidence_id,item]));if(claim.kind==='move')return`Recommended move: ${candidates[claim.candidate_id].move_san}.`;if(claim.kind==='score'){const item=candidates[claim.candidate_id];return item.mate_in!==null?`Mate evaluation: ${item.mate_in}.`:`Evaluation from the side to move: ${(item.score_cp/100).toFixed(2)} pawns.`;}if(claim.kind==='line')return`Line to calculate: ${candidates[claim.candidate_id].pv_uci.slice(claim.start_ply,claim.end_ply).join(' ')}.`;if(claim.kind==='comparison'){const best=candidates[claim.better_candidate_id],considered=candidates[claim.considered_candidate_id];if(best.evidence_id===considered.evidence_id)return`${considered.move_san} matches the engine's first choice.`;if(best.score_cp!==null&&considered.score_cp!==null)return`${best.move_san} evaluates ${((best.score_cp-considered.score_cp)/100).toFixed(2)} pawns better than ${considered.move_san}.`;return`The engine prefers ${best.move_san} to ${considered.move_san} by mate outcome.`;}return claim.template_id==='compare_candidate_moves'?'Compare the forcing replies to both moves.':'Calculate checks, captures, and threats first.';}
 
-parseFen($('fen').value); renderBoard(); updateModeUI();
+$('flip').addEventListener('click',()=>{state.flipped=!state.flipped;renderBoard();});
+$('load-example').addEventListener('click',()=>resetSession(EXAMPLE_FEN));
+$('new-game').addEventListener('click',()=>resetSession());
+$('undo').addEventListener('click',()=>{const previous=state.history.pop();if(!previous)return;state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').textContent='Start exhibition';$('fen').value=previous.fen;parseFen(previous.fen);state.moveRows=previous.rows;state.lastMove=[];state.legalTargets=[];$('undo').disabled=state.history.length===0;$('game-outcome').hidden=true;renderMoveList();renderBoard();setStatus(`${state.turn==='w'?'White':'Black'} to move.`);});
+$('fen').addEventListener('change',()=>{try{resetSession($('fen').value.trim());}catch(error){setError(error.message);}});
+$('analyze').addEventListener('click',explainPosition);
+$('cancel').addEventListener('click',()=>{cancelReview();setReviewStatus('Review cancelled.');});
+$('session-mode').addEventListener('change',()=>{const exhibition=$('session-mode').value==='exhibition';state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').hidden=!exhibition;$('exhibition').textContent='Start exhibition';$('game-kicker').textContent=exhibition?'Stockfish plays both sides. Every move is reviewed before the next.':'You move, Stockfish replies, and your move is reviewed automatically.';$('board-help').textContent=exhibition?'Start the exhibition to advance one reviewed engine move at a time.':'Select one of your pieces, then its destination. Promotions become queens.';renderBoard();setStatus(exhibition?'Engine exhibition ready.':'Select a piece to move.');});
+$('exhibition').addEventListener('click',()=>{if(state.exhibitionRunning){state.exhibitionRunning=false;state.exhibitionToken++;cancelReview();$('exhibition').textContent='Start exhibition';setStatus('Engine exhibition paused.');renderBoard();return;}state.exhibitionRunning=true;const token=++state.exhibitionToken;$('exhibition').textContent='Pause exhibition';renderBoard();void runExhibition(token);});
+
+async function loadHealth(){try{const response=await fetch('/api/v1/health'),health=await response.json();$('coach-mode').textContent=health.model_profile==='full'?'Gemma 4 coaching':'Deterministic coaching';}catch{$('coach-mode').textContent='Coach unavailable';}}
+initializeBoard();parseFen($('fen').value);renderMoveList();renderBoard();void loadHealth();

@@ -15,6 +15,7 @@ from .domain import (
     CandidateEvidence,
     EngineEvidence,
     EngineMetadata,
+    EngineTurnResult,
     GameDifficulty,
     LegalMovesResult,
     canonical_hash,
@@ -263,6 +264,44 @@ class StockfishProvider:
             human_move_san=human_san,
             engine_move_uci=engine_move_uci,
             engine_move_san=engine_move_san,
+            engine_name=engine_name,
+            engine_nodes=engine_nodes,
+            game_over=outcome is not None,
+            outcome=outcome.result() if outcome else None,
+            turn="white" if board.turn else "black",
+        )
+
+    def play_engine_turn(
+        self,
+        fen: str,
+        *,
+        difficulty: GameDifficulty,
+    ) -> EngineTurnResult:
+        board, normalized_fen = normalize_fen(fen)
+        if board.is_game_over(claim_draw=True):
+            raise ValueError("The game is already over")
+        engine_nodes = max(1, round(self.node_budget * GAME_NODE_RATIO[difficulty]))
+        engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
+        try:
+            applied = {key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options}
+            if "Skill Level" in engine.options:
+                applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
+            engine.configure(applied)
+            engine_name = engine.id.get("name", "Stockfish")
+            move = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
+            if move is None:
+                raise RuntimeError("Stockfish returned no move")
+            move_uci = move.uci()
+            move_san = board.san(move)
+            board.push(move)
+        finally:
+            engine.quit()
+        outcome = board.outcome(claim_draw=True)
+        return EngineTurnResult(
+            fen_before=normalized_fen,
+            fen=board.fen(en_passant="fen"),
+            move_uci=move_uci,
+            move_san=move_san,
             engine_name=engine_name,
             engine_nodes=engine_nodes,
             game_over=outcome is not None,

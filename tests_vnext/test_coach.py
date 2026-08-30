@@ -1,13 +1,21 @@
-from gemmafischer.coach import deterministic_coach, render_claim, validate_model_claims
+from gemmafischer.coach import (
+    deterministic_coach,
+    merge_model_claims,
+    render_claim,
+    validate_model_claims,
+)
 from gemmafischer.domain import (
     WDL,
     BoardFact,
     CandidateEvidence,
+    ComparisonClaim,
     EngineEvidence,
     EngineMetadata,
     GuidanceClaim,
     LineClaim,
+    MoveClaim,
     RatingBucket,
+    ScoreClaim,
 )
 
 
@@ -92,3 +100,14 @@ def test_model_claim_validator_drops_unknown_and_invalid_pv() -> None:
     valid, removed = validate_model_claims(evidence(), claims)
     assert valid == (claims[0],)
     assert removed == ("PV_RANGE_OUT_OF_BOUNDS", "UNKNOWN_EVIDENCE_ID")
+
+
+def test_model_move_review_keeps_required_comparison() -> None:
+    baseline = deterministic_coach(evidence(), RatingBucket.CLUB, "d2d4")
+    model_claims = (
+        MoveClaim(evidence_ids=("best",), candidate_id="best"),
+        ScoreClaim(evidence_ids=("best",), candidate_id="best"),
+    )
+    merged = merge_model_claims(model_claims, baseline.claims)
+    assert isinstance(merged[0], ComparisonClaim)
+    assert merged[0].considered_candidate_id == "considered"
