@@ -1,0 +1,353 @@
+{
+  "schema_version": "1.0",
+  "status": "target-host-repeatability-only",
+  "generated_at": "2026-08-30T22:04:50.071824+00:00",
+  "commit": "a3c6cc5c19a6b295ead9b9d7374160cbb370ff47",
+  "working_tree_clean": true,
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.12.12",
+  "fixture_path": "data/evaluation/diagnostic_positions.jsonl",
+  "fixture_sha256": "414ab708422fb6e3e8e7e259d47b6266463f9c7af40b1ad2846433ec8cc02ae7",
+  "engine_path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish",
+  "engine_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+  "node_budget": 250000,
+  "request_count": 20,
+  "latency_seconds": {
+    "mean": 0.6629340624029283,
+    "p50": 0.9026391670049634,
+    "p95": 1.062304375009262,
+    "max": 1.0948147080052877
+  },
+  "process_max_rss_raw": 54820864,
+  "raw": [
+    {
+      "index": 0,
+      "fixture_id": "opening-ruy",
+      "workflow": "compare",
+      "latency_seconds": 0.8608616669953335,
+      "position_id": "b40d14bddb19dcbc62579e2fa2ef4a0aba5147530850439b8cece57fe2355109",
+      "candidate_moves": [
+        "f1b5",
+        "d2d4",
+        "f1c4"
+      ],
+      "candidate_scores_cp": [
+        44,
+        37,
+        29
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 1,
+      "fixture_id": "initial-position",
+      "workflow": "compare",
+      "latency_seconds": 0.9026391670049634,
+      "position_id": "cf574bd864a626e34d626ed953bc01cd9e3f24fc9ed44567426eb5eca5110f43",
+      "candidate_moves": [
+        "e2e4",
+        "d2d4",
+        "g1f3"
+      ],
+      "candidate_scores_cp": [
+        37,
+        34,
+        34
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 2,
+      "fixture_id": "terminal-mate",
+      "workflow": "position",
+      "latency_seconds": 0.00015249999705702066,
+      "position_id": "67a9c5f17d03c85af75186f709f80b5ecd5c9c465c11dcc0439d3195ad703cf6",
+      "candidate_moves": [],
+      "candidate_scores_cp": [],
+      "terminal_reason": "checkmate"
+    },
+    {
+      "index": 3,
+      "fixture_id": "pawn-endgame",
+      "workflow": "compare",
+      "latency_seconds": 0.46369829200557433,
+      "position_id": "b68539ed8a0dff7208ff8afb5301c6f423f2bf2fc5fa97bc5c79fa6932126efc",
+      "candidate_moves": [
+        "d4e3",
+        "d4e5",
+        "d4d5"
+      ],
+      "candidate_scores_cp": [
+        -752,
+        -765,
+        -751
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 4,
+      "fixture_id": "middlegame-castle",
+      "workflow": "compare",
+      "latency_seconds": 1.0948147080052877,
+      "position_id": "3a819cb7fcf89cbbef15decac89d15cbacd1d972ad05e24cb407679e8b51a875",
+      "candidate_moves": [
+        "e1c1",
+        "f3d4",
+        "d2f4"
+      ],
+      "candidate_scores_cp": [
+        65,
+        47,
+        37
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 5,
+      "fixture_id": "opening-ruy",
+      "workflow": "compare",
+      "latency_seconds": 0.9148671660077525,
+      "position_id": "b40d14bddb19dcbc62579e2fa2ef4a0aba5147530850439b8cece57fe2355109",
+      "candidate_moves": [
+        "f1b5",
+        "d2d4",
+        "f1c4"
+      ],
+      "candidate_scores_cp": [
+        44,
+        37,
+        29
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 6,
+      "fixture_id": "initial-position",
+      "workflow": "compare",
+      "latency_seconds": 0.9013556249992689,
+      "position_id": "cf574bd864a626e34d626ed953bc01cd9e3f24fc9ed44567426eb5eca5110f43",
+      "candidate_moves": [
+        "e2e4",
+        "d2d4",
+        "g1f3"
+      ],
+      "candidate_scores_cp": [
+        37,
+        34,
+        34
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 7,
+      "fixture_id": "terminal-mate",
+      "workflow": "position",
+      "latency_seconds": 0.00017433300672564656,
+      "position_id": "67a9c5f17d03c85af75186f709f80b5ecd5c9c465c11dcc0439d3195ad703cf6",
+      "candidate_moves": [],
+      "candidate_scores_cp": [],
+      "terminal_reason": "checkmate"
+    },
+    {
+      "index": 8,
+      "fixture_id": "pawn-endgame",
+      "workflow": "compare",
+      "latency_seconds": 0.3972463329992024,
+      "position_id": "b68539ed8a0dff7208ff8afb5301c6f423f2bf2fc5fa97bc5c79fa6932126efc",
+      "candidate_moves": [
+        "d4e3",
+        "d4e5",
+        "d4d5"
+      ],
+      "candidate_scores_cp": [
+        -752,
+        -765,
+        -751
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 9,
+      "fixture_id": "middlegame-castle",
+      "workflow": "compare",
+      "latency_seconds": 0.9441353750007693,
+      "position_id": "3a819cb7fcf89cbbef15decac89d15cbacd1d972ad05e24cb407679e8b51a875",
+      "candidate_moves": [
+        "e1c1",
+        "f3d4",
+        "d2f4"
+      ],
+      "candidate_scores_cp": [
+        65,
+        47,
+        37
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 10,
+      "fixture_id": "opening-ruy",
+      "workflow": "compare",
+      "latency_seconds": 0.9301418749964796,
+      "position_id": "b40d14bddb19dcbc62579e2fa2ef4a0aba5147530850439b8cece57fe2355109",
+      "candidate_moves": [
+        "f1b5",
+        "d2d4",
+        "f1c4"
+      ],
+      "candidate_scores_cp": [
+        44,
+        37,
+        29
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 11,
+      "fixture_id": "initial-position",
+      "workflow": "compare",
+      "latency_seconds": 1.062304375009262,
+      "position_id": "cf574bd864a626e34d626ed953bc01cd9e3f24fc9ed44567426eb5eca5110f43",
+      "candidate_moves": [
+        "e2e4",
+        "d2d4",
+        "g1f3"
+      ],
+      "candidate_scores_cp": [
+        37,
+        34,
+        34
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 12,
+      "fixture_id": "terminal-mate",
+      "workflow": "position",
+      "latency_seconds": 0.00014562500291503966,
+      "position_id": "67a9c5f17d03c85af75186f709f80b5ecd5c9c465c11dcc0439d3195ad703cf6",
+      "candidate_moves": [],
+      "candidate_scores_cp": [],
+      "terminal_reason": "checkmate"
+    },
+    {
+      "index": 13,
+      "fixture_id": "pawn-endgame",
+      "workflow": "compare",
+      "latency_seconds": 0.472636375008733,
+      "position_id": "b68539ed8a0dff7208ff8afb5301c6f423f2bf2fc5fa97bc5c79fa6932126efc",
+      "candidate_moves": [
+        "d4e3",
+        "d4e5",
+        "d4d5"
+      ],
+      "candidate_scores_cp": [
+        -752,
+        -765,
+        -751
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 14,
+      "fixture_id": "middlegame-castle",
+      "workflow": "compare",
+      "latency_seconds": 1.004149915999733,
+      "position_id": "3a819cb7fcf89cbbef15decac89d15cbacd1d972ad05e24cb407679e8b51a875",
+      "candidate_moves": [
+        "e1c1",
+        "f3d4",
+        "d2f4"
+      ],
+      "candidate_scores_cp": [
+        65,
+        47,
+        37
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 15,
+      "fixture_id": "opening-ruy",
+      "workflow": "compare",
+      "latency_seconds": 0.916753208002774,
+      "position_id": "b40d14bddb19dcbc62579e2fa2ef4a0aba5147530850439b8cece57fe2355109",
+      "candidate_moves": [
+        "f1b5",
+        "d2d4",
+        "f1c4"
+      ],
+      "candidate_scores_cp": [
+        44,
+        37,
+        29
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 16,
+      "fixture_id": "initial-position",
+      "workflow": "compare",
+      "latency_seconds": 1.0066710410028463,
+      "position_id": "cf574bd864a626e34d626ed953bc01cd9e3f24fc9ed44567426eb5eca5110f43",
+      "candidate_moves": [
+        "e2e4",
+        "d2d4",
+        "g1f3"
+      ],
+      "candidate_scores_cp": [
+        37,
+        34,
+        34
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 17,
+      "fixture_id": "terminal-mate",
+      "workflow": "position",
+      "latency_seconds": 0.00013691700587514788,
+      "position_id": "67a9c5f17d03c85af75186f709f80b5ecd5c9c465c11dcc0439d3195ad703cf6",
+      "candidate_moves": [],
+      "candidate_scores_cp": [],
+      "terminal_reason": "checkmate"
+    },
+    {
+      "index": 18,
+      "fixture_id": "pawn-endgame",
+      "workflow": "compare",
+      "latency_seconds": 0.40691620799771044,
+      "position_id": "b68539ed8a0dff7208ff8afb5301c6f423f2bf2fc5fa97bc5c79fa6932126efc",
+      "candidate_moves": [
+        "d4e3",
+        "d4e5",
+        "d4d5"
+      ],
+      "candidate_scores_cp": [
+        -752,
+        -765,
+        -751
+      ],
+      "terminal_reason": null
+    },
+    {
+      "index": 19,
+      "fixture_id": "middlegame-castle",
+      "workflow": "compare",
+      "latency_seconds": 0.9788805420103017,
+      "position_id": "3a819cb7fcf89cbbef15decac89d15cbacd1d972ad05e24cb407679e8b51a875",
+      "candidate_moves": [
+        "e1c1",
+        "f3d4",
+        "d2f4"
+      ],
+      "candidate_scores_cp": [
+        65,
+        47,
+        37
+      ],
+      "terminal_reason": null
+    }
+  ]
+}
