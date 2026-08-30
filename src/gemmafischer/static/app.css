@@ -10,7 +10,7 @@
   --amber: #8a5a14;
   --red: #a2322b;
   --focus: #1169a8;
-  font-family: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
@@ -20,6 +20,7 @@ button, input, select { min-height: 44px; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [role="gridcell"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .site-header { height: 68px; display: flex; justify-content: space-between; gap: 24px; align-items: center; padding: 10px 24px; color: #f8f5ec; background: #20382b; border-bottom: 1px solid #17291f; }
 h1, h2, p { margin-top: 0; }
+h1, h2 { text-wrap: balance; }
 h1 { margin-bottom: 0; font-size: 1.55rem; letter-spacing: -.035em; }
 h2 { margin-bottom: 12px; font-size: clamp(1.25rem, 2vw, 1.6rem); }
 .eyebrow, .step { margin-bottom: 3px; color: var(--green); font-weight: 750; font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; }
@@ -58,10 +59,19 @@ textarea { resize: vertical; font-family: ui-monospace, "IBM Plex Mono", monospa
 .actions { display: flex; gap: 8px; margin-top: 16px; }
 .actions .primary { flex: 1; }
 .status { padding: 16px 0; color: var(--muted); border-top: 1px solid var(--line); }
+.empty-guide { display: grid; align-content: center; min-height: calc(100% - 130px); max-width: 430px; padding: 18px 4px 28px; }
+.empty-kicker { margin-bottom: 18px; color: var(--ink); font-size: 1.05rem; font-weight: 650; }
+.empty-guide ol { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.empty-guide li { display: grid; grid-template-columns: 42px 1fr; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); }
+.empty-guide li > span { color: var(--green); font: 700 .72rem/1.6 "SFMono-Regular", Consolas, monospace; letter-spacing: .08em; }
+.empty-guide li div { display: grid; gap: 2px; }
+.empty-guide li strong { font-size: .95rem; }
+.empty-guide li small { color: var(--muted); font-size: .84rem; }
+.engine-note { margin: 18px 0 0; color: var(--muted); font: .72rem/1.4 "SFMono-Regular", Consolas, monospace; text-transform: uppercase; letter-spacing: .04em; }
 .summary { font-size: clamp(1.25rem, 2.2vw, 1.65rem); line-height: 1.35; font-weight: 700; }
 .claim { margin: 0; padding: 16px 0; border-top: 1px solid var(--line); }
 .claim button { display: block; margin-top: 8px; padding: 0; min-height: 44px; border: 0; background: none; color: var(--green); text-decoration: underline; cursor: pointer; }
-.claim-evidence { margin-top: 8px; padding: 12px; background: #edf2eb; font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9rem; overflow-wrap: anywhere; }
+.claim-evidence { margin-top: 8px; padding: 12px; background: #edf2eb; font-family: "SFMono-Regular", Consolas, monospace; font-size: .9rem; overflow-wrap: anywhere; }
 .evidence { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
 .evidence summary { min-height: 44px; cursor: pointer; font-weight: 700; }
 .candidate { padding: 12px 0; border-bottom: 1px solid var(--line); }

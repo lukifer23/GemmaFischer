@@ -78,7 +78,7 @@ async function analyze() {
   const payload=await response.json();
   if(!response.ok){ setError(payload.error?.message || 'The analysis could not start.'); return; }
   state.analysisId=payload.analysis_id; state.generation=payload.generation;
-  $('result').hidden=true; $('cancel').hidden=false; $('analyze').disabled=true;
+  $('result').hidden=true; $('empty-guide').hidden=true; $('cancel').hidden=false; $('analyze').disabled=true;
   setStatus('Queued for local analysis.');
   state.poll=setInterval(poll,500); await poll();
 }
@@ -98,7 +98,7 @@ function stopPolling(){ if(state.poll) clearInterval(state.poll); state.poll=nul
 function setStatus(message){ $('status').textContent=message; }
 
 function renderResult(data) {
-  $('result').hidden=false; $('summary').textContent=data.coaching.summary;
+  $('empty-guide').hidden=true; $('result').hidden=false; $('summary').textContent=data.coaching.summary;
   $('degraded').hidden=data.state!=='engine_only'; $('degraded').textContent=data.state==='engine_only'?'Verified engine evidence is available. Gemma coaching was unavailable, so this result uses the deterministic coach.':'';
   const byId=Object.fromEntries([...data.evidence.candidates,...data.evidence.board_facts].map(item=>[item.evidence_id,item]));
   $('claims').replaceChildren(...data.coaching.claims.map((claim,index)=>{
