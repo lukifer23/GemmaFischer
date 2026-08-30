@@ -87,6 +87,7 @@ def run_full_profile_benchmark(
     output_path: Path,
     request_count: int = 6,
 ) -> dict[str, Any]:
+    import mlx.core as mx
     import psutil  # type: ignore[import-untyped]
 
     fixtures = [json.loads(line) for line in fixture_path.read_text().splitlines() if line]
@@ -138,7 +139,11 @@ def run_full_profile_benchmark(
                 "removed_claim_codes": list(removed),
                 "result_source": result_source,
                 "rss_bytes": process.memory_info().rss,
+                "mlx_active_memory_bytes": mx.get_active_memory(),
+                "mlx_peak_memory_bytes": mx.get_peak_memory(),
+                "mlx_cache_memory_bytes": mx.get_cache_memory(),
                 "system_available_bytes": psutil.virtual_memory().available,
+                "system_memory_percent": psutil.virtual_memory().percent,
             }
         )
     engine_latencies = [item["engine_latency_seconds"] for item in raw]
@@ -168,7 +173,13 @@ def run_full_profile_benchmark(
         "model_latency_seconds": _latency_summary(model_latencies),
         "total_latency_seconds": _latency_summary(total_latencies),
         "peak_rss_bytes": max(item["rss_bytes"] for item in raw),
+        "mlx_peak_memory_bytes": max(item["mlx_peak_memory_bytes"] for item in raw),
+        "maximum_mlx_active_memory_bytes": max(
+            item["mlx_active_memory_bytes"] for item in raw
+        ),
+        "maximum_mlx_cache_memory_bytes": max(item["mlx_cache_memory_bytes"] for item in raw),
         "minimum_system_available_bytes": min(item["system_available_bytes"] for item in raw),
+        "maximum_system_memory_percent": max(item["system_memory_percent"] for item in raw),
         "raw": raw,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
