@@ -15,7 +15,7 @@ The supported vNext path is `src/gemmafischer`. Stockfish owns legality, candida
 ## Status
 
 - The board, Stockfish replies, engine exhibitions, move review, secure loopback API, and local persistence are implemented and exercised in a real browser.
-- Stockfish 18 and the pinned Gemma 4 E2B Q4 model load on the M3 Pro/18 GB target. The five-position full-profile run served valid Gemma claims for 2 of 4 nonterminal positions and safely fell back for 2. This is not yet a passing quality gate.
+- Stockfish 18 and the pinned Gemma 4 E2B Q4 model load on the M3 Pro/18 GB target. The latest five-position schema profile served valid grounded Gemma claims for all 4 nonterminal positions and handled mate deterministically. This is a passing schema smoke, not a broad correctness or tutoring-quality gate.
 - The real 155,797-record historical corpus is blocked from training: the current audit found invalid positions, illegal labels, duplicate records, conflicting labels, train/eval overlap, and no per-record license fields.
 - Portable lint, strict typing, API/security tests, a model smoke, runtime profiles, and machine-readable evidence are available. Broader held-out, cancellation, long-run, device, accessibility, and human coaching gates remain open. The project is not production-ready.
 
@@ -57,7 +57,7 @@ uv run gemmafischer version --json
 ## Profiles
 
 - `deterministic`: FastAPI, Pydantic, python-chess, Stockfish evidence, deterministic coaching. This is the default and release baseline.
-- `full`: Adds MLX-LM 0.31.3 and pinned Gemma 4 E2B Q4 claims. It fits the target host, but current schema reliability is 2/4 nonterminal diagnostic positions, so deterministic fallback remains mandatory.
+- `full`: Adds MLX-LM 0.31.3 and pinned Gemma 4 E2B Q4 claims. It fits the target host and passed the five-position schema smoke; deterministic fallback remains mandatory until larger correctness and human-quality gates pass.
 - `dev`: Portable contributor tooling. It requires no engine, model, credentials, or LFS asset.
 
 No training command exists in the player CLI. Research/training work must consume frozen, licensed, leakage-checked datasets through a separate future boundary.

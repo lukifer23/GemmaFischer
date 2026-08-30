@@ -15,15 +15,15 @@ The clean 20-request run at commit `a3c6cc5` measured mean 0.663 s, p50 0.903 s,
 
 ## Full profile
 
-The clean five-position run at commit `b24be02` contained four nonterminal positions and one checkmate:
+The clean five-position run at commit `7e3f0d2` contained four nonterminal positions and one checkmate:
 
-- valid Gemma output: 2/4 nonterminal positions;
-- safe deterministic fallback: 2/4;
+- valid Gemma output: 4/4 nonterminal positions;
+- safe deterministic fallback: 0/4;
 - terminal position: 1/1 handled without model invocation;
-- total latency: mean 4.959 s across all five, p50 6.587 s, max 8.498 s;
+- total latency: mean 6.355 s across all five, p50 6.967 s, max 10.740 s;
 - MLX active memory: 2.60 GB maximum;
-- MLX allocation peak: 3.47 GB;
-- system memory: 79.2% maximum, 4.02 GB minimum available.
+- MLX allocation peak: 3.37 GB;
+- system memory: 81.4% maximum, 3.60 GB minimum available.
 
 The aggregate includes the near-zero terminal request, so use the raw per-position values for user-facing latency decisions. Full evidence is in [the full-profile artifact](../artifacts/qualification/full-2026-08-30.json).
 
