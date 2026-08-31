@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -11,10 +12,15 @@ import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 
 from . import __version__
+from .accuracy_eval import (
+    run_constructed_accuracy_benchmark,
+    run_lichess_puzzle_accuracy_benchmark,
+)
 from .coach import render_claim
 from .data_audit import audit_data
 from .dataset import acquire_source, build_puzzle_dataset, load_source
@@ -27,11 +33,20 @@ from .lifecycle import (
     runtime_dir,
     stop_instance,
 )
+from .lmstudio import DEFAULT_LFM_MODEL, DEFAULT_LM_STUDIO_URL
+from .model_profile import profile_lmstudio_generation, profile_mlx_generation
 from .qualification import run_deterministic_benchmark, run_full_profile_benchmark
 from .repo_audit import audit_repository
-from .runtime import ModelUnavailable, inspect_model_assets
+from .runtime import (
+    DEFAULT_MODEL,
+    DEFAULT_MODEL_REVISION,
+    ModelUnavailable,
+    claim_selection_prompt,
+    inspect_model_assets,
+)
 from .service import AnalysisService
 from .storage import default_history_path
+from .tutor_eval import run_tutoring_qualification
 from .web import create_app
 
 EXAMPLE_FEN = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
@@ -125,6 +140,75 @@ def parser() -> argparse.ArgumentParser:
         "--fixtures",
         type=Path,
         default=Path("data/evaluation/diagnostic_positions.jsonl"),
+    )
+    model_profile = commands.add_parser(
+        "profile-model", help="Measure real pinned-model TTFT, tokens, TPS, and memory"
+    )
+    model_profile.add_argument(
+        "--fixtures",
+        type=Path,
+        default=Path("data/evaluation/diagnostic_positions.jsonl"),
+    )
+    model_profile.add_argument("--requests", type=int, default=21)
+    model_profile.add_argument("--max-tokens", type=int, default=256)
+    model_profile.add_argument("--nodes", type=int, default=250_000)
+    model_profile.add_argument("--backend", choices=("mlx", "lmstudio"), default="mlx")
+    model_profile.add_argument("--model")
+    model_profile.add_argument(
+        "--revision", default=DEFAULT_MODEL_REVISION
+    )
+    model_profile.add_argument(
+        "--manifest", type=Path, default=Path("assets/model-manifest.json")
+    )
+    model_profile.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/qualification/model-profile-latest.json"),
+    )
+    model_profile.add_argument("--base-url", default=DEFAULT_LM_STUDIO_URL)
+    model_profile.add_argument("--model-artifact", type=Path)
+    model_profile.add_argument("--timeout", type=float, default=30.0)
+    accuracy = commands.add_parser(
+        "evaluate-accuracy", help="Run constructed and held-out Lichess accuracy suites"
+    )
+    accuracy.add_argument("--suite", choices=("constructed", "lichess", "all"), default="all")
+    accuracy.add_argument(
+        "--fixtures",
+        type=Path,
+        default=Path("data/evaluation/accuracy_positions.jsonl"),
+    )
+    accuracy.add_argument(
+        "--archive", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst")
+    )
+    accuracy.add_argument("--manifest", type=Path, default=Path("data/sources.json"))
+    accuracy.add_argument("--sample-size", type=int, default=100)
+    accuracy.add_argument("--repeats", type=int, default=3)
+    accuracy.add_argument("--nodes", type=int, default=250_000)
+    accuracy.add_argument(
+        "--output-dir", type=Path, default=Path("artifacts/qualification")
+    )
+    tutor = commands.add_parser(
+        "evaluate-tutoring", help="Run automated tutoring and blinded-review qualification"
+    )
+    tutor.add_argument(
+        "--cases",
+        type=Path,
+        default=Path("data/evaluation/tutoring_cases.jsonl"),
+    )
+    tutor.add_argument("--profile", choices=("deterministic", "full"), default="deterministic")
+    tutor.add_argument("--repetitions", type=int, default=2)
+    tutor.add_argument("--backend", choices=("mlx", "lmstudio"), default="mlx")
+    tutor.add_argument("--model")
+    tutor.add_argument(
+        "--revision", default="238767527555cb75a05732a84dff5d6ba0dd6809"
+    )
+    tutor.add_argument("--manifest", type=Path, default=Path("assets/model-manifest.json"))
+    tutor.add_argument("--base-url", default=DEFAULT_LM_STUDIO_URL)
+    tutor.add_argument("--model-artifact", type=Path)
+    tutor.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/qualification/tutoring-latest.json"),
     )
     benchmark.add_argument(
         "--profile", choices=("deterministic", "full"), default="deterministic"
@@ -431,6 +515,170 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def cmd_profile_model(args: argparse.Namespace) -> int:
+    if args.requests < 2:
+        raise ValueError("--requests must include one cold and at least one warm request")
+    fixtures = [
+        json.loads(line)
+        for line in args.fixtures.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if not fixtures:
+        raise ValueError("The model profile fixture file is empty")
+    prompts: list[str] = []
+    with StockfishProvider(node_budget=args.nodes) as provider:
+        for fixture in fixtures:
+            evidence = provider.analyze(fixture["fen"], fixture.get("considered_move_uci"))
+            if evidence.candidates:
+                prompts.append(claim_selection_prompt(evidence, RatingBucket.CLUB))
+        engine_sha256 = provider.binary_sha256
+    if not prompts:
+        raise ValueError("The model profile fixtures contain no nonterminal positions")
+    request_prompts = tuple(prompts[index % len(prompts)] for index in range(args.requests))
+    model_id = args.model or (DEFAULT_LFM_MODEL if args.backend == "lmstudio" else DEFAULT_MODEL)
+    if args.backend == "lmstudio":
+        if args.model_artifact is None:
+            raise ValueError("--model-artifact is required for LM Studio profiling")
+        profile = profile_lmstudio_generation(
+            request_prompts,
+            model_id=model_id,
+            base_url=args.base_url,
+            model_artifact=args.model_artifact,
+            max_tokens=args.max_tokens,
+            system_prompt="You select grounded chess coaching claims.",
+            timeout_seconds=args.timeout,
+        )
+    else:
+        profile = profile_mlx_generation(
+            request_prompts,
+            model_id=model_id,
+            revision=args.revision,
+            max_tokens=args.max_tokens,
+            system_prompt="You select grounded chess coaching claims.",
+            manifest_path=args.manifest,
+        )
+    payload = profile.as_dict()
+    warm = payload["summary"]["warm_requests"]
+    visible_ttft = warm["time_to_first_visible_token_seconds"]
+    gates = {
+        "warm_visible_ttft_p95_seconds": {
+            "required_max": 3.0,
+            "actual": visible_ttft["p95"] if visible_ttft else None,
+        },
+        "warm_total_p95_seconds": {
+            "required_max": 10.0,
+            "actual": warm["total_latency_seconds"]["p95"],
+        },
+        "warm_generation_tps_min": {
+            "required_min": 20.0,
+            "actual": warm["generation_tokens_per_second"]["min"],
+        },
+        "successful_request_rate": {
+            "required_min": 1.0,
+            "actual": payload["summary"]["successful_request_rate"],
+        },
+    }
+    for gate in gates.values():
+        gate["passed"] = gate["actual"] is not None and (
+            gate["actual"] <= gate["required_max"]
+            if "required_max" in gate
+            else gate["actual"] >= gate["required_min"]
+        )
+    payload.update(
+        {
+            "status": "passed" if all(item["passed"] for item in gates.values()) else "failed",
+            "commit": _git_revision(),
+            "working_tree_clean": not bool(subprocess.run(
+                ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
+            ).stdout.strip()),
+            "fixture_path": str(args.fixtures),
+            "fixture_sha256": _sha256_path(args.fixtures),
+            "engine_sha256": engine_sha256,
+            "engine_node_budget": args.nodes,
+            "max_tokens": args.max_tokens,
+            "gates": gates,
+        }
+    )
+    _write_json_atomic(args.output, payload)
+    print(
+        json.dumps(
+            {"output": str(args.output), "status": payload["status"], "gates": gates},
+            indent=2,
+        )
+    )
+    return 0 if payload["status"] == "passed" else 4
+
+
+def cmd_evaluate_accuracy(args: argparse.Namespace) -> int:
+    results: dict[str, Any] = {}
+    if args.suite in {"constructed", "all"}:
+        path = args.output_dir / "accuracy-constructed.json"
+        results["constructed"] = run_constructed_accuracy_benchmark(
+            args.fixtures, path, repeats=args.repeats, node_budget=args.nodes
+        )
+    if args.suite in {"lichess", "all"}:
+        path = args.output_dir / "accuracy-lichess.json"
+        results["lichess"] = run_lichess_puzzle_accuracy_benchmark(
+            args.archive,
+            args.manifest,
+            path,
+            sample_size=args.sample_size,
+            node_budget=args.nodes,
+        )
+    statuses = {name: result["status"] for name, result in results.items()}
+    print(json.dumps({"status": statuses, "output_dir": str(args.output_dir)}, indent=2))
+    return 0 if all(status == "passed" for status in statuses.values()) else 4
+
+
+def cmd_evaluate_tutoring(args: argparse.Namespace) -> int:
+    payload = run_tutoring_qualification(
+        args.cases,
+        args.output,
+        profile=args.profile,
+        repetitions=args.repetitions,
+        model_id=args.model
+        or (DEFAULT_LFM_MODEL if args.backend == "lmstudio" else DEFAULT_MODEL),
+        model_revision=args.revision,
+        model_manifest_path=args.manifest,
+        model_backend=args.backend,
+        model_base_url=args.base_url,
+        model_artifact_path=args.model_artifact,
+    )
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "status": payload["status"],
+                "human_usefulness_status": payload["human_usefulness_status"],
+                "failure_counts": payload["failure_counts"],
+            },
+            indent=2,
+        )
+    )
+    return 0 if payload["status"] == "passed" else 4
+
+
+def _git_revision() -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def _sha256_path(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _write_json_atomic(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
+    temporary.replace(path)
 
 
 def cmd_verify(args: argparse.Namespace) -> int:

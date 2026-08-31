@@ -445,7 +445,8 @@
           "source": {
             "enum": [
               "deterministic",
-              "gemma"
+              "gemma",
+              "lfm"
             ],
             "title": "Source",
             "type": "string"

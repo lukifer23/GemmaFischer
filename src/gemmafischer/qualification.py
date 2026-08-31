@@ -51,6 +51,7 @@ def run_deterministic_benchmark(
             }
         )
     latencies = [item["latency_seconds"] for item in raw]
+    total_elapsed = sum(latencies)
     payload = {
         "schema_version": "1.0",
         "status": "target-host-repeatability-only",
@@ -72,6 +73,13 @@ def run_deterministic_benchmark(
             "p95": percentile(latencies, 0.95),
             "max": max(latencies),
         },
+        "latency_by_workflow_seconds": {
+            workflow: _latency_summary(
+                [item["latency_seconds"] for item in raw if item["workflow"] == workflow]
+            )
+            for workflow in sorted({item["workflow"] for item in raw})
+        },
+        "throughput_requests_per_second": request_count / total_elapsed,
         "process_max_rss_raw": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         "raw": raw,
     }
@@ -115,12 +123,9 @@ def run_full_profile_benchmark(
                 claims = selection.claims
                 valid, removed_evidence = validate_model_claims(evidence, claims)
                 removed = selection.removed_claim_codes + removed_evidence
-                merged = (
-                    merge_model_claims(valid, baseline.claims)
-                    if len(valid) >= 2
-                    else baseline.claims
-                )
-                result_source = "gemma" if len(valid) >= 2 else "deterministic"
+                usable = bool(valid or selection.concept_ids)
+                merged = merge_model_claims(valid, baseline.claims) if usable else baseline.claims
+                result_source = "gemma" if usable else "deterministic"
             except (ValueError, RuntimeError) as exc:
                 claims = ()
                 valid = ()
@@ -163,6 +168,7 @@ def run_full_profile_benchmark(
     engine_latencies = [item["engine_latency_seconds"] for item in raw]
     model_latencies = [item["model_latency_seconds"] for item in raw]
     total_latencies = [item["total_latency_seconds"] for item in raw]
+    total_elapsed = sum(total_latencies)
     payload = {
         "schema_version": "1.0",
         "status": "target-host-profile",
@@ -186,6 +192,17 @@ def run_full_profile_benchmark(
         "engine_latency_seconds": _latency_summary(engine_latencies),
         "model_latency_seconds": _latency_summary(model_latencies),
         "total_latency_seconds": _latency_summary(total_latencies),
+        "total_latency_by_workflow_seconds": {
+            workflow: _latency_summary(
+                [
+                    item["total_latency_seconds"]
+                    for item in raw
+                    if item["workflow"] == workflow
+                ]
+            )
+            for workflow in sorted({item["workflow"] for item in raw})
+        },
+        "throughput_requests_per_second": request_count / total_elapsed,
         "peak_rss_bytes": max(item["rss_bytes"] for item in raw),
         "mlx_peak_memory_bytes": max(item["mlx_peak_memory_bytes"] for item in raw),
         "maximum_mlx_active_memory_bytes": max(

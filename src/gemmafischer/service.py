@@ -471,12 +471,16 @@ class AnalysisService:
                             evidence, request.rating_bucket
                         )
                         valid, removed = validate_model_claims(evidence, selection.claims)
-                        if len(valid) >= 2:
+                        if valid or selection.concept_ids:
                             merged = merge_model_claims(valid, baseline.claims)
                             coaching = CoachingResult(
                                 summary=baseline.summary,
                                 claims=merged,
-                                removed_claim_codes=selection.removed_claim_codes + removed,
+                                removed_claim_codes=(
+                                    selection.removed_claim_codes
+                                    + removed
+                                    + ("MODEL_SELECTION_MERGED_WITH_REQUIRED_BASELINE",)
+                                ),
                                 source="gemma",
                                 lesson_plan=order_lesson_plan(
                                     baseline.lesson_plan, selection.concept_ids

@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "status": "candidate_rejected",
+  "generated_at": "2026-08-30",
+  "commit": "d51e42aa0331309a0cbcca621d4f80162aa17a5b",
+  "working_tree_clean": false,
+  "workload": "bounded Stockfish-evidence coaching claim selection",
+  "decision": {
+    "current_candidate": "mlx-community/gemma-4-e2b-it-4bit",
+    "rejected_candidate": "lfm2.5-2.6b-mlx",
+    "reason": "LFM produced zero visible outputs in five 768-token profiling requests and failed all eight nonterminal tutoring executions. Raw decode speed and smaller weights do not offset output-completeness and latency failures.",
+    "human_usefulness_status": "human_open_for_gemma",
+    "release_status": "not_qualified"
+  },
+  "gemma_4_e2b": {
+    "artifact": "artifacts/qualification/model-profile-0.2-local.json",
+    "installed_size_bytes": 3583086498,
+    "requests": 21,
+    "successful_request_rate": 1.0,
+    "warm_ttft_p95_seconds": 0.5050964589900104,
+    "warm_total_p95_seconds": 3.9946667079930194,
+    "warm_generation_tps_min": 70.81281458854018,
+    "peak_mlx_memory_bytes": 3470730972,
+    "tutoring_artifact": "artifacts/qualification/tutoring-full-0.2-local.json",
+    "tutoring_passed_executions": 10,
+    "tutoring_total_executions": 10
+  },
+  "lfm2_5_2_6b": {
+    "artifact": "artifacts/qualification/model-profile-lfm2.5-2.6b-local.json",
+    "backend": "LM Studio OpenAI-compatible loopback API",
+    "model_artifact_bytes": 1517616892,
+    "model_artifact_sha256": "8a31b38d9d7c008bad771cb32331d47e7ff09b184adf3f2443a08b691c738574",
+    "requests": 5,
+    "successful_request_rate": 0.0,
+    "warm_hidden_token_ttft_p95_seconds": 1.0793902919976972,
+    "warm_visible_ttft_p95_seconds": null,
+    "warm_total_p95_seconds": 12.108949250003207,
+    "warm_generation_tps_min": 69.34923559424537,
+    "reasoning_tokens_per_request": 767,
+    "finish_reason": "length",
+    "tutoring_artifact": "artifacts/qualification/tutoring-lfm2.5-2.6b-local.json",
+    "tutoring_nonterminal_passed_executions": 0,
+    "tutoring_nonterminal_total_executions": 8,
+    "extended_budget_probe": {
+      "max_tokens": 2048,
+      "elapsed_seconds": 26.037693874997785,
+      "completion_tokens": 1778,
+      "reasoning_tokens": 1412,
+      "visible_output": true,
+      "finish_reason": "stop"
+    }
+  },
+  "fine_tuning": {
+    "installed_quant_is_training_input": false,
+    "recommended_starting_checkpoint": "LiquidAI/LFM2.5-2.6B-Base or native LiquidAI/LFM2.5-2.6B",
+    "policy": "Train only after the data gate passes and a repeated target-workload error is established; export and pin a fresh quant after training."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "status": "human_open",
+  "blinded": true,
+  "instructions": "Score each variant independently. Automated grounding results do not establish pedagogical usefulness.",
+  "rows": [
+    {
+      "case_id": "terminal-checkmate",
+      "fen": "7k/7Q/7K/8/8/8/8/8 b - - 0 1",
+      "rating_bucket": "1000-1199",
+      "considered_move_uci": null,
+      "variants": [
+        {
+          "variant_id": "ac4a168ecfae",
+          "summary": "This position is terminal: checkmate.",
+          "claims": [],
+          "lesson_title": "Game complete",
+          "lesson_steps": []
+        }
+      ],
+      "rubric_fields": {
+        "factual_correctness_1_to_5": null,
+        "relevance_1_to_5": null,
+        "rating_appropriateness_1_to_5": null,
+        "clarity_1_to_5": null,
+        "actionability_1_to_5": null,
+        "preferred_variant_id": null,
+        "reviewer_notes": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "schema_version": "1.0",
+  "model_id": "lfm2.5-2.6b-mlx",
+  "revision": null,
+  "asset_verification_seconds": 0.8342629580001812,
+  "model_load_seconds": null,
+  "requests": [
+    {
+      "request_index": 0,
+      "cold_request": true,
+      "prompt_tokens": 694,
+      "output_tokens": 767,
+      "time_to_first_token_seconds": 1.485588084004121,
+      "prompt_duration_seconds": null,
+      "generation_duration_seconds": 11.491397332996712,
+      "total_latency_seconds": 12.976985417000833,
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": 66.74558174031762,
+      "peak_mlx_memory_bytes": null,
+      "finish_reason": "length",
+      "output_text": "",
+      "time_to_first_visible_token_seconds": null,
+      "reasoning_tokens": 767,
+      "reasoning_text": "The user wants me to select grounded chess coaching claims from the candidate data and return a JSON array with 2-5 claim objects. Let me analyze the candidates:\n\n1. **Candidate f77ae6343f3f59ed784f262012b6e181a637e1dc366980579dd5b7c52d84f54d** (move: Bb5, score_cp: 50, mate_in: null, pv_length: 16)\n   - This is a move (Bb5) with high score_cp (50) and long PV length (16)\n   - It has a concept about \"development\" (concept_id: bbae28f80f8de3af35b3a0db39429ba94dc6a207bfb641c56c3d120aa0c84386)\n\n2. **Candidate e445d16a44ca10b5e70fb55eb223af2213ed4a88ed4a409f8eda252a70c8476f** (move: d4, score_cp: 37, mate_in: null, pv_length: 2)\n   - This is a move (d4) with moderate score_cp (37) and short PV length (2)\n   - No concepts listed\n\n3. **Candidate 17f9ff5ba05fecdc55823a8797cf3f76ccc4594d222abbd9a75632515ce57214** (move: Bc4, score_cp: 29, mate_in: null, pv_length: 2)\n   - This is a move (Bc4) with low score_cp (29) and short PV length (2)\n   - Has a concept about \"development\" (concept_id: 34207a08b47c8f61c325b85e1aa2181f3a71e4fde9f3b810eebba56eb720fa4b)\n\nThe task is to select the most useful 2-5 claims. I should include:\n- Move objects (with evidence_ids and candidate_id)\n- Score objects\n- Guidance objects (if any, with template_id)\n- Concept objects\n\nThe most useful claims would be:\n1. The Bb5 move (f77ae6343...) - this is a strong opening move with good score\n2. The Bc4 move (17f9ff5...) - also a development move with good score\n3. The concept of \"development\" appears in both moves\n\nI should structure the response as a JSON array with 2-5 objects. Let me include:\n- Move for Bb5 (f77ae6343...)\n- Move for Bc4 (17f9ff5...)\n- Concept \"development\" from the first move\n- Possibly a score object for one of them\n\nActually, looking at the allowed shapes:\n- `kind: \"move\"` with evidence_ids and candidate_id\n- `kind: \"score\"` with evidence_ids and candidate_id\n- `kind: \"guidance\"` with evidence_ids (empty) and template_id\n- `kind: \"concept\"` with concept_id\n\nI need to select 2-5 objects total. Let me pick:\n1. Move Bb5 (f77ae6343...)\n2. Move Bc4 (17f9ff5...)\n3. Concept \"development\" from the first move\n4. Score for one of them (maybe Bb5 with score 50)\n\nThat's 4 objects. Let me format this properly.\n\nWait, I need to check the exact structure.",
+      "succeeded": false,
+      "error_code": "NO_VISIBLE_OUTPUT"
+    },
+    {
+      "request_index": 1,
+      "cold_request": false,
+      "prompt_tokens": 650,
+      "output_tokens": 767,
+      "time_to_first_token_seconds": 1.0660603750002338,
+      "prompt_duration_seconds": null,
+      "generation_duration_seconds": 10.818151833009324,
+      "total_latency_seconds": 11.884212208009558,
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": 70.89935617835019,
+      "peak_mlx_memory_bytes": null,
+      "finish_reason": "length",
+      "output_text": "",
+      "time_to_first_visible_token_seconds": null,
+      "reasoning_tokens": 767,
+      "reasoning_text": "The user wants me to select grounded chess coaching claims from the candidate data. I need to:\n1. Return only one JSON array with 2 to 5 claim objects and up to 4 optional concept objects\n2. Do not return evidence rows or prose\n3. Use the allowed object shapes from the schema\n\nLooking at the candidate data:\n- `e5d903a627ddb03f554c8124810c74e03f2ee7792e2a12107c59594c1b276b93`: move \"e4\", score 43, mate_in null, pv_length 1\n- `0d2261e9fba575b49f764152d35b619645f057b2ac8607cdba31b36226381c28`: move \"d4\", score 34, mate_in null, pv_length 16\n- `229b196c98fd6ef9ad1808f167c62aa29949787f0af70be3373e18aa9e94fa50`: move \"Nf3\", score 34, mate_in null, pv_length 16, concepts: [\"development\"]\n\nThe task is to select the most useful 2-5 claims. I should focus on:\n1. The move \"e4\" (first candidate) - this is a fundamental opening move\n2. The concept of \"development\" from the third candidate\n\nThe structure allows:\n- `kind: \"move\"` with evidence_ids and candidate_id\n- `kind: \"score\"` with evidence_ids and candidate_id  \n- `kind: \"guidance\"` (optional, no evidence_ids)\n- Optional concept objects with `concept_id` and `concept`\n\nI should create a JSON array with 2-5 objects. Let me select:\n1. The move \"e4\" (candidate_id: e5d903a627ddb03f554c8124810c74e03f2ee7792e2a12107c59594c1b276b93)\n2. The concept \"development\" (concept_id: 14f60e1a4529f76d3a907155ba2af65a92524fd2740b44ff9be7b61901b8ce2b)\n\nThis gives me 2 objects which is within the 2-5 range. The guidance object has empty template_id and no evidence_ids, which seems like a placeholder.\n\nActually, looking more carefully at the allowed shapes:\n- `move` requires evidence_ids and candidate_id\n- `score` requires evidence_ids and candidate_id\n- `guidance` has template_id and no other required fields (evidence_ids is empty array)\n- `concept` has concept_id and concept\n\nI'll create:\n1. A move claim for e4\n2. A score claim for e4 (optional but useful)\n3. A concept claim for development\n\nWait, the user says \"up to 4 optional concept objects\" - so concepts are optional. Let me include the concept object as well.\n\nThe JSON array should contain 2-5 objects total. I'll include:\n1. move claim for e4\n2. score claim for e4  \n3. concept claim for development\n\nThat's 3 objects, which is within the range.\n\nLet me format this properly:\n\n```json\n[\n  {\n    \"kind\": \"move\",\n    \"evidence_ids\": [\"e5d903a627ddb03f554c8124810c74e03f2ee7792e2a12107c59594c1b276b93\"],\n    \"candidate",
+      "succeeded": false,
+      "error_code": "NO_VISIBLE_OUTPUT"
+    },
+    {
+      "request_index": 2,
+      "cold_request": false,
+      "prompt_tokens": 622,
+      "output_tokens": 767,
+      "time_to_first_token_seconds": 1.0206855830037966,
+      "prompt_duration_seconds": null,
+      "generation_duration_seconds": 10.563239708993933,
+      "total_latency_seconds": 11.58392529199773,
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": 72.61029959842223,
+      "peak_mlx_memory_bytes": null,
+      "finish_reason": "length",
+      "output_text": "",
+      "time_to_first_visible_token_seconds": null,
+      "reasoning_tokens": 767,
+      "reasoning_text": "The user wants me to select grounded chess coaching claims from the provided candidate data. I need to:\n1. Return only one JSON array with 2 to 5 claim objects\n2. Each object must be either:\n   - A \"move\" kind with evidence_ids and candidate_id\n   - A \"score\" kind with evidence_ids and candidate_id\n   - A \"guidance\" kind (no evidence_ids, template_id=\"calculate_forcing_moves\")\n3. Up to 4 optional concept objects (concept kind with concept_id)\n4. No evidence rows or prose\n5. Use only the candidate_ids from the provided list\n\nThe candidate data shows:\n- 21a7320c6d7cecce4d6dbbf150ecf3b94471994a2c6e1dc97ae2a4fcb379acce: move Ke3, score_cp=-738\n- 23b6c2ecd9bdf2a027ed2d847f8f094ed74d545dd4569305d5473f376b443891: move Ke5, score_cp=-751\n- 7bbb61d5a1a60652470b6708165432074c8607b05f5849939cd5aa23c0ead341: move Kd5, score_cp=-751\n\nI need to select 2-5 claims. The most useful ones would be:\n1. A move claim (one of the three moves)\n2. A score claim (to show performance)\n3-5 optional concept objects\n\nLet me structure the JSON array with:\n- 2-5 move/score claims\n- Up to 4 concept objects (though I don't have actual concept data, so I'll need to create them with appropriate IDs)\n\nActually, looking at the allowed object shapes more carefully:\n- \"move\" requires evidence_ids and candidate_id\n- \"score\" requires evidence_ids and candidate_id  \n- \"guidance\" has empty evidence_ids, template_id=\"calculate_forcing_moves\"\n- \"concept\" requires concept_id\n\nThe candidate data has 3 entries with different move_san values. I should select the most relevant ones for a 1400-1599 level player.\n\nFor a 1400-1599 player, the most useful claims would be:\n1. A move claim showing a critical position (Ke3 or Ke5)\n2. A score claim to show performance\n3-4 concept objects about the underlying principles\n\nLet me create a JSON array with:\n1. A move claim for one of the positions\n2. A score claim\n3-4 concept objects\n\nI'll use the candidate_ids from the data and create appropriate concept objects with IDs from the list (21a7320c6d7cecce4d6dbbf150ecf3b94471994a2c6e1dc97ae2a4fcb379acce, 23b6c2ecd9bdf2a027ed2d847f8f094ed74d545dd4569305d5473f376b443891, 7bbb61d5a1a60652470b6708165432074c8607b05f5849939cd5aa23c0ead341)\n\nActually, I need to be careful - the concept objects should have \"concept_id\" field. The candidate_ids are for moves/scores, not concepts.\n\nLet me construct the JSON:\n\n[\n  {\n    \"kind\": \"move\",\n    \"evidence_ids\": [\"21a7320c6d7cecce4d6dbb",
+      "succeeded": false,
+      "error_code": "NO_VISIBLE_OUTPUT"
+    },
+    {
+      "request_index": 3,
+      "cold_request": false,
+      "prompt_tokens": 651,
+      "output_tokens": 767,
+      "time_to_first_token_seconds": 1.0489859580120537,
+      "prompt_duration_seconds": null,
+      "generation_duration_seconds": 11.059963291991153,
+      "total_latency_seconds": 12.108949250003207,
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": 69.34923559424537,
+      "peak_mlx_memory_bytes": null,
+      "finish_reason": "length",
+      "output_text": "",
+      "time_to_first_visible_token_seconds": null,
+      "reasoning_tokens": 767,
+      "reasoning_text": "The user wants me to select grounded chess coaching claims from the candidate data. Let me analyze the candidates:\n\n1. **e128b7f0784ea71dd2d1b84751995a71101aba1638b1a28d8eede804b9e18497** - Move: \"O-O-O\" (castling), score_cp: 68, mate_in: null, pv_length: 11\n2. **9601cdce6de87f4658bc7f63d39d96becfcc703b60096fdc6de37c8463ac10f9** - Move: \"Nd4\", score_cp: 47, mate_in: null, pv_length: 1\n3. **b1b5f512a8ff3400afd040a4c475f9d516628c2ddf87b3c40af82b005b8595ba** - Move: \"Qf4\", score_cp: 37, mate_in: null, pv_length: 13\n\nThe task is to select the most useful 2-5 claims (move, score, guidance) and up to 4 optional concept objects.\n\nLooking at the data:\n- The first candidate (e128b7f...) has a castling move with score 68 and PV length 11 - this is likely a good position to teach about castling\n- The second candidate (9601cdce...) has move \"Nd4\" with score 47 and PV length 1 - this is a tactical position\n- The third candidate (b1b5f...) has move \"Qf4\" with score 37 and PV length 13 - this is a tactical position\n\nFor a 1400-1599 level player, the most useful coaching claims would be:\n1. The castling move (O-O-O) - teaching about castling technique\n2. The tactical positions (Nd4 and Qf4) - teaching about piece activity, tactics\n\nI should select 2-5 claims. Let me pick:\n1. The move \"O-O-O\" (castling) - this is a fundamental technique\n2. The concept of castling from the first candidate\n\nActually, looking more carefully at the structure:\n- \"move\" claims have evidence_ids and candidate_id\n- \"score\" claims have evidence_ids and candidate_id  \n- \"guidance\" claims have empty evidence_ids and template_id\n- \"concept\" claims have concept_id\n\nThe user wants me to return a JSON array with 2-5 claim objects and up to 4 optional concept objects.\n\nI should include:\n1. A move claim for the castling (O-O-O)\n2. A score claim for that same move\n3. Possibly a concept about castling\n\nLet me structure this properly:\n\n```json\n[\n  {\n    \"kind\": \"move\",\n    \"evidence_ids\": [\"e128b7f0784ea71dd2d1b84751995a71101aba1638b1a28d8eede804b9e18497\"],\n    \"candidate_id\": \"e128b7f0784ea71dd2d1b84751995a71101aba1638b1a28d8eede804b9e18497\"\n  },\n  {\n    \"kind\": \"score\",\n    \"evidence_ids\": [\"e128b7f0784ea71dd2d1b84751995a71101aba1638b1a28d8eede804b9e18497\"],\n    \"candidate_id\": \"e128b",
+      "succeeded": false,
+      "error_code": "NO_VISIBLE_OUTPUT"
+    },
+    {
+      "request_index": 4,
+      "cold_request": false,
+      "prompt_tokens": 694,
+      "output_tokens": 767,
+      "time_to_first_token_seconds": 1.0793902919976972,
+      "prompt_duration_seconds": null,
+      "generation_duration_seconds": 10.955042375004268,
+      "total_latency_seconds": 12.034432667001965,
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": 70.0134215591933,
+      "peak_mlx_memory_bytes": null,
+      "finish_reason": "length",
+      "output_text": "",
+      "time_to_first_visible_token_seconds": null,
+      "reasoning_tokens": 767,
+      "reasoning_text": "The user wants me to select grounded chess coaching claims from the candidate data and return a JSON array with 2-5 claim objects. Let me analyze the candidates:\n\n1. **Candidate f77ae6343f3f59ed784f262012b6e181a637e1dc366980579dd5b7c52d84f54d** (move: Bb5, score_cp: 50, mate_in: null, pv_length: 16)\n   - This is a move (Bb5) with high score_cp (50) and long PV length (16)\n   - It has a concept about \"development\" (concept_id: bbae28f80f8de3af35b3a0db39429ba94dc6a207bfb641c56c3d120aa0c84386)\n\n2. **Candidate e445d16a44ca10b5e70fb55eb223af2213ed4a88ed4a409f8eda252a70c8476f** (move: d4, score_cp: 37, mate_in: null, pv_length: 2)\n   - This is a move (d4) with moderate score_cp (37) and short PV length (2)\n   - No concepts listed\n\n3. **Candidate 17f9ff5ba05fecdc55823a8797cf3f76ccc4594d222abbd9a75632515ce57214** (move: Bc4, score_cp: 29, mate_in: null, pv_length: 2)\n   - This is a move (Bc4) with low score_cp (29) and short PV length (2)\n   - Has a concept about \"development\" (concept_id: 34207a08b47c8f61c325b85e1aa2181f3a71e4fde9f3b810eebba56eb720fa4b)\n\nThe task is to select the most useful 2-5 claims. I should include:\n- Move objects (with evidence_ids and candidate_id)\n- Score objects\n- Guidance objects (if any, with template_id)\n- Concept objects\n\nThe most useful claims would be:\n1. The Bb5 move (f77ae6343...) - this is a strong opening move with good score\n2. The Bc4 move (17f9ff5...) - also a development move with good score\n3. The concept of \"development\" appears in both moves\n\nI should structure the response as a JSON array with 2-5 objects. Let me include:\n- Move for Bb5 (f77ae6343...)\n- Move for Bc4 (17f9ff5...)\n- Concept \"development\" from the first move\n- Possibly a score object for one of them\n\nActually, looking at the allowed shapes:\n- `kind: \"move\"` with evidence_ids and candidate_id\n- `kind: \"score\"` with evidence_ids and candidate_id\n- `kind: \"guidance\"` with evidence_ids (empty) and template_id\n- `kind: \"concept\"` with concept_id\n\nI need to select 2-5 objects total. Let me pick:\n1. Move Bb5 (f77ae6343...)\n2. Move Bc4 (17f9ff5...)\n3. Concept \"development\" from the first move\n4. Score for one of them (maybe Bb5 with score 50)\n\nThat's 4 objects. Let me format this properly.\n\nWait, I need to check the exact structure.",
+      "succeeded": false,
+      "error_code": "NO_VISIBLE_OUTPUT"
+    }
+  ],
+  "summary": {
+    "request_count": 5,
+    "total_prompt_tokens": 3311,
+    "total_output_tokens": 3835,
+    "successful_request_count": 0,
+    "failed_request_count": 5,
+    "successful_request_rate": 0.0,
+    "peak_mlx_memory_bytes": null,
+    "all_requests": {
+      "time_to_first_token_seconds": {
+        "mean": 1.1401420584035804,
+        "p50": 1.0660603750002338,
+        "p95": 1.485588084004121,
+        "min": 1.0206855830037966,
+        "max": 1.485588084004121
+      },
+      "time_to_first_visible_token_seconds": null,
+      "total_latency_seconds": {
+        "mean": 12.117700966802659,
+        "p50": 12.034432667001965,
+        "p95": 12.976985417000833,
+        "min": 11.58392529199773,
+        "max": 12.976985417000833
+      },
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": {
+        "mean": 69.92357893410573,
+        "p50": 70.0134215591933,
+        "p95": 72.61029959842223,
+        "min": 66.74558174031762,
+        "max": 72.61029959842223
+      }
+    },
+    "warm_requests": {
+      "time_to_first_token_seconds": {
+        "mean": 1.0537805520034453,
+        "p50": 1.0660603750002338,
+        "p95": 1.0793902919976972,
+        "min": 1.0206855830037966,
+        "max": 1.0793902919976972
+      },
+      "time_to_first_visible_token_seconds": null,
+      "total_latency_seconds": {
+        "mean": 11.902879854253115,
+        "p50": 12.034432667001965,
+        "p95": 12.108949250003207,
+        "min": 11.58392529199773,
+        "max": 12.108949250003207
+      },
+      "prompt_tokens_per_second": null,
+      "generation_tokens_per_second": {
+        "mean": 70.71807823255277,
+        "p50": 70.89935617835019,
+        "p95": 72.61029959842223,
+        "min": 69.34923559424537,
+        "max": 72.61029959842223
+      }
+    }
+  },
+  "backend": "lmstudio-openai-compatible",
+  "identity": {
+    "base_url": "http://127.0.0.1:1234/v1",
+    "model_id": "lfm2.5-2.6b-mlx",
+    "model_artifact": "/Users/admin/.cache/lm-studio/models/lmstudio-community/LFM2.5-2.6B-MLX-4bit/model.safetensors",
+    "model_artifact_bytes": 1517616892,
+    "model_artifact_sha256": "8a31b38d9d7c008bad771cb32331d47e7ff09b184adf3f2443a08b691c738574",
+    "catalog_model_ids": [
+      "google/gemma-4-e4b",
+      "lfm2.5-2.6b-mlx"
+    ]
+  },
+  "status": "failed",
+  "commit": "d51e42aa0331309a0cbcca621d4f80162aa17a5b",
+  "working_tree_clean": false,
+  "fixture_path": "data/evaluation/diagnostic_positions.jsonl",
+  "fixture_sha256": "414ab708422fb6e3e8e7e259d47b6266463f9c7af40b1ad2846433ec8cc02ae7",
+  "engine_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+  "engine_node_budget": 250000,
+  "max_tokens": 768,
+  "gates": {
+    "warm_visible_ttft_p95_seconds": {
+      "required_max": 3.0,
+      "actual": null,
+      "passed": false
+    },
+    "warm_total_p95_seconds": {
+      "required_max": 10.0,
+      "actual": 12.108949250003207,
+      "passed": false
+    },
+    "warm_generation_tps_min": {
+      "required_min": 20.0,
+      "actual": 69.34923559424537,
+      "passed": true
+    },
+    "successful_request_rate": {
+      "required_min": 1.0,
+      "actual": 0.0,
+      "passed": false
+    }
+  }
+}

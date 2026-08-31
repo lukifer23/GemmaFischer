@@ -1,0 +1,190 @@
+{
+  "schema_version": "1.0",
+  "status": "failed",
+  "scope": "automated-grounding-and-contract-qualification",
+  "human_usefulness_status": "human_open",
+  "test_question_status": "not-assessed-no-question-output-contract",
+  "generated_at": "2026-08-30T23:56:43.349706+00:00",
+  "commit": "d51e42aa0331309a0cbcca621d4f80162aa17a5b",
+  "profile": "full",
+  "model": {
+    "backend": "lmstudio",
+    "model_id": "lfm2.5-2.6b-mlx",
+    "revision": null,
+    "identity": {
+      "base_url": "http://127.0.0.1:1234/v1",
+      "model_id": "lfm2.5-2.6b-mlx",
+      "model_artifact": "/Users/admin/.cache/lm-studio/models/lmstudio-community/LFM2.5-2.6B-MLX-4bit/model.safetensors",
+      "model_artifact_bytes": 1517616892,
+      "model_artifact_sha256": "8a31b38d9d7c008bad771cb32331d47e7ff09b184adf3f2443a08b691c738574",
+      "catalog_model_ids": [
+        "google/gemma-4-e4b",
+        "lfm2.5-2.6b-mlx"
+      ]
+    }
+  },
+  "engine_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+  "engine_node_budget": 250000,
+  "case_path": "data/evaluation/tutoring_cases.jsonl",
+  "case_sha256": "6929a0b1c2609bd16f1549950dea7814699a8f053a93a5b3d9ad2509f95b7662",
+  "case_count": 5,
+  "repetitions": 2,
+  "execution_count": 10,
+  "passed_execution_count": 2,
+  "failed_execution_count": 8,
+  "unstable_case_ids": [],
+  "failure_counts": {
+    "EXECUTION_ERROR": 8
+  },
+  "coaching_note_counts": {},
+  "results": [
+    {
+      "case_id": "opening-development-beginner",
+      "repetition": 1,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "in-check-forced-capture",
+      "repetition": 1,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "queenside-castling-club",
+      "repetition": 1,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "losing-pawn-endgame-advanced",
+      "repetition": 1,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "terminal-checkmate",
+      "repetition": 1,
+      "profile": "full",
+      "passed": true,
+      "failure_codes": [],
+      "position_id": "bad7bf8e7b9521f09074f2ac14d2153f5920aa1c0f1f77ccb4a56dea450550fa",
+      "coaching_source": "deterministic",
+      "evidence_fingerprint": "749cd9806cc1c3571b513f33b96aaac7e4d645132ec77445022052bfe124444c",
+      "coaching_fingerprint": "d78644e883cd8eb0f3e871ceb49cc613a7da087c25c620998a6c98b064886da8",
+      "coaching_note_codes": [],
+      "error": null
+    },
+    {
+      "case_id": "opening-development-beginner",
+      "repetition": 2,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "in-check-forced-capture",
+      "repetition": 2,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "queenside-castling-club",
+      "repetition": 2,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "losing-pawn-endgame-advanced",
+      "repetition": 2,
+      "profile": "full",
+      "passed": false,
+      "failure_codes": [
+        "EXECUTION_ERROR"
+      ],
+      "position_id": null,
+      "coaching_source": null,
+      "evidence_fingerprint": null,
+      "coaching_fingerprint": null,
+      "coaching_note_codes": [],
+      "error": "ValueError: Model returned invalid coaching claims: Gemma response did not contain a JSON array"
+    },
+    {
+      "case_id": "terminal-checkmate",
+      "repetition": 2,
+      "profile": "full",
+      "passed": true,
+      "failure_codes": [],
+      "position_id": "bad7bf8e7b9521f09074f2ac14d2153f5920aa1c0f1f77ccb4a56dea450550fa",
+      "coaching_source": "deterministic",
+      "evidence_fingerprint": "749cd9806cc1c3571b513f33b96aaac7e4d645132ec77445022052bfe124444c",
+      "coaching_fingerprint": "d78644e883cd8eb0f3e871ceb49cc613a7da087c25c620998a6c98b064886da8",
+      "coaching_note_codes": [],
+      "error": null
+    }
+  ],
+  "human_review_packet_path": "artifacts/qualification/tutoring-lfm2.5-2.6b-local.human-review.json",
+  "human_review_unblinding_path": "artifacts/qualification/tutoring-lfm2.5-2.6b-local.unblinding.json"
+}

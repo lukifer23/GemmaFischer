@@ -123,3 +123,6 @@ def test_model_move_review_keeps_required_comparison() -> None:
     merged = merge_model_claims(model_claims, baseline.claims)
     assert isinstance(merged[0], ComparisonClaim)
     assert merged[0].comparison_id == "comparison"
+    assert any(isinstance(claim, GuidanceClaim) for claim in merged)
+    assert any(isinstance(claim, MoveClaim) for claim in merged)
+    assert any(isinstance(claim, ScoreClaim) for claim in merged)

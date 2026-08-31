@@ -44,6 +44,14 @@ process RSS ranged from 1.35 to 2.13 GiB, and no child process remained after
 either exit. See
 [the current evidence artifact](../artifacts/qualification/performance-0.2-local.json).
 
+The newer 21-request Gemma selector profile measured warm p95 TTFT 0.505 seconds,
+warm p95 total latency 3.995 seconds, and warm decode throughput of at least
+70.81 tokens/second, with 3.47 GB peak MLX allocation. The LFM2.5-2.6B LM Studio
+candidate decoded hidden reasoning at 69.35-72.61 tokens/second but produced no
+visible answer in five of five 768-token prompts; warm p95 total latency was
+12.109 seconds. Raw decode TPS is therefore not treated as product success.
+See the [candidate bakeoff](../artifacts/qualification/model-bakeoff-0.2-local.json).
+
 ## Historical Stockfish baseline
 
 The 20-request run at commit `a3c6cc5` measured mean 0.663 s, p50 0.903 s,

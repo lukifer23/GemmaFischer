@@ -1,0 +1,2354 @@
+{
+  "benchmark": "lichess-held-out-puzzle-accuracy",
+  "cases": [
+    {
+      "candidate_moves": [
+        "f4c7",
+        "f4g5",
+        "f4e3"
+      ],
+      "expected_move": "f4c7",
+      "fen": "k2r4/pb2QB2/1q3r2/8/2p2B2/PpNn1PP1/6KP/5R2 w - - 2 31",
+      "legal": true,
+      "puzzle_id": "fYQOI",
+      "rating": 2447,
+      "themes": [
+        "crushing",
+        "defensiveMove",
+        "fork",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d2b4",
+        "e3e4",
+        "f2f4"
+      ],
+      "expected_move": "d2b4",
+      "fen": "r4rk1/2p1nppp/1p2p3/1P2P3/8/4P3/3B1PPP/R4RK1 w - - 1 22",
+      "legal": true,
+      "puzzle_id": "lEm00",
+      "rating": 1684,
+      "themes": [
+        "advantage",
+        "enPassant",
+        "endgame",
+        "long"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e4f5",
+        "b2b7",
+        "e4e5"
+      ],
+      "expected_move": "e4f5",
+      "fen": "2k5/1rP2p2/2R4p/p2Pp2P/4Q3/q5r1/1R6/1K6 w - - 1 39",
+      "legal": true,
+      "puzzle_id": "AQhTc",
+      "rating": 1075,
+      "themes": [
+        "endgame",
+        "master",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d5b6",
+        "d5c7",
+        "b1b4"
+      ],
+      "expected_move": "d5b6",
+      "fen": "1k1rq2r/p1pb1ppp/Qp3b2/3N4/1p2P3/P3BP2/6PP/1R3RK1 w - - 0 20",
+      "legal": true,
+      "puzzle_id": "RmEfF",
+      "rating": 2499,
+      "themes": [
+        "crushing",
+        "long",
+        "middlegame",
+        "pin"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e3e4",
+        "e3f3",
+        "e3d3"
+      ],
+      "expected_move": "e3e4",
+      "fen": "8/8/8/5kp1/4r3/4R1KP/8/8 w - - 0 53",
+      "legal": true,
+      "puzzle_id": "hxXCh",
+      "rating": 1307,
+      "themes": [
+        "crushing",
+        "endgame",
+        "long",
+        "rookEndgame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c7c2",
+        "h7c2",
+        "h6g5"
+      ],
+      "expected_move": "c7c2",
+      "fen": "r4rk1/ppq2ppb/4pn1p/1B1p2P1/N2Q1N1P/P4P2/1PP5/2KR3R b - - 0 18",
+      "legal": true,
+      "puzzle_id": "uFFkB",
+      "rating": 725,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove",
+        "queensideAttack"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e5e4",
+        "h6h5",
+        "f3f2"
+      ],
+      "expected_move": "e5e4",
+      "fen": "8/8/7p/4p3/1P6/2K2k1P/8/8 b - - 0 46",
+      "legal": true,
+      "puzzle_id": "w91rv",
+      "rating": 1471,
+      "themes": [
+        "advancedPawn",
+        "crushing",
+        "endgame",
+        "pawnEndgame",
+        "quietMove",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d3c4",
+        "d3c2",
+        "d3e2"
+      ],
+      "expected_move": "d3c4",
+      "fen": "r2r2k1/p5bp/1p1q2p1/4p3/1P2p3/P2B1N1P/5PP1/Q2R2K1 w - - 0 29",
+      "legal": true,
+      "puzzle_id": "NYHLP",
+      "rating": 1126,
+      "themes": [
+        "crushing",
+        "discoveredAttack",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e1g1",
+        "c6c7",
+        "b4b5"
+      ],
+      "expected_move": "e1g1",
+      "fen": "8/5pk1/2K5/7r/1P6/8/P5p1/4R3 w - - 0 47",
+      "legal": true,
+      "puzzle_id": "91az2",
+      "rating": 1422,
+      "themes": [
+        "crushing",
+        "endgame",
+        "long",
+        "quietMove",
+        "rookEndgame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "a3b3",
+        "c5c4",
+        "d6c7"
+      ],
+      "expected_move": "a3b3",
+      "fen": "8/8/3b4/1Kp5/P7/kB6/8/8 b - - 0 87",
+      "legal": true,
+      "puzzle_id": "si6Br",
+      "rating": 1833,
+      "themes": [
+        "bishopEndgame",
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "hangingPiece",
+        "long",
+        "quietMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d4c6",
+        "d4f5",
+        "d4c2"
+      ],
+      "expected_move": "d4c6",
+      "fen": "8/4b2p/p7/5p2/1k1N1P2/3P1K2/8/8 w - - 3 47",
+      "legal": true,
+      "puzzle_id": "83TOt",
+      "rating": 985,
+      "themes": [
+        "crushing",
+        "endgame",
+        "fork",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g1b1",
+        "d5d6",
+        "f5e6"
+      ],
+      "expected_move": "g1b1",
+      "fen": "1r5k/2q5/pp5p/2pP1Qp1/P1P1Bp2/7P/1b6/6RK w - - 0 34",
+      "legal": true,
+      "puzzle_id": "fRRji",
+      "rating": 2667,
+      "themes": [
+        "crushing",
+        "endgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f1f6",
+        "f1f4",
+        "e1e8"
+      ],
+      "expected_move": "f1f6",
+      "fen": "r1b2r1k/ppp2p1p/8/2q5/3p4/3P2R1/P5PP/4RQK1 w - - 6 21",
+      "legal": true,
+      "puzzle_id": "GgQIT",
+      "rating": 952,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d6d1",
+        "d6d2",
+        "b7b5"
+      ],
+      "expected_move": "d6d1",
+      "fen": "8/pp4k1/3r4/2p2Pp1/8/2P1RPPp/PP5P/7K b - - 0 36",
+      "legal": true,
+      "puzzle_id": "ZiymX",
+      "rating": 445,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn2",
+        "rookEndgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g3g7",
+        "e6f8",
+        "g3h3"
+      ],
+      "expected_move": "g3g7",
+      "fen": "r1b1qr2/pp2n1pk/1b2N3/n2pPp2/3P1P2/2P3Q1/P5PP/RNB1K2R w KQ - 1 15",
+      "legal": true,
+      "puzzle_id": "cU8O8",
+      "rating": 1100,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b1b4",
+        "b1c1",
+        "b1a1"
+      ],
+      "expected_move": "b1b4",
+      "fen": "8/6k1/5p2/pP6/Pr4P1/2p1p3/4K3/1R6 w - - 6 44",
+      "legal": true,
+      "puzzle_id": "ymw4h",
+      "rating": 1866,
+      "themes": [
+        "crushing",
+        "endgame",
+        "master",
+        "rookEndgame",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c3c2",
+        "b3c4",
+        "b3a3"
+      ],
+      "expected_move": "c3c2",
+      "fen": "8/8/8/8/1p2K3/1kp5/6R1/8 b - - 0 57",
+      "legal": true,
+      "puzzle_id": "jYL9z",
+      "rating": 2379,
+      "themes": [
+        "advancedPawn",
+        "crushing",
+        "endgame",
+        "long",
+        "rookEndgame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e2h5",
+        "f1f2",
+        "f1g2"
+      ],
+      "expected_move": "e2h5",
+      "fen": "4r1r1/3n1p2/pp3Pk1/2pP1R2/2P1p3/4N3/PP2B3/5K2 w - - 2 36",
+      "legal": true,
+      "puzzle_id": "zDFVj",
+      "rating": 1113,
+      "themes": [
+        "advantage",
+        "deflection",
+        "endgame",
+        "short",
+        "skewer"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "a3a2",
+        "h7g6",
+        "b2b1"
+      ],
+      "expected_move": "a3a2",
+      "fen": "6k1/7p/5PP1/5P2/7R/p7/1r6/6K1 b - - 0 37",
+      "legal": true,
+      "puzzle_id": "D8SXU",
+      "rating": 1713,
+      "themes": [
+        "advancedPawn",
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "rookEndgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h1h7",
+        "e2e6",
+        "e2d3"
+      ],
+      "expected_move": "h1h7",
+      "fen": "1q4rk/p5pp/2pb4/2pp4/8/1PP5/PK2Q3/4R2R w - - 1 38",
+      "legal": true,
+      "puzzle_id": "wxKKN",
+      "rating": 1487,
+      "themes": [
+        "attraction",
+        "endgame",
+        "mate",
+        "mateIn2",
+        "sacrifice",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f7f8",
+        "c4d5",
+        "f3d5"
+      ],
+      "expected_move": "f7f8",
+      "fen": "5rk1/p4R2/1p5p/2bp3P/2Bp3q/1P3Q2/PKP5/6r1 w - - 0 36",
+      "legal": true,
+      "puzzle_id": "l8qPg",
+      "rating": 1557,
+      "themes": [
+        "advantage",
+        "deflection",
+        "exposedKing",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c4e2",
+        "d4f3",
+        "f6h4"
+      ],
+      "expected_move": "c4e2",
+      "fen": "r4rk1/pbp2pB1/1p2pb2/8/2qnB3/2P2N1Q/PP3PPP/R3K2R b KQ - 0 17",
+      "legal": true,
+      "puzzle_id": "VuVoL",
+      "rating": 1232,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "a7f2",
+        "f8d8",
+        "g8g7"
+      ],
+      "expected_move": "a7f2",
+      "fen": "5rk1/q4rPp/4Q1n1/1p6/p3R3/P7/1PP2PPP/R4K2 b - - 0 25",
+      "legal": true,
+      "puzzle_id": "1jSfZ",
+      "rating": 1311,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f4e3",
+        "b8b3",
+        "b8a8"
+      ],
+      "expected_move": "f4e3",
+      "fen": "1r1r4/6kp/N1Qp2p1/8/2P2bq1/1P1R2P1/P6P/3R2K1 b - - 0 31",
+      "legal": true,
+      "puzzle_id": "dqKWK",
+      "rating": 2382,
+      "themes": [
+        "crushing",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b4e1",
+        "g7h6",
+        "c8f8"
+      ],
+      "expected_move": "b4e1",
+      "fen": "2r3k1/Qb1Rppbp/2p3p1/8/Nq2P3/1B6/PPP2PPP/2K5 b - - 0 19",
+      "legal": true,
+      "puzzle_id": "1NlMF",
+      "rating": 1865,
+      "themes": [
+        "crushing",
+        "long",
+        "middlegame",
+        "queensideAttack"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h3e6",
+        "c4d5",
+        "d1d7"
+      ],
+      "expected_move": "h3e6",
+      "fen": "7r/pbp1krp1/1p2pb2/8/2B5/5qPQ/PPP2P1P/3R1RK1 w - - 5 21",
+      "legal": true,
+      "puzzle_id": "RQ5CR",
+      "rating": 1331,
+      "themes": [
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e6g6",
+        "d5d4",
+        "a6a5"
+      ],
+      "expected_move": "e6g6",
+      "fen": "2k3r1/7p/p3q3/2ppP3/4pP1Q/P5rP/1PP1R1P1/3R2K1 b - - 4 28",
+      "legal": true,
+      "puzzle_id": "8m7KI",
+      "rating": 2479,
+      "themes": [
+        "advantage",
+        "endgame",
+        "quietMove",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f7f2",
+        "a2f2",
+        "a2e2"
+      ],
+      "expected_move": "f7f2",
+      "fen": "2R5/4rqkp/4p1p1/1p2P3/1P6/1Q5P/r4PP1/2R3K1 b - - 3 34",
+      "legal": true,
+      "puzzle_id": "dsyT3",
+      "rating": 891,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn2",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g4g5",
+        "f8h8",
+        "f4e5"
+      ],
+      "expected_move": "g4g5",
+      "fen": "5R2/6pp/p3p1r1/8/5QPk/4PP2/1P5K/4q3 w - - 1 37",
+      "legal": true,
+      "puzzle_id": "4aifW",
+      "rating": 1459,
+      "themes": [
+        "discoveredAttack",
+        "discoveredCheck",
+        "endgame",
+        "mate",
+        "mateIn2",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f6f7",
+        "g1f2",
+        "e5b2"
+      ],
+      "expected_move": "f6f7",
+      "fen": "5Rrk/8/4pPpp/4B1P1/p4P2/6P1/rp6/6K1 w - - 0 37",
+      "legal": true,
+      "puzzle_id": "xFZlP",
+      "rating": 1061,
+      "themes": [
+        "advancedPawn",
+        "discoveredAttack",
+        "discoveredCheck",
+        "endgame",
+        "mate",
+        "mateIn2",
+        "promotion",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d6c6",
+        "d6b4",
+        "d6d2"
+      ],
+      "expected_move": "d6c6",
+      "fen": "r3k1r1/p4p1p/2pQb3/1p2q3/2p5/4B1P1/Pb3P1P/RN2R1K1 w q - 2 18",
+      "legal": true,
+      "puzzle_id": "krN46",
+      "rating": 1651,
+      "themes": [
+        "crushing",
+        "discoveredAttack",
+        "fork",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g3h4",
+        "f5e6",
+        "f5g6"
+      ],
+      "expected_move": "g3h4",
+      "fen": "4Q3/2p2ppk/8/p2P1b1p/P2N4/5Pq1/1PP3P1/7K b - - 2 31",
+      "legal": true,
+      "puzzle_id": "GcwdF",
+      "rating": 1376,
+      "themes": [
+        "advantage",
+        "endgame",
+        "fork",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c6a5",
+        "b8d6",
+        "g7f8"
+      ],
+      "expected_move": "c6a5",
+      "fen": "1q4k1/5rb1/2nN1ppp/Q1p1p3/1n1pP3/R2P1N2/1P1B1PPP/R5K1 b - - 0 25",
+      "legal": true,
+      "puzzle_id": "4jjrc",
+      "rating": 2091,
+      "themes": [
+        "advantage",
+        "master",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e8e2",
+        "e1e2",
+        "e8c8"
+      ],
+      "expected_move": "e8e2",
+      "fen": "2Q1r3/8/p1Q4p/5ppk/N2B4/2P3P1/P4K1P/b3r3 b - - 0 37",
+      "legal": true,
+      "puzzle_id": "3hWrt",
+      "rating": 1675,
+      "themes": [
+        "mate",
+        "mateIn5",
+        "middlegame",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e1e7",
+        "g3h5",
+        "d4b5"
+      ],
+      "expected_move": "e1e7",
+      "fen": "2r2rk1/3qnpbp/p2p2p1/1p4B1/2nN4/1B4NP/PP3PP1/1b1QR1K1 w - - 0 20",
+      "legal": true,
+      "puzzle_id": "lZoBw",
+      "rating": 1698,
+      "themes": [
+        "advantage",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b5f1",
+        "b6d5",
+        "e8e5"
+      ],
+      "expected_move": "b5f1",
+      "fen": "4r1k1/2p2pp1/1n5p/1q2P3/3RBP2/6P1/3Q3P/7K b - - 1 34",
+      "legal": true,
+      "puzzle_id": "oy2iG",
+      "rating": 1058,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d3h7",
+        "d3c4",
+        "d3e4"
+      ],
+      "expected_move": "d3h7",
+      "fen": "r4rk1/p4ppp/5q2/8/2pp1P2/3Q3R/PPP3PP/R5K1 w - - 0 21",
+      "legal": true,
+      "puzzle_id": "1NfvU",
+      "rating": 1042,
+      "themes": [
+        "endgame",
+        "kingsideAttack",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f3d1",
+        "f3e4",
+        "f3h5"
+      ],
+      "expected_move": "f3d1",
+      "fen": "6k1/p4q2/6pP/3p2Q1/8/2P1PbK1/P1r5/3R2R1 b - - 0 37",
+      "legal": true,
+      "puzzle_id": "Bpd4O",
+      "rating": 1622,
+      "themes": [
+        "crushing",
+        "endgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h8h4",
+        "e2d1",
+        "e2f1"
+      ],
+      "expected_move": "h8h4",
+      "fen": "7Q/1B2q3/p5p1/Pp3pk1/3P4/1r2P1P1/4K3/8 w - - 5 48",
+      "legal": true,
+      "puzzle_id": "eAFJH",
+      "rating": 911,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e5d6",
+        "a4a5",
+        "h2h3"
+      ],
+      "expected_move": "e5d6",
+      "fen": "r5k1/2q2ppp/pp1b3r/2p1PP2/P1Q1R3/8/6PP/4R1K1 w - - 0 31",
+      "legal": true,
+      "puzzle_id": "MaXwi",
+      "rating": 1152,
+      "themes": [
+        "advantage",
+        "clearance",
+        "kingsideAttack",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b7e7",
+        "b7c7",
+        "b7g7"
+      ],
+      "expected_move": "b7e7",
+      "fen": "4k3/1R6/5P1p/r3nKp1/6P1/6P1/8/8 w - - 4 49",
+      "legal": true,
+      "puzzle_id": "fr9LE",
+      "rating": 1531,
+      "themes": [
+        "crushing",
+        "endgame",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f2f7",
+        "f1e1",
+        "f2f4"
+      ],
+      "expected_move": "f2f7",
+      "fen": "br3rk1/2Q2p2/1p2p1p1/p3P1q1/P6p/1P1B2P1/2P2R1P/5RK1 w - - 0 23",
+      "legal": true,
+      "puzzle_id": "CdP9R",
+      "rating": 1245,
+      "themes": [
+        "advantage",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b4d2",
+        "f2f4",
+        "f2f3"
+      ],
+      "expected_move": "b4d2",
+      "fen": "4r3/5R2/p1p3p1/3p1pkb/1B1Pr3/6K1/1PP2P2/7R w - - 8 38",
+      "legal": true,
+      "puzzle_id": "D1UVW",
+      "rating": 1350,
+      "themes": [
+        "advantage",
+        "endgame",
+        "long",
+        "master"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d5d7",
+        "e6d7",
+        "d5d4"
+      ],
+      "expected_move": "d5d7",
+      "fen": "1r2kr2/pbpp2pp/1p2P3/2bQ2N1/2Bn4/8/PPP2qPP/RN1K3R w - - 2 15",
+      "legal": true,
+      "puzzle_id": "tvoic",
+      "rating": 1185,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "a4a5",
+        "g3g4",
+        "h3h4"
+      ],
+      "expected_move": "a4a5",
+      "fen": "8/1p4p1/p1p4p/2Ppkp2/KP6/4P1PP/5P2/8 w - - 6 46",
+      "legal": true,
+      "puzzle_id": "ULUsN",
+      "rating": 1954,
+      "themes": [
+        "advantage",
+        "endgame",
+        "long",
+        "pawnEndgame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h2e2",
+        "g7g6",
+        "h2b2"
+      ],
+      "expected_move": "h2e2",
+      "fen": "8/1P1R2p1/b4p1k/4pB1p/4P3/4KPP1/7r/8 b - - 0 47",
+      "legal": true,
+      "puzzle_id": "eCOp2",
+      "rating": 754,
+      "themes": [
+        "endgame",
+        "master",
+        "mate",
+        "mateIn1",
+        "oneMove",
+        "operaMate"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c4e2",
+        "c4c8",
+        "e8c8"
+      ],
+      "expected_move": "c4e2",
+      "fen": "2Q1r2k/p4p1p/8/5Qb1/2q5/5P2/PP2N2P/R4K1R b - - 0 29",
+      "legal": true,
+      "puzzle_id": "pgx7F",
+      "rating": 1336,
+      "themes": [
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d1d8",
+        "h4d8",
+        "d1d6"
+      ],
+      "expected_move": "d1d8",
+      "fen": "3r1k2/pp3pp1/4b2r/q3P2p/7Q/5N2/P4PPP/3R2K1 w - - 0 22",
+      "legal": true,
+      "puzzle_id": "4g7Xe",
+      "rating": 1070,
+      "themes": [
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c1h1",
+        "h5h4",
+        "f5f6"
+      ],
+      "expected_move": "c1h1",
+      "fen": "6k1/5p2/p3p1p1/3bRq1p/3Q4/P2P2BP/5PPK/2r5 b - - 6 33",
+      "legal": true,
+      "puzzle_id": "j358o",
+      "rating": 2150,
+      "themes": [
+        "attraction",
+        "deflection",
+        "endgame",
+        "long",
+        "master",
+        "mate",
+        "mateIn3",
+        "pin",
+        "sacrifice"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g7g5",
+        "b6f2",
+        "c6e5"
+      ],
+      "expected_move": "g7g5",
+      "fen": "r1bqr1k1/pppp1pp1/1bn2n1p/3N4/4P2B/1N6/PPP1QPPP/R3KB1R b KQ - 3 10",
+      "legal": true,
+      "puzzle_id": "5B6m1",
+      "rating": 2134,
+      "themes": [
+        "advantage",
+        "opening",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e7e1",
+        "g3g4",
+        "g3g5"
+      ],
+      "expected_move": "e7e1",
+      "fen": "7k/p3r3/Qp6/P1p3Pp/3p4/3P1Rq1/1PP3P1/6K1 b - - 0 35",
+      "legal": true,
+      "puzzle_id": "PNAlq",
+      "rating": 1299,
+      "themes": [
+        "crushing",
+        "endgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b3b2",
+        "d8c7",
+        "c3d3"
+      ],
+      "expected_move": "b3b2",
+      "fen": "3k4/3P2p1/4Bb1p/4pP2/8/1pr3P1/7P/R5K1 b - - 5 46",
+      "legal": true,
+      "puzzle_id": "t8U6K",
+      "rating": 1988,
+      "themes": [
+        "advancedPawn",
+        "advantage",
+        "defensiveMove",
+        "endgame",
+        "long"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d1f3",
+        "d5f3",
+        "g1f1"
+      ],
+      "expected_move": "d1f3",
+      "fen": "4r1k1/2qb1p1p/p5p1/bp1B2B1/8/5n1P/5PP1/2RQ2K1 w - - 0 26",
+      "legal": true,
+      "puzzle_id": "AlNOG",
+      "rating": 2175,
+      "themes": [
+        "crushing",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g5g2",
+        "c6d5",
+        "g5f4"
+      ],
+      "expected_move": "g5g2",
+      "fen": "8/1p6/2b3k1/4B1q1/p4Q1p/P6P/1P4P1/6K1 b - - 4 53",
+      "legal": true,
+      "puzzle_id": "4qmlm",
+      "rating": 816,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g2a8",
+        "d2d5",
+        "b4b5"
+      ],
+      "expected_move": "g2a8",
+      "fen": "8/p1p5/kp5q/4n1b1/1PP5/P7/2KR2Q1/8 w - - 1 42",
+      "legal": true,
+      "puzzle_id": "54EQV",
+      "rating": 2235,
+      "themes": [
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "long"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c4c5",
+        "c4d4",
+        "h6g5"
+      ],
+      "expected_move": "c4c5",
+      "fen": "8/1k5p/4p1pB/1P2Pp2/2K2P2/7P/3b4/8 w - - 9 34",
+      "legal": true,
+      "puzzle_id": "7FGbX",
+      "rating": 1135,
+      "themes": [
+        "bishopEndgame",
+        "crushing",
+        "endgame",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f3a8",
+        "f3c6",
+        "h2h3"
+      ],
+      "expected_move": "f3a8",
+      "fen": "r5k1/p1p2pp1/1p1p1q2/5P2/2b5/2P2Q2/6PP/5RK1 w - - 4 33",
+      "legal": true,
+      "puzzle_id": "rBHT2",
+      "rating": 1779,
+      "themes": [
+        "crushing",
+        "endgame",
+        "hangingPiece",
+        "pin",
+        "quietMove",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f6g6",
+        "f6f5",
+        "f6f7"
+      ],
+      "expected_move": "f6g6",
+      "fen": "8/8/4rk2/8/p2Q1p2/P4PbP/6P1/6K1 b - - 8 52",
+      "legal": true,
+      "puzzle_id": "wTyub",
+      "rating": 2083,
+      "themes": [
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "long"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e4f6",
+        "b5c6",
+        "b5c4"
+      ],
+      "expected_move": "e4f6",
+      "fen": "r4rk1/ppp2ppp/1bn5/1B2q1B1/4N3/2P2Q2/PP4PP/3R3K w - - 0 20",
+      "legal": true,
+      "puzzle_id": "uHzB9",
+      "rating": 1658,
+      "themes": [
+        "advantage",
+        "kingsideAttack",
+        "long",
+        "middlegame",
+        "sacrifice"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c7h2",
+        "a5b3",
+        "a5c6"
+      ],
+      "expected_move": "c7h2",
+      "fen": "1b3rk1/2q2ppp/4p3/n7/1PPP4/P7/4BPPP/RNB2RK1 b - - 0 21",
+      "legal": true,
+      "puzzle_id": "0MVhE",
+      "rating": 1270,
+      "themes": [
+        "kingsideAttack",
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "a6a5",
+        "a6a8",
+        "a6a7"
+      ],
+      "expected_move": "a6a5",
+      "fen": "8/3P1p2/R2K2p1/bk5p/8/6P1/2r4P/8 w - - 5 60",
+      "legal": true,
+      "puzzle_id": "3zS1Z",
+      "rating": 1197,
+      "themes": [
+        "advancedPawn",
+        "advantage",
+        "attraction",
+        "endgame",
+        "master",
+        "promotion",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g5c1",
+        "h7h6",
+        "h7h5"
+      ],
+      "expected_move": "g5c1",
+      "fen": "6k1/pQ1R1ppp/8/6q1/8/1P4B1/P3rPP1/2R3K1 b - - 0 32",
+      "legal": true,
+      "puzzle_id": "huydZ",
+      "rating": 1291,
+      "themes": [
+        "advantage",
+        "endgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c5d5",
+        "c5c6",
+        "c5d6"
+      ],
+      "expected_move": "c5d5",
+      "fen": "8/8/8/2k3p1/1p4Pp/1P1K3P/8/8 b - - 1 45",
+      "legal": true,
+      "puzzle_id": "BPZqs",
+      "rating": 1828,
+      "themes": [
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "long",
+        "pawnEndgame",
+        "zugzwang"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e6e8",
+        "e1f1",
+        "e6e7"
+      ],
+      "expected_move": "e6e8",
+      "fen": "r6k/pp4pp/4Q2b/3B4/2p5/2q4P/P1P3P1/4R2K w - - 0 27",
+      "legal": true,
+      "puzzle_id": "HKUNk",
+      "rating": 933,
+      "themes": [
+        "backRankMate",
+        "endgame",
+        "mate",
+        "mateIn2",
+        "sacrifice",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d4f2",
+        "d7d6",
+        "d7d5"
+      ],
+      "expected_move": "d4f2",
+      "fen": "r1b1k2N/pppp2pp/5n2/2b5/3q4/5P2/PPQPB1PP/RNB2K1R b q - 0 10",
+      "legal": true,
+      "puzzle_id": "54jpn",
+      "rating": 660,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c6e5",
+        "f4f5",
+        "g7g6"
+      ],
+      "expected_move": "c6e5",
+      "fen": "6k1/1pp2ppp/2n5/8/3p1q2/1P1K4/P1P2B2/1R2Q3 b - - 3 30",
+      "legal": true,
+      "puzzle_id": "u9mSj",
+      "rating": 2354,
+      "themes": [
+        "advantage",
+        "endgame",
+        "exposedKing",
+        "long"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e5h8",
+        "e3d5",
+        "e3g4"
+      ],
+      "expected_move": "e5h8",
+      "fen": "3r1k1r/1p3q2/1p1P2p1/4Q2p/4p2P/4N1P1/P1PK1P2/8 w - - 3 28",
+      "legal": true,
+      "puzzle_id": "acyZL",
+      "rating": 1397,
+      "themes": [
+        "crushing",
+        "endgame",
+        "hangingPiece",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f2f4",
+        "c4d3",
+        "f2f3"
+      ],
+      "expected_move": "f2f4",
+      "fen": "2b5/p7/2p2ppp/2P1k3/2B3PP/P3K3/5P2/8 w - - 1 39",
+      "legal": true,
+      "puzzle_id": "SYRXh",
+      "rating": 874,
+      "themes": [
+        "bishopEndgame",
+        "endgame",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g3h4",
+        "h7h6",
+        "h7h5"
+      ],
+      "expected_move": "g3h4",
+      "fen": "7k/pQ4pp/6p1/8/3P4/2P1b1q1/PP4B1/5R1K b - - 2 30",
+      "legal": true,
+      "puzzle_id": "I5xAv",
+      "rating": 1052,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn2",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c3d5",
+        "d1h5",
+        "g5f3"
+      ],
+      "expected_move": "c3d5",
+      "fen": "r2q1b1r/pppbk3/5p1p/4p1N1/3nP3/2NP4/PPP3PP/R1BQ2K1 w - - 0 13",
+      "legal": true,
+      "puzzle_id": "se5n4",
+      "rating": 919,
+      "themes": [
+        "advantage",
+        "opening",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f8f7",
+        "f8e8",
+        "f8g8"
+      ],
+      "expected_move": "f8f7",
+      "fen": "3r1q1k/pp3R2/5bpp/3B1p2/bP2p3/P3P3/4QPPP/3R2K1 b - - 4 31",
+      "legal": true,
+      "puzzle_id": "VcMro",
+      "rating": 1726,
+      "themes": [
+        "advantage",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f5e4",
+        "f5h7",
+        "f5b1"
+      ],
+      "expected_move": "f5e4",
+      "fen": "8/1k2n2p/1p6/p3PB1P/5P2/5N2/1p4r1/5K2 w - - 0 33",
+      "legal": true,
+      "puzzle_id": "IeU54",
+      "rating": 2132,
+      "themes": [
+        "advantage",
+        "endgame",
+        "long",
+        "pin"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d7g7",
+        "h2g1",
+        "h2g3"
+      ],
+      "expected_move": "d7g7",
+      "fen": "2r3k1/3Q3p/6p1/4B3/p1q5/P1P1p2P/7K/8 w - - 0 39",
+      "legal": true,
+      "puzzle_id": "af2p1",
+      "rating": 876,
+      "themes": [
+        "endgame",
+        "master",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h2g1",
+        "h2d6",
+        "h2c7"
+      ],
+      "expected_move": "h2g1",
+      "fen": "6k1/p4ppp/8/8/6nq/5B2/PPPP1PPb/R1B2RNK b - - 5 17",
+      "legal": true,
+      "puzzle_id": "7kb32",
+      "rating": 1682,
+      "themes": [
+        "attraction",
+        "discoveredAttack",
+        "discoveredCheck",
+        "kingsideAttack",
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f7e6",
+        "b3d2",
+        "d1h5"
+      ],
+      "expected_move": "f7e6",
+      "fen": "r6k/bpp2Bp1/2npb2p/p7/P2Pq3/1N2B2P/1P3PP1/R2Q2K1 w - - 2 19",
+      "legal": true,
+      "puzzle_id": "m6Uzv",
+      "rating": 1388,
+      "themes": [
+        "advantage",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b6b1",
+        "b6b2",
+        "g5f5"
+      ],
+      "expected_move": "b6b1",
+      "fen": "8/8/1r6/6k1/3R1p2/5Pp1/6P1/5K2 b - - 3 52",
+      "legal": true,
+      "puzzle_id": "JONRP",
+      "rating": 2526,
+      "themes": [
+        "crushing",
+        "endgame",
+        "rookEndgame",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e5f4",
+        "e5e6",
+        "e5f6"
+      ],
+      "expected_move": "e5f4",
+      "fen": "8/8/8/2K1k1p1/6P1/5P2/8/8 b - - 4 50",
+      "legal": true,
+      "puzzle_id": "pfkRg",
+      "rating": 441,
+      "themes": [
+        "crushing",
+        "endgame",
+        "pawnEndgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h7g7",
+        "b2b3",
+        "b2c3"
+      ],
+      "expected_move": "h7g7",
+      "fen": "r3r1k1/1p4bR/pq2b1p1/2p3N1/5B2/2p2Q2/PP2B3/2K5 w - - 0 22",
+      "legal": true,
+      "puzzle_id": "cVAwq",
+      "rating": 2499,
+      "themes": [
+        "attraction",
+        "crushing",
+        "exposedKing",
+        "intermezzo",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g7e5",
+        "c6d5",
+        "c4b3"
+      ],
+      "expected_move": "g7e5",
+      "fen": "5k2/5rbQ/2q1p3/p3P3/2pB4/1PP4R/5PPK/8 b - - 0 44",
+      "legal": true,
+      "puzzle_id": "EXgWU",
+      "rating": 1613,
+      "themes": [
+        "advantage",
+        "discoveredAttack",
+        "endgame",
+        "master",
+        "masterVsMaster",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c4a2",
+        "a6a5",
+        "h6h5"
+      ],
+      "expected_move": "c4a2",
+      "fen": "r3k2r/2p2pp1/p3pn1p/1p1b4/1PqPp1P1/4B1NP/PP1Q1PB1/1K1RR3 b kq - 0 16",
+      "legal": true,
+      "puzzle_id": "nMweF",
+      "rating": 2458,
+      "themes": [
+        "mate",
+        "mateIn5",
+        "middlegame",
+        "queensideAttack",
+        "sacrifice",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d6h2",
+        "d6c6",
+        "d6d7"
+      ],
+      "expected_move": "d6h2",
+      "fen": "r4rk1/1pb2ppp/p2qp3/8/P2P4/B1P4P/4RPP1/R2Q2K1 b - - 2 19",
+      "legal": true,
+      "puzzle_id": "WMTJO",
+      "rating": 656,
+      "themes": [
+        "kingsideAttack",
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d8d2",
+        "e5f3",
+        "d8d3"
+      ],
+      "expected_move": "d8d2",
+      "fen": "3rr1k1/p4ppp/1pb2q2/4nP1n/4p1P1/P1N1B2P/BP1R1P1Q/3R3K b - - 2 25",
+      "legal": true,
+      "puzzle_id": "uIPK1",
+      "rating": 1999,
+      "themes": [
+        "crushing",
+        "master",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g4f3",
+        "c6d4",
+        "b4d6"
+      ],
+      "expected_move": "g4f3",
+      "fen": "r2qr1k1/ppp2ppp/2n5/8/1b1P2b1/2N1PN2/PPQB1PPP/R3K2R b KQ - 4 12",
+      "legal": true,
+      "puzzle_id": "Uzseh",
+      "rating": 1672,
+      "themes": [
+        "crushing",
+        "middlegame",
+        "pin",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e1e8",
+        "b2b4",
+        "f4f5"
+      ],
+      "expected_move": "e1e8",
+      "fen": "6k1/1p3pb1/p2B2pp/2pP4/3q1P2/7P/1P4P1/4Q2K w - - 1 30",
+      "legal": true,
+      "puzzle_id": "HhG9F",
+      "rating": 1740,
+      "themes": [
+        "advantage",
+        "deflection",
+        "endgame",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d6f4",
+        "h6h2",
+        "d6d5"
+      ],
+      "expected_move": "d6f4",
+      "fen": "8/5pkn/p2q2pr/1p1Q4/4pRP1/1BP5/PP3PK1/8 b - - 0 44",
+      "legal": true,
+      "puzzle_id": "oKF5j",
+      "rating": 1108,
+      "themes": [
+        "crushing",
+        "endgame",
+        "hangingPiece",
+        "master",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "g5f7",
+        "c3e4",
+        "c1f4"
+      ],
+      "expected_move": "g5f7",
+      "fen": "r2q2rk/ppp3pp/2nb4/6N1/2B2p2/2N5/PPP3PP/R1B1K2R w KQ - 0 15",
+      "legal": true,
+      "puzzle_id": "jYAeg",
+      "rating": 1337,
+      "themes": [
+        "mate",
+        "mateIn1",
+        "oneMove",
+        "opening",
+        "smotheredMate"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h6h7",
+        "h1h2",
+        "f4f1"
+      ],
+      "expected_move": "h6h7",
+      "fen": "6rk/bp3p1p/p1p2PpQ/4P3/5R2/1q4PP/8/2r1B2K w - - 0 30",
+      "legal": true,
+      "puzzle_id": "Q1oPN",
+      "rating": 1342,
+      "themes": [
+        "attraction",
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "sacrifice",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e5b8",
+        "c3c4",
+        "h2h4"
+      ],
+      "expected_move": "e5b8",
+      "fen": "6k1/5qpp/p3p3/1pBnQ3/3P4/2P1p1P1/PP4KP/8 w - - 5 31",
+      "legal": true,
+      "puzzle_id": "WoKEe",
+      "rating": 761,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn2",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e2e8",
+        "g2h3",
+        "g2f3"
+      ],
+      "expected_move": "e2e8",
+      "fen": "5k2/p2n2pp/1ppN4/5p2/2P2P2/1P4P1/P3R1KP/r7 w - - 0 30",
+      "legal": true,
+      "puzzle_id": "vX0lr",
+      "rating": 797,
+      "themes": [
+        "endgame",
+        "mate",
+        "mateIn1",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "a8a2",
+        "c2b3",
+        "a8b8"
+      ],
+      "expected_move": "a8a2",
+      "fen": "r1r3k1/5ppp/4p3/8/8/5P1P/PPqQ2P1/K2R3R b - - 2 28",
+      "legal": true,
+      "puzzle_id": "GwTaJ",
+      "rating": 1436,
+      "themes": [
+        "attraction",
+        "endgame",
+        "long",
+        "mate",
+        "mateIn3",
+        "sacrifice"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b2b1",
+        "b2h2",
+        "b2d2"
+      ],
+      "expected_move": "b2b1",
+      "fen": "Q4R2/8/8/4b1k1/1pR5/1P5p/1r6/7K b - - 0 49",
+      "legal": true,
+      "puzzle_id": "SwtO7",
+      "rating": 948,
+      "themes": [
+        "endgame",
+        "exposedKing",
+        "long",
+        "mate",
+        "mateIn3"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d3h7",
+        "b2c3",
+        "f1f2"
+      ],
+      "expected_move": "d3h7",
+      "fen": "r2rb1k1/1q4pp/pp2p3/4P3/P5P1/2pB4/1PQ3PK/R4R2 w - - 0 26",
+      "legal": true,
+      "puzzle_id": "U3Ijt",
+      "rating": 934,
+      "themes": [
+        "kingsideAttack",
+        "mate",
+        "mateIn2",
+        "middlegame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b3b2",
+        "e6f6",
+        "h7h5"
+      ],
+      "expected_move": "b3b2",
+      "fen": "8/7p/4kP2/8/3K4/1ppN4/8/8 b - - 2 50",
+      "legal": true,
+      "puzzle_id": "4OFuE",
+      "rating": 2136,
+      "themes": [
+        "advancedPawn",
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "knightEndgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c7e5",
+        "c5e5",
+        "g3h4"
+      ],
+      "expected_move": "c7e5",
+      "fen": "k7/1pB4p/q5p1/P1Q1bp2/2p5/4rBK1/4r2P/1R6 w - - 5 41",
+      "legal": true,
+      "puzzle_id": "wqADy",
+      "rating": 1397,
+      "themes": [
+        "crushing",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "f5f4",
+        "e6e7",
+        "e6d7"
+      ],
+      "expected_move": "f5f4",
+      "fen": "8/8/4k1K1/5p2/7P/8/8/8 b - - 0 57",
+      "legal": true,
+      "puzzle_id": "kktVn",
+      "rating": 566,
+      "themes": [
+        "advancedPawn",
+        "crushing",
+        "endgame",
+        "master",
+        "pawnEndgame",
+        "promotion",
+        "quietMove",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "b5b2",
+        "b5b1",
+        "e5d3"
+      ],
+      "expected_move": "b5b2",
+      "fen": "2r1kb1r/5ppp/p3p3/QRppN3/3PnBP1/N1P1P3/q4P1P/6K1 w k - 1 17",
+      "legal": true,
+      "puzzle_id": "EA7XB",
+      "rating": 2291,
+      "themes": [
+        "advantage",
+        "defensiveMove",
+        "long",
+        "middlegame"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "h4h5",
+        "b3c2",
+        "b3a2"
+      ],
+      "expected_move": "h4h5",
+      "fen": "8/6p1/8/4k3/1p1pP2P/1KpP2P1/8/8 w - - 0 45",
+      "legal": true,
+      "puzzle_id": "wm9zK",
+      "rating": 2152,
+      "themes": [
+        "crushing",
+        "defensiveMove",
+        "endgame",
+        "long",
+        "pawnEndgame",
+        "quietMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "e4f6",
+        "f3f4",
+        "c1h6"
+      ],
+      "expected_move": "e4f6",
+      "fen": "r1b1r1k1/bpp2pp1/p1q4p/P4P2/1P2N3/2P2R2/6PP/R1B1Q2K w - - 1 22",
+      "legal": true,
+      "puzzle_id": "BtO1U",
+      "rating": 2773,
+      "themes": [
+        "crushing",
+        "defensiveMove",
+        "kingsideAttack",
+        "middlegame",
+        "sacrifice",
+        "veryLong"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "d4g7",
+        "d4c3",
+        "d4d5"
+      ],
+      "expected_move": "d4g7",
+      "fen": "r1b2rk1/p1pnqppp/8/Ppp5/3QP3/P4N2/1BP2PPP/R4RK1 w - - 0 16",
+      "legal": true,
+      "puzzle_id": "nvlDg",
+      "rating": 485,
+      "themes": [
+        "kingsideAttack",
+        "mate",
+        "mateIn1",
+        "middlegame",
+        "oneMove"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    },
+    {
+      "candidate_moves": [
+        "c2d3",
+        "a4b5",
+        "a4a5"
+      ],
+      "expected_move": "c2d3",
+      "fen": "8/1p1b4/8/1p1Pp1p1/P1k1P1p1/4K3/1PB5/8 w - - 0 53",
+      "legal": true,
+      "puzzle_id": "LxNak",
+      "rating": 2160,
+      "themes": [
+        "advantage",
+        "bishopEndgame",
+        "endgame",
+        "short"
+      ],
+      "top1_hit": true,
+      "top3_hit": true
+    }
+  ],
+  "commit": "d51e42aa0331309a0cbcca621d4f80162aa17a5b",
+  "engine": {
+    "binary_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+    "node_budget": 250000,
+    "options": {
+      "Hash": 64,
+      "Skill Level": 20,
+      "Threads": 1,
+      "UCI_ShowWDL": true
+    },
+    "path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish"
+  },
+  "evidence_scope": "external-cc0-label-agreement",
+  "gates": {
+    "legality_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    },
+    "top1_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 0.8
+    },
+    "top3_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 0.95
+    }
+  },
+  "generated_at": "2026-08-30T23:41:40.149988+00:00",
+  "machine": "arm64",
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "python": "3.12.12",
+  "schema_version": "1.0",
+  "selection": {
+    "eligible_evaluation_rows": 611065,
+    "invalid_rows": 0,
+    "rows_scanned": 6100960,
+    "rule": "evaluation lineage split; lowest sha256(seed:PuzzleId)",
+    "sample_size": 100,
+    "seed": "gemmafischer-accuracy-v1"
+  },
+  "source": {
+    "archive_path": "data/raw/lichess_db_puzzle.csv.zst",
+    "archive_sha256": "a0ea9129c6b6434dfb34a9ac4ec660c9cfff22b2de465e01854f018fc847f073",
+    "id": "lichess-puzzles-2026-08-02",
+    "license": "CC0-1.0",
+    "manifest_path": "data/sources.json",
+    "manifest_sha256": "5b096afb35600faaa5497e01a878505dcc62e713babd852a8115fad145dc7a73"
+  },
+  "status": "passed",
+  "summary": {
+    "categories": {
+      "advancedPawn": {
+        "count": 8,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "advantage": {
+        "count": 25,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "attraction": {
+        "count": 7,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "backRankMate": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "bishopEndgame": {
+        "count": 4,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "clearance": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "crushing": {
+        "count": 36,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "defensiveMove": {
+        "count": 11,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "deflection": {
+        "count": 4,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "discoveredAttack": {
+        "count": 6,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "discoveredCheck": {
+        "count": 3,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "enPassant": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "endgame": {
+        "count": 58,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "exposedKing": {
+        "count": 4,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "fork": {
+        "count": 4,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "hangingPiece": {
+        "count": 4,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "intermezzo": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "kingsideAttack": {
+        "count": 9,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "knightEndgame": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "long": {
+        "count": 28,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "master": {
+        "count": 18,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "masterVsMaster": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "mate": {
+        "count": 39,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "mateIn1": {
+        "count": 19,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "mateIn2": {
+        "count": 15,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "mateIn3": {
+        "count": 3,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "mateIn5": {
+        "count": 2,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "middlegame": {
+        "count": 39,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "oneMove": {
+        "count": 19,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "opening": {
+        "count": 3,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "operaMate": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "pawnEndgame": {
+        "count": 6,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "pin": {
+        "count": 5,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "promotion": {
+        "count": 3,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "queensideAttack": {
+        "count": 3,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "quietMove": {
+        "count": 7,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "rookEndgame": {
+        "count": 7,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "sacrifice": {
+        "count": 8,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "short": {
+        "count": 45,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "skewer": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "smotheredMate": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "veryLong": {
+        "count": 8,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      },
+      "zugzwang": {
+        "count": 1,
+        "top1_rate": 1.0,
+        "top3_rate": 1.0
+      }
+    },
+    "legality_rate": 1.0,
+    "top1_hits": 100,
+    "top1_rate": 1.0,
+    "top1_total": 100,
+    "top3_hits": 100,
+    "top3_rate": 1.0,
+    "top3_total": 100
+  },
+  "working_tree_clean": false
+}

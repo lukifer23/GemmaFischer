@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "warning": "Keep separate from reviewers until scoring is complete.",
+  "variants": {
+    "62eec5507f57": "deterministic",
+    "b3fd6f5b3647": "gemma",
+    "0271a2034c3e": "deterministic",
+    "d7f16d81a59a": "gemma",
+    "c2d7ca2f9f6c": "deterministic",
+    "b429391ee04a": "gemma",
+    "2db3a2fd6451": "deterministic",
+    "442ff857af56": "gemma",
+    "ac4a168ecfae": "deterministic"
+  }
+}

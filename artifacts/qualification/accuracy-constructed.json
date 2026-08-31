@@ -1,0 +1,664 @@
+{
+  "benchmark": "constructed-chess-accuracy",
+  "cases": [
+    {
+      "fixture": {
+        "category": "terminal-checkmate",
+        "expected_terminal_reason": "checkmate",
+        "expected_top_moves": [],
+        "fen": "7k/7Q/7K/8/8/8/8/8 b - - 0 1",
+        "id": "terminal-checkmate",
+        "license": "CC0-1.0",
+        "reference_method": "python-chess rules evaluation",
+        "score_expectation": "terminal",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "checkmate",
+          "top1_hit": null,
+          "top3_hit": null
+        },
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "checkmate",
+          "top1_hit": null,
+          "top3_hit": null
+        },
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "checkmate",
+          "top1_hit": null,
+          "top3_hit": null
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "terminal-stalemate",
+        "expected_terminal_reason": "stalemate",
+        "expected_top_moves": [],
+        "fen": "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1",
+        "id": "terminal-stalemate",
+        "license": "CC0-1.0",
+        "reference_method": "python-chess rules evaluation",
+        "score_expectation": "terminal",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "stalemate",
+          "top1_hit": null,
+          "top3_hit": null
+        },
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "stalemate",
+          "top1_hit": null,
+          "top3_hit": null
+        },
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "stalemate",
+          "top1_hit": null,
+          "top3_hit": null
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "terminal-insufficient-material",
+        "expected_terminal_reason": "insufficient_material",
+        "expected_top_moves": [],
+        "fen": "8/8/8/8/8/2k5/8/2K5 w - - 0 1",
+        "id": "terminal-insufficient-material",
+        "license": "CC0-1.0",
+        "reference_method": "python-chess rules evaluation",
+        "score_expectation": "terminal",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "insufficient_material",
+          "top1_hit": null,
+          "top3_hit": null
+        },
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "insufficient_material",
+          "top1_hit": null,
+          "top3_hit": null
+        },
+        {
+          "candidate_moves": [],
+          "candidate_scores": [],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": "insufficient_material",
+          "top1_hit": null,
+          "top3_hit": null
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "mate-in-one",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "g6g7"
+        ],
+        "fen": "7k/8/5KQ1/8/8/8/8/8 w - - 0 1",
+        "id": "unique-queen-mate",
+        "license": "CC0-1.0",
+        "reference_method": "exhaustive legal-move mate enumeration",
+        "score_expectation": "mate_for_side",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "g6g7",
+            "g6h6",
+            "g6g3"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "g6g7",
+            "g6h6",
+            "g6g3"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "g6g7",
+            "g6h6",
+            "g6g3"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "mate-in-one",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "d1d8"
+        ],
+        "fen": "6k1/5ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1",
+        "id": "unique-back-rank-mate",
+        "license": "CC0-1.0",
+        "reference_method": "exhaustive legal-move mate enumeration",
+        "score_expectation": "mate_for_side",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "d1d8",
+            "f2f4",
+            "f2f3"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": null,
+              "score_cp": 696
+            },
+            {
+              "mate_in": null,
+              "score_cp": 694
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "d1d8",
+            "f2f4",
+            "f2f3"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": null,
+              "score_cp": 696
+            },
+            {
+              "mate_in": null,
+              "score_cp": 694
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "d1d8",
+            "f2f4",
+            "f2f3"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": null,
+              "score_cp": 696
+            },
+            {
+              "mate_in": null,
+              "score_cp": 694
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "promotion-mate-in-one",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "a7a8q",
+          "a7a8r"
+        ],
+        "fen": "7k/P7/6K1/8/8/8/8/8 w - - 0 1",
+        "id": "promotion-mate-equivalence",
+        "license": "CC0-1.0",
+        "reference_method": "exhaustive legal-move mate enumeration",
+        "score_expectation": "mate_for_side",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "a7a8q",
+            "a7a8r",
+            "g6f6"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 4,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "a7a8q",
+            "a7a8r",
+            "g6f6"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 4,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "a7a8q",
+            "a7a8r",
+            "g6f6"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 4,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "forced-only-move-mated-next",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "h8h7"
+        ],
+        "fen": "7k/8/5K2/6Q1/8/8/8/8 b - - 0 1",
+        "id": "forced-losing-king-move",
+        "license": "CC0-1.0",
+        "reference_method": "single legal move enumeration",
+        "score_expectation": "mate_against_side",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "h8h7"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": -1,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "h8h7"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": -1,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "h8h7"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": -1,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "forced-only-move-check-evasion",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "c1d2"
+        ],
+        "fen": "8/8/8/8/8/8/8/KQk5 b - - 0 1",
+        "id": "forced-check-evasion",
+        "license": "CC0-1.0",
+        "reference_method": "single legal move enumeration",
+        "score_expectation": "any",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "c1d2"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": -10,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "c1d2"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": -10,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "c1d2"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": -10,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    }
+  ],
+  "commit": "d51e42aa0331309a0cbcca621d4f80162aa17a5b",
+  "engine": {
+    "binary_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+    "node_budget": 250000,
+    "options": {
+      "Hash": 64,
+      "Skill Level": 20,
+      "Threads": 1,
+      "UCI_ShowWDL": true
+    },
+    "path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish"
+  },
+  "evidence_scope": "rules-derived-edge-suite",
+  "fixture_count": 8,
+  "fixture_path": "data/evaluation/accuracy_positions.jsonl",
+  "fixture_sha256": "32784e364e53724a82b0e49801bc92190b27b566ae0b25442128bf99ef192fe1",
+  "gates": {
+    "legality_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    },
+    "repeatability_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    },
+    "score_mate_consistency_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    },
+    "terminal_correctness_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    },
+    "top1_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    },
+    "top3_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    }
+  },
+  "generated_at": "2026-08-30T23:40:58.781527+00:00",
+  "machine": "arm64",
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "python": "3.12.12",
+  "repeats": 3,
+  "schema_version": "1.0",
+  "score_tolerance_cp": 15,
+  "status": "passed",
+  "summary": {
+    "legality_rate": 1.0,
+    "repeatability_rate": 1.0,
+    "score_mate_consistency_rate": 1.0,
+    "terminal_correctness_rate": 1.0,
+    "top1_hits": 15,
+    "top1_rate": 1.0,
+    "top1_total": 15,
+    "top3_hits": 15,
+    "top3_rate": 1.0,
+    "top3_total": 15
+  },
+  "working_tree_clean": false
+}

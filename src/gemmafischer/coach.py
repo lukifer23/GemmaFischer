@@ -171,7 +171,13 @@ def validate_model_claims(
 def merge_model_claims(
     model_claims: tuple[CoachingClaim, ...], baseline_claims: tuple[CoachingClaim, ...]
 ) -> tuple[CoachingClaim, ...]:
-    required = tuple(claim for claim in baseline_claims if isinstance(claim, ComparisonClaim))
+    # The deterministic layer owns the required factual spine. Gemma may add a
+    # bounded line or select concept ordering, but incomplete model output can
+    # never remove the best move, score, guidance, or move comparison.
+    required = (
+        *(claim for claim in baseline_claims if isinstance(claim, ComparisonClaim)),
+        *(claim for claim in baseline_claims if not isinstance(claim, ComparisonClaim)),
+    )
     merged: list[CoachingClaim] = []
     seen: set[str] = set()
     for claim in (*required, *model_claims):

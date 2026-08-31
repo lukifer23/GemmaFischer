@@ -1,0 +1,218 @@
+{
+  "schema_version": "1.0",
+  "status": "human_open",
+  "blinded": true,
+  "instructions": "Score each variant independently. Automated grounding results do not establish pedagogical usefulness.",
+  "rows": [
+    {
+      "case_id": "opening-development-beginner",
+      "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+      "rating_bucket": "1000-1199",
+      "considered_move_uci": "f1b5",
+      "variants": [
+        {
+          "variant_id": "62eec5507f57",
+          "summary": "Start with Bb5. White is better by 0.50 pawns.",
+          "claims": [
+            "The engine recommends Bb5 (f1b5).",
+            "White is better by 0.50 pawns.",
+            "Principal variation: f1b5 a7a6 b5a4 f8e7",
+            "f1b5 is effectively equal to f1b5 within 15 centipawns.",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why Bb5?",
+          "lesson_steps": [
+            "Bb5 develops a minor piece from its starting square."
+          ]
+        },
+        {
+          "variant_id": "b3fd6f5b3647",
+          "summary": "Start with Bb5. White is better by 0.50 pawns.",
+          "claims": [
+            "f1b5 is effectively equal to f1b5 within 15 centipawns.",
+            "The engine recommends Bb5 (f1b5).",
+            "White is better by 0.50 pawns.",
+            "Principal variation: f1b5 a7a6 b5a4 f8e7",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why Bb5?",
+          "lesson_steps": [
+            "Bb5 develops a minor piece from its starting square."
+          ]
+        }
+      ],
+      "rubric_fields": {
+        "factual_correctness_1_to_5": null,
+        "relevance_1_to_5": null,
+        "rating_appropriateness_1_to_5": null,
+        "clarity_1_to_5": null,
+        "actionability_1_to_5": null,
+        "preferred_variant_id": null,
+        "reviewer_notes": null
+      }
+    },
+    {
+      "case_id": "in-check-forced-capture",
+      "fen": "4k3/8/8/8/8/8/4r3/4K3 w - - 0 1",
+      "rating_bucket": "1200-1399",
+      "considered_move_uci": "e1f1",
+      "variants": [
+        {
+          "variant_id": "0271a2034c3e",
+          "summary": "Start with Kxe2. White is better by 0.09 pawns.",
+          "claims": [
+            "The engine recommends Kxe2 (e1e2).",
+            "White is better by 0.09 pawns.",
+            "Principal variation: e1e2 e8f7 e2e3 f7g7",
+            "The matched-budget comparison favors e1e2.",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why Kxe2?",
+          "lesson_steps": [
+            "Calculate the capture after Kxe2.",
+            "Track the material change created by Kxe2."
+          ]
+        },
+        {
+          "variant_id": "d7f16d81a59a",
+          "summary": "Start with Kxe2. White is better by 0.09 pawns.",
+          "claims": [
+            "The matched-budget comparison favors e1e2.",
+            "The engine recommends Kxe2 (e1e2).",
+            "White is better by 0.09 pawns.",
+            "Principal variation: e1e2 e8f7 e2e3 f7g7",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why Kxe2?",
+          "lesson_steps": [
+            "Calculate the capture after Kxe2.",
+            "Track the material change created by Kxe2."
+          ]
+        }
+      ],
+      "rubric_fields": {
+        "factual_correctness_1_to_5": null,
+        "relevance_1_to_5": null,
+        "rating_appropriateness_1_to_5": null,
+        "clarity_1_to_5": null,
+        "actionability_1_to_5": null,
+        "preferred_variant_id": null,
+        "reviewer_notes": null
+      }
+    },
+    {
+      "case_id": "queenside-castling-club",
+      "fen": "r1bq1rk1/ppp2ppp/2np1n2/8/2B1P3/2N2N2/PPPQ1PPP/R3K2R w KQ - 0 10",
+      "rating_bucket": "1400-1599",
+      "considered_move_uci": "e1c1",
+      "variants": [
+        {
+          "variant_id": "b429391ee04a",
+          "summary": "Start with O-O-O. White is better by 0.68 pawns.",
+          "claims": [
+            "e1c1 is effectively equal to e1c1 within 15 centipawns.",
+            "The engine recommends O-O-O (e1c1).",
+            "White is better by 0.68 pawns.",
+            "Principal variation: e1c1 a7a6 h1e1 c8e6 c4f1 b7b5 h2h3 a8b8",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why O-O-O?",
+          "lesson_steps": [
+            "O-O-O castles the king."
+          ]
+        },
+        {
+          "variant_id": "c2d7ca2f9f6c",
+          "summary": "Start with O-O-O. White is better by 0.68 pawns.",
+          "claims": [
+            "The engine recommends O-O-O (e1c1).",
+            "White is better by 0.68 pawns.",
+            "Principal variation: e1c1 a7a6 h1e1 c8e6 c4f1 b7b5 h2h3 a8b8",
+            "e1c1 is effectively equal to e1c1 within 15 centipawns.",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why O-O-O?",
+          "lesson_steps": [
+            "O-O-O castles the king."
+          ]
+        }
+      ],
+      "rubric_fields": {
+        "factual_correctness_1_to_5": null,
+        "relevance_1_to_5": null,
+        "rating_appropriateness_1_to_5": null,
+        "clarity_1_to_5": null,
+        "actionability_1_to_5": null,
+        "preferred_variant_id": null,
+        "reviewer_notes": null
+      }
+    },
+    {
+      "case_id": "losing-pawn-endgame-advanced",
+      "fen": "8/5pk1/7p/8/3K4/8/8/8 w - - 0 1",
+      "rating_bucket": "1600-1800",
+      "considered_move_uci": "d4e5",
+      "variants": [
+        {
+          "variant_id": "2db3a2fd6451",
+          "summary": "Start with Ke3. Black is better by 7.38 pawns.",
+          "claims": [
+            "The engine recommends Ke3 (d4e3).",
+            "Black is better by 7.38 pawns.",
+            "Principal variation: d4e3 h6h5 e3f3 g7f6 f3f4 f6g6 f4e4 g6g5",
+            "d4e5 is effectively equal to d4e3 within 15 centipawns.",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why Ke3?",
+          "lesson_steps": []
+        },
+        {
+          "variant_id": "442ff857af56",
+          "summary": "Start with Ke3. Black is better by 7.38 pawns.",
+          "claims": [
+            "d4e5 is effectively equal to d4e3 within 15 centipawns.",
+            "The engine recommends Ke3 (d4e3).",
+            "Black is better by 7.38 pawns.",
+            "Principal variation: d4e3 h6h5 e3f3 g7f6 f3f4 f6g6 f4e4 g6g5",
+            "Compare the forcing replies to both candidate moves."
+          ],
+          "lesson_title": "Why Ke3?",
+          "lesson_steps": []
+        }
+      ],
+      "rubric_fields": {
+        "factual_correctness_1_to_5": null,
+        "relevance_1_to_5": null,
+        "rating_appropriateness_1_to_5": null,
+        "clarity_1_to_5": null,
+        "actionability_1_to_5": null,
+        "preferred_variant_id": null,
+        "reviewer_notes": null
+      }
+    },
+    {
+      "case_id": "terminal-checkmate",
+      "fen": "7k/7Q/7K/8/8/8/8/8 b - - 0 1",
+      "rating_bucket": "1000-1199",
+      "considered_move_uci": null,
+      "variants": [
+        {
+          "variant_id": "ac4a168ecfae",
+          "summary": "This position is terminal: checkmate.",
+          "claims": [],
+          "lesson_title": "Game complete",
+          "lesson_steps": []
+        }
+      ],
+      "rubric_fields": {
+        "factual_correctness_1_to_5": null,
+        "relevance_1_to_5": null,
+        "rating_appropriateness_1_to_5": null,
+        "clarity_1_to_5": null,
+        "actionability_1_to_5": null,
+        "preferred_variant_id": null,
+        "reviewer_notes": null
+      }
+    }
+  ]
+}

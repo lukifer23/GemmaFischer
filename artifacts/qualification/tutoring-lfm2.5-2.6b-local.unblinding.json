@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "warning": "Keep separate from reviewers until scoring is complete.",
+  "variants": {
+    "ac4a168ecfae": "deterministic"
+  }
+}

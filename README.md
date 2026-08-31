@@ -9,7 +9,7 @@ The supported product is intentionally narrow and real:
 - every comparison uses separate, equal-budget searches and never rewrites MultiPV ranking;
 - evidence IDs include position, engine binary, and analysis configuration;
 - visible factual coaching is rendered from typed evidence and deterministic concept facts;
-- optional Gemma 4 E2B may select typed lesson claims, but never invent moves, scores, or prose;
+- an optional qualified text model may select typed lesson claims, but never invent moves, scores, or prose;
 - sessions and bounded analysis history persist in local SQLite;
 - mutations require a per-launch capability token and the server accepts loopback traffic only.
 
@@ -51,6 +51,7 @@ uv run gemmafischer analyze --offline --mode compare \
 
 - `deterministic` is the baseline: FastAPI, python-chess, persistent Stockfish, evidence schema 2.0, and typed deterministic lessons.
 - `full` adds MLX-LM 0.31.3 and the revision-pinned `mlx-community/gemma-4-e2b-it-4bit`. Runtime loading is offline-only; missing or corrupt assets degrade explicitly to deterministic coaching.
+- LM Studio models are qualification candidates, not silently selected player runtimes. The local LFM2.5-2.6B 4-bit candidate is smaller, but its current always-thinking checkpoint failed the visible-output and tutoring gates described in the model card.
 - `dev` checks portable contributor prerequisites without requiring Stockfish or model assets.
 
 No training command exists in the player. Training is blocked until a newly acquired corpus has complete license and lineage metadata, zero invalid or conflicting labels, and frozen leakage-free evaluation splits. Historical data was audited, found unsafe for training, and archived rather than silently repaired.
@@ -73,6 +74,22 @@ uv run gemmafischer verify
 uv run gemmafischer repo-audit
 uv run gemmafischer benchmark --profile deterministic --requests 100 \
   --output artifacts/qualification/deterministic-local.json
+uv run gemmafischer profile-model --requests 21 \
+  --output artifacts/qualification/model-profile-local.json
+uv run gemmafischer evaluate-accuracy --suite all
+uv run gemmafischer evaluate-tutoring --profile full --repetitions 2 \
+  --output artifacts/qualification/tutoring-full-local.json
+```
+
+An installed LM Studio candidate can be tested through the same real prompt and
+tutoring contracts. The weight file is mandatory so the artifact records its
+SHA-256 rather than trusting only a mutable model alias:
+
+```bash
+uv run gemmafischer profile-model --backend lmstudio \
+  --model lfm2.5-2.6b-mlx \
+  --model-artifact /absolute/path/to/model.safetensors \
+  --output artifacts/qualification/model-profile-lfm-local.json
 ```
 
 `verify` runs Ruff, strict mypy, and all non-model tests. The suite includes real Stockfish qualification, API security, session revision conflicts, SQLite restart persistence, evidence migration, and data-gate behavior. The generated OpenAPI contract is checked in CI.

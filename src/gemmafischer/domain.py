@@ -352,7 +352,7 @@ class CoachingResult(StrictModel):
     summary: str
     claims: tuple[CoachingClaim, ...] = Field(max_length=5)
     removed_claim_codes: tuple[str, ...] = ()
-    source: Literal["deterministic", "gemma"]
+    source: Literal["deterministic", "gemma", "lfm"]
     lesson_plan: LessonPlan | None = None
 
     @model_validator(mode="before")
