@@ -590,9 +590,312 @@
           "top3_hit": true
         }
       ]
+    },
+    {
+      "fixture": {
+        "category": "castling-mate-in-one",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "e1g1"
+        ],
+        "fen": "8/8/8/1r2Q3/6b1/5k2/8/4K2R w K - 0 1",
+        "id": "unique-castling-mate",
+        "license": "CC0-1.0",
+        "reference_method": "exhaustive legal-move mate enumeration",
+        "score_expectation": "mate_for_side",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "e1g1",
+            "e5e2",
+            "e5b5"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 9,
+              "score_cp": null
+            },
+            {
+              "mate_in": null,
+              "score_cp": 1131
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "e1g1",
+            "e5e2",
+            "e5b5"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 9,
+              "score_cp": null
+            },
+            {
+              "mate_in": null,
+              "score_cp": 1131
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "e1g1",
+            "e5e2",
+            "e5b5"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 9,
+              "score_cp": null
+            },
+            {
+              "mate_in": null,
+              "score_cp": 1131
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "en-passant-mate-in-one",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "e5d6"
+        ],
+        "fen": "2K5/6P1/4k2N/3pP3/3Q4/8/4R3/8 w - d6 0 1",
+        "id": "unique-en-passant-mate",
+        "license": "CC0-1.0",
+        "reference_method": "exhaustive legal-move mate enumeration",
+        "score_expectation": "mate_for_side",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "e5d6",
+            "d4a7",
+            "d4c5"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "e5d6",
+            "d4a7",
+            "d4c5"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "e5d6",
+            "d4a7",
+            "d4c5"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": 1,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            },
+            {
+              "mate_in": 2,
+              "score_cp": null
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "category": "simple-material-outcome",
+        "expected_terminal_reason": null,
+        "expected_top_moves": [
+          "e1e2"
+        ],
+        "fen": "4k3/8/8/8/8/8/4r3/4K3 w - - 0 1",
+        "id": "material-saving-check-evasion",
+        "license": "CC0-1.0",
+        "reference_method": "legal-move enumeration and immediate material delta",
+        "score_expectation": "any",
+        "source": "GemmaFischer constructed position"
+      },
+      "runs": [
+        {
+          "candidate_moves": [
+            "e1e2",
+            "e1f1",
+            "e1d1"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": null,
+              "score_cp": 9
+            },
+            {
+              "mate_in": null,
+              "score_cp": -376
+            },
+            {
+              "mate_in": null,
+              "score_cp": -455
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "e1e2",
+            "e1f1",
+            "e1d1"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": null,
+              "score_cp": 9
+            },
+            {
+              "mate_in": null,
+              "score_cp": -376
+            },
+            {
+              "mate_in": null,
+              "score_cp": -455
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        },
+        {
+          "candidate_moves": [
+            "e1e2",
+            "e1f1",
+            "e1d1"
+          ],
+          "candidate_scores": [
+            {
+              "mate_in": null,
+              "score_cp": 9
+            },
+            {
+              "mate_in": null,
+              "score_cp": -376
+            },
+            {
+              "mate_in": null,
+              "score_cp": -455
+            }
+          ],
+          "legal": true,
+          "repeatable": true,
+          "score_mate_consistent": true,
+          "terminal_correct": true,
+          "terminal_reason": null,
+          "top1_hit": true,
+          "top3_hit": true
+        }
+      ]
     }
   ],
-  "commit": "d51e42aa0331309a0cbcca621d4f80162aa17a5b",
+  "commit": "21b2f9a51ef2cdacc85196ec139ac84f57ca5d3b",
   "engine": {
     "binary_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
     "node_budget": 250000,
@@ -605,9 +908,9 @@
     "path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish"
   },
   "evidence_scope": "rules-derived-edge-suite",
-  "fixture_count": 8,
+  "fixture_count": 11,
   "fixture_path": "data/evaluation/accuracy_positions.jsonl",
-  "fixture_sha256": "32784e364e53724a82b0e49801bc92190b27b566ae0b25442128bf99ef192fe1",
+  "fixture_sha256": "fcb254b99dac8c27d3521d5ebda0591bcdfd0af24bce9572b1666e8a54235bc8",
   "gates": {
     "legality_rate": {
       "actual": 1.0,
@@ -640,7 +943,7 @@
       "required": 1.0
     }
   },
-  "generated_at": "2026-08-30T23:40:58.781527+00:00",
+  "generated_at": "2026-08-31T01:04:07.505751+00:00",
   "machine": "arm64",
   "platform": "macOS-27.0-arm64-arm-64bit",
   "python": "3.12.12",
@@ -653,12 +956,12 @@
     "repeatability_rate": 1.0,
     "score_mate_consistency_rate": 1.0,
     "terminal_correctness_rate": 1.0,
-    "top1_hits": 15,
+    "top1_hits": 24,
     "top1_rate": 1.0,
-    "top1_total": 15,
-    "top3_hits": 15,
+    "top1_total": 24,
+    "top3_hits": 24,
     "top3_rate": 1.0,
-    "top3_total": 15
+    "top3_total": 24
   },
   "working_tree_clean": false
 }

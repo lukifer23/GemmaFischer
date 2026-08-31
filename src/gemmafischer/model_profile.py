@@ -5,8 +5,8 @@ import statistics
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Iterable, Sequence
-from dataclasses import asdict, dataclass
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +36,8 @@ class ModelRequestMetrics:
     reasoning_text: str = ""
     succeeded: bool = True
     error_code: str | None = None
+    contract_valid: bool | None = None
+    contract_error: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -72,6 +74,7 @@ def summarize_model_requests(requests: Sequence[ModelRequestMetrics]) -> dict[st
     if not requests:
         raise ValueError("At least one model request is required")
     warm = requests[1:] if len(requests) > 1 else requests
+    contract_checked = [item for item in requests if item.contract_valid is not None]
     return {
         "request_count": len(requests),
         "total_prompt_tokens": sum(item.prompt_tokens for item in requests),
@@ -79,12 +82,43 @@ def summarize_model_requests(requests: Sequence[ModelRequestMetrics]) -> dict[st
         "successful_request_count": sum(item.succeeded for item in requests),
         "failed_request_count": sum(not item.succeeded for item in requests),
         "successful_request_rate": sum(item.succeeded for item in requests) / len(requests),
+        "contract_checked_request_count": len(contract_checked),
+        "contract_valid_request_count": sum(item.contract_valid is True for item in requests),
+        "contract_valid_request_rate": (
+            sum(item.contract_valid is True for item in contract_checked) / len(contract_checked)
+            if contract_checked
+            else None
+        ),
         "peak_mlx_memory_bytes": _optional_max(
             [item.peak_mlx_memory_bytes for item in requests]
         ),
         "all_requests": _request_summary(requests),
         "warm_requests": _request_summary(warm),
     }
+
+
+def validate_profile_outputs(
+    profile: ModelProfile,
+    validator: Callable[[int, str], None],
+) -> ModelProfile:
+    """Apply the production output contract to every captured model response."""
+
+    checked: list[ModelRequestMetrics] = []
+    for request in profile.requests:
+        try:
+            validator(request.request_index, request.output_text)
+        except ValueError as exc:
+            checked.append(
+                replace(
+                    request,
+                    contract_valid=False,
+                    contract_error=str(exc)[:500],
+                )
+            )
+        else:
+            checked.append(replace(request, contract_valid=True, contract_error=None))
+    frozen = tuple(checked)
+    return replace(profile, requests=frozen, summary=summarize_model_requests(frozen))
 
 
 def profile_mlx_generation(

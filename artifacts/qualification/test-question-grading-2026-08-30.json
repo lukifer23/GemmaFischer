@@ -1,0 +1,359 @@
+{
+  "answer_contract": "exact-uci-san-or-terminal-reason",
+  "benchmark": "deterministic-test-question-grading",
+  "case_path": "data/evaluation/test_questions.jsonl",
+  "case_sha256": "dcb11f52553bfa33fc08e7178093e906171b80f1601156af6ab6e3aeefd12886",
+  "commit": "21b2f9a51ef2cdacc85196ec139ac84f57ca5d3b",
+  "evidence_scope": "rules-derived-label-and-exact-notation-grader",
+  "gates": {
+    "grading_agreement_rate": {
+      "actual": 1.0,
+      "passed": true,
+      "required": 1.0
+    }
+  },
+  "generated_at": "2026-08-31T01:04:58.704300+00:00",
+  "question_generation_status": "fixture-defined",
+  "results": [
+    {
+      "actual_correct": true,
+      "answer": "g6g7",
+      "case_id": "queen-mate-uci-san",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "g6g7",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "Qg7#",
+      "case_id": "queen-mate-uci-san",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "g6g7",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "Qg7",
+      "case_id": "queen-mate-uci-san",
+      "example": 3,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "g6g7",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "g6h6",
+      "case_id": "queen-mate-uci-san",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": "g6h6",
+      "reason": "incorrect"
+    },
+    {
+      "actual_correct": false,
+      "answer": "I would play Qg7#",
+      "case_id": "queen-mate-uci-san",
+      "example": 5,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "a7a8q",
+      "case_id": "promotion-mates",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "a7a8q",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "a8=R#",
+      "case_id": "promotion-mates",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "a7a8r",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "a7a8n",
+      "case_id": "promotion-mates",
+      "example": 3,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": "a7a8n",
+      "reason": "incorrect"
+    },
+    {
+      "actual_correct": false,
+      "answer": "a7a8",
+      "case_id": "promotion-mates",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "O-O#",
+      "case_id": "castling-mate",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "e1g1",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "0-0",
+      "case_id": "castling-mate",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "e1g1",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "e1g1",
+      "case_id": "castling-mate",
+      "example": 3,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "e1g1",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "e1c1",
+      "case_id": "castling-mate",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "exd6#",
+      "case_id": "en-passant-mate",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "e5d6",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "e5d6",
+      "case_id": "en-passant-mate",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "e5d6",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "Qe4+",
+      "case_id": "en-passant-mate",
+      "example": 3,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": "d4e4",
+      "reason": "incorrect"
+    },
+    {
+      "actual_correct": false,
+      "answer": "en passant",
+      "case_id": "en-passant-mate",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "c1d2",
+      "case_id": "only-check-evasion",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "c1d2",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "Kd2",
+      "case_id": "only-check-evasion",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "c1d2",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "Kb2",
+      "case_id": "only-check-evasion",
+      "example": 3,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": false,
+      "answer": "pass",
+      "case_id": "only-check-evasion",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "checkmate",
+      "case_id": "identify-checkmate",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "checkmate",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "Mate!",
+      "case_id": "identify-checkmate",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "checkmate",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "stalemate",
+      "case_id": "identify-checkmate",
+      "example": 3,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": "stalemate",
+      "reason": "incorrect"
+    },
+    {
+      "actual_correct": false,
+      "answer": "not checkmate",
+      "case_id": "identify-checkmate",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "stalemate",
+      "case_id": "identify-stalemate",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "stalemate",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "Stalemate.",
+      "case_id": "identify-stalemate",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "stalemate",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "checkmate",
+      "case_id": "identify-stalemate",
+      "example": 3,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": "checkmate",
+      "reason": "incorrect"
+    },
+    {
+      "actual_correct": false,
+      "answer": "draw",
+      "case_id": "identify-stalemate",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    },
+    {
+      "actual_correct": true,
+      "answer": "insufficient material",
+      "case_id": "identify-insufficient-material",
+      "example": 1,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "insufficient_material",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": true,
+      "answer": "draw by insufficient material",
+      "case_id": "identify-insufficient-material",
+      "example": 2,
+      "expected_correct": true,
+      "matched": true,
+      "normalized_answer": "insufficient_material",
+      "reason": "accepted"
+    },
+    {
+      "actual_correct": false,
+      "answer": "stalemate",
+      "case_id": "identify-insufficient-material",
+      "example": 3,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": "stalemate",
+      "reason": "incorrect"
+    },
+    {
+      "actual_correct": false,
+      "answer": "material",
+      "case_id": "identify-insufficient-material",
+      "example": 4,
+      "expected_correct": false,
+      "matched": true,
+      "normalized_answer": null,
+      "reason": "invalid_notation"
+    }
+  ],
+  "schema_version": "1.0",
+  "status": "passed",
+  "summary": {
+    "case_count": 8,
+    "correct_examples": 18,
+    "grading_agreement_rate": 1.0,
+    "grading_example_count": 33,
+    "incorrect_examples": 15
+  },
+  "working_tree_clean": false
+}

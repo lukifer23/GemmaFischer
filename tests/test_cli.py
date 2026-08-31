@@ -31,3 +31,12 @@ def test_lmstudio_qualification_options_are_explicit() -> None:
     assert args.backend == "lmstudio"
     assert args.model == "lfm2.5-2.6b-mlx"
     assert str(args.model_artifact) == "/tmp/model.safetensors"
+
+
+def test_runtime_qualification_options_are_explicit() -> None:
+    args = parser().parse_args(
+        ["profile-runtime", "--requests", "7", "--nodes", "1234", "--output", "/tmp/run.json"]
+    )
+    assert args.requests == 7
+    assert args.nodes == 1234
+    assert str(args.output) == "/tmp/run.json"

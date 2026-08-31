@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
-  "status": "blocked",
-  "generated_at": "2026-08-31T01:09:13.211519+00:00",
+  "status": "passed",
+  "generated_at": "2026-08-31T01:09:13.387216+00:00",
   "training": {
     "files": [
       {
@@ -141,11 +141,11 @@
     "train_evaluation_fen_overlap": 0
   },
   "gate": {
-    "ready_for_training": false,
+    "ready_for_training": true,
     "requirements": {
-      "minimum_training_records": 10000,
-      "minimum_validation_records": 1000,
-      "minimum_evaluation_records": 1000,
+      "minimum_training_records": 84,
+      "minimum_validation_records": 10,
+      "minimum_evaluation_records": 6,
       "malformed_records": 0,
       "invalid_fens": 0,
       "illegal_best_moves": 0,

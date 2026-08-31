@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-31T01:09:13.616731+00:00",
+  "status": "blocked",
+  "authorized_to_train": false,
+  "checks": {
+    "hardware_smoke_eligible": true,
+    "data_contract_and_isolation": false,
+    "toolchain_exactly_pinned_and_installed": false,
+    "native_base_weights_pinned": false,
+    "error_and_baseline_evidence_frozen": false
+  },
+  "hardware": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "chip": "Apple M3 Pro",
+    "memory_bytes": 19327352832
+  },
+  "installed_versions": {
+    "unsloth": null,
+    "unsloth_zoo": null,
+    "mlx": "0.32.2",
+    "mlx_lm": "0.31.3"
+  },
+  "manifest": "training/post-training.json",
+  "data_audit": "artifacts/data-audit/current-main.json",
+  "blockers": [
+    "data_contract_and_isolation",
+    "toolchain_exactly_pinned_and_installed",
+    "native_base_weights_pinned",
+    "error_and_baseline_evidence_frozen"
+  ],
+  "next_allowed_action": "resolve blockers and rerun this gate; do not train"
+}

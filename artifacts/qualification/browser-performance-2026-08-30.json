@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "status": "passed",
+  "generated_at": "2026-08-30T20:01:00-05:00",
+  "commit": "21b2f9a51ef2cdacc85196ec139ac84f57ca5d3b",
+  "working_tree_clean": false,
+  "url": "http://127.0.0.1:8765/",
+  "browser": "gstack Chromium",
+  "navigation_ms": {
+    "ttfb": 3.6,
+    "first_contentful_paint": 44.0,
+    "dom_interactive": 10.3,
+    "dom_complete": 33.4,
+    "full_load": 33.4,
+    "largest_contentful_paint": null
+  },
+  "resources": {
+    "request_count": 4,
+    "total_transfer_bytes": 39163,
+    "javascript_bytes": 28103,
+    "css_bytes": 9836,
+    "items": [
+      {"name": "sessions", "type": "fetch", "transfer_bytes": 803, "duration_ms": 10},
+      {"name": "app.css", "type": "link", "transfer_bytes": 9836, "duration_ms": 4},
+      {"name": "app.js", "type": "script", "transfer_bytes": 28103, "duration_ms": 4},
+      {"name": "capabilities", "type": "fetch", "transfer_bytes": 421, "duration_ms": 3}
+    ]
+  },
+  "budgets": {
+    "first_contentful_paint_under_1800ms": true,
+    "javascript_under_500000_bytes": true,
+    "css_under_100000_bytes": true,
+    "transfer_under_2000000_bytes": true,
+    "requests_under_50": true
+  },
+  "limitations": [
+    "Largest Contentful Paint was not exposed by this capture and is null rather than estimated.",
+    "This is one local navigation, not a cross-device or network-throttled release result.",
+    "The worktree contained concurrent qualification changes; rerun from the final clean commit for release evidence."
+  ]
+}

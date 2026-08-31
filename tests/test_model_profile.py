@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from gemmafischer.model_profile import ModelRequestMetrics, summarize_model_requests
+from gemmafischer.model_profile import (
+    ModelProfile,
+    ModelRequestMetrics,
+    summarize_model_requests,
+    validate_profile_outputs,
+)
 
 
 def _metrics(
@@ -60,3 +65,25 @@ def test_single_request_is_also_the_warm_summary() -> None:
 def test_summary_rejects_empty_input() -> None:
     with pytest.raises(ValueError, match="At least one"):
         summarize_model_requests(())
+
+
+def test_profile_output_validation_records_exact_contract_rate() -> None:
+    requests = (
+        _metrics(0, ttft=1.0, total=2.0, generation_tps=20.0),
+        _metrics(1, ttft=1.0, total=2.0, generation_tps=20.0),
+    )
+    profile = ModelProfile("model", "revision", 0.1, 0.2, requests, {})
+
+    def validator(index: int, output: str) -> None:
+        assert output == "grounded output"
+        if index == 1:
+            raise ValueError("schema mismatch")
+
+    result = validate_profile_outputs(profile, validator)
+
+    assert result.requests[0].contract_valid is True
+    assert result.requests[1].contract_valid is False
+    assert result.requests[1].contract_error == "schema mismatch"
+    assert result.summary["contract_checked_request_count"] == 2
+    assert result.summary["contract_valid_request_count"] == 1
+    assert result.summary["contract_valid_request_rate"] == 0.5

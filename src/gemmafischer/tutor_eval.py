@@ -470,7 +470,7 @@ def run_tutoring_qualification(
         "status": "passed" if passed else "failed",
         "scope": "automated-grounding-and-contract-qualification",
         "human_usefulness_status": "human_open",
-        "test_question_status": "not-assessed-no-question-output-contract",
+        "test_question_status": "separate-question-grading-qualification-required",
         "generated_at": datetime.now(UTC).isoformat(),
         "commit": _git_revision(),
         "profile": profile,

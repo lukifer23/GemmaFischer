@@ -17,7 +17,7 @@ from gemmafischer.accuracy_eval import (
 
 def test_constructed_fixture_references_are_rule_checkable() -> None:
     positions = load_accuracy_positions(Path("data/evaluation/accuracy_positions.jsonl"))
-    assert len(positions) == 8
+    assert len(positions) == 11
     assert {position.license for position in positions} == {"CC0-1.0"}
     assert sum(position.expected_terminal_reason is not None for position in positions) == 3
     assert (
@@ -27,6 +27,9 @@ def test_constructed_fixture_references_are_rule_checkable() -> None:
         )
         == 2
     )
+    assert {"castling-mate-in-one", "en-passant-mate-in-one", "simple-material-outcome"} <= {
+        position.category for position in positions
+    }
 
 
 def test_loader_rejects_an_illegal_expected_move(tmp_path: Path) -> None:
@@ -62,11 +65,11 @@ def test_constructed_benchmark_uses_real_stockfish_and_writes_evidence(tmp_path:
         node_budget=10_000,
     )
     assert result["summary"] == {
-        "top1_hits": 10,
-        "top1_total": 10,
+        "top1_hits": 16,
+        "top1_total": 16,
         "top1_rate": 1.0,
-        "top3_hits": 10,
-        "top3_total": 10,
+        "top3_hits": 16,
+        "top3_total": 16,
         "top3_rate": 1.0,
         "legality_rate": 1.0,
         "terminal_correctness_rate": 1.0,

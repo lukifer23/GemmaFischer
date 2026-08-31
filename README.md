@@ -63,9 +63,10 @@ uv run gemmafischer acquire-data
 uv sync --all-extras
 uv run gemmafischer build-dataset --limit 1000 --nodes 50000
 uv run gemmafischer audit-data
+uv run gemmafischer training-readiness
 ```
 
-The builder verifies the archive hash, applies the documented Lichess setup move, rejects illegal or repeated positions, creates Stockfish-backed concept evidence and typed lesson targets, and assigns whole puzzle lineages deterministically to train or evaluation. `audit-data` also blocks duplicates, incomplete chess records, corpora below 10,000 training and 1,000 evaluation records, or any license, provenance, legality, conflict, or leakage failure.
+The builder verifies the archive hash, applies the documented Lichess setup move, rejects illegal or repeated positions, creates Stockfish-backed evidence and parser-validated claim-selection targets, and assigns whole puzzle lineages deterministically to train, validation, or untouched final test. `audit-data` blocks duplicates, incomplete records, corpora below 10,000/1,000/1,000 rows, or any contract, license, provenance, legality, conflict, semantic-position leakage, or lineage-leakage failure.
 
 ## Verification
 
@@ -100,10 +101,13 @@ The latest implementation pass also ran the actual browser at 900×600: no horiz
 
 - [Dependency-ordered execution roadmap](docs/execution-roadmap.md)
 - [Phase 1 execution contract](docs/phase1-execution.md)
+- [Measurement and qualification execution](docs/phase2-execution.md)
+- [Clean stop and resume point](docs/resume-2026-08-30.md)
 - [Architecture and data flow](docs/architecture-vnext.md)
 - [Evidence and HTTP contracts](docs/evidence-contract.md)
 - [Model runtime and qualification](docs/model-card.md)
 - [Training and data policy](docs/data-provenance.md)
+- [Post-training and Unsloth readiness](docs/training-readiness.md)
 - [Performance targets and evidence](docs/performance-vnext.md)
 - [Qualification plan](docs/qualification-plan.md)
 - [Tutoring review rubric](docs/tutoring-review-rubric.md)

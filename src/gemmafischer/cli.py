@@ -21,7 +21,7 @@ from .accuracy_eval import (
     run_constructed_accuracy_benchmark,
     run_lichess_puzzle_accuracy_benchmark,
 )
-from .coach import render_claim
+from .coach import render_claim, validate_model_claims
 from .data_audit import audit_data
 from .dataset import acquire_source, build_puzzle_dataset, load_source
 from .domain import AnalysisRequest, AnalysisState, RatingBucket, Workflow
@@ -34,7 +34,11 @@ from .lifecycle import (
     stop_instance,
 )
 from .lmstudio import DEFAULT_LFM_MODEL, DEFAULT_LM_STUDIO_URL
-from .model_profile import profile_lmstudio_generation, profile_mlx_generation
+from .model_profile import (
+    profile_lmstudio_generation,
+    profile_mlx_generation,
+    validate_profile_outputs,
+)
 from .qualification import run_deterministic_benchmark, run_full_profile_benchmark
 from .repo_audit import audit_repository
 from .runtime import (
@@ -43,9 +47,12 @@ from .runtime import (
     ModelUnavailable,
     claim_selection_prompt,
     inspect_model_assets,
+    parse_claim_selection,
 )
+from .runtime_qualification import run_runtime_qualification
 from .service import AnalysisService
 from .storage import default_history_path
+from .training_readiness import evaluate_training_readiness
 from .tutor_eval import run_tutoring_qualification
 from .web import create_app
 
@@ -116,6 +123,20 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/data-audit/latest.json"),
     )
+    readiness = commands.add_parser(
+        "training-readiness", help="Fail-closed data, hardware, and toolchain gate"
+    )
+    readiness.add_argument(
+        "--audit", type=Path, default=Path("artifacts/data-audit/latest.json")
+    )
+    readiness.add_argument(
+        "--manifest", type=Path, default=Path("training/post-training.json")
+    )
+    readiness.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/training/readiness-latest.json"),
+    )
     acquire = commands.add_parser("acquire-data", help="Download and verify a pinned source")
     acquire.add_argument("--manifest", type=Path, default=Path("data/sources.json"))
     acquire.add_argument("--source", default="lichess-puzzles-2026-08-02")
@@ -150,7 +171,7 @@ def parser() -> argparse.ArgumentParser:
         default=Path("data/evaluation/diagnostic_positions.jsonl"),
     )
     model_profile.add_argument("--requests", type=int, default=21)
-    model_profile.add_argument("--max-tokens", type=int, default=256)
+    model_profile.add_argument("--max-tokens", type=int, default=768)
     model_profile.add_argument("--nodes", type=int, default=250_000)
     model_profile.add_argument("--backend", choices=("mlx", "lmstudio"), default="mlx")
     model_profile.add_argument("--model")
@@ -218,6 +239,19 @@ def parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         default=Path("artifacts/qualification/deterministic-latest.json"),
+    )
+    runtime_profile = commands.add_parser(
+        "profile-runtime",
+        help="Measure real loopback HTTP latency and Stockfish process lifecycle",
+    )
+    runtime_profile.add_argument("--requests", type=int, default=20)
+    runtime_profile.add_argument("--nodes", type=int, default=250_000)
+    runtime_profile.add_argument("--startup-timeout", type=float, default=15.0)
+    runtime_profile.add_argument("--shutdown-timeout", type=float, default=10.0)
+    runtime_profile.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/qualification/runtime-latest.json"),
     )
     commands.add_parser("verify", help="Run the documented portable verification command")
     commands.add_parser("repo-audit", help="Detect duplicate and unsupported repository content")
@@ -453,8 +487,14 @@ def cmd_audit_legacy(args: argparse.Namespace) -> int:
 
 def cmd_audit_data(args: argparse.Namespace) -> int:
     training_paths = sorted(Path("data/derived").glob("train*.jsonl"))
-    evaluation_paths = sorted(Path("data/derived").glob("evaluation*.jsonl"))
-    payload = audit_data(training_paths, evaluation_paths, args.output)
+    validation_paths = sorted(Path("data/derived").glob("validation*.jsonl"))
+    evaluation_paths = sorted(Path("data/derived").glob("final_test*.jsonl"))
+    payload = audit_data(
+        training_paths,
+        evaluation_paths,
+        args.output,
+        validation_paths=validation_paths,
+    )
     _emit(
         {
             "status": payload["status"],
@@ -471,6 +511,20 @@ def cmd_audit_data(args: argparse.Namespace) -> int:
         "human",
     )
     return 0 if payload["gate"]["ready_for_training"] else 4
+
+
+def cmd_training_readiness(args: argparse.Namespace) -> int:
+    payload = evaluate_training_readiness(args.audit, args.manifest, args.output)
+    _emit(
+        {
+            "status": payload["status"],
+            "authorized_to_train": payload["authorized_to_train"],
+            "blockers": payload["blockers"],
+            "output": str(args.output),
+        },
+        "human",
+    )
+    return 0 if payload["status"] == "ready_for_smoke" else 4
 
 
 def cmd_acquire_data(args: argparse.Namespace) -> int:
@@ -517,6 +571,28 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_profile_runtime(args: argparse.Namespace) -> int:
+    payload = run_runtime_qualification(
+        args.output,
+        request_count=args.requests,
+        node_budget=args.nodes,
+        startup_timeout=args.startup_timeout,
+        shutdown_timeout=args.shutdown_timeout,
+    )
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "status": payload["status"],
+                "latency_seconds": payload["latency_seconds"],
+                "stockfish_lifecycle": payload["stockfish_lifecycle"],
+            },
+            indent=2,
+        )
+    )
+    return 0 if payload["status"] == "passed" else 4
+
+
 def cmd_profile_model(args: argparse.Namespace) -> int:
     if args.requests < 2:
         raise ValueError("--requests must include one cold and at least one warm request")
@@ -528,11 +604,13 @@ def cmd_profile_model(args: argparse.Namespace) -> int:
     if not fixtures:
         raise ValueError("The model profile fixture file is empty")
     prompts: list[str] = []
+    prompt_evidence = []
     with StockfishProvider(node_budget=args.nodes) as provider:
         for fixture in fixtures:
             evidence = provider.analyze(fixture["fen"], fixture.get("considered_move_uci"))
             if evidence.candidates:
                 prompts.append(claim_selection_prompt(evidence, RatingBucket.CLUB))
+                prompt_evidence.append(evidence)
         engine_sha256 = provider.binary_sha256
     if not prompts:
         raise ValueError("The model profile fixtures contain no nonterminal positions")
@@ -559,6 +637,17 @@ def cmd_profile_model(args: argparse.Namespace) -> int:
             system_prompt="You select grounded chess coaching claims.",
             manifest_path=args.manifest,
         )
+    request_evidence = tuple(
+        prompt_evidence[index % len(prompt_evidence)] for index in range(args.requests)
+    )
+
+    def validate_contract(index: int, output: str) -> None:
+        selection = parse_claim_selection(output, request_evidence[index])
+        valid, _removed = validate_model_claims(request_evidence[index], selection.claims)
+        if not valid and not selection.concept_ids:
+            raise ValueError("Output contained no production-eligible claim or concept")
+
+    profile = validate_profile_outputs(profile, validate_contract)
     payload = profile.as_dict()
     warm = payload["summary"]["warm_requests"]
     visible_ttft = warm["time_to_first_visible_token_seconds"]
@@ -578,6 +667,10 @@ def cmd_profile_model(args: argparse.Namespace) -> int:
         "successful_request_rate": {
             "required_min": 1.0,
             "actual": payload["summary"]["successful_request_rate"],
+        },
+        "contract_valid_request_rate": {
+            "required_min": 1.0,
+            "actual": payload["summary"]["contract_valid_request_rate"],
         },
     }
     for gate in gates.values():

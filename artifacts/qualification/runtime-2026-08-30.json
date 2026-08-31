@@ -1,0 +1,781 @@
+{
+  "schema_version": "1.0",
+  "status": "passed",
+  "generated_at": "2026-08-31T01:05:48.820976+00:00",
+  "commit": "21b2f9a51ef2cdacc85196ec139ac84f57ca5d3b",
+  "working_tree_clean": false,
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.12.12",
+  "transport": "tcp-loopback",
+  "server": "uvicorn",
+  "request_cycles": 20,
+  "total_http_requests": 80,
+  "node_budget": 250000,
+  "engine_path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish",
+  "engine_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+  "startup_seconds": 0.23299941599543672,
+  "latency_seconds": {
+    "health": {
+      "mean": 0.002420566751243314,
+      "p50": 0.002615125005831942,
+      "p95": 0.0031852920074015856,
+      "max": 0.0032532920013181865
+    },
+    "session_create": {
+      "mean": 0.0026858604011067654,
+      "p50": 0.0027540830051293597,
+      "p95": 0.0031741660059196874,
+      "max": 0.0033117080020019785
+    },
+    "legal_moves": {
+      "mean": 0.0016723145512514749,
+      "p50": 0.0017145000019809231,
+      "p95": 0.0021205829980317503,
+      "max": 0.002211458995589055
+    },
+    "engine_move": {
+      "mean": 0.2844021104989224,
+      "p50": 0.2750055000069551,
+      "p95": 0.31008408300112933,
+      "max": 0.4131061670050258
+    }
+  },
+  "stockfish_lifecycle": {
+    "counts_after_engine_request": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "observed_pids": [
+      48344,
+      48346,
+      48348,
+      48350,
+      48352,
+      48354,
+      48357,
+      48359,
+      48361,
+      48363,
+      48365,
+      48367,
+      48369,
+      48371,
+      48376,
+      48378,
+      48381,
+      48383,
+      48385,
+      48393
+    ],
+    "unique_observed_processes": 20,
+    "process_restarts_observed": 19,
+    "maximum_processes": 1,
+    "orphaned_pids_after_shutdown": [],
+    "server_returncode": 0,
+    "graceful_shutdown": true
+  },
+  "gates": {
+    "health_p95_seconds": {
+      "required_max": 0.1,
+      "actual": 0.0031852920074015856,
+      "passed": true
+    },
+    "session_create_p95_seconds": {
+      "required_max": 0.1,
+      "actual": 0.0031741660059196874,
+      "passed": true
+    },
+    "legal_moves_p95_seconds": {
+      "required_max": 0.1,
+      "actual": 0.0021205829980317503,
+      "passed": true
+    },
+    "engine_move_p95_seconds": {
+      "required_max": 0.5,
+      "actual": 0.31008408300112933,
+      "passed": true
+    },
+    "stockfish_process_max": {
+      "required_max": 1,
+      "actual": 1,
+      "passed": true
+    },
+    "stockfish_process_min_after_engine_start": {
+      "required_min": 1,
+      "actual": 1,
+      "passed": true
+    },
+    "orphaned_stockfish_processes": {
+      "required_max": 0,
+      "actual": 0,
+      "passed": true
+    },
+    "graceful_server_shutdown": {
+      "required": true,
+      "actual": true,
+      "passed": true
+    }
+  },
+  "server_log_tail": "",
+  "raw": [
+    {
+      "cycle": 0,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0015412499924423173
+    },
+    {
+      "cycle": 0,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0033117080020019785
+    },
+    {
+      "cycle": 0,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0012196660100016743
+    },
+    {
+      "cycle": 0,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.4131061670050258
+    },
+    {
+      "cycle": 1,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002891124997404404
+    },
+    {
+      "cycle": 1,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0031741660059196874
+    },
+    {
+      "cycle": 1,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0019509169942466542
+    },
+    {
+      "cycle": 1,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.31008408300112933
+    },
+    {
+      "cycle": 2,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0018825840088538826
+    },
+    {
+      "cycle": 2,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0024270840076496825
+    },
+    {
+      "cycle": 2,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0014774590090382844
+    },
+    {
+      "cycle": 2,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 751,
+      "latency_seconds": 0.2750055000069551
+    },
+    {
+      "cycle": 3,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0017983750003622845
+    },
+    {
+      "cycle": 3,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.002075583004625514
+    },
+    {
+      "cycle": 3,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.002211458995589055
+    },
+    {
+      "cycle": 3,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.27278666700294707
+    },
+    {
+      "cycle": 4,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0031852920074015856
+    },
+    {
+      "cycle": 4,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0029891669983044267
+    },
+    {
+      "cycle": 4,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0017949170141946524
+    },
+    {
+      "cycle": 4,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.2695199580048211
+    },
+    {
+      "cycle": 5,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002615125005831942
+    },
+    {
+      "cycle": 5,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0028127920086262748
+    },
+    {
+      "cycle": 5,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0013832080003339797
+    },
+    {
+      "cycle": 5,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.27952362499490846
+    },
+    {
+      "cycle": 6,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0032532920013181865
+    },
+    {
+      "cycle": 6,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.003023332988959737
+    },
+    {
+      "cycle": 6,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0015177079912973568
+    },
+    {
+      "cycle": 6,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.2818734580068849
+    },
+    {
+      "cycle": 7,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0026220420113531873
+    },
+    {
+      "cycle": 7,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.002381290993071161
+    },
+    {
+      "cycle": 7,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0018817500094883144
+    },
+    {
+      "cycle": 7,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.2742372089996934
+    },
+    {
+      "cycle": 8,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002332083007786423
+    },
+    {
+      "cycle": 8,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0028952499997103587
+    },
+    {
+      "cycle": 8,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0017145000019809231
+    },
+    {
+      "cycle": 8,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.28018062499177177
+    },
+    {
+      "cycle": 9,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0023819589987397194
+    },
+    {
+      "cycle": 9,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0027540830051293597
+    },
+    {
+      "cycle": 9,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0013168750010663643
+    },
+    {
+      "cycle": 9,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.2697557919891551
+    },
+    {
+      "cycle": 10,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002686749998247251
+    },
+    {
+      "cycle": 10,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0028079580079065636
+    },
+    {
+      "cycle": 10,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0017585840105311945
+    },
+    {
+      "cycle": 10,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.2707410839939257
+    },
+    {
+      "cycle": 11,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0019372920069145039
+    },
+    {
+      "cycle": 11,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0021029579947935417
+    },
+    {
+      "cycle": 11,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0016243329882854596
+    },
+    {
+      "cycle": 11,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 751,
+      "latency_seconds": 0.2743454169976758
+    },
+    {
+      "cycle": 12,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002009832998737693
+    },
+    {
+      "cycle": 12,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0027916669932892546
+    },
+    {
+      "cycle": 12,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0013172909966669977
+    },
+    {
+      "cycle": 12,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.27281487500295043
+    },
+    {
+      "cycle": 13,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002636541990796104
+    },
+    {
+      "cycle": 13,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.002359209000132978
+    },
+    {
+      "cycle": 13,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0021205829980317503
+    },
+    {
+      "cycle": 13,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.2765465839911485
+    },
+    {
+      "cycle": 14,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0027495419926708564
+    },
+    {
+      "cycle": 14,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0024892090004868805
+    },
+    {
+      "cycle": 14,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.001582083001267165
+    },
+    {
+      "cycle": 14,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.276773375007906
+    },
+    {
+      "cycle": 15,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.0019499579939292744
+    },
+    {
+      "cycle": 15,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0026500829990254715
+    },
+    {
+      "cycle": 15,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0013341659941943362
+    },
+    {
+      "cycle": 15,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.27273733299807645
+    },
+    {
+      "cycle": 16,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002881249994970858
+    },
+    {
+      "cycle": 16,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0025501250056549907
+    },
+    {
+      "cycle": 16,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0016690000047674403
+    },
+    {
+      "cycle": 16,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 751,
+      "latency_seconds": 0.27066624999861233
+    },
+    {
+      "cycle": 17,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002324083005078137
+    },
+    {
+      "cycle": 17,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.00268845800019335
+    },
+    {
+      "cycle": 17,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.001912374995299615
+    },
+    {
+      "cycle": 17,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.2693260410014773
+    },
+    {
+      "cycle": 18,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.00204416700580623
+    },
+    {
+      "cycle": 18,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.0028467090014601126
+    },
+    {
+      "cycle": 18,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0018039590067928657
+    },
+    {
+      "cycle": 18,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 752,
+      "latency_seconds": 0.28151745899231173
+    },
+    {
+      "cycle": 19,
+      "operation": "health",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 133,
+      "latency_seconds": 0.002688791006221436
+    },
+    {
+      "cycle": 19,
+      "operation": "session_create",
+      "method": "POST",
+      "status": 201,
+      "response_bytes": 488,
+      "latency_seconds": 0.002586375005193986
+    },
+    {
+      "cycle": 19,
+      "operation": "legal_moves",
+      "method": "GET",
+      "status": 200,
+      "response_bytes": 98,
+      "latency_seconds": 0.0018554580019554123
+    },
+    {
+      "cycle": 19,
+      "operation": "engine_move",
+      "method": "POST",
+      "status": 200,
+      "response_bytes": 750,
+      "latency_seconds": 0.296500707991072
+    }
+  ]
+}

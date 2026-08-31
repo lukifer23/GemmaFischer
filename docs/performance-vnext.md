@@ -44,13 +44,27 @@ process RSS ranged from 1.35 to 2.13 GiB, and no child process remained after
 either exit. See
 [the current evidence artifact](../artifacts/qualification/performance-0.2-local.json).
 
-The newer 21-request Gemma selector profile measured warm p95 TTFT 0.505 seconds,
-warm p95 total latency 3.995 seconds, and warm decode throughput of at least
-70.81 tokens/second, with 3.47 GB peak MLX allocation. The LFM2.5-2.6B LM Studio
+The corrected 21-request Gemma selector profile uses the production 768-token
+ceiling and validates every response through the runtime parser. It measured warm
+p95 visible TTFT 0.654 seconds, warm p95 total latency 8.830 seconds, and warm
+decode throughput of at least 27.66 tokens/second, with 3.47 GB peak MLX
+allocation and 21/21 contract-valid outputs. The LFM2.5-2.6B LM Studio
 candidate decoded hidden reasoning at 69.35-72.61 tokens/second but produced no
 visible answer in five of five 768-token prompts; warm p95 total latency was
 12.109 seconds. Raw decode TPS is therefore not treated as product success.
 See the [candidate bakeoff](../artifacts/qualification/model-bakeoff-0.2-local.json).
+
+The real-socket qualification completed 20 gameplay cycles and 80 HTTP requests
+at 250,000 nodes. Engine-move p95 was 310.1 ms; health, session creation, and
+legal-move p95 were 3.2, 3.2, and 2.1 ms. At most one Stockfish child existed and
+zero remained after shutdown. Rapid gameplay caused 19 engine restarts by
+preempting reviews, which remains an explicit endurance optimization target.
+
+The current Chromium baseline measured 44 ms FCP, 33.4 ms full load, four
+requests, 39,163 transferred bytes, 28,103 JavaScript bytes, and 9,836 CSS bytes.
+LCP was unavailable and is not estimated. See the [runtime](../artifacts/qualification/runtime-2026-08-30.json)
+and [browser](../artifacts/qualification/browser-performance-2026-08-30.json)
+artifacts.
 
 ## Phase 1 concurrency and interaction verification
 

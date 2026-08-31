@@ -13,6 +13,8 @@ from .domain import CoachingClaim, EngineEvidence, RatingBucket
 
 DEFAULT_MODEL = "mlx-community/gemma-4-e2b-it-4bit"
 DEFAULT_MODEL_REVISION = "238767527555cb75a05732a84dff5d6ba0dd6809"
+CLAIM_SELECTION_SYSTEM_PROMPT = "You select grounded chess coaching claims."
+CLAIM_SELECTION_CONTRACT_VERSION = "claim-selection-1.0"
 
 
 class ModelUnavailable(RuntimeError):
@@ -247,7 +249,7 @@ class GemmaRuntime:
             raise ValueError("Gemma coaching requires at least one engine candidate")
         prompt = claim_selection_prompt(evidence, rating)
         messages = [
-            {"role": "system", "content": "You select grounded chess coaching claims."},
+            {"role": "system", "content": CLAIM_SELECTION_SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
         formatted = self._tokenizer.apply_chat_template(  # type: ignore[no-untyped-call]

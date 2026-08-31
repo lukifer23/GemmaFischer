@@ -13,6 +13,12 @@ import chess
 from .coach import deterministic_coach
 from .domain import RatingBucket, canonical_hash
 from .engine import StockfishProvider
+from .runtime import (
+    CLAIM_SELECTION_CONTRACT_VERSION,
+    CLAIM_SELECTION_SYSTEM_PROMPT,
+    claim_selection_prompt,
+    parse_claim_selection,
+)
 
 
 def load_source(manifest_path: Path, source_id: str) -> dict[str, str]:
@@ -68,12 +74,13 @@ def build_puzzle_dataset(
     if digest.hexdigest() != source["sha256"]:
         raise ValueError("The puzzle archive does not match the pinned source manifest")
     output_dir.mkdir(parents=True, exist_ok=True)
-    paths = {split: output_dir / f"{split}.jsonl" for split in ("train", "evaluation")}
+    splits = ("train", "validation", "final_test")
+    paths = {split: output_dir / f"{split}.jsonl" for split in splits}
     handles = {
         split: path.with_suffix(".jsonl.tmp").open("w", encoding="utf-8")
         for split, path in paths.items()
     }
-    counts = {"train": 0, "evaluation": 0, "rejected": 0}
+    counts = {"train": 0, "validation": 0, "final_test": 0, "rejected": 0}
     seen: set[str] = set()
     try:
         with StockfishProvider(node_budget=node_budget) as provider, archive_path.open("rb") as raw:
@@ -81,7 +88,7 @@ def build_puzzle_dataset(
                 io.TextIOWrapper(zstandard.ZstdDecompressor().stream_reader(raw), encoding="utf-8")
             )
             for row in reader:
-                if counts["train"] + counts["evaluation"] >= limit:
+                if sum(counts[split] for split in splits) >= limit:
                     break
                 try:
                     board = chess.Board(row["FEN"])
@@ -99,19 +106,33 @@ def build_puzzle_dataset(
                         continue
                     seen.add(fen)
                     evidence = provider.analyze(fen, solution.uci())
-                    lesson = deterministic_coach(evidence, RatingBucket.CLUB, solution.uci())
-                    split = (
-                        "evaluation"
-                        if int(hashlib.sha256(lineage.encode()).hexdigest()[:8], 16) % 10 == 0
-                        else "train"
+                    rating = RatingBucket.CLUB
+                    lesson = deterministic_coach(evidence, rating, solution.uci())
+                    response = json.dumps(
+                        [claim.model_dump(mode="json") for claim in lesson.claims],
+                        separators=(",", ":"),
                     )
+                    # Prove the emitted target is accepted by the same parser used
+                    # in production before publishing the row.
+                    parsed = parse_claim_selection(response, evidence)
+                    if not 2 <= len(parsed.claims) <= 5 or parsed.removed_claim_codes:
+                        raise ValueError("generated target violates claim-selection contract")
+                    bucket = int(hashlib.sha256(lineage.encode()).hexdigest()[:8], 16) % 10
+                    if bucket == 0:
+                        split = "final_test"
+                    elif bucket == 1:
+                        split = "validation"
+                    else:
+                        split = "train"
+                    prompt = claim_selection_prompt(evidence, rating)
                     record: dict[str, Any] = {
                         "record_id": canonical_hash(
                             {"source_id": source["id"], "lineage": lineage, "fen": fen}
                         ),
-                        "task": "grounded_lesson_plan",
-                        "prompt": f"FEN: {fen}",
-                        "response": solution.uci(),
+                        "task": CLAIM_SELECTION_CONTRACT_VERSION,
+                        "system_prompt": CLAIM_SELECTION_SYSTEM_PROMPT,
+                        "prompt": prompt,
+                        "response": response,
                         "license": source["license"],
                         "meta": {
                             "fen": fen,
@@ -123,26 +144,20 @@ def build_puzzle_dataset(
                             "split": split,
                             "themes": row.get("Themes", "").split(),
                             "rating": int(row["Rating"]),
+                            "rating_bucket": rating.value,
+                            "setup_move": moves[0].uci(),
+                            "solution_move": solution.uci(),
+                            "move_sequence": [move.uci() for move in moves],
+                            "evidence_contract_version": evidence.schema_version,
+                            "model_contract_version": CLAIM_SELECTION_CONTRACT_VERSION,
+                            "engine_binary_sha256": provider.binary_sha256,
+                            "engine_node_budget": node_budget,
                             "transformation": (
                                 "apply first UCI setup move; analyze solution position"
                             ),
                         },
-                        "input": {
-                            "position_id": evidence.position_id,
-                            "candidate_set_id": (
-                                evidence.candidate_set.evidence_id
-                                if evidence.candidate_set
-                                else None
-                            ),
-                            "concepts": [
-                                item.model_dump(mode="json") for item in evidence.concepts
-                            ],
-                        },
-                        "target": (
-                            lesson.lesson_plan.model_dump(mode="json")
-                            if lesson.lesson_plan
-                            else None
-                        ),
+                        "input": evidence.model_dump(mode="json"),
+                        "target": [claim.model_dump(mode="json") for claim in parsed.claims],
                     }
                     handles[split].write(json.dumps(record, separators=(",", ":")) + "\n")
                     counts[split] += 1

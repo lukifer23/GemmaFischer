@@ -11,12 +11,14 @@ coaching.
 
 ## Current target-host evidence
 
-The current Gemma E2B run used 21 real Stockfish-derived prompts. Warm p95 first
-token was 0.505 seconds, warm p95 total generation was 3.995 seconds, warm
-generation throughput was at least 70.81 tokens/second, and MLX peak allocation
-was 3.47 GB. The five-case tutoring suite ran twice and passed all 10 automated
-grounding executions after required deterministic claims were preserved. This
-does not close the blinded human-usefulness gate.
+The current Gemma E2B run used 21 real Stockfish-derived prompts at the same
+768-token ceiling as production. Every captured response passed the production
+claim parser and evidence validator. Warm p95 visible TTFT was 0.654 seconds,
+warm p95 total generation was 8.830 seconds, minimum warm generation throughput
+was 27.66 tokens/second, and MLX peak allocation was 3.47 GB. The five-case
+tutoring suite ran twice and passed all 10 automated grounding executions after
+required deterministic claims were preserved. This does not close the blinded
+human-usefulness gate.
 
 The exact local LM Studio challenger was
 `lmstudio-community/LFM2.5-2.6B-MLX-4bit`, alias
@@ -38,8 +40,8 @@ latency and output-completeness contracts despite good raw decode speed.
 
 Evidence:
 
-- [Gemma model profile](../artifacts/qualification/model-profile-0.2-local.json)
-- [Gemma tutoring qualification](../artifacts/qualification/tutoring-full-0.2-local.json)
+- [Gemma model profile](../artifacts/qualification/model-profile-phase2-current.json)
+- [Gemma tutoring qualification](../artifacts/qualification/tutoring-full-phase2-current.json)
 - [LFM model profile](../artifacts/qualification/model-profile-lfm2.5-2.6b-local.json)
 - [LFM tutoring qualification](../artifacts/qualification/tutoring-lfm2.5-2.6b-local.json)
 - [Candidate decision](../artifacts/qualification/model-bakeoff-0.2-local.json)
@@ -61,10 +63,10 @@ user-visible factual prose. The deterministic coach owns the typed `LessonPlan`
 and its text templates.
 
 The revision, runtime version, cached size, tokenizer, chat template, and sampled
-asset hashes are recorded in `assets/model-manifest.json`. That manifest records
-the old smoke commit and is deliberately marked stale for current qualification.
-A new full-profile run must bind every result to the current commit, lock,
-runtime manifest, model revision, and engine/evidence hashes.
+asset hashes are recorded in `assets/model-manifest.json`. The current artifacts
+bind the model and engine revisions to the development commit, but were generated
+from a dirty integration worktree. Release evidence must be regenerated from the
+final clean commit and bind the lock and every configuration hash.
 
 Promotion requires a licensed, lineage-isolated held-out suite; repeated cold and
 warm measurements; offline restart; cancellation and memory-pressure tests; and
@@ -76,9 +78,8 @@ on `main` today.
 ## Fine-tuning decision
 
 Do not fine-tune the installed 4-bit inference artifact. If later evidence shows
-a stable, repeated selector error worth training, use Liquid AI's native Base or
-native post-trained checkpoint for LoRA/SFT and export a new pinned MLX quant
-afterward. Its smaller text-only footprint may reduce training and deployment
-cost, but the current data gate and the always-thinking behavior remain more
-important than parameter count. Training stays blocked until the licensed,
-lineage-isolated corpus meets the documented minimums and leakage gates.
+a stable, repeated selector error worth training, select a license-compatible
+native checkpoint for the chosen model family, pin every weight hash, run the
+bounded Unsloth and MLX-LM LoRA smoke comparison, and export a separately pinned
+MLX inference artifact. Training stays blocked until the task-aligned corpus,
+frozen evaluations, and blind human baseline meet the documented gates.
