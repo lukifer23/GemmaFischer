@@ -98,11 +98,14 @@ The latest implementation pass also ran the actual browser at 900×600: no horiz
 
 ## Documentation
 
+- [Dependency-ordered execution roadmap](docs/execution-roadmap.md)
 - [Architecture and data flow](docs/architecture-vnext.md)
 - [Evidence and HTTP contracts](docs/evidence-contract.md)
 - [Model runtime and qualification](docs/model-card.md)
 - [Training and data policy](docs/data-provenance.md)
 - [Performance targets and evidence](docs/performance-vnext.md)
+- [Qualification plan](docs/qualification-plan.md)
+- [Tutoring review rubric](docs/tutoring-review-rubric.md)
 - [Security model](docs/security-model.md)
 - [Compatibility and archive recovery](docs/compatibility.md)
 - [Third-party notices](docs/third-party-notices.md)

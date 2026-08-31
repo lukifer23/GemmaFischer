@@ -32,6 +32,11 @@ from .service import AnalysisService, SessionConflict
 
 STATIC_DIR = Path(__file__).with_name("static")
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
+MAX_REQUEST_BODY_BYTES = 64 * 1024
+
+
+class RequestBodyTooLarge(Exception):
+    """Raised before request parsing when the local API body exceeds its limit."""
 
 
 def create_app(
@@ -83,7 +88,49 @@ def create_app(
                     "security",
                     403,
                 )
-        response = await call_next(request)
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                declared_bytes = int(content_length)
+            except ValueError:
+                return _error(
+                    "INVALID_CONTENT_LENGTH",
+                    "Content-Length must be a non-negative integer.",
+                    "validation",
+                    400,
+                    field="content-length",
+                )
+            if declared_bytes < 0:
+                return _error(
+                    "INVALID_CONTENT_LENGTH",
+                    "Content-Length must be a non-negative integer.",
+                    "validation",
+                    400,
+                    field="content-length",
+                )
+            if declared_bytes > MAX_REQUEST_BODY_BYTES:
+                return _request_too_large()
+
+        received_bytes = 0
+        original_receive = request._receive
+
+        async def limited_receive():  # type: ignore[no-untyped-def]
+            nonlocal received_bytes
+            message = await original_receive()
+            if message["type"] == "http.request":
+                received_bytes += len(message.get("body", b""))
+                if received_bytes > MAX_REQUEST_BODY_BYTES:
+                    raise RequestBodyTooLarge
+            return message
+
+        request._receive = limited_receive
+        try:
+            # Buffer the bounded body here so chunked or falsely declared input
+            # is rejected before FastAPI attempts JSON/model parsing.
+            await request.body()
+            response = await call_next(request)
+        except RequestBodyTooLarge:
+            return _request_too_large()
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
             "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
@@ -134,15 +181,15 @@ def create_app(
     @app.get("/api/v1/health")
     async def health(request: Request) -> dict[str, object]:
         try:
-            resolved_engine = str(resolve_stockfish(request.app.state.service.engine_path))
+            resolve_stockfish(request.app.state.service.engine_path)
+            engine_available = True
         except EngineUnavailable:
-            resolved_engine = None
+            engine_available = False
         return {
             "ok": True,
             "version": __version__,
             "engine_configured": request.app.state.service.engine_path is not None,
-            "engine_available": resolved_engine is not None,
-            "engine_path": resolved_engine,
+            "engine_available": engine_available,
             "model_profile": "full" if full_profile else "deterministic",
             "history_enabled": request.app.state.service.history_enabled,
         }
@@ -219,8 +266,10 @@ def create_app(
             result = request.app.state.service.play_move(payload)
         except ValueError as exc:
             return _error("ILLEGAL_MOVE", str(exc), "move_validation", 422, field="move_uci")
-        except Exception as exc:
-            return _error("ENGINE_FAILURE", str(exc), "engine", 503)
+        except Exception:
+            return _error(
+                "ENGINE_FAILURE", "The chess engine could not complete the move.", "engine", 503
+            )
         return JSONResponse(content=result.model_dump(mode="json"))
 
     @app.post("/api/v1/board/legal-moves", deprecated=True)
@@ -237,8 +286,10 @@ def create_app(
             result = request.app.state.service.play_engine_turn(payload)
         except ValueError as exc:
             return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
-        except Exception as exc:
-            return _error("ENGINE_FAILURE", str(exc), "engine", 503)
+        except Exception:
+            return _error(
+                "ENGINE_FAILURE", "The chess engine could not complete its turn.", "engine", 503
+            )
         return JSONResponse(content=result.model_dump(mode="json"))
 
     @app.post(
@@ -307,8 +358,13 @@ def create_app(
             return _error("REVISION_CONFLICT", str(exc), "session", 409)
         except ValueError as exc:
             return _error("INVALID_SESSION_COMMAND", str(exc), "session", 422)
-        except Exception as exc:
-            return _error("ENGINE_FAILURE", str(exc), "engine", 503)
+        except Exception:
+            return _error(
+                "ENGINE_FAILURE",
+                "The chess engine could not complete the session command.",
+                "engine",
+                503,
+            )
 
     @app.delete(
         "/api/v1/sessions/{session_id}",
@@ -344,4 +400,13 @@ def _error(
                 "request_id": "request-rejected",
             }
         },
+    )
+
+
+def _request_too_large() -> JSONResponse:
+    return _error(
+        "REQUEST_TOO_LARGE",
+        f"Request bodies are limited to {MAX_REQUEST_BODY_BYTES} bytes.",
+        "validation",
+        413,
     )

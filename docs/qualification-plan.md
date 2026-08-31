@@ -4,6 +4,10 @@ GemmaFischer is qualified in four separate layers. A green runtime test cannot
 substitute for chess accuracy, and automated grounding cannot substitute for a
 useful lesson.
 
+The dependency order, implementation slices, and release definition are tracked
+in the [execution roadmap](execution-roadmap.md). This document defines the
+qualification gates; it is not an implementation backlog.
+
 ## 1. Runtime and performance
 
 Record exact commit, worktree state, hardware, engine/model hashes, configuration,

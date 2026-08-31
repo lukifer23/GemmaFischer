@@ -2,7 +2,12 @@
 
 The supported server binds to `127.0.0.1` or `localhost`. It rejects non-loopback Host values, foreign Origin headers, and mutations without the per-launch capability token. The browser receives the token through an HttpOnly, SameSite=Strict cookie.
 
-The player surface contains no training, evaluation, adapter, checkpoint, settings, filesystem-path, or arbitrary process routes. Request models reject extra fields and cap inputs. Static assets are self-hosted under a restrictive Content Security Policy.
+The player surface contains no training, evaluation, adapter, checkpoint,
+settings, filesystem-path, or arbitrary process routes. Health reports engine
+availability without returning the configured or resolved binary path. Request
+models reject extra fields, and the HTTP boundary rejects bodies above 64 KiB
+before JSON/model parsing even when `Content-Length` is absent or false. Static
+assets are self-hosted under a restrictive Content Security Policy.
 
 Completed analyses and server-owned sessions are retained in a local SQLite WAL
 ledger. The browser stores only the server session ID and view preferences in

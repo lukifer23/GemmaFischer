@@ -37,6 +37,10 @@ HTTP routes are:
   undo, pause, and resume with `expected_revision`;
 - `GET /api/v1/health` and `/api/v1/capabilities` for local runtime status.
 
+The health contract reports capability/status only and never returns resolved
+filesystem paths. Request bodies are limited to 64 KiB at the HTTP boundary;
+oversized bodies receive `413 REQUEST_TOO_LARGE` before schema parsing.
+
 The old stateless `POST /api/v1/board/*` routes are deprecated compatibility
 endpoints. New clients must use sessions.
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from gemmafischer.web import create_app
+from gemmafischer.web import MAX_REQUEST_BODY_BYTES, create_app
 
 TOKEN = "test-capability-token"
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -14,12 +14,53 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         assert health.status_code == 200
         assert isinstance(health.json()["engine_available"], bool)
         assert health.json()["history_enabled"] is False
+        assert "engine_path" not in health.json()
         page = client.get("/")
         assert page.status_code == 200
         assert "Explain this position" in page.text
         assert "Play, analyze, and learn in one session" in page.text
         assert "Engine vs engine" in page.text
         assert "https://" not in page.text
+
+
+def test_health_does_not_disclose_configured_engine_path() -> None:
+    private_path = "/Users/private/bin/stockfish"
+    with TestClient(
+        create_app(engine_path=private_path, capability_token=TOKEN, node_budget=1)
+    ) as client:
+        response = client.get("/api/v1/health")
+
+    assert response.status_code == 200
+    assert private_path not in response.text
+    assert "engine_path" not in response.json()
+
+
+def test_request_body_limit_is_enforced_before_json_parsing() -> None:
+    with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
+        response = client.post(
+            "/api/v1/sessions",
+            headers={"X-GemmaFischer-Token": TOKEN, "Content-Type": "application/json"},
+            content=b"x" * (MAX_REQUEST_BODY_BYTES + 1),
+        )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "REQUEST_TOO_LARGE"
+
+
+def test_request_body_limit_does_not_trust_a_false_content_length() -> None:
+    with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
+        response = client.post(
+            "/api/v1/sessions",
+            headers={
+                "X-GemmaFischer-Token": TOKEN,
+                "Content-Type": "application/json",
+                "Content-Length": "1",
+            },
+            content=b"x" * (MAX_REQUEST_BODY_BYTES + 1),
+        )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "REQUEST_TOO_LARGE"
 
 
 def test_mutation_requires_capability_token() -> None:
