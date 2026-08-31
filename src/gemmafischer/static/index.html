@@ -62,7 +62,7 @@
                 <button id="new-game" class="quiet" type="button">New game</button>
                 <button id="undo" class="quiet" type="button" disabled>Undo turn</button>
               </div>
-              <p id="board-help" class="field-help">Select one of your pieces, then its destination. Promotions become queens.</p>
+              <p id="board-help" class="field-help">Select one of your pieces, then its destination. Choose Q, R, B, or N when promoting.</p>
             </div>
 
             <div id="rating-wrap">
@@ -112,6 +112,20 @@
       </section>
     </div>
   </main>
-  <script type="module" src="/app.js?v=20260830-2"></script>
+  <dialog id="promotion-dialog" aria-labelledby="promotion-title">
+    <div class="promotion-card">
+      <p class="step">Promotion</p>
+      <h2 id="promotion-title">Choose a piece</h2>
+      <p>Your pawn has reached the final rank.</p>
+      <div class="promotion-options">
+        <button type="button" data-promotion="q">Queen</button>
+        <button type="button" data-promotion="r">Rook</button>
+        <button type="button" data-promotion="b">Bishop</button>
+        <button type="button" data-promotion="n">Knight</button>
+      </div>
+      <button id="promotion-cancel" class="text-button" type="button">Cancel promotion</button>
+    </div>
+  </dialog>
+  <script type="module" src="/app.js?v=20260830-4"></script>
 </body>
 </html>

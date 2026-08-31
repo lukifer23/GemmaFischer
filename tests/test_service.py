@@ -14,6 +14,7 @@ from gemmafischer.domain import (
     CreateSessionRequest,
     Ply,
     SessionCommandRequest,
+    SessionMode,
     Workflow,
 )
 from gemmafischer.service import AnalysisService, SessionConflict
@@ -178,5 +179,65 @@ def test_undo_returns_player_to_previous_decision_point() -> None:
         assert undone.plies == ()
         assert undone.fen == START_FEN
         assert undone.turn == "white"
+    finally:
+        service.close()
+
+
+def test_interactive_submission_does_not_supersede_pending_durable_review() -> None:
+    service = AnalysisService()
+    try:
+        with service._condition:
+            durable = service.submit(
+                AnalysisRequest(mode=Workflow.POSITION, fen=START_FEN), durable=True
+            )
+            superseded = service.submit(AnalysisRequest(mode=Workflow.POSITION, fen=START_FEN))
+            latest = service.submit(AnalysisRequest(mode=Workflow.POSITION, fen=START_FEN))
+
+            assert service.get(durable.analysis_id).state is AnalysisState.QUEUED  # type: ignore[union-attr]
+            assert service.get(superseded.analysis_id).state is AnalysisState.CANCELLED  # type: ignore[union-attr]
+            assert service.get(latest.analysis_id).state is AnalysisState.QUEUED  # type: ignore[union-attr]
+            assert list(service._pending_ids) == [durable.analysis_id, latest.analysis_id]
+    finally:
+        service.close()
+
+
+@pytest.mark.hardware
+def test_real_gameplay_preemption_requeues_durable_analysis() -> None:
+    service = AnalysisService(node_budget=1_000_000)
+    try:
+        snapshot = service.submit(
+            AnalysisRequest(mode=Workflow.POSITION, fen=START_FEN), durable=True
+        )
+        deadline = time.monotonic() + 5
+        while True:
+            provider = service._provider
+            active = provider.operation_status() if provider else None
+            if active is not None and active.kind == "analysis":
+                break
+            assert time.monotonic() < deadline
+            time.sleep(0.005)
+
+        session = service.create_session(
+            CreateSessionRequest(
+                mode=SessionMode.EXHIBITION,
+                player_color=None,
+                fen=START_FEN,
+            )
+        )
+        moved = service.command_session(
+            session.session_id,
+            SessionCommandRequest(expected_revision=0, action="engine_move"),
+        )
+        assert moved.plies[0].move_uci
+
+        deadline = time.monotonic() + 10
+        while True:
+            restored = service.get(snapshot.analysis_id)
+            assert restored is not None
+            if restored.state in {AnalysisState.COMPLETE, AnalysisState.ENGINE_ONLY}:
+                break
+            assert restored.state is not AnalysisState.FAILED
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
     finally:
         service.close()

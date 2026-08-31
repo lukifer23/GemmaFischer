@@ -99,6 +99,7 @@ The latest implementation pass also ran the actual browser at 900×600: no horiz
 ## Documentation
 
 - [Dependency-ordered execution roadmap](docs/execution-roadmap.md)
+- [Phase 1 execution contract](docs/phase1-execution.md)
 - [Architecture and data flow](docs/architecture-vnext.md)
 - [Evidence and HTTP contracts](docs/evidence-contract.md)
 - [Model runtime and qualification](docs/model-card.md)

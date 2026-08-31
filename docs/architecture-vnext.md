@@ -8,8 +8,8 @@ are preserved by `archive/pre-recovery-2026-08-30` at commit
 ```text
 Browser / CLI
   -> typed session command or ad hoc analysis request
-  -> AnalysisService (one newest-pending analysis worker)
-  -> one locked, persistent StockfishProvider
+  -> AnalysisService (durable-review queue plus newest pending interactive work)
+  -> one token-owned, gameplay-priority StockfishProvider/process
   -> CandidateSet plus optional matched-budget MoveComparisonEvidence
   -> immutable EngineEvidence 2.0 and deterministic concept extraction
   -> deterministic LessonPlan / validated optional Gemma claim selection
@@ -26,15 +26,23 @@ exhibition. The browser stores only a session identifier and view preferences.
 Training, adapter, checkpoint, arbitrary filesystem, model switching, and
 arbitrary process-control routes are absent.
 
-One ad hoc analysis runs at a time and only the newest pending analysis is kept.
-Every request receives a monotonic generation. Cancellation invalidates late
-results and interrupts an active UCI command; the provider restarts cleanly on
-the next request. The service serializes Stockfish access behind one provider,
-so analyses and session play do not create one engine per request. Shutdown
-closes the worker, engine, store, and process lock. Analyses (250 by default) and
-sessions are stored in SQLite WAL under
+One analysis runs at a time. Only a pending interactive analysis may supersede
+another pending interactive analysis; automatic ply reviews are durable queue
+entries. Every request receives a monotonic generation. The provider admits one
+token-owned operation at a time, gives FIFO gameplay waiters priority, and
+preempts/retries analysis when a move is waiting. Targeted cancellation can
+close only the exact active analysis token and can never close gameplay.
+Blocking session commands run in FastAPI's worker pool, keeping health and
+polling responsive. Shutdown alone performs an untargeted provider close.
+
+Analyses (250 unreferenced rows by default) and sessions are stored in SQLite WAL under
 `~/Library/Application Support/GemmaFischer/`; interrupted nonterminal analyses
 become explicit `ANALYSIS_INTERRUPTED` failures after restart.
+`analysis_reservations` protects a durable review during the short interval before
+its owning ply is committed. `session_analysis_refs` then protects every retained
+ply review from independent pruning and releases it when its session is deleted.
+Exhibition pause and resume are revisioned, persisted session mutations rather
+than browser-only flags.
 
 Python 3.12 and `uv.lock` are the executable baseline. Stockfish 18 is the only
 chess authority. One MultiPV search creates the ordered candidate set. A reviewed

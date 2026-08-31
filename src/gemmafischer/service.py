@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,7 +34,12 @@ from .domain import (
     normalize_fen,
     now_utc,
 )
-from .engine import EngineUnavailable, StockfishProvider
+from .engine import (
+    EngineOperationCancelled,
+    EngineOperationPreempted,
+    EngineUnavailable,
+    StockfishProvider,
+)
 from .runtime import GemmaRuntime
 from .storage import AnalysisStore
 
@@ -41,7 +47,9 @@ from .storage import AnalysisStore
 @dataclass
 class _Job:
     snapshot: AnalysisSnapshot
+    durable: bool = False
     cancelled: bool = False
+    operation_id: str | None = None
 
 
 class SessionConflict(RuntimeError):
@@ -71,7 +79,7 @@ class AnalysisService:
         self._jobs: dict[str, _Job] = {}
         self._sessions: dict[str, Session] = {}
         self._session_locks: dict[str, threading.RLock] = {}
-        self._pending_id: str | None = None
+        self._pending_ids: deque[str] = deque()
         self._active_id: str | None = None
         self._generation = 0
         self._job_retention = max(1, history_retention)
@@ -80,7 +88,7 @@ class AnalysisService:
         self._worker = threading.Thread(target=self._run, name="gemmafischer-engine", daemon=True)
         self._worker.start()
 
-    def submit(self, request: AnalysisRequest) -> AnalysisSnapshot:
+    def submit(self, request: AnalysisRequest, *, durable: bool = False) -> AnalysisSnapshot:
         with self._condition:
             self._ensure_open_locked()
             self._generation += 1
@@ -94,11 +102,13 @@ class AnalysisService:
                 updated_at=timestamp,
                 request=request,
             )
-            if self._pending_id:
-                self._cancel_locked(self._pending_id)
-            self._jobs[analysis_id] = _Job(snapshot=snapshot)
-            self._persist(snapshot)
-            self._pending_id = analysis_id
+            if not durable:
+                for pending_id in tuple(self._pending_ids):
+                    if not self._jobs[pending_id].durable:
+                        self._cancel_locked(pending_id)
+            self._jobs[analysis_id] = _Job(snapshot=snapshot, durable=durable)
+            self._persist(snapshot, reserve=durable)
+            self._pending_ids.append(analysis_id)
             self._condition.notify()
             return snapshot
 
@@ -315,7 +325,8 @@ class AnalysisService:
                 fen=fen,
                 rating_bucket=rating_bucket,
                 considered_move_uci=move_uci,
-            )
+            ),
+            durable=True,
         )
 
     def _advance_session(self, session: Session, ply: Ply, outcome: str | None) -> Session:
@@ -362,13 +373,10 @@ class AnalysisService:
                     self._cancel_locked(analysis_id, interrupt_active=False)
             self._condition.notify_all()
         if self._provider is not None:
-            self._provider.interrupt()
-        self._worker.join(timeout=2)
-        if self._worker.is_alive() and self._provider is not None:
-            self._provider.interrupt()
-            self._worker.join(timeout=2)
-        if self._provider is not None:
             self._provider.close()
+        self._worker.join(timeout=2)
+        if self._worker.is_alive():
+            self._worker.join(timeout=2)
 
     def play_move(self, request: BoardMoveRequest) -> BoardMoveResult:
         return self._engine().play_move(
@@ -386,21 +394,23 @@ class AnalysisService:
 
     def _cancel_locked(self, analysis_id: str, *, interrupt_active: bool = True) -> None:
         job = self._jobs[analysis_id]
+        was_terminal = job.snapshot.state in TERMINAL_STATES
+        operation_id = job.operation_id
         job.cancelled = True
-        if job.snapshot.state not in TERMINAL_STATES:
+        if not was_terminal:
             job.snapshot = job.snapshot.model_copy(
                 update={"state": AnalysisState.CANCELLED, "updated_at": now_utc()}
             )
             self._persist(job.snapshot)
-        if self._pending_id == analysis_id:
-            self._pending_id = None
+        if analysis_id in self._pending_ids:
+            self._pending_ids.remove(analysis_id)
         elif (
             interrupt_active
             and self._active_id == analysis_id
-            and job.snapshot.state not in TERMINAL_STATES
+            and operation_id
             and self._provider is not None
         ):
-            self._provider.interrupt()
+            self._provider.interrupt_analysis(operation_id, "cancelled")
 
     def _ensure_open_locked(self) -> None:
         if self._closed:
@@ -426,20 +436,18 @@ class AnalysisService:
             )
             self._persist(job.snapshot)
 
-    def _persist(self, snapshot: AnalysisSnapshot) -> None:
+    def _persist(self, snapshot: AnalysisSnapshot, *, reserve: bool = False) -> None:
         if self._store:
-            self._store.save(snapshot)
+            self._store.save(snapshot, reserve=reserve)
 
     def _run(self) -> None:
         while True:
             with self._condition:
-                while not self._closed and self._pending_id is None:
+                while not self._closed and not self._pending_ids:
                     self._condition.wait()
                 if self._closed:
                     return
-                analysis_id = self._pending_id
-                self._pending_id = None
-                assert analysis_id is not None
+                analysis_id = self._pending_ids.popleft()
                 self._active_id = analysis_id
                 job = self._jobs[analysis_id]
             if job.cancelled:
@@ -451,7 +459,17 @@ class AnalysisService:
             try:
                 self._update(job, AnalysisState.VALIDATING)
                 self._update(job, AnalysisState.ENGINE_RUNNING)
-                evidence = self._engine().analyze(request.fen, request.considered_move_uci)
+                operation_id = uuid.uuid4().hex
+                with self._condition:
+                    if job.cancelled:
+                        continue
+                    job.operation_id = operation_id
+                evidence = self._engine().analyze(
+                    request.fen,
+                    request.considered_move_uci,
+                    operation_id=operation_id,
+                )
+                job.operation_id = None
                 if job.cancelled:
                     continue
                 if request.considered_move_uci:
@@ -498,6 +516,19 @@ class AnalysisService:
                     coaching=coaching,
                 )
                 self._evict_jobs()
+            except EngineOperationCancelled:
+                job.operation_id = None
+            except EngineOperationPreempted:
+                job.operation_id = None
+                with self._condition:
+                    if job.cancelled:
+                        pass
+                    elif job.durable or not self._pending_ids:
+                        self._update(job, AnalysisState.QUEUED)
+                        self._pending_ids.appendleft(analysis_id)
+                        self._condition.notify()
+                    else:
+                        self._cancel_locked(analysis_id, interrupt_active=False)
             except (ValueError, EngineUnavailable) as exc:
                 code = "INVALID_INPUT" if isinstance(exc, ValueError) else "ENGINE_UNAVAILABLE"
                 self._fail(job, code, str(exc), retryable=not isinstance(exc, ValueError))

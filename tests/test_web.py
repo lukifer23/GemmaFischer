@@ -1,5 +1,8 @@
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from gemmafischer.web import MAX_REQUEST_BODY_BYTES, create_app
@@ -219,3 +222,108 @@ def test_server_owned_session_enforces_revision_and_persists(tmp_path: Path) -> 
         restored = client.get(f"/api/v1/sessions/{session['session_id']}")
         assert restored.status_code == 200
         assert restored.json()["plies"][0]["move_uci"] == "e2e4"
+
+
+def test_exhibition_pause_and_resume_survive_restart(tmp_path: Path) -> None:
+    history_path = tmp_path / "history.sqlite3"
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(
+        create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    ) as client:
+        created = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "exhibition", "player_color": None, "fen": START_FEN},
+        ).json()
+        paused = client.post(
+            f"/api/v1/sessions/{created['session_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 0, "action": "pause"},
+        )
+        assert paused.status_code == 200
+        assert paused.json()["status"] == "paused"
+
+    with TestClient(
+        create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    ) as client:
+        restored = client.get(f"/api/v1/sessions/{created['session_id']}")
+        assert restored.json()["status"] == "paused"
+        blocked = client.post(
+            f"/api/v1/sessions/{created['session_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 1, "action": "engine_move"},
+        )
+        assert blocked.status_code == 422
+        resumed = client.post(
+            f"/api/v1/sessions/{created['session_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 1, "action": "resume"},
+        )
+        assert resumed.status_code == 200
+        assert resumed.json()["status"] == "active"
+
+
+def test_session_preserves_exact_underpromotion_and_revision() -> None:
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    fen = "7k/P7/8/8/8/8/8/7K w - - 0 1"
+    with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
+        created = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "player", "player_color": "white", "fen": fen},
+        ).json()
+        promoted = client.post(
+            f"/api/v1/sessions/{created['session_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 0, "action": "player_move", "move_uci": "a7a8n"},
+        )
+
+    assert promoted.status_code == 200
+    assert promoted.json()["revision"] == 1
+    assert promoted.json()["plies"][0]["move_uci"] == "a7a8n"
+    assert promoted.json()["fen"].startswith("N6k/")
+
+
+@pytest.mark.hardware
+def test_health_stays_responsive_during_real_engine_session_command() -> None:
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    app = create_app(capability_token=TOKEN, node_budget=1_000_000)
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={
+                "mode": "exhibition",
+                "player_color": None,
+                "fen": START_FEN,
+                "white_difficulty": "strong",
+                "black_difficulty": "strong",
+            },
+        ).json()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            command = executor.submit(
+                client.post,
+                f"/api/v1/sessions/{created['session_id']}/commands",
+                headers=headers,
+                json={"expected_revision": 0, "action": "engine_move"},
+            )
+            deadline = time.monotonic() + 5
+            while True:
+                provider = app.state.service._provider
+                active = provider.operation_status() if provider else None
+                if active is not None and active.kind == "gameplay":
+                    break
+                assert time.monotonic() < deadline
+                time.sleep(0.005)
+
+            latencies = []
+            for _ in range(20):
+                started = time.monotonic()
+                health = client.get("/api/v1/health")
+                latencies.append(time.monotonic() - started)
+                assert health.status_code == 200
+
+            result = command.result(timeout=10)
+
+    assert result.status_code == 200
+    assert sorted(latencies)[18] < 0.2

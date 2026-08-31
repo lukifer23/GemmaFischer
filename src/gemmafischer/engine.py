@@ -4,9 +4,13 @@ import hashlib
 import os
 import shutil
 import threading
+import uuid
+from collections import deque
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 import chess
 import chess.engine
@@ -49,6 +53,20 @@ ANALYSIS_SKILL_LEVEL = 20
 
 class EngineUnavailable(RuntimeError):
     pass
+
+
+class EngineOperationCancelled(RuntimeError):
+    pass
+
+
+class EngineOperationPreempted(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class EngineOperation:
+    token: str
+    kind: Literal["analysis", "gameplay"]
 
 
 def sha256_file(path: Path) -> str:
@@ -201,13 +219,16 @@ class StockfishProvider:
         self.node_budget = node_budget
         self.binary_sha256 = sha256_file(self.path)
         self._engine: chess.engine.SimpleEngine | None = None
-        self._lock = threading.RLock()
+        self._condition = threading.Condition()
+        self._active_operation: EngineOperation | None = None
+        self._analysis_waiters: set[str] = set()
+        self._gameplay_waiters: deque[str] = deque()
+        self._interrupt_reasons: dict[str, Literal["cancelled", "preempted"]] = {}
+        self._closed = False
         self._started_at: datetime | None = None
         self._applied_options: dict[str, int | str | bool | None] = {}
 
     def __enter__(self) -> StockfishProvider:
-        with self._lock:
-            self._ensure_engine()
         return self
 
     def __exit__(self, *_args: object) -> None:
@@ -221,22 +242,107 @@ class StockfishProvider:
             self.close()
 
     def close(self) -> None:
-        with self._lock:
+        with self._condition:
+            if self._closed and self._engine is None:
+                return
+            self._closed = True
             engine, self._engine = self._engine, None
-            if engine is not None:
-                try:
-                    engine.quit()
-                except (BrokenPipeError, TimeoutError, chess.engine.EngineTerminatedError):
-                    engine.close()
+            active = self._active_operation is not None
+            self._condition.notify_all()
+        if engine is not None:
+            if active:
+                engine.close()
+                return
+            try:
+                engine.quit()
+            except (BrokenPipeError, TimeoutError, chess.engine.EngineTerminatedError):
+                engine.close()
 
-    def interrupt(self) -> None:
-        """Terminate an active UCI command; the next request starts a clean engine."""
-        engine = self._engine
-        self._engine = None
+    def interrupt_analysis(
+        self, operation_id: str, reason: Literal["cancelled", "preempted"] = "cancelled"
+    ) -> bool:
+        """Interrupt an exact active or waiting analysis operation, never gameplay."""
+        with self._condition:
+            active = self._active_operation
+            is_active = active == EngineOperation(operation_id, "analysis")
+            if not is_active and operation_id not in self._analysis_waiters:
+                return False
+            self._interrupt_reasons[operation_id] = reason
+            engine = None
+            if is_active:
+                engine, self._engine = self._engine, None
+            self._condition.notify_all()
         if engine is not None:
             engine.close()
+        return True
+
+    def operation_status(self) -> EngineOperation | None:
+        with self._condition:
+            return self._active_operation
+
+    def _acquire_analysis(self, operation_id: str) -> None:
+        with self._condition:
+            self._analysis_waiters.add(operation_id)
+            try:
+                while self._active_operation is not None or self._gameplay_waiters:
+                    if self._closed:
+                        raise EngineUnavailable("The Stockfish provider is closed")
+                    self._raise_if_interrupted_locked(operation_id)
+                    self._condition.wait()
+                if self._closed:
+                    raise EngineUnavailable("The Stockfish provider is closed")
+                self._raise_if_interrupted_locked(operation_id)
+                self._active_operation = EngineOperation(operation_id, "analysis")
+            finally:
+                self._analysis_waiters.discard(operation_id)
+
+    def _acquire_gameplay(self, operation_id: str) -> None:
+        engine_to_close: chess.engine.SimpleEngine | None = None
+        with self._condition:
+            if self._closed:
+                raise EngineUnavailable("The Stockfish provider is closed")
+            self._gameplay_waiters.append(operation_id)
+            active = self._active_operation
+            if active is not None and active.kind == "analysis":
+                self._interrupt_reasons[active.token] = "preempted"
+                engine_to_close, self._engine = self._engine, None
+        if engine_to_close is not None:
+            engine_to_close.close()
+        with self._condition:
+            while (
+                self._active_operation is not None
+                or not self._gameplay_waiters
+                or self._gameplay_waiters[0] != operation_id
+            ):
+                if self._closed:
+                    with suppress(ValueError):
+                        self._gameplay_waiters.remove(operation_id)
+                    raise EngineUnavailable("The Stockfish provider is closed")
+                self._condition.wait()
+            self._gameplay_waiters.popleft()
+            self._active_operation = EngineOperation(operation_id, "gameplay")
+
+    def _release_operation(self, operation_id: str) -> None:
+        with self._condition:
+            if self._active_operation and self._active_operation.token == operation_id:
+                self._active_operation = None
+            self._interrupt_reasons.pop(operation_id, None)
+            self._condition.notify_all()
+
+    def _raise_if_interrupted_locked(self, operation_id: str) -> None:
+        reason = self._interrupt_reasons.pop(operation_id, None)
+        if reason == "cancelled":
+            raise EngineOperationCancelled(operation_id)
+        if reason == "preempted":
+            raise EngineOperationPreempted(operation_id)
+
+    def _raise_if_interrupted(self, operation_id: str) -> None:
+        with self._condition:
+            self._raise_if_interrupted_locked(operation_id)
 
     def _ensure_engine(self) -> chess.engine.SimpleEngine:
+        if self._closed:
+            raise EngineUnavailable("The Stockfish provider is closed")
         if self._engine is None:
             self._engine = chess.engine.SimpleEngine.popen_uci(str(self.path))
             applied = {
@@ -251,7 +357,13 @@ class StockfishProvider:
             self._started_at = datetime.now(UTC)
         return self._engine
 
-    def analyze(self, fen: str, considered_move_uci: str | None = None) -> EngineEvidence:
+    def analyze(
+        self,
+        fen: str,
+        considered_move_uci: str | None = None,
+        *,
+        operation_id: str | None = None,
+    ) -> EngineEvidence:
         board, normalized_fen = normalize_fen(fen)
         position_id = canonical_hash({"schema_version": "2.0", "normalized_fen": normalized_fen})
         if board.is_game_over(claim_draw=False):
@@ -274,8 +386,14 @@ class StockfishProvider:
             if considered not in board.legal_moves:
                 raise ValueError("The considered move is illegal in this position")
 
-        with self._lock:
+        operation_id = operation_id or uuid.uuid4().hex
+        self._acquire_analysis(operation_id)
+        try:
             engine = self._ensure_engine()
+            # A gameplay request or cancellation can arrive while the UCI
+            # process is starting, before there is an engine handle to close.
+            # Honor the token before issuing the first command in that case.
+            self._raise_if_interrupted(operation_id)
             analysis_options = {
                 key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options
             }
@@ -319,6 +437,12 @@ class StockfishProvider:
                     board, position_id, best_move, best_constrained, considered, considered_info
                 )
             metadata = self._metadata(identity.get("name", "Stockfish"), identity.get("author"))
+            self._raise_if_interrupted(operation_id)
+        except (BrokenPipeError, chess.engine.EngineTerminatedError):
+            self._raise_if_interrupted(operation_id)
+            raise
+        finally:
+            self._release_operation(operation_id)
 
         candidate_set_id = canonical_hash(
             {
@@ -357,7 +481,23 @@ class StockfishProvider:
         if board.is_game_over(claim_draw=True):
             raise ValueError("The game is already over")
 
-        normalized_move = self._normalize_promotion(board, move_uci.lower())
+        normalized_move = move_uci.lower()
+        if len(normalized_move) == 4:
+            source: int | None
+            target: int | None
+            try:
+                source = chess.parse_square(normalized_move[:2])
+                target = chess.parse_square(normalized_move[2:])
+            except ValueError:
+                source = target = None
+            piece = board.piece_at(source) if source is not None else None
+            if (
+                piece
+                and piece.piece_type == chess.PAWN
+                and target is not None
+                and chess.square_rank(target) in {0, 7}
+            ):
+                raise ValueError("Promotion move requires q, r, b, or n suffix")
         try:
             human_move = chess.Move.from_uci(normalized_move)
         except ValueError as exc:
@@ -375,7 +515,9 @@ class StockfishProvider:
 
         if engine_reply and not board.is_game_over(claim_draw=True):
             engine_nodes = max(1, round(self.node_budget * GAME_NODE_RATIO[difficulty]))
-            with self._lock:
+            operation_id = uuid.uuid4().hex
+            self._acquire_gameplay(operation_id)
+            try:
                 engine = self._ensure_engine()
                 applied = dict(self._applied_options)
                 if "Skill Level" in engine.options:
@@ -389,6 +531,8 @@ class StockfishProvider:
                 engine_move_uci = reply.uci()
                 engine_move_san = board.san(reply)
                 board.push(reply)
+            finally:
+                self._release_operation(operation_id)
 
         outcome = board.outcome(claim_draw=True)
         return BoardMoveResult(
@@ -416,7 +560,9 @@ class StockfishProvider:
         if board.is_game_over(claim_draw=True):
             raise ValueError("The game is already over")
         engine_nodes = max(1, round(self.node_budget * GAME_NODE_RATIO[difficulty]))
-        with self._lock:
+        operation_id = uuid.uuid4().hex
+        self._acquire_gameplay(operation_id)
+        try:
             engine = self._ensure_engine()
             applied = dict(self._applied_options)
             if "Skill Level" in engine.options:
@@ -429,6 +575,8 @@ class StockfishProvider:
             move_uci = move.uci()
             move_san = board.san(move)
             board.push(move)
+        finally:
+            self._release_operation(operation_id)
         outcome = board.outcome(claim_draw=True)
         return EngineTurnResult(
             fen_before=normalized_fen,
@@ -441,20 +589,6 @@ class StockfishProvider:
             outcome=outcome.result() if outcome else None,
             turn="white" if board.turn else "black",
         )
-
-    @staticmethod
-    def _normalize_promotion(board: chess.Board, move_uci: str) -> str:
-        if len(move_uci) != 4:
-            return move_uci
-        try:
-            source = chess.parse_square(move_uci[:2])
-            target = chess.parse_square(move_uci[2:])
-        except ValueError:
-            return move_uci
-        piece = board.piece_at(source)
-        if piece and piece.piece_type == chess.PAWN and chess.square_rank(target) in {0, 7}:
-            return f"{move_uci}q"
-        return move_uci
 
     def _metadata(self, name: str, author: str | None) -> EngineMetadata:
         return EngineMetadata(

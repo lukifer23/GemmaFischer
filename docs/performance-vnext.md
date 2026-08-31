@@ -52,6 +52,22 @@ visible answer in five of five 768-token prompts; warm p95 total latency was
 12.109 seconds. Raw decode TPS is therefore not treated as product success.
 See the [candidate bakeoff](../artifacts/qualification/model-bakeoff-0.2-local.json).
 
+## Phase 1 concurrency and interaction verification
+
+The 2026-08-30 Phase 1 pass added real-Stockfish regression tests proving that
+gameplay preempts a long analysis on the single provider, a preempted durable
+analysis is retried, active and gameplay-blocked analyses accept exact-token
+cancellation, the provider recovers, and twenty health requests remain below a
+200 ms functional ceiling while a real engine session command is active. These
+are functional concurrency gates, not release latency percentiles; subprocess
+and 1,000-request measurement remain open below.
+
+A headed Chromium run exercised exact knight underpromotion, automatic review,
+engine-v-engine play, server-confirmed pause, reload, and paused-session restore
+with zero console errors. The live server held one Stockfish child throughout
+the observed run and zero after clean shutdown. The retained local screenshot is
+[phase1-paused-exhibition.png](../output/playwright/phase1-paused-exhibition.png).
+
 ## Historical Stockfish baseline
 
 The 20-request run at commit `a3c6cc5` measured mean 0.663 s, p50 0.903 s,

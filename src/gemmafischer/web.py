@@ -346,7 +346,7 @@ def create_app(
         response_model=Session,
         responses={404: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}},
     )
-    async def command_session(
+    def command_session(
         session_id: str, payload: SessionCommandRequest, request: Request
     ) -> Session | JSONResponse:
         service: AnalysisService = request.app.state.service

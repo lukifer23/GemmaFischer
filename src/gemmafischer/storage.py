@@ -54,9 +54,35 @@ class AnalysisStore:
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS analyses_updated_idx ON analyses(updated_at DESC)"
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS session_analysis_refs (
+                    session_id TEXT NOT NULL,
+                    ply INTEGER NOT NULL,
+                    analysis_id TEXT NOT NULL UNIQUE,
+                    PRIMARY KEY (session_id, ply),
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
+                    FOREIGN KEY (analysis_id) REFERENCES analyses(analysis_id) ON DELETE RESTRICT
+                )
+                """
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS session_analysis_refs_analysis_idx "
+                "ON session_analysis_refs(analysis_id)"
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS analysis_reservations (
+                    analysis_id TEXT PRIMARY KEY,
+                    FOREIGN KEY (analysis_id) REFERENCES analyses(analysis_id) ON DELETE CASCADE
+                )
+                """
+            )
+            self._backfill_session_analysis_refs(connection)
+            connection.execute("PRAGMA user_version=2")
         self._recover_interrupted()
 
-    def save(self, snapshot: AnalysisSnapshot) -> None:
+    def save(self, snapshot: AnalysisSnapshot, *, reserve: bool = False) -> None:
         with self._connect() as connection:
             connection.execute(
                 """
@@ -78,15 +104,12 @@ class AnalysisStore:
                     snapshot.model_dump_json(),
                 ),
             )
-            connection.execute(
-                """
-                DELETE FROM analyses WHERE analysis_id IN (
-                    SELECT analysis_id FROM analyses
-                    ORDER BY updated_at DESC LIMIT -1 OFFSET ?
+            if reserve:
+                connection.execute(
+                    "INSERT OR IGNORE INTO analysis_reservations (analysis_id) VALUES (?)",
+                    (snapshot.analysis_id,),
                 )
-                """,
-                (self.retention,),
-            )
+            self._prune_analyses(connection)
 
     def get(self, analysis_id: str) -> AnalysisSnapshot | None:
         with self._connect() as connection:
@@ -116,6 +139,27 @@ class AnalysisStore:
                 (session.session_id, session.updated_at.isoformat(), session.model_dump_json()),
             )
             connection.execute(
+                "DELETE FROM session_analysis_refs WHERE session_id = ?",
+                (session.session_id,),
+            )
+            for ply in session.plies:
+                if ply.analysis_id is None:
+                    continue
+                connection.execute(
+                    """
+                    INSERT INTO session_analysis_refs (session_id, ply, analysis_id)
+                    SELECT ?, ?, ?
+                    WHERE EXISTS (
+                        SELECT 1 FROM analyses WHERE analysis_id = ?
+                    )
+                    """,
+                    (session.session_id, ply.ply, ply.analysis_id, ply.analysis_id),
+                )
+                connection.execute(
+                    "DELETE FROM analysis_reservations WHERE analysis_id = ?",
+                    (ply.analysis_id,),
+                )
+            connection.execute(
                 """
                 DELETE FROM sessions WHERE session_id IN (
                     SELECT session_id FROM sessions
@@ -124,6 +168,7 @@ class AnalysisStore:
                 """,
                 (self.retention,),
             )
+            self._prune_analyses(connection)
 
     def get_session(self, session_id: str) -> Session | None:
         with self._connect() as connection:
@@ -146,7 +191,44 @@ class AnalysisStore:
             cursor = connection.execute(
                 "DELETE FROM sessions WHERE session_id = ?", (session_id,)
             )
+            self._prune_analyses(connection)
         return cursor.rowcount > 0
+
+    def _backfill_session_analysis_refs(self, connection: sqlite3.Connection) -> None:
+        rows = connection.execute("SELECT session_json FROM sessions").fetchall()
+        for row in rows:
+            session = Session.model_validate_json(row[0])
+            for ply in session.plies:
+                if ply.analysis_id is None:
+                    continue
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO session_analysis_refs (session_id, ply, analysis_id)
+                    SELECT ?, ?, ?
+                    WHERE EXISTS (
+                        SELECT 1 FROM analyses WHERE analysis_id = ?
+                    )
+                    """,
+                    (session.session_id, ply.ply, ply.analysis_id, ply.analysis_id),
+                )
+
+    def _prune_analyses(self, connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """
+            DELETE FROM analyses WHERE analysis_id IN (
+                SELECT analyses.analysis_id
+                FROM analyses
+                LEFT JOIN session_analysis_refs
+                    ON session_analysis_refs.analysis_id = analyses.analysis_id
+                LEFT JOIN analysis_reservations
+                    ON analysis_reservations.analysis_id = analyses.analysis_id
+                WHERE session_analysis_refs.analysis_id IS NULL
+                    AND analysis_reservations.analysis_id IS NULL
+                ORDER BY analyses.updated_at DESC LIMIT -1 OFFSET ?
+            )
+            """,
+            (self.retention,),
+        )
 
     def _recover_interrupted(self) -> None:
         placeholders = ",".join("?" for _ in ACTIVE_STATES)
@@ -172,4 +254,6 @@ class AnalysisStore:
             )
 
     def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.path, timeout=5)
+        connection = sqlite3.connect(self.path, timeout=5)
+        connection.execute("PRAGMA foreign_keys=ON")
+        return connection
