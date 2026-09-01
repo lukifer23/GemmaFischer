@@ -165,6 +165,9 @@ def test_board_move_rejects_illegal_move_without_starting_engine() -> None:
         )
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "ILLEGAL_MOVE"
+        assert response.json()["error"]["message"] == (
+            "The submitted move is not legal in this position."
+        )
 
 
 def test_legal_move_destinations_are_available_without_engine() -> None:
@@ -217,6 +220,9 @@ def test_server_owned_session_enforces_revision_and_persists(tmp_path: Path) -> 
         )
         assert stale.status_code == 409
         assert stale.json()["error"]["code"] == "REVISION_CONFLICT"
+        assert stale.json()["error"]["message"] == (
+            "The session changed; refresh it and retry the command."
+        )
 
     with TestClient(
         create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
@@ -339,6 +345,9 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
         )
         assert terminal.status_code == 409
         assert terminal.json()["error"]["code"] == "TUTOR_STATE_CONFLICT"
+        assert terminal.json()["error"]["message"] == (
+            "This practice interaction is already complete or dismissed."
+        )
         live_session = client.get(f"/api/v1/sessions/{session['session_id']}").json()
         assert live_session["fen"] == replied["fen"]
 

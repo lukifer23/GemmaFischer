@@ -268,8 +268,14 @@ def create_app(
     def play_board_move(payload: BoardMoveRequest, request: Request) -> JSONResponse:
         try:
             result = request.app.state.service.play_move(payload)
-        except ValueError as exc:
-            return _error("ILLEGAL_MOVE", str(exc), "move_validation", 422, field="move_uci")
+        except ValueError:
+            return _error(
+                "ILLEGAL_MOVE",
+                "The submitted move is not legal in this position.",
+                "move_validation",
+                422,
+                field="move_uci",
+            )
         except Exception:
             return _error(
                 "ENGINE_FAILURE", "The chess engine could not complete the move.", "engine", 503
@@ -280,16 +286,28 @@ def create_app(
     def board_legal_moves(payload: LegalMovesRequest) -> JSONResponse:
         try:
             result = legal_moves_for_square(payload.fen, payload.from_square)
-        except ValueError as exc:
-            return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
+        except ValueError:
+            return _error(
+                "INVALID_POSITION",
+                "The position or source square is invalid.",
+                "move_validation",
+                422,
+                field="fen",
+            )
         return JSONResponse(content=result.model_dump(mode="json"))
 
     @app.post("/api/v1/board/engine-turn", deprecated=True)
     def board_engine_turn(payload: EngineTurnRequest, request: Request) -> JSONResponse:
         try:
             result = request.app.state.service.play_engine_turn(payload)
-        except ValueError as exc:
-            return _error("INVALID_POSITION", str(exc), "move_validation", 422, field="fen")
+        except ValueError:
+            return _error(
+                "INVALID_POSITION",
+                "The position is invalid.",
+                "move_validation",
+                422,
+                field="fen",
+            )
         except Exception:
             return _error(
                 "ENGINE_FAILURE", "The chess engine could not complete its turn.", "engine", 503
@@ -341,8 +359,13 @@ def create_app(
             return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
         try:
             result = legal_moves_for_square(session.fen, from_square)
-        except ValueError as exc:
-            return _error("INVALID_POSITION", str(exc), "move_validation", 422)
+        except ValueError:
+            return _error(
+                "INVALID_POSITION",
+                "The stored session position is invalid.",
+                "move_validation",
+                422,
+            )
         return JSONResponse(content=result.model_dump(mode="json"))
 
     @app.post(
@@ -358,10 +381,20 @@ def create_app(
             return service.command_session(session_id, payload)
         except KeyError:
             return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
-        except SessionConflict as exc:
-            return _error("REVISION_CONFLICT", str(exc), "session", 409)
-        except ValueError as exc:
-            return _error("INVALID_SESSION_COMMAND", str(exc), "session", 422)
+        except SessionConflict:
+            return _error(
+                "REVISION_CONFLICT",
+                "The session changed; refresh it and retry the command.",
+                "session",
+                409,
+            )
+        except ValueError:
+            return _error(
+                "INVALID_SESSION_COMMAND",
+                "The session command is invalid for the current position or state.",
+                "session",
+                422,
+            )
         except Exception:
             return _error(
                 "ENGINE_FAILURE",
@@ -393,8 +426,13 @@ def create_app(
             return service.create_tutor(session_id, payload)
         except KeyError:
             return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
-        except ValueError as exc:
-            return _error("TUTOR_UNAVAILABLE", str(exc), "tutor", 422)
+        except ValueError:
+            return _error(
+                "TUTOR_UNAVAILABLE",
+                "Practice requires a completed review from this session.",
+                "tutor",
+                422,
+            )
 
     @app.get(
         "/api/v1/sessions/{session_id}/tutor",
@@ -438,8 +476,13 @@ def create_app(
             return _error("TUTOR_NOT_FOUND", "No tutor interaction has this ID.", "lookup", 404)
         try:
             return legal_moves_for_square(interaction.question.fen, from_square)
-        except ValueError as exc:
-            return _error("INVALID_POSITION", str(exc), "tutor", 422)
+        except ValueError:
+            return _error(
+                "INVALID_POSITION",
+                "The stored practice position is invalid.",
+                "tutor",
+                422,
+            )
 
     @app.post(
         "/api/v1/sessions/{session_id}/tutor/{interaction_id}/commands",
@@ -456,12 +499,27 @@ def create_app(
             return service.command_tutor(session_id, interaction_id, payload)
         except KeyError:
             return _error("TUTOR_NOT_FOUND", "No tutor interaction has this ID.", "lookup", 404)
-        except TutorStateConflict as exc:
-            return _error("TUTOR_STATE_CONFLICT", str(exc), "tutor", 409)
-        except SessionConflict as exc:
-            return _error("TUTOR_REVISION_CONFLICT", str(exc), "tutor", 409)
-        except ValueError as exc:
-            return _error("INVALID_TUTOR_COMMAND", str(exc), "tutor", 422)
+        except TutorStateConflict:
+            return _error(
+                "TUTOR_STATE_CONFLICT",
+                "This practice interaction is already complete or dismissed.",
+                "tutor",
+                409,
+            )
+        except SessionConflict:
+            return _error(
+                "TUTOR_REVISION_CONFLICT",
+                "The practice interaction changed; refresh it and retry.",
+                "tutor",
+                409,
+            )
+        except ValueError:
+            return _error(
+                "INVALID_TUTOR_COMMAND",
+                "The practice command is invalid for the current state.",
+                "tutor",
+                422,
+            )
         except Exception:
             return _error(
                 "ENGINE_FAILURE",
