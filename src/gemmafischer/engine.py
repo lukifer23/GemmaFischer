@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
+import subprocess
 import threading
 import uuid
 from collections import deque
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypeVar
 
 import chess
 import chess.engine
@@ -49,6 +52,7 @@ GAME_NODE_RATIO = {
     GameDifficulty.STRONG: 1.0,
 }
 ANALYSIS_SKILL_LEVEL = 20
+_EngineResultT = TypeVar("_EngineResultT")
 
 
 class EngineUnavailable(RuntimeError):
@@ -87,6 +91,32 @@ def resolve_stockfish(explicit: str | None = None) -> Path:
     raise EngineUnavailable(
         "Stockfish was not found. Install Stockfish 18 and set GEMMAFISCHER_STOCKFISH."
     )
+
+
+def inspect_stockfish_binary(path: Path) -> dict[str, str]:
+    """Start the resolved binary and require an exact supported major version."""
+    try:
+        result = subprocess.run(
+            [str(path)],
+            input="uci\nquit\n",
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise EngineUnavailable("Stockfish could not complete its identity handshake.") from exc
+    name = next(
+        (
+            line.removeprefix("id name ").strip()
+            for line in result.stdout.splitlines()
+            if line.startswith("id name ")
+        ),
+        "",
+    )
+    if result.returncode or not re.search(r"\bStockfish 18(?:\b|$)", name):
+        raise EngineUnavailable("The resolved engine is not the supported Stockfish 18 release.")
+    return {"name": name, "path": str(path), "sha256": sha256_file(path)}
 
 
 def _fact(position_id: str, fact_type: str, value: bool | int | str) -> BoardFact:
@@ -386,6 +416,41 @@ class StockfishProvider:
             self._started_at = datetime.now(UTC)
         return self._engine
 
+    def _discard_engine(self, engine: chess.engine.SimpleEngine) -> None:
+        """Forget a failed child process without closing a replacement."""
+        with self._condition:
+            if self._engine is engine:
+                self._engine = None
+        with suppress(Exception):
+            engine.close()
+
+    def _with_engine_recovery(
+        self,
+        operation_id: str,
+        operation: Callable[[chess.engine.SimpleEngine], _EngineResultT],
+    ) -> _EngineResultT:
+        """Retry one UCI operation after replacing a crashed Stockfish child."""
+        for attempt in range(2):
+            engine: chess.engine.SimpleEngine | None = None
+            try:
+                engine = self._ensure_engine()
+                self._raise_if_interrupted(operation_id)
+                return operation(engine)
+            except (
+                BrokenPipeError,
+                TimeoutError,
+                OSError,
+                chess.engine.EngineTerminatedError,
+            ) as exc:
+                self._raise_if_interrupted(operation_id)
+                if engine is not None:
+                    self._discard_engine(engine)
+                if attempt:
+                    raise EngineUnavailable(
+                        "Stockfish stopped unexpectedly and could not be restarted."
+                    ) from exc
+        raise AssertionError("engine recovery loop exhausted")
+
     def analyze(
         self,
         fen: str,
@@ -418,58 +483,62 @@ class StockfishProvider:
         operation_id = operation_id or uuid.uuid4().hex
         self._acquire_analysis(operation_id)
         try:
-            engine = self._ensure_engine()
-            # A gameplay request or cancellation can arrive while the UCI
-            # process is starting, before there is an engine handle to close.
-            # Honor the token before issuing the first command in that case.
-            self._raise_if_interrupted(operation_id)
-            analysis_options = {
-                key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options
-            }
-            if "Skill Level" in engine.options:
-                analysis_options["Skill Level"] = ANALYSIS_SKILL_LEVEL
-            engine.configure(analysis_options)
-            self._applied_options = dict(analysis_options)
-            if "Clear Hash" in engine.options:
-                engine.configure({"Clear Hash": None})
-            identity = engine.id
-            infos = engine.analyse(
-                board,
-                chess.engine.Limit(nodes=self.node_budget),
-                multipv=min(3, board.legal_moves.count()),
-                info=chess.engine.INFO_ALL,
-            )
-            candidates = [
-                self._candidate(board, info, rank, position_id)
-                for rank, info in enumerate(infos, 1)
-            ]
-            comparison = None
-            if considered is not None:
-                best_move = chess.Move.from_uci(candidates[0].move_uci)
-                best_constrained = engine.analyse(
+            def run(engine: chess.engine.SimpleEngine) -> tuple[
+                list[CandidateEvidence], MoveComparisonEvidence | None, EngineMetadata
+            ]:
+                analysis_options = {
+                    key: value for key, value in ENGINE_OPTIONS.items() if key in engine.options
+                }
+                if "Skill Level" in engine.options:
+                    analysis_options["Skill Level"] = ANALYSIS_SKILL_LEVEL
+                engine.configure(analysis_options)
+                self._applied_options = dict(analysis_options)
+                if "Clear Hash" in engine.options:
+                    engine.configure({"Clear Hash": None})
+                identity = engine.id
+                infos = engine.analyse(
                     board,
                     chess.engine.Limit(nodes=self.node_budget),
-                    root_moves=[best_move],
+                    multipv=min(3, board.legal_moves.count()),
                     info=chess.engine.INFO_ALL,
                 )
-                considered_info = (
-                    best_constrained
-                    if considered == best_move
-                    else engine.analyse(
+                candidates = [
+                    self._candidate(board, info, rank, position_id)
+                    for rank, info in enumerate(infos, 1)
+                ]
+                comparison = None
+                if considered is not None:
+                    best_move = chess.Move.from_uci(candidates[0].move_uci)
+                    best_constrained = engine.analyse(
                         board,
                         chess.engine.Limit(nodes=self.node_budget),
-                        root_moves=[considered],
+                        root_moves=[best_move],
                         info=chess.engine.INFO_ALL,
                     )
+                    considered_info = (
+                        best_constrained
+                        if considered == best_move
+                        else engine.analyse(
+                            board,
+                            chess.engine.Limit(nodes=self.node_budget),
+                            root_moves=[considered],
+                            info=chess.engine.INFO_ALL,
+                        )
+                    )
+                    comparison = self._comparison(
+                        board,
+                        position_id,
+                        best_move,
+                        best_constrained,
+                        considered,
+                        considered_info,
+                    )
+                metadata = self._metadata(
+                    identity.get("name", "Stockfish"), identity.get("author")
                 )
-                comparison = self._comparison(
-                    board, position_id, best_move, best_constrained, considered, considered_info
-                )
-            metadata = self._metadata(identity.get("name", "Stockfish"), identity.get("author"))
-            self._raise_if_interrupted(operation_id)
-        except (BrokenPipeError, chess.engine.EngineTerminatedError):
-            self._raise_if_interrupted(operation_id)
-            raise
+                return candidates, comparison, metadata
+
+            candidates, comparison, metadata = self._with_engine_recovery(operation_id, run)
         finally:
             self._release_operation(operation_id)
 
@@ -524,16 +593,18 @@ class StockfishProvider:
             operation_id = uuid.uuid4().hex
             self._acquire_gameplay(operation_id)
             try:
-                engine = self._ensure_engine()
-                applied = dict(self._applied_options)
-                if "Skill Level" in engine.options:
-                    applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
-                engine.configure(applied)
-                self._applied_options = applied
-                engine_name = engine.id.get("name", "Stockfish")
-                reply = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
-                if reply is None:
-                    raise RuntimeError("Stockfish returned no move")
+                def run(engine: chess.engine.SimpleEngine) -> tuple[str, chess.Move]:
+                    applied = dict(self._applied_options)
+                    if "Skill Level" in engine.options:
+                        applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
+                    engine.configure(applied)
+                    self._applied_options = applied
+                    reply = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
+                    if reply is None:
+                        raise RuntimeError("Stockfish returned no move")
+                    return engine.id.get("name", "Stockfish"), reply
+
+                engine_name, reply = self._with_engine_recovery(operation_id, run)
                 engine_move_uci = reply.uci()
                 engine_move_san = board.san(reply)
                 board.push(reply)
@@ -569,15 +640,18 @@ class StockfishProvider:
         operation_id = uuid.uuid4().hex
         self._acquire_gameplay(operation_id)
         try:
-            engine = self._ensure_engine()
-            applied = dict(self._applied_options)
-            if "Skill Level" in engine.options:
-                applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
-            engine.configure(applied)
-            engine_name = engine.id.get("name", "Stockfish")
-            move = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
-            if move is None:
-                raise RuntimeError("Stockfish returned no move")
+            def run(engine: chess.engine.SimpleEngine) -> tuple[str, chess.Move]:
+                applied = dict(self._applied_options)
+                if "Skill Level" in engine.options:
+                    applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
+                engine.configure(applied)
+                self._applied_options = applied
+                move = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
+                if move is None:
+                    raise RuntimeError("Stockfish returned no move")
+                return engine.id.get("name", "Stockfish"), move
+
+            engine_name, move = self._with_engine_recovery(operation_id, run)
             move_uci = move.uci()
             move_san = board.san(move)
             board.push(move)

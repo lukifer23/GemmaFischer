@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 import uuid
 from collections import deque
@@ -35,6 +36,7 @@ from .domain import (
     TutorInteractionView,
     TutorStatus,
     Workflow,
+    canonical_hash,
     normalize_fen,
     now_utc,
 )
@@ -46,7 +48,13 @@ from .engine import (
     validate_player_move,
 )
 from .runtime import GemmaRuntime
-from .storage import AnalysisStore
+from .storage import (
+    AnalysisStore,
+    StorageConflict,
+    StorageCorrupt,
+    StorageError,
+    StorageUnavailable,
+)
 from .tutor import (
     TutorInteractionRecord,
     answer_follow_up,
@@ -73,6 +81,9 @@ class TutorStateConflict(SessionConflict):
     pass
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class AnalysisService:
     """Single-worker local orchestrator with one active and latest-pending semantics."""
 
@@ -97,35 +108,85 @@ class AnalysisService:
         self._sessions: dict[str, Session] = {}
         self._tutors: dict[str, TutorInteractionRecord] = {}
         self._session_locks: dict[str, threading.RLock] = {}
+        self._creation_lock = threading.RLock()
         self._pending_ids: deque[str] = deque()
         self._active_id: str | None = None
         self._generation = 0
         self._job_retention = max(1, history_retention)
         self._condition = threading.Condition()
         self._closed = False
+        self._storage_status = "ready" if self._store else "disabled"
+        self._worker_status = "ready"
         self._worker = threading.Thread(target=self._run, name="gemmafischer-engine", daemon=True)
         self._worker.start()
 
-    def submit(self, request: AnalysisRequest, *, durable: bool = False) -> AnalysisSnapshot:
+    def submit(
+        self,
+        request: AnalysisRequest,
+        *,
+        durable: bool = False,
+        idempotency_key: str | None = None,
+    ) -> AnalysisSnapshot:
         with self._condition:
             self._ensure_open_locked()
-            self._generation += 1
+            payload_hash = canonical_hash(request.model_dump(mode="json"))
+            if idempotency_key:
+                replay = self._get_receipt("analysis:create", idempotency_key, payload_hash)
+                if replay is not None:
+                    return AnalysisSnapshot.model_validate_json(replay)
+            generation = self._generation + 1
             analysis_id = uuid.uuid4().hex
             timestamp = now_utc()
             snapshot = AnalysisSnapshot(
                 analysis_id=analysis_id,
-                generation=self._generation,
+                generation=generation,
                 state=AnalysisState.QUEUED,
                 created_at=timestamp,
                 updated_at=timestamp,
                 request=request,
             )
+            cancelled: list[tuple[_Job, AnalysisSnapshot]] = []
             if not durable:
                 for pending_id in tuple(self._pending_ids):
-                    if not self._jobs[pending_id].durable:
-                        self._cancel_locked(pending_id)
+                    job = self._jobs[pending_id]
+                    if not job.durable:
+                        cancelled.append(
+                            (
+                                job,
+                                job.snapshot.model_copy(
+                                    update={
+                                        "state": AnalysisState.CANCELLED,
+                                        "updated_at": now_utc(),
+                                    }
+                                ),
+                            )
+                        )
+            if self._store:
+                try:
+                    self._store.create_with_cancellations(
+                        snapshot,
+                        tuple((candidate, job.snapshot.state) for job, candidate in cancelled),
+                        reserve=durable,
+                        receipt=(
+                            "analysis:create",
+                            idempotency_key,
+                            payload_hash,
+                            "analysis",
+                            snapshot.model_dump_json(),
+                        )
+                        if idempotency_key
+                        else None,
+                    )
+                except StorageError as exc:
+                    self._note_storage_error(exc)
+                    raise
+            for job, candidate in cancelled:
+                job.cancelled = True
+                job.snapshot = candidate
+                if candidate.analysis_id in self._pending_ids:
+                    self._pending_ids.remove(candidate.analysis_id)
+            self._generation = generation
             self._jobs[analysis_id] = _Job(snapshot=snapshot, durable=durable)
-            self._persist(snapshot, reserve=durable)
             self._pending_ids.append(analysis_id)
             self._condition.notify()
             return snapshot
@@ -134,25 +195,79 @@ class AnalysisService:
     def history_enabled(self) -> bool:
         return self._store is not None
 
+    @property
+    def storage_status(self) -> str:
+        with self._condition:
+            return self._storage_status
+
+    @property
+    def worker_status(self) -> str:
+        with self._condition:
+            return self._worker_status
+
+    def retry_storage(self) -> str:
+        if self._store is None:
+            return "disabled"
+        try:
+            self._store.probe()
+        except StorageCorrupt:
+            with self._condition:
+                self._storage_status = "corrupt"
+                self._worker_status = "failed"
+            raise
+        except StorageUnavailable:
+            with self._condition:
+                self._storage_status = "degraded"
+                self._worker_status = "paused_storage"
+            raise
+        with self._condition:
+            self._storage_status = "ready"
+            self._worker_status = "ready"
+            self._condition.notify_all()
+        return "ready"
+
     def get(self, analysis_id: str) -> AnalysisSnapshot | None:
         with self._condition:
             job = self._jobs.get(analysis_id)
             if job:
                 return job.snapshot
-            return self._store.get(analysis_id) if self._store else None
+            if not self._store:
+                return None
+            try:
+                return self._store.get(analysis_id)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
 
     def recent(self, limit: int = 20) -> tuple[AnalysisSnapshot, ...]:
         if self._store:
-            return self._store.recent(limit)
+            try:
+                return self._store.recent(limit)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
         with self._condition:
             snapshots = (job.snapshot for job in self._jobs.values())
             return tuple(
                 sorted(snapshots, key=lambda item: item.updated_at, reverse=True)[:limit]
             )
 
-    def create_session(self, request: CreateSessionRequest) -> Session:
+    def create_session(
+        self, request: CreateSessionRequest, *, idempotency_key: str | None = None
+    ) -> Session:
+        with self._creation_lock:
+            return self._create_session(request, idempotency_key=idempotency_key)
+
+    def _create_session(
+        self, request: CreateSessionRequest, *, idempotency_key: str | None
+    ) -> Session:
         with self._condition:
             self._ensure_open_locked()
+            payload_hash = canonical_hash(request.model_dump(mode="json"))
+            if idempotency_key:
+                replay = self._get_receipt("session:create", idempotency_key, payload_hash)
+                if replay is not None:
+                    return Session.model_validate_json(replay)
         board, fen = normalize_fen(request.fen)
         timestamp = now_utc()
         outcome = board.outcome()
@@ -172,18 +287,38 @@ class AnalysisService:
             updated_at=timestamp,
             outcome=outcome.result() if outcome else None,
         )
-        self._save_session(session)
+        self._save_session(
+            session,
+            receipt=(
+                "session:create",
+                idempotency_key,
+                payload_hash,
+                "session",
+                session.model_dump_json(),
+            )
+            if idempotency_key
+            else None,
+        )
         return session
 
     def get_session(self, session_id: str) -> Session | None:
         with self._condition:
-            return self._sessions.get(session_id) or (
-                self._store.get_session(session_id) if self._store else None
-            )
+            cached = self._sessions.get(session_id)
+            if cached is not None or not self._store:
+                return cached
+            try:
+                return self._store.get_session(session_id)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
 
     def recent_sessions(self, limit: int = 20) -> tuple[Session, ...]:
         if self._store:
-            return self._store.recent_sessions(limit)
+            try:
+                return self._store.recent_sessions(limit)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
         with self._condition:
             return tuple(
                 sorted(self._sessions.values(), key=lambda item: item.updated_at, reverse=True)[
@@ -194,21 +329,52 @@ class AnalysisService:
     def delete_session(self, session_id: str) -> bool:
         lock = self._session_lock(session_id)
         with lock, self._condition:
-            existed = self._sessions.pop(session_id, None) is not None
+            existed = self._sessions.get(session_id) is not None
+            try:
+                deleted = self._store.delete_session(session_id) if self._store else existed
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+            if not (deleted or existed):
+                return False
+            self._sessions.pop(session_id, None)
             self._tutors = {
                 key: value
                 for key, value in self._tutors.items()
                 if value.view.session_id != session_id
             }
-            deleted = self._store.delete_session(session_id) if self._store else existed
             self._session_locks.pop(session_id, None)
-            return deleted or existed
+            return True
 
     def create_tutor(
-        self, session_id: str, request: CreateTutorRequest
+        self,
+        session_id: str,
+        request: CreateTutorRequest,
+        *,
+        idempotency_key: str | None = None,
     ) -> TutorInteractionView:
         lock = self._session_lock(session_id)
         with lock:
+            scope = f"session:{session_id}:tutor:create"
+            payload_hash = canonical_hash(request.model_dump(mode="json"))
+            if idempotency_key:
+                replay = self._get_receipt(scope, idempotency_key, payload_hash)
+                if replay is not None:
+                    return TutorInteractionView.model_validate_json(replay)
+            active = next(
+                (
+                    item
+                    for item in self.recent_tutors(session_id, 20)
+                    if item.status not in {TutorStatus.COMPLETE, TutorStatus.DISMISSED}
+                ),
+                None,
+            )
+            if active is not None:
+                if active.question.source_analysis_id == request.source_analysis_id:
+                    return active
+                raise TutorStateConflict(
+                    "Dismiss the active tutor interaction before starting another."
+                )
             session = self.get_session(session_id)
             if session is None:
                 raise KeyError(session_id)
@@ -229,20 +395,42 @@ class AnalysisService:
                 request.source_analysis_id,
                 analysis.evidence,
             )
-            self._save_tutor(record)
+            self._save_tutor(
+                record,
+                expected_revision=None,
+                receipt=(
+                    scope,
+                    idempotency_key,
+                    payload_hash,
+                    "tutor",
+                    record.view.model_dump_json(),
+                )
+                if idempotency_key
+                else None,
+            )
             return record.view
 
     def get_tutor(self, interaction_id: str) -> TutorInteractionView | None:
-        record = self._tutors.get(interaction_id) or (
-            self._store.get_tutor(interaction_id) if self._store else None
-        )
+        record = self._tutors.get(interaction_id)
+        if record is None and self._store:
+            try:
+                record = self._store.get_tutor(interaction_id)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
         return record.view if record else None
 
     def recent_tutors(
         self, session_id: str, limit: int = 20
     ) -> tuple[TutorInteractionView, ...]:
         if self._store:
-            return tuple(record.view for record in self._store.recent_tutors(session_id, limit))
+            try:
+                return tuple(
+                    record.view for record in self._store.recent_tutors(session_id, limit)
+                )
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
         return tuple(
             sorted(
                 (
@@ -263,9 +451,13 @@ class AnalysisService:
     ) -> TutorInteractionView:
         lock = self._session_lock(session_id)
         with lock:
-            record = self._tutors.get(interaction_id) or (
-                self._store.get_tutor(interaction_id) if self._store else None
-            )
+            record = self._tutors.get(interaction_id)
+            if record is None and self._store:
+                try:
+                    record = self._store.get_tutor(interaction_id)
+                except StorageError as exc:
+                    self._note_storage_error(exc)
+                    raise
             if record is None or record.view.session_id != session_id:
                 raise KeyError(interaction_id)
             if command.expected_revision != record.view.revision:
@@ -286,13 +478,27 @@ class AnalysisService:
                 updated = answer_follow_up(record, command.option_id)
             else:
                 updated = dismiss(record)
-            self._save_tutor(updated)
+            self._save_tutor(updated, expected_revision=record.view.revision)
             return updated.view
 
-    def _save_tutor(self, record: TutorInteractionRecord) -> None:
-        self._tutors[record.view.interaction_id] = record
+    def _save_tutor(
+        self,
+        record: TutorInteractionRecord,
+        *,
+        expected_revision: int | None,
+        receipt: tuple[str, str, str, str, str] | None = None,
+    ) -> None:
         if self._store:
-            self._store.save_tutor(record)
+            try:
+                self._store.save_tutor(
+                    record, expected_revision=expected_revision, receipt=receipt
+                )
+            except StorageConflict as exc:
+                raise SessionConflict("The tutor changed before it could be saved.") from exc
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+        self._tutors[record.view.interaction_id] = record
 
     def command_session(self, session_id: str, command: SessionCommandRequest) -> Session:
         # A revision check and its mutation are one transaction from the API's
@@ -457,15 +663,29 @@ class AnalysisService:
         updated = session.model_copy(
             update={"revision": session.revision + 1, "updated_at": now_utc(), **values}
         )
-        self._save_session(updated)
+        self._save_session(updated, expected_revision=session.revision)
         return updated
 
-    def _save_session(self, session: Session) -> None:
+    def _save_session(
+        self,
+        session: Session,
+        *,
+        expected_revision: int | None = None,
+        receipt: tuple[str, str, str, str, str] | None = None,
+    ) -> None:
         with self._condition:
             self._ensure_open_locked()
-            self._sessions[session.session_id] = session
             if self._store:
-                self._store.save_session(session)
+                try:
+                    self._store.save_session(
+                        session, expected_revision=expected_revision, receipt=receipt
+                    )
+                except StorageConflict as exc:
+                    raise SessionConflict("The session changed before it could be saved.") from exc
+                except StorageError as exc:
+                    self._note_storage_error(exc)
+                    raise
+            self._sessions[session.session_id] = session
 
     def cancel(self, analysis_id: str) -> AnalysisSnapshot | None:
         with self._condition:
@@ -477,19 +697,26 @@ class AnalysisService:
             return snapshot
 
     def close(self) -> None:
+        provider = None
         with self._condition:
             if self._closed:
                 return
             self._closed = True
             for analysis_id, job in tuple(self._jobs.items()):
                 if job.snapshot.state not in TERMINAL_STATES:
-                    self._cancel_locked(analysis_id, interrupt_active=False)
+                    try:
+                        self._cancel_locked(analysis_id, interrupt_active=False)
+                    except StorageError:
+                        LOGGER.exception("Failed to persist cancellation during shutdown")
             self._condition.notify_all()
-        if self._provider is not None:
-            self._provider.close()
-        self._worker.join(timeout=2)
-        if self._worker.is_alive():
+            provider = self._provider
+        try:
+            if provider is not None:
+                provider.close()
+        finally:
             self._worker.join(timeout=2)
+            if self._worker.is_alive():
+                self._worker.join(timeout=2)
 
     def play_move(self, request: BoardMoveRequest) -> BoardMoveResult:
         validate_player_move(request.fen, request.move_uci)
@@ -510,12 +737,13 @@ class AnalysisService:
         job = self._jobs[analysis_id]
         was_terminal = job.snapshot.state in TERMINAL_STATES
         operation_id = job.operation_id
-        job.cancelled = True
         if not was_terminal:
-            job.snapshot = job.snapshot.model_copy(
+            candidate = job.snapshot.model_copy(
                 update={"state": AnalysisState.CANCELLED, "updated_at": now_utc()}
             )
-            self._persist(job.snapshot)
+            self._persist(candidate, expected_state=job.snapshot.state)
+            job.snapshot = candidate
+        job.cancelled = True
         if analysis_id in self._pending_ids:
             self._pending_ids.remove(analysis_id)
         elif (
@@ -545,19 +773,43 @@ class AnalysisService:
         with self._condition:
             if job.cancelled:
                 return
-            job.snapshot = job.snapshot.model_copy(
+            previous_state = job.snapshot.state
+            candidate = job.snapshot.model_copy(
                 update={"state": state, "updated_at": now_utc(), **values}
             )
-            self._persist(job.snapshot)
+            self._persist(candidate, expected_state=previous_state)
+            job.snapshot = candidate
 
-    def _persist(self, snapshot: AnalysisSnapshot, *, reserve: bool = False) -> None:
+    def _persist(
+        self,
+        snapshot: AnalysisSnapshot,
+        *,
+        reserve: bool = False,
+        expected_state: AnalysisState | None = None,
+    ) -> None:
         if self._store:
-            self._store.save(snapshot, reserve=reserve)
+            try:
+                self._store.save(snapshot, reserve=reserve, expected_state=expected_state)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+
+    def _get_receipt(self, scope: str, key: str, payload_hash: str) -> str | None:
+        if not self._store:
+            return None
+        try:
+            return self._store.get_receipt(scope, key, payload_hash)
+        except StorageError as exc:
+            self._note_storage_error(exc)
+            raise
 
     def _run(self) -> None:
         while True:
             with self._condition:
-                while not self._closed and not self._pending_ids:
+                while not self._closed and (
+                    not self._pending_ids
+                    or self._storage_status not in {"ready", "disabled"}
+                ):
                     self._condition.wait()
                 if self._closed:
                     return
@@ -634,20 +886,43 @@ class AnalysisService:
                 job.operation_id = None
             except EngineOperationPreempted:
                 job.operation_id = None
-                with self._condition:
-                    if job.cancelled:
-                        pass
-                    elif job.durable or not self._pending_ids:
-                        self._update(job, AnalysisState.QUEUED)
-                        self._pending_ids.appendleft(analysis_id)
-                        self._condition.notify()
-                    else:
-                        self._cancel_locked(analysis_id, interrupt_active=False)
+                try:
+                    with self._condition:
+                        if job.cancelled:
+                            pass
+                        elif job.durable or not self._pending_ids:
+                            self._update(job, AnalysisState.QUEUED)
+                            self._pending_ids.appendleft(analysis_id)
+                            self._condition.notify()
+                        else:
+                            self._cancel_locked(analysis_id, interrupt_active=False)
+                except StorageError as exc:
+                    self._pause_for_storage(job, analysis_id, exc)
+            except StorageError as exc:
+                self._pause_for_storage(job, analysis_id, exc)
             except (ValueError, EngineUnavailable) as exc:
                 code = "INVALID_INPUT" if isinstance(exc, ValueError) else "ENGINE_UNAVAILABLE"
-                self._fail(job, code, str(exc), retryable=not isinstance(exc, ValueError))
-            except Exception as exc:
-                self._fail(job, "ENGINE_FAILURE", str(exc), retryable=True)
+                message = (
+                    "The analysis request is invalid."
+                    if isinstance(exc, ValueError)
+                    else "The chess engine is unavailable."
+                )
+                self._record_failure(
+                    job,
+                    analysis_id,
+                    code,
+                    message,
+                    not isinstance(exc, ValueError),
+                )
+            except Exception:
+                LOGGER.exception("Analysis worker failed")
+                self._record_failure(
+                    job,
+                    analysis_id,
+                    "ENGINE_FAILURE",
+                    "The chess engine could not complete the analysis.",
+                    True,
+                )
             finally:
                 with self._condition:
                     if self._active_id == analysis_id:
@@ -677,3 +952,38 @@ class AnalysisService:
             request_id=job.snapshot.analysis_id,
         )
         self._update(job, AnalysisState.FAILED, error=error)
+
+    def _record_failure(
+        self,
+        job: _Job,
+        analysis_id: str,
+        code: str,
+        message: str,
+        retryable: bool,
+    ) -> None:
+        try:
+            self._fail(job, code, message, retryable)
+        except StorageError as exc:
+            self._pause_for_storage(job, analysis_id, exc)
+
+    def _pause_for_storage(
+        self, job: _Job, analysis_id: str, exc: StorageError
+    ) -> None:
+        LOGGER.exception("Storage failure paused durable analysis work")
+        self._note_storage_error(exc)
+        with self._condition:
+            if (
+                not isinstance(exc, StorageCorrupt)
+                and not job.cancelled
+                and analysis_id not in self._pending_ids
+            ):
+                self._pending_ids.appendleft(analysis_id)
+
+    def _note_storage_error(self, exc: StorageError) -> None:
+        with self._condition:
+            if isinstance(exc, StorageCorrupt):
+                self._storage_status = "corrupt"
+                self._worker_status = "failed"
+            else:
+                self._storage_status = "degraded"
+                self._worker_status = "paused_storage"

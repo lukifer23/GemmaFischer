@@ -41,17 +41,23 @@ HTTP routes are:
   `/legal-moves` and `/commands` resources for frozen-position play, hint,
   answer, follow-up, and dismiss mutations with an independent revision;
 - `GET /api/v1/health` and `/api/v1/capabilities` for local runtime status.
+- `POST /api/v1/storage/retry` for a token-protected integrity/write probe that
+  resumes work paused by a transient storage failure.
 
 Tutor responses expose the frozen question, cited hint, submitted answer,
 comparison-backed feedback, and closed follow-up options. They never expose the
 hidden best move or correct follow-up key before submission. Tutor state copies
 its immutable source evidence and cannot alter the live session.
 
-The health contract reports capability/status only and never returns resolved
-filesystem paths. Request bodies are limited to 64 KiB at the HTTP boundary;
-oversized bodies receive `413 REQUEST_TOO_LARGE` before schema parsing.
+The health contract reports capability/status only, including storage and worker
+state, and never returns resolved filesystem paths. Durable create routes accept
+`Idempotency-Key`; the receipt and resource commit together, while reuse with a
+different payload returns `409 IDEMPOTENCY_CONFLICT`. Public failures carry a
+generated request ID in the header and typed body plus safe retry/remediation
+fields. Request bodies are limited to 64 KiB at the HTTP boundary; oversized
+bodies receive `413 REQUEST_TOO_LARGE` before schema parsing.
 
-The old stateless `POST /api/v1/board/*` routes are deprecated compatibility
-endpoints. New clients must use sessions.
+The old stateless `POST /api/v1/board/*` routes do not exist. Clients use
+server-owned sessions.
 
 The generated contract is committed as [openapi.json](openapi.json); CI fails on drift. Mutations require the per-launch capability token.

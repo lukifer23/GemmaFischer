@@ -3,6 +3,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import platform
 import shlex
 import signal
 import subprocess
@@ -12,13 +13,21 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from . import __version__
+
 
 class InstanceAlreadyRunning(RuntimeError):
     pass
 
 
 def runtime_dir() -> Path:
-    return Path.home() / "Library" / "Application Support" / "GemmaFischer"
+    override = os.environ.get("GEMMAFISCHER_DATA_DIR")
+    if override:
+        return Path(override).expanduser()
+    if platform.system() == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "GemmaFischer"
+    root = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    return root / "gemmafischer"
 
 
 def pid_path() -> Path:
@@ -50,6 +59,8 @@ class InstanceLock:
             "profile": self.profile,
             "cwd": str(Path.cwd().resolve()),
             "executable": str(Path(sys.executable).resolve()),
+            "application_version": __version__,
+            "data_dir": str(runtime_dir().resolve()),
             "started_at": datetime.now(UTC).isoformat(),
             "process_started": _process_started(os.getpid()),
         }
@@ -113,6 +124,21 @@ def instance_status() -> dict[str, Any]:
         "owned": owned,
         "identity_matches": identity_matches,
     }
+
+
+def instance_is_compatible(
+    status: dict[str, Any], *, host: str, port: int, profile: str
+) -> bool:
+    """Require the complete launch identity, not merely a live owned PID."""
+    return bool(
+        status.get("running")
+        and status.get("host") == host
+        and status.get("port") == port
+        and status.get("profile") == profile
+        and status.get("application_version") == __version__
+        and status.get("executable") == str(Path(sys.executable).resolve())
+        and status.get("data_dir") == str(runtime_dir().resolve())
+    )
 
 
 def _process_started(pid: int) -> str:

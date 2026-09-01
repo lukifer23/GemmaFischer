@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "status": "blocked_pending_data_and_toolchain",
+  "status": "archived_not_in_active_scope",
   "task": "claim-selection-1.0",
   "model": {
     "native_base_model": null,

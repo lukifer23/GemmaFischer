@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -27,12 +27,20 @@ from .domain import (
     Session,
     SessionCommandRequest,
     SessionList,
+    StorageRecoveryResult,
     TutorCommandRequest,
     TutorInteractionList,
     TutorInteractionView,
 )
 from .engine import EngineUnavailable, legal_moves_for_square, resolve_stockfish
 from .service import AnalysisService, SessionConflict, TutorStateConflict
+from .storage import (
+    IdempotencyConflict,
+    StorageConflict,
+    StorageCorrupt,
+    StorageError,
+    StorageUnavailable,
+)
 
 STATIC_DIR = Path(__file__).with_name("static")
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
@@ -149,10 +157,53 @@ def create_app(
         field = str(first.get("loc", ["request"])[-1])
         return _error(
             "INVALID_REQUEST",
-            str(first.get("msg", "The request is invalid.")),
+            "The request field is invalid.",
             "validation",
             422,
             field=field,
+        )
+
+    @app.exception_handler(StorageUnavailable)
+    async def storage_unavailable(_request: Request, _exc: StorageUnavailable) -> JSONResponse:
+        return _error(
+            "STORAGE_UNAVAILABLE",
+            "Local history is temporarily unavailable; the last committed state is unchanged.",
+            "storage",
+            503,
+            retryable=True,
+            remediation=("Retry storage recovery, then repeat the action.",),
+        )
+
+    @app.exception_handler(StorageCorrupt)
+    async def storage_corrupt(_request: Request, _exc: StorageCorrupt) -> JSONResponse:
+        return _error(
+            "STORAGE_CORRUPT",
+            "Local history failed its integrity check and has been left untouched.",
+            "storage",
+            503,
+            remediation=("Stop the app, back up the database, and run doctor.",),
+        )
+
+    @app.exception_handler(StorageConflict)
+    async def storage_conflict(_request: Request, _exc: StorageConflict) -> JSONResponse:
+        return _error(
+            "STORAGE_CONFLICT",
+            "The durable state changed; refresh it before retrying.",
+            "storage",
+            409,
+            remediation=("Refresh the resource before retrying.",),
+        )
+
+    @app.exception_handler(IdempotencyConflict)
+    async def idempotency_conflict(
+        _request: Request, _exc: IdempotencyConflict
+    ) -> JSONResponse:
+        return _error(
+            "IDEMPOTENCY_CONFLICT",
+            "This idempotency key was already used with a different request.",
+            "idempotency",
+            409,
+            remediation=("Generate a new idempotency key for a different request.",),
         )
 
     @app.get("/", include_in_schema=False)
@@ -196,6 +247,8 @@ def create_app(
             "engine_available": engine_available,
             "model_profile": "full" if full_profile else "deterministic",
             "history_enabled": request.app.state.service.history_enabled,
+            "storage_status": request.app.state.service.storage_status,
+            "worker_status": request.app.state.service.worker_status,
         }
 
     @app.get("/api/v1/capabilities", response_model=RuntimeCapabilities)
@@ -209,6 +262,17 @@ def create_app(
             engine_status=engine_status,  # type: ignore[arg-type]
             model_status=request.app.state.service.model_status,
             history_enabled=request.app.state.service.history_enabled,
+            storage_status=request.app.state.service.storage_status,
+            worker_status=request.app.state.service.worker_status,
+        )
+
+    @app.post("/api/v1/storage/retry", response_model=StorageRecoveryResult)
+    def retry_storage(request: Request) -> StorageRecoveryResult:
+        service: AnalysisService = request.app.state.service
+        service.retry_storage()
+        return StorageRecoveryResult(
+            storage_status=service.storage_status,  # type: ignore[arg-type]
+            worker_status=service.worker_status,  # type: ignore[arg-type]
         )
 
     @app.post(
@@ -217,8 +281,16 @@ def create_app(
         response_model=AnalysisAccepted,
         responses={422: {"model": ErrorEnvelope}},
     )
-    async def create_analysis(payload: AnalysisRequest, request: Request) -> JSONResponse:
-        snapshot = request.app.state.service.submit(payload)
+    def create_analysis(
+        payload: AnalysisRequest,
+        request: Request,
+        idempotency_key: str | None = Header(
+            default=None, alias="Idempotency-Key", min_length=8, max_length=128
+        ),
+    ) -> JSONResponse:
+        snapshot = request.app.state.service.submit(
+            payload, idempotency_key=idempotency_key
+        )
         location = f"/api/v1/analyses/{snapshot.analysis_id}"
         return JSONResponse(
             status_code=202,
@@ -231,7 +303,7 @@ def create_app(
         )
 
     @app.get("/api/v1/analyses", response_model=AnalysisList)
-    async def list_analyses(
+    def list_analyses(
         request: Request, limit: int = Query(default=20, ge=1, le=100)
     ) -> JSONResponse:
         snapshots = request.app.state.service.recent(limit)
@@ -247,7 +319,7 @@ def create_app(
         response_model=AnalysisSnapshot,
         responses={404: {"model": ErrorEnvelope}},
     )
-    async def get_analysis(analysis_id: str, request: Request) -> JSONResponse:
+    def get_analysis(analysis_id: str, request: Request) -> JSONResponse:
         snapshot = request.app.state.service.get(analysis_id)
         if snapshot is None:
             return _error("ANALYSIS_NOT_FOUND", "No analysis has this ID.", "lookup", 404)
@@ -258,7 +330,7 @@ def create_app(
         response_model=AnalysisSnapshot,
         responses={404: {"model": ErrorEnvelope}},
     )
-    async def cancel_analysis(analysis_id: str, request: Request) -> JSONResponse:
+    def cancel_analysis(analysis_id: str, request: Request) -> JSONResponse:
         snapshot = request.app.state.service.cancel(analysis_id)
         if snapshot is None:
             return _error("ANALYSIS_NOT_FOUND", "No analysis has this ID.", "lookup", 404)
@@ -320,12 +392,18 @@ def create_app(
         status_code=201,
         responses={422: {"model": ErrorEnvelope}},
     )
-    async def create_session(payload: CreateSessionRequest, request: Request) -> Session:
+    def create_session(
+        payload: CreateSessionRequest,
+        request: Request,
+        idempotency_key: str | None = Header(
+            default=None, alias="Idempotency-Key", min_length=8, max_length=128
+        ),
+    ) -> Session:
         service: AnalysisService = request.app.state.service
-        return service.create_session(payload)
+        return service.create_session(payload, idempotency_key=idempotency_key)
 
     @app.get("/api/v1/sessions", response_model=SessionList)
-    async def list_sessions(
+    def list_sessions(
         request: Request, limit: int = Query(default=20, ge=1, le=100)
     ) -> SessionList:
         sessions = request.app.state.service.recent_sessions(limit)
@@ -336,7 +414,7 @@ def create_app(
         response_model=Session,
         responses={404: {"model": ErrorEnvelope}},
     )
-    async def get_session(session_id: str, request: Request) -> Session | JSONResponse:
+    def get_session(session_id: str, request: Request) -> Session | JSONResponse:
         service: AnalysisService = request.app.state.service
         session = service.get_session(session_id)
         if session is None:
@@ -348,7 +426,7 @@ def create_app(
         response_model=LegalMovesResult,
         responses={404: {"model": ErrorEnvelope}},
     )
-    async def session_legal_moves(
+    def session_legal_moves(
         session_id: str,
         from_square: str,
         request: Request,
@@ -395,12 +473,16 @@ def create_app(
                 "session",
                 422,
             )
+        except StorageError:
+            raise
         except Exception:
             return _error(
                 "ENGINE_FAILURE",
                 "The chess engine could not complete the session command.",
                 "engine",
                 503,
+                retryable=True,
+                remediation=("Retry the command or run doctor if the failure persists.",),
             )
 
     @app.delete(
@@ -408,7 +490,7 @@ def create_app(
         response_model=DeleteResult,
         responses={404: {"model": ErrorEnvelope}},
     )
-    async def delete_session(session_id: str, request: Request) -> DeleteResult | JSONResponse:
+    def delete_session(session_id: str, request: Request) -> DeleteResult | JSONResponse:
         if not request.app.state.service.delete_session(session_id):
             return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
         return DeleteResult()
@@ -419,13 +501,27 @@ def create_app(
         status_code=201,
     )
     def create_tutor(
-        session_id: str, payload: CreateTutorRequest, request: Request
+        session_id: str,
+        payload: CreateTutorRequest,
+        request: Request,
+        idempotency_key: str | None = Header(
+            default=None, alias="Idempotency-Key", min_length=8, max_length=128
+        ),
     ) -> TutorInteractionView | JSONResponse:
         service: AnalysisService = request.app.state.service
         try:
-            return service.create_tutor(session_id, payload)
+            return service.create_tutor(
+                session_id, payload, idempotency_key=idempotency_key
+            )
         except KeyError:
             return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        except TutorStateConflict:
+            return _error(
+                "TUTOR_STATE_CONFLICT",
+                "Finish or dismiss the active practice before starting another.",
+                "tutor",
+                409,
+            )
         except ValueError:
             return _error(
                 "TUTOR_UNAVAILABLE",
@@ -520,12 +616,16 @@ def create_app(
                 "tutor",
                 422,
             )
+        except StorageError:
+            raise
         except Exception:
             return _error(
                 "ENGINE_FAILURE",
                 "The chess engine could not grade this tutor answer.",
                 "engine",
                 503,
+                retryable=True,
+                remediation=("Retry the answer or run doctor if the failure persists.",),
             )
 
     return app
@@ -538,7 +638,10 @@ def _error(
     status: int,
     *,
     field: str | None = None,
+    retryable: bool = False,
+    remediation: tuple[str, ...] = (),
 ) -> JSONResponse:
+    request_id = secrets.token_hex(16)
     return JSONResponse(
         status_code=status,
         content={
@@ -546,12 +649,13 @@ def _error(
                 "code": code,
                 "message": message,
                 "stage": stage,
-                "retryable": False,
+                "retryable": retryable,
                 "field": field,
-                "remediation": [],
-                "request_id": "request-rejected",
+                "remediation": list(remediation),
+                "request_id": request_id,
             }
         },
+        headers={"X-Request-ID": request_id},
     )
 
 

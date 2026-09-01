@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -25,10 +26,16 @@ from .coach import render_claim, validate_model_claims
 from .data_audit import audit_data
 from .dataset import acquire_source, build_puzzle_dataset, load_source
 from .domain import AnalysisRequest, AnalysisState, RatingBucket, Workflow
-from .engine import EngineUnavailable, StockfishProvider, resolve_stockfish
+from .engine import (
+    EngineUnavailable,
+    StockfishProvider,
+    inspect_stockfish_binary,
+    resolve_stockfish,
+)
 from .lifecycle import (
     InstanceAlreadyRunning,
     InstanceLock,
+    instance_is_compatible,
     instance_status,
     runtime_dir,
     stop_instance,
@@ -292,34 +299,173 @@ def _emit(payload: object, output_format: str) -> None:
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
+    if args.yes and not args.repair:
+        raise ValueError("--yes is only valid with --repair")
+    state = _setup_state(args.profile)
+    actions, blockers = _setup_actions(args.profile, state)
+    payload: dict[str, object] = {
+        "profile": args.profile,
+        "mode": "repair" if args.repair else ("plan" if args.plan else "inspect"),
+        "mutating": bool(args.repair and args.yes),
+        "ready": not actions and not blockers,
+        "state": state,
+        "actions": [
+            {"code": code, "description": description, "command": list(command)}
+            for code, description, command in actions
+        ],
+        "blockers": blockers,
+    }
+    if args.repair and not args.yes:
+        payload["confirmation_required"] = "Repeat with --repair --yes to execute this plan."
+        _emit(payload, args.format)
+        return 2
+    if args.repair and args.yes:
+        if blockers:
+            _emit(payload, args.format)
+            return 3
+        completed: list[str] = []
+        for code, _description, command in actions:
+            result = subprocess.run(command, check=False)
+            if result.returncode:
+                payload["completed"] = completed
+                payload["failed_action"] = code
+                _emit(payload, args.format)
+                return 4
+            completed.append(code)
+        state = _setup_state(args.profile)
+        remaining, blockers = _setup_actions(args.profile, state)
+        payload.update(
+            {
+                "state": state,
+                "completed": completed,
+                "actions": [
+                    {"code": code, "description": description, "command": list(command)}
+                    for code, description, command in remaining
+                ],
+                "blockers": blockers,
+                "ready": not remaining and not blockers,
+            }
+        )
+    _emit(payload, args.format)
+    if args.plan:
+        return 0
+    return 0 if payload["ready"] else 3
+
+
+def _setup_state(profile: str) -> dict[str, object]:
     try:
         engine = resolve_stockfish()
-        provider = StockfishProvider(str(engine), node_budget=1)
-        engine_info = {
-            "path": str(engine),
-            "sha256": provider.binary_sha256,
+        identity = inspect_stockfish_binary(engine)
+        engine_info: dict[str, object] = {
+            **identity,
             "status": "verified-local",
         }
     except EngineUnavailable:
-        engine_info = {
-            "status": "missing",
-            "repair": (
-                "brew install stockfish; export "
-                "GEMMAFISCHER_STOCKFISH=$(command -v stockfish)"
-            ),
-        }
-    payload = {
-        "profile": args.profile,
-        "mutating": False,
-        "engine": engine_info,
-        "model": (
-            {"id": "mlx-community/gemma-4-e2b-it-4bit", "download": "opt-in"}
-            if args.profile == "full"
-            else {"status": "not required"}
-        ),
-    }
-    _emit(payload, args.format)
-    return 0 if engine_info["status"] != "missing" else 3
+        engine_info = {"status": "missing"}
+    state: dict[str, object] = {"engine": engine_info}
+    if profile == "full":
+        try:
+            import mlx_lm  # noqa: F401
+
+            state["full_dependencies"] = {"status": "installed"}
+        except ImportError:
+            state["full_dependencies"] = {"status": "missing"}
+        try:
+            state["model"] = inspect_model_assets(DEFAULT_MODEL, DEFAULT_MODEL_REVISION)
+        except ModelUnavailable as exc:
+            state["model"] = {"status": "missing_or_invalid", "message": str(exc)}
+    else:
+        state["full_dependencies"] = {"status": "not_required"}
+        state["model"] = {"status": "not_required"}
+    return state
+
+
+def _setup_actions(
+    profile: str, state: dict[str, object]
+) -> tuple[list[tuple[str, str, tuple[str, ...]]], list[str]]:
+    actions: list[tuple[str, str, tuple[str, ...]]] = []
+    blockers: list[str] = []
+    engine = state["engine"]
+    assert isinstance(engine, dict)
+    if engine.get("status") != "verified-local":
+        if platform.system() == "Darwin" and shutil.which("brew"):
+            actions.append(
+                (
+                    "INSTALL_STOCKFISH",
+                    "Install Stockfish with Homebrew.",
+                    ("brew", "install", "stockfish"),
+                )
+            )
+        elif platform.system() == "Linux" and shutil.which("apt-get"):
+            prefix = () if os.geteuid() == 0 else (("sudo",) if shutil.which("sudo") else ())
+            if os.geteuid() != 0 and not prefix:
+                blockers.append("Stockfish repair needs root access or sudo for apt-get.")
+            else:
+                actions.extend(
+                    (
+                        (
+                            "APT_UPDATE",
+                            "Refresh apt package metadata.",
+                            (*prefix, "apt-get", "update"),
+                        ),
+                        (
+                            "INSTALL_STOCKFISH",
+                            "Install Stockfish with apt.",
+                            (*prefix, "apt-get", "install", "-y", "stockfish"),
+                        ),
+                    )
+                )
+        else:
+            blockers.append("Install Homebrew on macOS or use an apt-based Linux system.")
+    if profile == "full":
+        if platform.system() != "Darwin" or platform.machine() not in {"arm64", "aarch64"}:
+            blockers.append("The full MLX profile requires Apple Silicon macOS.")
+            return actions, blockers
+        dependencies = state["full_dependencies"]
+        assert isinstance(dependencies, dict)
+        if dependencies.get("status") != "installed":
+            command: tuple[str, ...]
+            if shutil.which("uv"):
+                command = (
+                    "uv",
+                    "pip",
+                    "install",
+                    "--python",
+                    sys.executable,
+                    "mlx-lm==0.31.3",
+                    "psutil==7.2.2",
+                )
+            else:
+                command = (
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "mlx-lm==0.31.3",
+                    "psutil==7.2.2",
+                )
+            actions.append(
+                (
+                    "INSTALL_FULL_DEPENDENCIES",
+                    "Install the pinned full-profile runtime.",
+                    command,
+                )
+            )
+        model = state["model"]
+        assert isinstance(model, dict)
+        if model.get("status") != "verified-local":
+            script = (
+                "from huggingface_hub import snapshot_download; "
+                f"snapshot_download(repo_id={DEFAULT_MODEL!r}, revision={DEFAULT_MODEL_REVISION!r})"
+            )
+            actions.append(
+                (
+                    "DOWNLOAD_PINNED_MODEL",
+                    "Download the exact model revision; verification runs after download.",
+                    (sys.executable, "-c", script),
+                )
+            )
+    return actions, blockers
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -334,7 +480,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if args.profile != "dev":
         try:
             path = resolve_stockfish()
-            checks.append({"code": "STOCKFISH", "ok": True, "path": str(path)})
+            checks.append({"code": "STOCKFISH", "ok": True, **inspect_stockfish_binary(path)})
         except EngineUnavailable as exc:
             checks.append({"code": "STOCKFISH", "ok": False, "message": str(exc)})
     if args.profile == "full":
@@ -432,6 +578,19 @@ def cmd_launch(args: argparse.Namespace) -> int:
     current = instance_status()
     if current.get("running"):
         url = f"http://{current['host']}:{current['port']}"
+        if not instance_is_compatible(
+            current,
+            host="127.0.0.1",
+            port=args.port,
+            profile=args.profile,
+        ):
+            print(
+                "INSTANCE_CONFIG_CONFLICT: running instance uses "
+                f"profile={current.get('profile')} port={current.get('port')}; "
+                "stop it before launching a different configuration",
+                file=sys.stderr,
+            )
+            return 6
         if not args.no_open:
             webbrowser.open(url)
         _emit({"status": "already_running", "url": url, "pid": current["pid"]}, "human")
@@ -462,9 +621,24 @@ def cmd_launch(args: argparse.Namespace) -> int:
         try:
             with urllib.request.urlopen(f"{url}/api/v1/health", timeout=0.5) as response:
                 if response.status == 200:
+                    status = instance_status()
+                    if not instance_is_compatible(
+                        status,
+                        host="127.0.0.1",
+                        port=args.port,
+                        profile=args.profile,
+                    ):
+                        if status.get("running"):
+                            print(
+                                "INSTANCE_CONFIG_CONFLICT: health endpoint belongs to an "
+                                "incompatible managed instance",
+                                file=sys.stderr,
+                            )
+                            return 6
+                        time.sleep(0.1)
+                        continue
                     if not args.no_open:
                         webbrowser.open(url)
-                    status = instance_status()
                     _emit({"status": "running", "url": url, "pid": status.get("pid")}, "human")
                     return 0
         except (urllib.error.URLError, TimeoutError):

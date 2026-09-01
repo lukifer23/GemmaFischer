@@ -1295,12 +1295,34 @@
             "default": "2.0",
             "title": "Schema Version",
             "type": "string"
+          },
+          "storage_status": {
+            "enum": [
+              "disabled",
+              "ready",
+              "degraded",
+              "corrupt"
+            ],
+            "title": "Storage Status",
+            "type": "string"
+          },
+          "worker_status": {
+            "enum": [
+              "ready",
+              "paused_storage",
+              "recovering",
+              "failed"
+            ],
+            "title": "Worker Status",
+            "type": "string"
           }
         },
         "required": [
           "engine_status",
           "model_status",
-          "history_enabled"
+          "history_enabled",
+          "storage_status",
+          "worker_status"
         ],
         "title": "RuntimeCapabilities",
         "type": "object"
@@ -1523,6 +1545,37 @@
         ],
         "title": "SessionStatus",
         "type": "string"
+      },
+      "StorageRecoveryResult": {
+        "additionalProperties": false,
+        "properties": {
+          "storage_status": {
+            "enum": [
+              "disabled",
+              "ready",
+              "degraded",
+              "corrupt"
+            ],
+            "title": "Storage Status",
+            "type": "string"
+          },
+          "worker_status": {
+            "enum": [
+              "ready",
+              "paused_storage",
+              "recovering",
+              "failed"
+            ],
+            "title": "Worker Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "storage_status",
+          "worker_status"
+        ],
+        "title": "StorageRecoveryResult",
+        "type": "object"
       },
       "TutorCommandRequest": {
         "additionalProperties": false,
@@ -1977,6 +2030,26 @@
       },
       "post": {
         "operationId": "create_analysis_api_v1_analyses_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2300,6 +2373,26 @@
       },
       "post": {
         "operationId": "create_session_api_v1_sessions_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2619,6 +2712,24 @@
               "title": "Session Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
           }
         ],
         "requestBody": {
@@ -2817,6 +2928,24 @@
           }
         },
         "summary": "Tutor Legal Moves"
+      }
+    },
+    "/api/v1/storage/retry": {
+      "post": {
+        "operationId": "retry_storage_api_v1_storage_retry_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageRecoveryResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Retry Storage"
       }
     }
   }

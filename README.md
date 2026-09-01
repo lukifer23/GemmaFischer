@@ -24,11 +24,15 @@ Requirements: macOS or Linux, Python 3.12 through [`uv`](https://docs.astral.sh/
 git clone https://github.com/lukifer23/GemmaFischer.git
 cd GemmaFischer
 uv sync --frozen --group dev
-brew install stockfish                 # macOS; use your package manager on Linux
-export GEMMAFISCHER_STOCKFISH="$(command -v stockfish)"
+uv run gemmafischer setup --plan --profile deterministic
+uv run gemmafischer setup --repair --yes --profile deterministic
 uv run gemmafischer doctor --profile deterministic
 uv run gemmafischer launch
 ```
+
+`setup --plan` is read-only. Confirmed repair supports Homebrew on macOS and
+apt-based Debian/Ubuntu, then re-verifies the installed engine. The full profile
+adds one exact Gemma revision; it never discovers or installs a second checkpoint.
 
 `launch` starts exactly one background instance, waits for health, and opens the browser. Lifecycle commands are explicit:
 
@@ -55,19 +59,11 @@ uv run gemmafischer analyze --offline --mode compare \
 - LM Studio models are qualification candidates, not silently selected player runtimes. The local LFM2.5-2.6B 4-bit candidate is smaller, but its current always-thinking checkpoint failed the visible-output and tutoring gates described in the model card.
 - `dev` checks portable contributor prerequisites without requiring Stockfish or model assets.
 
-No training command exists in the player. Training is blocked until a newly acquired corpus has complete license and lineage metadata, zero invalid or conflicting labels, and frozen leakage-free evaluation splits. Historical data was audited, found unsafe for training, and archived rather than silently repaired.
-
-The repository pins the official Lichess puzzle and evaluation exports by URL, publication date, CC0 license, and SHA-256 in `data/sources.json`. Acquisition and lesson-record construction are executable but deliberately separate from training:
-
-```bash
-uv run gemmafischer acquire-data
-uv sync --all-extras
-uv run gemmafischer build-dataset --limit 1000 --nodes 50000
-uv run gemmafischer audit-data
-uv run gemmafischer training-readiness
-```
-
-The builder verifies the archive hash, applies the documented Lichess setup move, rejects illegal or repeated positions, creates Stockfish-backed evidence and parser-validated claim-selection targets, and assigns whole puzzle lineages deterministically to train, validation, or untouched final test. `audit-data` blocks duplicates, incomplete records, corpora below 10,000/1,000/1,000 rows, or any contract, license, provenance, legality, conflict, semantic-position leakage, or lineage-leakage failure.
+Post-training is not active product work. There is no training command, adapter,
+training checkpoint, or training environment on `main`. Historical data and the
+old readiness gate remain inspectable only as fail-closed governance records.
+Model work stops unless the one pinned Gemma inference candidate first beats the
+deterministic tutor in a frozen blinded human evaluation. A tie is a loss.
 
 ## Verification
 
@@ -98,7 +94,14 @@ uv run gemmafischer profile-model --backend lmstudio \
 
 `portable` runs Ruff, strict mypy, engine-free/model-free tests, JavaScript syntax, repository and OpenAPI drift audits, dependency compatibility, distribution builds, and an isolated installed-wheel smoke test. `local-alpha` adds the 70% model-free whole-package coverage ratchet, real Stockfish tests, and the real Chromium flow. `release` also enforces the checked-in release-status ledger. Optional model tests remain separate because missing Gemma assets must not block the deterministic product.
 
-The durable browser gate launches a real FastAPI server, real Stockfish, temporary SQLite, and Chromium. It proves position analysis, cited hint display, legal board answer, evidence-based grading, follow-up completion, return to an unchanged live FEN, one keyboard tab stop, zero console errors, and no horizontal overflow at 390×844. Physical-device, VoiceOver, endurance, human-usefulness, and optional-model release gates remain open and are listed in [release status](docs/release-status.md).
+The durable browser gate launches a real FastAPI server, real Stockfish,
+temporary SQLite, and Chromium. It proves position analysis, persisted tutor
+restore and dismissal across reload, cited hint display, legal board answer,
+evidence-based grading, follow-up completion, return to an unchanged live FEN,
+desktop column order, zero console errors, and no horizontal overflow at
+390×844. Physical-device, VoiceOver, endurance, human-usefulness, and
+optional-model release gates remain open and are listed in
+[release status](docs/release-status.md).
 
 ## Documentation
 
@@ -111,7 +114,7 @@ The durable browser gate launches a real FastAPI server, real Stockfish, tempora
 - [Evidence and HTTP contracts](docs/evidence-contract.md)
 - [Model runtime and qualification](docs/model-card.md)
 - [Training and data policy](docs/data-provenance.md)
-- [Post-training and Unsloth readiness](docs/training-readiness.md)
+- [Archived post-training readiness record](docs/training-readiness.md)
 - [Performance targets and evidence](docs/performance-vnext.md)
 - [Runtime qualification](docs/runtime-qualification.md)
 - [Qualification plan](docs/qualification-plan.md)

@@ -9,6 +9,49 @@ import pytest
 import gemmafischer.lifecycle as lifecycle
 
 
+def test_runtime_dir_is_platform_aware(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("GEMMAFISCHER_DATA_DIR", raising=False)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    monkeypatch.setattr(lifecycle.platform, "system", lambda: "Linux")
+
+    assert lifecycle.runtime_dir() == tmp_path / "gemmafischer"
+
+
+def test_runtime_dir_honors_explicit_data_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GEMMAFISCHER_DATA_DIR", str(tmp_path))
+
+    assert lifecycle.runtime_dir() == tmp_path
+
+
+def test_instance_compatibility_requires_complete_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GEMMAFISCHER_DATA_DIR", str(tmp_path))
+    status = {
+        "running": True,
+        "host": "127.0.0.1",
+        "port": 8765,
+        "profile": "deterministic",
+        "application_version": lifecycle.__version__,
+        "executable": str(Path(lifecycle.sys.executable).resolve()),
+        "data_dir": str(tmp_path.resolve()),
+    }
+
+    assert lifecycle.instance_is_compatible(
+        status, host="127.0.0.1", port=8765, profile="deterministic"
+    )
+    assert not lifecycle.instance_is_compatible(
+        {**status, "application_version": "0.1.0"},
+        host="127.0.0.1",
+        port=8765,
+        profile="deterministic",
+    )
+
+
 def test_status_rejects_reused_pid_even_when_command_looks_owned(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

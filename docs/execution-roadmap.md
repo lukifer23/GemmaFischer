@@ -308,9 +308,21 @@ LFM2.5-2.6B remains a recorded failed candidate for the current frozen harness;
 that is not a claim about the whole model family and is not repaired by grading
 it differently.
 
-## Phase 8 - Decide on post-training and Unsloth
+## Archived decision boundary - post-training is not active work
 
-Fine-tuning is considered only after Phases 1-7 pass, the task-aligned corpus is
+Post-training is outside the active product roadmap. The deterministic learning
+loop and human usefulness gate come first; the single pinned Gemma inference
+candidate is evaluated only after that loop passes. A tie is a loss. Unless
+Gemma first produces a statistically meaningful blinded win with no correctness,
+grounding, latency, memory, or reliability regression, model work stops and no
+training-scale corpus, native checkpoint, adapter, or training environment is
+created.
+
+The material below is retained as a historical fail-closed decision record. It
+does not authorize setup, downloads, toolchain installation, a smoke run, or a
+second model checkpoint.
+
+Fine-tuning was considered only after Phases 1-7 pass, the task-aligned corpus is
 audited, repeated model errors form a stable taxonomy, and harness/schema errors
 have been ruled out on frozen evaluation.
 

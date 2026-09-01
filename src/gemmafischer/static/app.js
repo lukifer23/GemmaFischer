@@ -65,6 +65,15 @@ const state = {
 };
 const squareNodes = new Map();
 class StaleIntentError extends Error {}
+class ApiError extends Error {
+  constructor(error, status) {
+    super(error?.message || `Request failed (${status})`);
+    this.name = "ApiError";
+    this.code = error?.code || "REQUEST_FAILED";
+    this.retryable = Boolean(error?.retryable);
+    this.requestId = error?.request_id || null;
+  }
+}
 const superseded = (error) =>
   error?.name === "AbortError" || error instanceof StaleIntentError;
 
@@ -74,11 +83,17 @@ async function api(path, options = {}) {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
   });
   const data = response.status === 204 ? null : await response.json();
-  if (!response.ok)
-    throw new Error(
-      data?.error?.message || `Request failed (${response.status})`,
-    );
+  if (!response.ok) {
+    if (["STORAGE_UNAVAILABLE", "STORAGE_CORRUPT"].includes(data?.error?.code))
+      updateStorageBanner(
+        data.error.code === "STORAGE_CORRUPT" ? "corrupt" : "degraded",
+      );
+    throw new ApiError(data?.error, response.status);
+  }
   return data;
+}
+function idempotencyKey(prefix) {
+  return `${prefix}-${crypto.randomUUID()}`;
 }
 function sessionContext() {
   return {
@@ -225,19 +240,22 @@ function renderBoard() {
       row === 7 ? square[0] : column === 0 ? square[1] : "";
     button.setAttribute(
       "aria-label",
-      `${piece ? NAMES[piece] + " on " : "Empty "}${square}${legal ? ", legal destination" : ""}`,
+      `${piece ? NAMES[piece] + " on " : "Empty "}${square}${state.selected === square ? ", selected" : ""}${legal ? ", legal destination" : ""}${state.lastMove.includes(square) ? ", last move" : ""}`,
     );
+    button.setAttribute("aria-selected", String(state.selected === square));
     button.disabled = inputDisabled;
     button.setAttribute("aria-disabled", String(inputDisabled));
     button.tabIndex = !inputDisabled && square === state.focusSquare ? 0 : -1;
   });
-  if (
-    board.children.length !== 64 ||
-    [...board.children].some(
-      (node, index) => node !== squareNodes.get(order[index]),
-    )
-  )
-    board.replaceChildren(...order.map((square) => squareNodes.get(square)));
+  const rows = [];
+  for (let row = 0; row < 8; row += 1) {
+    const rowNode = document.createElement("div");
+    rowNode.className = "board-row";
+    rowNode.setAttribute("role", "row");
+    rowNode.append(...order.slice(row * 8, row * 8 + 8).map((square) => squareNodes.get(square)));
+    rows.push(rowNode);
+  }
+  board.replaceChildren(...rows);
 }
 function boardKeydown(event) {
   const deltas = {
@@ -616,6 +634,7 @@ async function explainPosition() {
   try {
     const created = await api("/api/v1/analyses", {
       method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey("analysis") },
       body: JSON.stringify({
         mode: "position",
         fen: state.session.fen,
@@ -721,17 +740,34 @@ async function tutorCommand(action, payload = {}) {
   const context = sessionContext(),
     interaction = state.tutor;
   if (!interaction) throw new Error("No practice question is active.");
-  const result = await api(
-    `/api/v1/sessions/${context.sessionId}/tutor/${interaction.interaction_id}/commands`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        expected_revision: interaction.revision,
-        action,
-        ...payload,
-      }),
-    },
-  );
+  let result;
+  try {
+    result = await api(
+      `/api/v1/sessions/${context.sessionId}/tutor/${interaction.interaction_id}/commands`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          expected_revision: interaction.revision,
+          action,
+          ...payload,
+        }),
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      ["TUTOR_REVISION_CONFLICT", "TUTOR_STATE_CONFLICT"].includes(error.code)
+    ) {
+      const authoritative = await api(
+        `/api/v1/sessions/${context.sessionId}/tutor/${interaction.interaction_id}`,
+      );
+      if (contextIsCurrent(context)) {
+        state.tutor = authoritative;
+        renderTutor();
+      }
+    }
+    throw error;
+  }
   if (
     !contextIsCurrent(context) ||
     state.tutor?.interaction_id !== interaction.interaction_id
@@ -784,10 +820,59 @@ function renderTutor() {
     button.type = "button";
     button.className = "primary";
     button.textContent = "Return to game";
-    button.addEventListener("click", leaveTutor);
+    button.addEventListener("click", () => void leaveTutor());
     followUp.replaceChildren(message, button);
   }
   renderBoard();
+}
+function setTutorStatus(message = "") {
+  $("tutor-status").textContent = message;
+  $("tutor-status").hidden = !message;
+}
+function setTutorError(message = "") {
+  $("tutor-error").textContent = message;
+  $("tutor-error").hidden = !message;
+}
+function enterTutor(tutor, restored = false) {
+  state.tutor = tutor;
+  state.tutorMode = true;
+  state.lastAnalysisId = tutor.question.source_analysis_id;
+  clearSelection();
+  parseFen(tutor.question.fen);
+  $("practice-banner").hidden = false;
+  $("result").hidden = true;
+  $("empty-guide").hidden = true;
+  $("tutor-panel").hidden = false;
+  setTutorError();
+  setTutorStatus(restored ? "Restored your unfinished local practice." : "");
+  setStatus(
+    restored
+      ? "Practice restored. Your live game is unchanged."
+      : "Practice mode: play the strongest move. Your live game will not change.",
+  );
+  renderTutor();
+  $("tutor-question").focus?.();
+}
+function clearTutorView() {
+  state.tutorMode = false;
+  state.tutor = null;
+  clearSelection();
+  $("practice-banner").hidden = true;
+  $("tutor-panel").hidden = true;
+  setTutorStatus();
+  setTutorError();
+}
+async function restoreTutor() {
+  if (!state.session) return false;
+  const list = await api(`/api/v1/sessions/${state.session.session_id}/tutor?limit=20`);
+  const active = list.items.find((item) =>
+    ["awaiting_answer", "awaiting_follow_up"].includes(item.status),
+  );
+  if (!active) return false;
+  const source = await api(`/api/v1/analyses/${active.question.source_analysis_id}`);
+  if (source.evidence && source.coaching) renderResult(source);
+  enterTutor(active, true);
+  return true;
 }
 async function beginTutor() {
   if (!state.session || !state.lastAnalysisId) return;
@@ -797,67 +882,75 @@ async function beginTutor() {
     const context = sessionContext(),
       tutor = await api(`/api/v1/sessions/${context.sessionId}/tutor`, {
         method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey("tutor") },
         body: JSON.stringify({ source_analysis_id: state.lastAnalysisId }),
       });
     if (!contextIsCurrent(context)) return;
-    state.tutor = tutor;
-    state.tutorMode = true;
-    clearSelection();
-    parseFen(tutor.question.fen);
-    $("practice-banner").hidden = false;
-    $("result").hidden = true;
-    $("empty-guide").hidden = true;
-    $("tutor-panel").hidden = false;
-    setStatus(
-      "Practice mode: play the strongest move. Your live game will not change.",
-    );
-    renderTutor();
+    enterTutor(tutor);
   } catch (error) {
     if (!superseded(error))
-      setError(`Practice could not start: ${error.message}`);
+      setTutorError(`Practice could not start: ${error.message}`);
   } finally {
     endBusy(busyToken);
   }
 }
 async function submitTutorAnswer(move) {
   const busyToken = beginBusy();
-  setError();
+  setTutorError();
+  setTutorStatus("Grading with Stockfish…");
   try {
     await tutorCommand("answer", { move_uci: move });
+    setTutorStatus();
     setStatus("Answer graded. Complete the follow-up question.");
     renderTutor();
   } catch (error) {
     if (!superseded(error))
-      setError(`The answer could not be graded: ${error.message}`);
+      setTutorError(`The answer could not be graded: ${error.message}`);
   } finally {
     endBusy(busyToken);
   }
 }
 async function revealTutorHint() {
+  setTutorError();
+  setTutorStatus("Loading cited hint…");
   try {
     await tutorCommand("hint");
+    setTutorStatus();
     renderTutor();
   } catch (error) {
     if (!superseded(error))
-      setError(`The hint could not be loaded: ${error.message}`);
+      setTutorError(`The hint could not be loaded: ${error.message}`);
   }
 }
 async function submitFollowUp(optionId) {
+  setTutorError();
+  setTutorStatus("Saving your follow-up…");
   try {
     await tutorCommand("follow_up", { option_id: optionId });
+    setTutorStatus();
     setStatus("Practice complete. Your live game is still unchanged.");
     renderTutor();
   } catch (error) {
     if (!superseded(error))
-      setError(`The follow-up could not be submitted: ${error.message}`);
+      setTutorError(`The follow-up could not be submitted: ${error.message}`);
   }
 }
-function leaveTutor() {
-  state.tutorMode = false;
-  state.tutor = null;
-  clearSelection();
-  $("practice-banner").hidden = true;
-  $("tutor-panel").hidden = true;
+async function leaveTutor() {
+  if (!state.tutorMode) return;
+  setTutorError();
+  if (state.tutor && !["complete", "dismissed"].includes(state.tutor.status)) {
+    setTutorStatus("Ending practice safely…");
+    try {
+      await tutorCommand("dismiss");
+    } catch (error) {
+      if (!state.tutor || !["complete", "dismissed"].includes(state.tutor.status)) {
+        setTutorStatus();
+        setTutorError(`Practice is still active: ${error.message}`);
+        return;
+      }
+    }
+  }
+  clearTutorView();
   if (state.session) {
     parseFen(state.session.fen);
     $("result").hidden = !state.lastAnalysisId;
@@ -868,6 +961,7 @@ function leaveTutor() {
         : `${state.session.turn === state.session.player_color ? "Your" : "Stockfish"} turn.`,
     );
     renderSession();
+    $("result-title").focus();
   }
 }
 function evidenceText(item) {
@@ -910,7 +1004,7 @@ function claimText(claim, evidence) {
 
 function renderSession() {
   if (!state.session) return;
-  $("fen").value = state.session.fen;
+  if (document.activeElement !== $("fen")) $("fen").value = state.session.fen;
   parseFen(state.session.fen);
   $("undo").disabled = state.session.plies.length === 0 || state.busy;
   $("game-outcome").hidden = !state.session.outcome;
@@ -940,6 +1034,10 @@ function renderSession() {
           move = row[color],
           label = document.createElement("small");
         cell.className = "move-cell";
+        cell.setAttribute(
+          "aria-label",
+          `${color}, ${move?.move_san || "no move"}, ${move ? (move.actor === "player" ? "you" : "Stockfish") : "empty"}`,
+        );
         cell.append(document.createTextNode(move?.move_san || "…"));
         label.textContent = move
           ? move.actor === "player"
@@ -962,22 +1060,16 @@ function restoreCommittedControls() {
   $("fen").value = state.session.fen;
 }
 async function createSession(fen = START_FEN) {
-  leaveTutor();
-  stopExhibition();
-  cancelReview();
-  cancelAnimation();
-  clearSelection();
-  invalidateBusy();
-  setError();
-  setReviewStatus();
   const epoch = ++state.sessionEpoch,
     exhibition = $("session-mode").value === "exhibition";
   state.sessionTransition = true;
+  setFenError();
   renderMode();
   renderBoard();
   try {
     const created = await api("/api/v1/sessions", {
       method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey("session") },
       body: JSON.stringify({
         mode: exhibition ? "exhibition" : "player",
         fen,
@@ -993,6 +1085,27 @@ async function createSession(fen = START_FEN) {
       }).catch(() => {});
       return;
     }
+    if (
+      state.tutor &&
+      !["complete", "dismissed"].includes(state.tutor.status)
+    ) {
+      try {
+        await tutorCommand("dismiss");
+      } catch (error) {
+        await api(`/api/v1/sessions/${created.session_id}`, {
+          method: "DELETE",
+        }).catch(() => {});
+        throw error;
+      }
+    }
+    clearTutorView();
+    stopExhibition();
+    cancelReview();
+    cancelAnimation();
+    clearSelection();
+    invalidateBusy();
+    setError();
+    setReviewStatus();
     state.session = created;
     state.lastMove = [];
     state.lastAnalysisId = null;
@@ -1022,7 +1135,7 @@ async function createSession(fen = START_FEN) {
 function requestSession(fen = START_FEN) {
   void createSession(fen).catch((error) => {
     if (!superseded(error))
-      setError(`The session could not be created: ${error.message}`);
+      setFenError(`The position could not be loaded: ${error.message}`);
   });
 }
 async function refreshSession() {
@@ -1137,6 +1250,10 @@ function setError(message = "") {
   $("input-error").textContent = message;
   $("input-error").hidden = !message;
 }
+function setFenError(message = "") {
+  $("fen-error").textContent = message;
+  $("fen-error").hidden = !message;
+}
 function setStatus(message) {
   $("status").textContent = message;
 }
@@ -1154,9 +1271,10 @@ $("new-game").addEventListener("click", () => {
   requestSession();
 });
 $("load-example").addEventListener("click", () => {
+  $("fen").value = EXAMPLE_FEN;
   requestSession(EXAMPLE_FEN);
 });
-$("fen").addEventListener("change", () => {
+$("apply-fen").addEventListener("click", () => {
   requestSession($("fen").value.trim());
 });
 $("analyze").addEventListener("click", () => {
@@ -1172,7 +1290,8 @@ $("practice").addEventListener("click", () => {
 $("tutor-hint-button").addEventListener("click", () => {
   void revealTutorHint();
 });
-$("return-game").addEventListener("click", leaveTutor);
+$("return-game").addEventListener("click", () => void leaveTutor());
+$("end-practice").addEventListener("click", () => void leaveTutor());
 $("undo").addEventListener("click", async () => {
   stopExhibition();
   cancelReview();
@@ -1238,7 +1357,13 @@ async function initialize() {
     const reviewed = [...state.session.plies]
       .reverse()
       .find((ply) => ply.analysis_id);
-    if (reviewed)
+    let tutorRestored = false;
+    try {
+      tutorRestored = await restoreTutor();
+    } catch (error) {
+      setTutorError(`Saved practice could not be restored: ${error.message}`);
+    }
+    if (reviewed && !tutorRestored)
       void pollAnalysis(reviewed.analysis_id, `Review of ${reviewed.move_san}`);
   }
   try {
@@ -1247,10 +1372,31 @@ async function initialize() {
       capabilities.model_status === "disabled"
         ? "Deterministic coach"
         : `Gemma 4 · ${capabilities.model_status}`;
+    updateStorageBanner(capabilities.storage_status);
   } catch {
     $("coach-mode").textContent = "Coach unavailable";
   }
 }
+function updateStorageBanner(status) {
+  const banner = $("storage-banner");
+  banner.hidden = !["degraded", "corrupt"].includes(status);
+  banner.querySelector("span").textContent =
+    status === "corrupt"
+      ? "Local history failed its integrity check. Stop, back it up, and run doctor."
+      : "Local history is temporarily unavailable. The last committed state is unchanged.";
+  $("retry-storage").hidden = status === "corrupt";
+}
+$("retry-storage").addEventListener("click", async () => {
+  $("retry-storage").disabled = true;
+  try {
+    const result = await api("/api/v1/storage/retry", { method: "POST" });
+    updateStorageBanner(result.storage_status);
+  } catch (error) {
+    updateStorageBanner(error.code === "STORAGE_CORRUPT" ? "corrupt" : "degraded");
+  } finally {
+    $("retry-storage").disabled = false;
+  }
+});
 void initialize().catch((error) =>
   setError(`GemmaFischer could not start: ${error.message}`),
 );

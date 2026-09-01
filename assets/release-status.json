@@ -1,21 +1,80 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "release_channel": "public-alpha",
-  "product_profile": "deterministic",
-  "checked_at": "2026-09-01",
-  "automated_blockers": [],
-  "local_gates": [
-    "portable verification",
-    "real Stockfish tests",
-    "real Chromium tutor acceptance",
-    "wheel and source distribution smoke"
+  "claim": "local_release_gates_passed",
+  "candidate": {
+    "sha": "3db834b4499cd9932275532938fb3d4b823dcc13",
+    "clean_tree": true,
+    "application_version": "0.2.0",
+    "api_version": "v1",
+    "profile": "deterministic",
+    "checked_at": "2026-09-01T15:13:24Z"
+  },
+  "receipts": [
+    {
+      "command": "uv run gemmafischer verify --tier portable",
+      "conclusion": "success",
+      "environment": {
+        "os": "macOS 27.0 arm64",
+        "python": "CPython 3.12",
+        "dependency_lock": "uv.lock"
+      },
+      "artifacts": [
+        {
+          "path": "artifacts/qualification/deterministic-latest.json",
+          "sha256": "7f5cae0b73f7b9e9487474d68a8ad4eebef114db10fa4c8bf0cd3ff717fd45b1"
+        }
+      ]
+    },
+    {
+      "command": "uv run gemmafischer verify --tier local-alpha",
+      "conclusion": "success",
+      "environment": {
+        "os": "macOS 27.0 arm64",
+        "python": "CPython 3.12",
+        "stockfish": "Stockfish 18",
+        "browser": "Chromium"
+      },
+      "artifacts": [
+        {
+          "path": "output/playwright/public-alpha-tutor-mobile.png",
+          "sha256": "ef23ba74ae8cc82b75e5d8416d53fff63206406542df33c1c53a195b19b1a468"
+        },
+        {
+          "path": "artifacts/qualification/runtime-2026-08-30.json",
+          "sha256": "ed0749bc133a3d574d7bc386382cb936f09cf587852c25705efd31b1512dc272"
+        }
+      ]
+    }
   ],
-  "open_acceptance_gates": [
-    "hosted CI on the pushed main commit",
-    "physical-device and VoiceOver acceptance",
-    "100-ply and 1000-request endurance qualification",
-    "blind human tutoring usefulness review",
-    "optional Gemma release-candidate requalification"
+  "hosted": [
+    {
+      "kind": "verification",
+      "run_id": 33524208529,
+      "head_sha": "3db834b4499cd9932275532938fb3d4b823dcc13",
+      "conclusion": "success",
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33524208529"
+    },
+    {
+      "kind": "codeql",
+      "run_id": 33524208544,
+      "head_sha": "3db834b4499cd9932275532938fb3d4b823dcc13",
+      "conclusion": "success",
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33524208544"
+    }
   ],
-  "model_policy": "Gemma is optional and cannot author chess facts or grading."
+  "security_alerts": {
+    "checked_at": "2026-09-01T21:39:48Z",
+    "code_scanning": 0,
+    "dependabot": 0,
+    "secret_scanning": 0
+  },
+  "external_gates": [
+    {"code": "PHYSICAL_DESKTOP", "status": "open", "owner": "operator"},
+    {"code": "VOICEOVER", "status": "open", "owner": "human-reviewer"},
+    {"code": "ENDURANCE", "status": "open", "owner": "engineering"},
+    {"code": "HUMAN_USEFULNESS", "status": "open", "owner": "study-moderator"},
+    {"code": "OPTIONAL_GEMMA", "status": "open", "owner": "model-review"}
+  ],
+  "model_policy": "Gemma is optional, cannot author chess facts or grading, and a tie is a loss."
 }

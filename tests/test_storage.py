@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from gemmafischer.domain import (
     AnalysisRequest,
     AnalysisSnapshot,
@@ -12,7 +14,7 @@ from gemmafischer.domain import (
     Workflow,
     now_utc,
 )
-from gemmafischer.storage import AnalysisStore
+from gemmafischer.storage import SCHEMA_VERSION, AnalysisStore, StorageCorrupt
 
 
 def snapshot(analysis_id: str, generation: int, state: AnalysisState) -> AnalysisSnapshot:
@@ -49,6 +51,31 @@ def test_store_marks_interrupted_work_failed_on_restart(tmp_path: Path) -> None:
     assert recovered.state is AnalysisState.FAILED
     assert recovered.error is not None
     assert recovered.error.code == "ANALYSIS_INTERRUPTED"
+
+
+def test_store_refuses_future_schema_without_modifying_database(tmp_path: Path) -> None:
+    path = tmp_path / "future.sqlite3"
+    with sqlite3.connect(path) as connection:
+        connection.execute(f"PRAGMA user_version={SCHEMA_VERSION + 1}")
+        connection.execute("CREATE TABLE future_data (value TEXT NOT NULL)")
+        connection.execute("INSERT INTO future_data VALUES ('preserve-me')")
+    before = path.read_bytes()
+
+    with pytest.raises(StorageCorrupt, match="newer than supported"):
+        AnalysisStore(path)
+
+    assert path.read_bytes() == before
+
+
+def test_store_refuses_corrupt_database_without_reset(tmp_path: Path) -> None:
+    path = tmp_path / "corrupt.sqlite3"
+    path.write_bytes(b"not a sqlite database")
+    before = path.read_bytes()
+
+    with pytest.raises(StorageCorrupt):
+        AnalysisStore(path)
+
+    assert path.read_bytes() == before
 
 
 def test_store_prunes_session_history_to_configured_retention(tmp_path: Path) -> None:
@@ -263,5 +290,31 @@ def test_v1_database_migrates_and_backfills_review_references(tmp_path: Path) ->
     migrated = AnalysisStore(path, retention=1)
     migrated.save(snapshot("post-migration", 2, AnalysisState.COMPLETE))
 
+    backups = tuple(tmp_path.glob("history.schema0.*.bak"))
+    assert len(backups) == 1
+    with sqlite3.connect(backups[0]) as backup:
+        assert backup.execute("PRAGMA user_version").fetchone() == (0,)
+        assert backup.execute("SELECT COUNT(*) FROM sessions").fetchone() == (1,)
     assert migrated.get(review.analysis_id) == review
     assert migrated.get_session(session.session_id) == session
+
+
+def test_migration_backup_includes_committed_wal_content(tmp_path: Path) -> None:
+    path = tmp_path / "history.sqlite3"
+    writer = sqlite3.connect(path)
+    try:
+        assert writer.execute("PRAGMA journal_mode=WAL").fetchone() == ("wal",)
+        writer.execute("CREATE TABLE legacy_marker (value TEXT NOT NULL)")
+        writer.execute("INSERT INTO legacy_marker VALUES ('committed-in-wal')")
+        writer.commit()
+
+        AnalysisStore(path)
+    finally:
+        writer.close()
+
+    backups = tuple(tmp_path.glob("history.schema0.*.bak"))
+    assert len(backups) == 1
+    with sqlite3.connect(backups[0]) as backup:
+        assert backup.execute("SELECT value FROM legacy_marker").fetchone() == (
+            "committed-in-wal",
+        )

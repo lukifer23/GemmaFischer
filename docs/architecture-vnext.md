@@ -42,9 +42,13 @@ close only the exact active analysis token and can never close gameplay.
 Blocking session commands run in FastAPI's worker pool, keeping health and
 polling responsive. Shutdown alone performs an untargeted provider close.
 
-Analyses (250 unreferenced rows by default), sessions, and bounded tutor interactions are stored in SQLite WAL under
-`~/Library/Application Support/GemmaFischer/`; interrupted nonterminal analyses
-become explicit `ANALYSIS_INTERRUPTED` failures after restart.
+Analyses (250 unreferenced rows by default), sessions, and bounded tutor
+interactions are stored in SQLite WAL under macOS Application Support or the
+Linux XDG data directory. `GEMMAFISCHER_DATA_DIR` is the explicit override.
+Interrupted nonterminal analyses become explicit `ANALYSIS_INTERRUPTED`
+failures after restart. Backup-first migrations reject corrupt or future
+schemas instead of resetting history. Durable writes use revision/state
+compare-and-swap, and create requests can atomically retain idempotency receipts.
 `analysis_reservations` protects a durable review during the short interval before
 its owning ply is committed. `session_analysis_refs` then protects every retained
 ply review from independent pruning and releases it when its session is deleted.

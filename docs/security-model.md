@@ -18,6 +18,12 @@ beyond the loopback API. History contains FENs, move ledgers, engine evidence,
 and coaching output; the Mac account remains the privacy boundary because the
 database is not encrypted at rest.
 
+SQLite is the commit authority for durable mutations. Migrations run inside a
+transaction after an integrity check and a backup of populated older schemas;
+future or corrupt databases are preserved and rejected rather than reset.
+Client-safe errors never contain raw exception text, and the protected recovery
+route performs only a bounded write probe and integrity check.
+
 The player path prohibits `trust_remote_code`, unsafe pickle loading, external
 CDNs, “latest checkpoint” discovery, and network model resolution. The full
 profile resolves one pinned revision with local-files-only mode. Lifecycle

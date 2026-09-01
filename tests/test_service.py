@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -18,6 +19,7 @@ from gemmafischer.domain import (
     Workflow,
 )
 from gemmafischer.service import AnalysisService, SessionConflict
+from gemmafischer.storage import AnalysisStore, StorageUnavailable
 
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -45,6 +47,89 @@ def test_same_revision_commands_are_atomic_per_session() -> None:
         assert len(results) == 1
         assert len(conflicts) == 1
         assert service.get_session(session.session_id).revision == 1  # type: ignore[union-attr]
+    finally:
+        service.close()
+
+
+def test_failed_session_commit_never_advances_visible_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "history.sqlite3"
+    service = AnalysisService(history_path=path)
+    try:
+        session = service.create_session(CreateSessionRequest(fen=START_FEN))
+        assert service._store is not None
+
+        def fail_save(*_args: object, **_kwargs: object) -> None:
+            raise StorageUnavailable("simulated locked database")
+
+        monkeypatch.setattr(service._store, "save_session", fail_save)
+        with pytest.raises(StorageUnavailable):
+            service.command_session(
+                session.session_id,
+                SessionCommandRequest(expected_revision=0, action="pause"),
+            )
+
+        visible = service.get_session(session.session_id)
+        durable = AnalysisStore(path).get_session(session.session_id)
+        assert visible is not None and durable is not None
+        assert (visible.revision, visible.status) == (0, durable.status)
+        assert durable.revision == 0
+    finally:
+        service.close()
+
+
+def test_worker_pauses_and_recovers_after_persist_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class InvalidProvider:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def analyze(self, *_args: object, **_kwargs: object) -> object:
+            raise ValueError("private provider detail")
+
+        def interrupt_analysis(self, *_args: object, **_kwargs: object) -> bool:
+            return False
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(service_module, "StockfishProvider", InvalidProvider)
+    service = AnalysisService(history_path=tmp_path / "history.sqlite3")
+    try:
+        assert service._store is not None
+        original_save = service._store.save
+        failed = False
+
+        def fail_once(*args: object, **kwargs: object) -> None:
+            nonlocal failed
+            if not failed:
+                failed = True
+                raise StorageUnavailable("simulated locked database")
+            original_save(*args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(service._store, "save", fail_once)
+        snapshot = service.submit(AnalysisRequest(mode=Workflow.POSITION, fen=START_FEN))
+        deadline = time.monotonic() + 2
+        while service.storage_status != "degraded":
+            assert time.monotonic() < deadline
+            time.sleep(0.005)
+
+        assert service.worker_status == "paused_storage"
+        assert service._worker.is_alive()
+        assert service.get(snapshot.analysis_id).state is AnalysisState.QUEUED  # type: ignore[union-attr]
+
+        assert service.retry_storage() == "ready"
+        deadline = time.monotonic() + 2
+        while service.get(snapshot.analysis_id).state is not AnalysisState.FAILED:  # type: ignore[union-attr]
+            assert time.monotonic() < deadline
+            time.sleep(0.005)
+        error = service.get(snapshot.analysis_id).error  # type: ignore[union-attr]
+        assert error is not None
+        assert error.message == "The analysis request is invalid."
+        assert "private provider detail" not in error.message
+        assert service._worker.is_alive()
     finally:
         service.close()
 

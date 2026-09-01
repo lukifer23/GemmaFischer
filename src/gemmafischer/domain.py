@@ -553,7 +553,14 @@ class RuntimeCapabilities(StrictModel):
     engine_status: Literal["ready", "missing", "failed"]
     model_status: Literal["disabled", "loading", "ready", "missing", "corrupt", "degraded"]
     history_enabled: bool
+    storage_status: Literal["disabled", "ready", "degraded", "corrupt"]
+    worker_status: Literal["ready", "paused_storage", "recovering", "failed"]
     evidence_schema: Literal["2.0"] = "2.0"
+
+
+class StorageRecoveryResult(StrictModel):
+    storage_status: Literal["disabled", "ready", "degraded", "corrupt"]
+    worker_status: Literal["ready", "paused_storage", "recovering", "failed"]
 
 
 class SessionList(StrictModel):

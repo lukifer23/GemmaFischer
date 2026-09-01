@@ -45,6 +45,12 @@ def assert_layout(page: Page, mobile: bool) -> None:
               name => document.querySelector('.' + name).getBoundingClientRect().top)"""
         )
         assert positions == sorted(positions), "mobile order must be board, review, controls"
+    else:
+        positions = page.evaluate(
+            """() => ['board-pane','result-pane','controls-pane'].map(
+              name => document.querySelector('.' + name).getBoundingClientRect().left)"""
+        )
+        assert positions == sorted(positions), "desktop order must be board, review, controls"
 
 
 def session_id(page: Page) -> str:
@@ -71,8 +77,24 @@ def run_flow(page: Page, url: str) -> None:
     page.locator("#practice-banner").wait_for(state="visible")
     page.locator("#tutor-hint-button").click()
     page.locator("#tutor-hint").wait_for(state="visible")
+    page.screenshot(
+        path=ROOT / "output" / "playwright" / "public-alpha-tutor-active-desktop.png",
+        full_page=True,
+    )
+
+    page.reload(wait_until="networkidle")
+    page.locator("#practice-banner").wait_for(state="visible")
+    page.locator("#tutor-hint").wait_for(state="visible")
+    assert "restored" in page.locator("#status").inner_text().lower()
+    page.locator("#end-practice").click()
+    page.locator("#practice-banner").wait_for(state="hidden")
 
     current_session = session_id(page)
+    dismissed = page.request.get(f"{url}/api/v1/sessions/{current_session}/tutor").json()
+    assert dismissed["items"][0]["status"] == "dismissed"
+    page.locator("#practice").click()
+    page.locator("#practice-banner").wait_for(state="visible")
+
     tutors = page.request.get(f"{url}/api/v1/sessions/{current_session}/tutor").json()
     interaction = tutors["items"][0]
     question_fen = interaction["question"]["fen"]
@@ -91,6 +113,7 @@ def run_flow(page: Page, url: str) -> None:
     page.locator("#tutor-feedback").wait_for(state="visible", timeout=60_000)
     page.locator("#tutor-follow-up button").first.click()
     page.get_by_role("button", name="Return to game").last.click()
+    page.locator("#practice-banner").wait_for(state="hidden")
     assert page.locator("#fen").input_value() == live_fen
     assert page.locator("#practice-banner").is_hidden()
     assert question_fen != ""
@@ -132,7 +155,10 @@ def main() -> int:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
-    print("Browser acceptance passed: live analysis, cited tutor practice, mobile layout.")
+    print(
+        "Browser acceptance passed: live analysis, persisted tutor restore/dismiss, "
+        "cited practice, desktop/mobile layout."
+    )
     return 0
 
 

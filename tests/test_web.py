@@ -1,3 +1,4 @@
+import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -5,6 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from gemmafischer.storage import StorageUnavailable
 from gemmafischer.web import MAX_REQUEST_BODY_BYTES, create_app
 
 TOKEN = "test-capability-token"
@@ -36,6 +38,120 @@ def test_health_does_not_disclose_configured_engine_path() -> None:
     assert response.status_code == 200
     assert private_path not in response.text
     assert "engine_path" not in response.json()
+
+
+def test_storage_failure_is_typed_correlated_and_recoverable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = create_app(
+        capability_token=TOKEN,
+        node_budget=1,
+        history_path=tmp_path / "history.sqlite3",
+    )
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(app) as client:
+        store = app.state.service._store
+        assert store is not None
+
+        def fail_save(*_args: object, **_kwargs: object) -> None:
+            raise StorageUnavailable("/private/path and SQL must stay private")
+
+        monkeypatch.setattr(store, "save_session", fail_save)
+        failed = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "player", "player_color": "white", "fen": START_FEN},
+        )
+        assert failed.status_code == 503
+        error = failed.json()["error"]
+        assert error["code"] == "STORAGE_UNAVAILABLE"
+        assert error["retryable"] is True
+        assert error["request_id"] == failed.headers["X-Request-ID"]
+        assert "/private/path" not in failed.text
+        assert app.state.service.storage_status == "degraded"
+        assert app.state.service.worker_status == "paused_storage"
+
+        monkeypatch.undo()
+        recovered = client.post("/api/v1/storage/retry", headers=headers)
+        assert recovered.status_code == 200
+        assert recovered.json() == {
+            "storage_status": "ready",
+            "worker_status": "ready",
+        }
+
+
+def test_session_create_idempotency_replays_and_rejects_payload_reuse(tmp_path: Path) -> None:
+    app = create_app(
+        capability_token=TOKEN,
+        node_budget=1,
+        history_path=tmp_path / "history.sqlite3",
+    )
+    headers = {
+        "X-GemmaFischer-Token": TOKEN,
+        "Idempotency-Key": "session-create-0001",
+    }
+    payload = {"mode": "player", "player_color": "white", "fen": START_FEN}
+    with TestClient(app) as client:
+        first = client.post("/api/v1/sessions", headers=headers, json=payload)
+        replay = client.post("/api/v1/sessions", headers=headers, json=payload)
+        conflict = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={**payload, "player_color": "black"},
+        )
+        sessions = client.get("/api/v1/sessions").json()
+
+    assert first.status_code == replay.status_code == 201
+    assert first.json()["session_id"] == replay.json()["session_id"]
+    assert sessions["count"] == 1
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["code"] == "IDEMPOTENCY_CONFLICT"
+
+
+def test_real_sqlite_lock_preserves_revision_and_health_responsiveness(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "history.sqlite3"
+    app = create_app(capability_token=TOKEN, node_budget=1, history_path=path)
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(app) as client:
+        session = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "player", "player_color": "white", "fen": START_FEN},
+        ).json()
+        lock = sqlite3.connect(path)
+        try:
+            lock.execute("BEGIN IMMEDIATE")
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                mutation = executor.submit(
+                    client.post,
+                    f"/api/v1/sessions/{session['session_id']}/commands",
+                    headers=headers,
+                    json={"expected_revision": 0, "action": "pause"},
+                )
+                latencies = []
+                for _ in range(5):
+                    started = time.monotonic()
+                    health = client.get("/api/v1/health")
+                    latencies.append(time.monotonic() - started)
+                    assert health.status_code == 200
+                failed = mutation.result(timeout=2)
+            assert failed.status_code == 503
+            assert failed.json()["error"]["code"] == "STORAGE_UNAVAILABLE"
+            # TestClient serializes an occasional portal handoff across threads;
+            # the four unaffected probes still prove the ASGI loop is not held
+            # for SQLite's lock timeout. Real-socket p95 is a release benchmark.
+            assert sorted(latencies)[3] < 0.1
+            visible = client.get(f"/api/v1/sessions/{session['session_id']}").json()
+            assert visible["revision"] == 0
+            assert visible["status"] == "active"
+        finally:
+            lock.rollback()
+            lock.close()
+
+        recovered = client.post("/api/v1/storage/retry", headers=headers)
+        assert recovered.status_code == 200
 
 
 def test_request_body_limit_is_enforced_before_json_parsing() -> None:

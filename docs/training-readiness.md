@@ -1,7 +1,14 @@
-# Post-training and Unsloth Readiness
+# Archived Post-training Readiness Record
 
-No training command exists, and the current state is **blocked**. Run the
-inspectable gates without downloading weights or installing a toolchain:
+This is a historical governance record, not an active roadmap or operator
+workflow. Current product work does not include fine-tuning, post-training,
+adapter creation, training-scale data, or a second checkpoint. The only model
+that may later be evaluated in the supported runtime is the single revision in
+`assets/model-manifest.json`, and a tie against deterministic teaching is a loss.
+
+No training command exists, and the state is **not authorized**. Contributors
+may inspect the historical gate without downloading weights or installing a
+toolchain:
 
 ```bash
 uv run gemmafischer audit-data --output artifacts/data-audit/latest.json

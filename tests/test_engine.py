@@ -3,13 +3,20 @@ from __future__ import annotations
 import threading
 from collections import deque
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import chess
 import pytest
 
 from gemmafischer.domain import GameDifficulty
-from gemmafischer.engine import ANALYSIS_SKILL_LEVEL, StockfishProvider, legal_moves_for_square
+from gemmafischer.engine import (
+    ANALYSIS_SKILL_LEVEL,
+    EngineUnavailable,
+    StockfishProvider,
+    inspect_stockfish_binary,
+    legal_moves_for_square,
+)
 
 
 class _FailAfterConfigureEngine:
@@ -30,6 +37,64 @@ class _FailAfterConfigureEngine:
 
     def close(self) -> None:
         return None
+
+
+class _RecoverableEngine:
+    def __init__(self) -> None:
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_engine_operation_restarts_once_after_child_process_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = _RecoverableEngine()
+    second = _RecoverableEngine()
+    provider = StockfishProvider.__new__(StockfishProvider)
+    provider._condition = threading.Condition()
+    provider._engine = first  # type: ignore[assignment]
+    provider._closed = False
+    provider._interrupt_reasons = {}
+    available = iter((first, second))
+
+    def ensure_engine() -> Any:
+        engine = next(available)
+        provider._engine = engine  # type: ignore[assignment]
+        return engine
+
+    monkeypatch.setattr(provider, "_ensure_engine", ensure_engine)
+    calls = 0
+
+    def operation(engine: Any) -> str:
+        nonlocal calls
+        calls += 1
+        if engine is first:
+            raise BrokenPipeError("child exited")
+        return "recovered"
+
+    assert provider._with_engine_recovery("analysis-1", operation) == "recovered"
+    assert calls == 2
+    assert first.closed
+    assert provider._engine is second
+
+
+def test_stockfish_identity_requires_supported_major(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    binary = tmp_path / "stockfish"
+    binary.write_bytes(b"binary")
+    monkeypatch.setattr(
+        "gemmafischer.engine.subprocess.run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            stdout="id name Stockfish 17\nuciok\n",
+        ),
+    )
+
+    with pytest.raises(EngineUnavailable, match="Stockfish 18"):
+        inspect_stockfish_binary(binary)
 
 
 def test_analysis_restores_full_skill_after_gameplay_configuration() -> None:
