@@ -60,8 +60,10 @@ Studying a position must never mutate the live game.
 | Accuracy/tutor/model evaluation | `accuracy_eval.py`, `tutor_eval.py`, `model_profile.py` |
 | Governed data acquisition | `data/sources.json`, build/audit commands |
 
-The public-alpha implementation has 108 automated tests, a 73% whole-package
-model-free coverage ratchet, an installed-wheel smoke, and a real Chromium core tutor flow.
+The public-alpha implementation currently passes 130 model-free tests (with one
+model-only skip and one deselection), a 70% whole-package model-free coverage
+ratchet (70.10% observed on 2026-09-01), an installed-wheel smoke, and a real
+Chromium core tutor flow.
 Earlier constructed, held-out, and optional-Gemma artifacts remain development
 evidence. Human usefulness, physical-device accessibility, the full browser
 fixture matrix, and long-run qualification remain open.

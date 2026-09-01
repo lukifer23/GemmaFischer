@@ -19,7 +19,7 @@ and return to the unchanged game.
 | 100-ply and 1,000-request endurance | Open | Target-host release qualification |
 | Blind human tutoring usefulness | Open | At least two chess-literate reviewers |
 | Optional Gemma release candidate | Open | Deterministic mode remains the product baseline |
-| Training | Blocked | Data, toolchain, weights, baseline, and human gates remain unmet |
+| Post-training | Inactive | Historical fail-closed readiness records remain; no training command, adapter, or second checkpoint is supported |
 
 The machine-readable v2 companion is
 [`assets/release-status.json`](../assets/release-status.json). It binds local
