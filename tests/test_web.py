@@ -239,10 +239,12 @@ def test_analysis_history_survives_app_restart(tmp_path: Path) -> None:
             },
         )
         analysis_id = response.json()["analysis_id"]
-        client.delete(
+        terminal = client.delete(
             f"/api/v1/analyses/{analysis_id}",
             headers={"X-GemmaFischer-Token": TOKEN},
         )
+        assert terminal.status_code == 200
+        terminal_state = terminal.json()["state"]
 
     with TestClient(
         create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
@@ -252,7 +254,8 @@ def test_analysis_history_survives_app_restart(tmp_path: Path) -> None:
 
     assert history["count"] == 1
     assert history["items"][0]["analysis_id"] == analysis_id
-    assert restored.json()["state"] == "cancelled"
+    assert history["items"][0]["state"] == terminal_state
+    assert restored.json()["state"] == terminal_state
 
 
 def test_legacy_control_plane_routes_do_not_exist() -> None:
