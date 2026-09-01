@@ -161,7 +161,7 @@ def profile_mlx_generation(
     requests: list[ModelRequestMetrics] = []
     for index, prompt in enumerate(prompt_list):
         formatted_prompt = (
-            tokenizer.apply_chat_template(  # type: ignore[no-untyped-call]
+            tokenizer.apply_chat_template(
                 [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},

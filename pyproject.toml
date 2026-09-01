@@ -79,5 +79,17 @@ strict = true
 packages = ["gemmafischer"]
 
 [[tool.mypy.overrides]]
-module = ["mlx_lm", "mlx_lm.*", "zstandard"]
+module = [
+  "huggingface_hub",
+  "huggingface_hub.*",
+  "mlx",
+  "mlx.*",
+  "mlx_lm",
+  "mlx_lm.*",
+  "zstandard",
+]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["gemmafischer.runtime", "gemmafischer.model_profile"]
+disable_error_code = ["no-untyped-call"]

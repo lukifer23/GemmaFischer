@@ -253,7 +253,7 @@ class GemmaRuntime:
             {"role": "system", "content": CLAIM_SELECTION_SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
-        formatted = self._tokenizer.apply_chat_template(  # type: ignore[no-untyped-call]
+        formatted = self._tokenizer.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True,
