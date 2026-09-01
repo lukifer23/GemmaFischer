@@ -14,7 +14,7 @@ and return to the unchanged game.
 | Repository, OpenAPI, package resources, isolated wheel | Passed locally | Source and built distributions |
 | Real Stockfish session and tutor integration | Passed locally | Installed Stockfish 18 |
 | Real Chromium core flow at desktop and 390x844 | Passed locally | Headless local Chromium |
-| Hosted GitHub Actions | Pending pushed commit | Not interchangeable with local checks |
+| Hosted GitHub Actions | Commit-specific | Verify the exact release SHA in GitHub Actions |
 | Physical device and VoiceOver | Open | Human/device acceptance |
 | 100-ply and 1,000-request endurance | Open | Target-host release qualification |
 | Blind human tutoring usefulness | Open | At least two chess-literate reviewers |
@@ -43,7 +43,7 @@ Python and JavaScript on pushes to `main`, pull requests, and a weekly schedule.
 
 ## Next work, in order
 
-1. Confirm the pushed `main` SHA and hosted CI/CodeQL results.
+1. Confirm the pushed `main` SHA and its hosted CI/CodeQL results.
 2. Expand browser fixtures for promotions, castling, en passant, terminal games,
    restart recovery, keyboard paths, and the full viewport matrix.
 3. Reduce or justify rapid-preemption Stockfish restarts, then run endurance,

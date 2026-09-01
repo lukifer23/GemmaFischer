@@ -88,6 +88,7 @@ def test_invalid_origin_is_rejected() -> None:
         assert response.json()["error"]["code"] == "INVALID_ORIGIN"
 
 
+@pytest.mark.hardware
 def test_create_poll_and_idempotent_cancel() -> None:
     with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
         response = client.post(
