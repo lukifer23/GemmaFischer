@@ -96,7 +96,7 @@ uv run gemmafischer profile-model --backend lmstudio \
   --output artifacts/qualification/model-profile-lfm-local.json
 ```
 
-`portable` runs Ruff, strict mypy, JavaScript syntax, the 70% model-free whole-package coverage ratchet, repository and OpenAPI drift audits, dependency compatibility, distribution builds, and an isolated installed-wheel smoke test. `local-alpha` adds real Stockfish tests and the real Chromium flow. `release` also enforces the checked-in release-status ledger. Optional model tests remain separate because missing Gemma assets must not block the deterministic product.
+`portable` runs Ruff, strict mypy, engine-free/model-free tests, JavaScript syntax, repository and OpenAPI drift audits, dependency compatibility, distribution builds, and an isolated installed-wheel smoke test. `local-alpha` adds the 70% model-free whole-package coverage ratchet, real Stockfish tests, and the real Chromium flow. `release` also enforces the checked-in release-status ledger. Optional model tests remain separate because missing Gemma assets must not block the deterministic product.
 
 The durable browser gate launches a real FastAPI server, real Stockfish, temporary SQLite, and Chromium. It proves position analysis, cited hint display, legal board answer, evidence-based grading, follow-up completion, return to an unchanged live FEN, one keyboard tab stop, zero console errors, and no horizontal overflow at 390×844. Physical-device, VoiceOver, endurance, human-usefulness, and optional-model release gates remain open and are listed in [release status](docs/release-status.md).
 

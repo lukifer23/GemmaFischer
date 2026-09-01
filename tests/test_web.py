@@ -180,6 +180,7 @@ def test_legal_move_destinations_are_available_without_engine() -> None:
         assert set(response.json()["destinations"]) == {"e3", "e4"}
 
 
+@pytest.mark.hardware
 def test_server_owned_session_enforces_revision_and_persists(tmp_path: Path) -> None:
     history_path = tmp_path / "history.sqlite3"
     headers = {"X-GemmaFischer-Token": TOKEN}
@@ -263,6 +264,7 @@ def test_exhibition_pause_and_resume_survive_restart(tmp_path: Path) -> None:
         assert resumed.json()["status"] == "active"
 
 
+@pytest.mark.hardware
 def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Path) -> None:
     history_path = tmp_path / "history.sqlite3"
     headers = {"X-GemmaFischer-Token": TOKEN}
@@ -349,6 +351,7 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
         assert restored.json()["status"] == "complete"
 
 
+@pytest.mark.hardware
 def test_tutor_accepts_completed_analysis_of_current_session_position(tmp_path: Path) -> None:
     headers = {"X-GemmaFischer-Token": TOKEN}
     with TestClient(
@@ -380,6 +383,7 @@ def test_tutor_accepts_completed_analysis_of_current_session_position(tmp_path: 
         assert tutor.json()["question"]["fen"] == session["fen"]
 
 
+@pytest.mark.hardware
 def test_session_preserves_exact_underpromotion_and_revision() -> None:
     headers = {"X-GemmaFischer-Token": TOKEN}
     fen = "7k/P7/8/8/8/8/8/7K w - - 0 1"

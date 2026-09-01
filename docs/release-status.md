@@ -9,7 +9,8 @@ and return to the unchanged game.
 
 | Gate | Status | Evidence boundary |
 |---|---|---|
-| Portable code, tests, 70% model-free coverage ratchet | Passed locally | Python 3.12 checkout |
+| Portable code, engine-free/model-free tests | Passed locally | Python 3.12 checkout |
+| Local-alpha 70% model-free coverage ratchet | Passed locally | Real Stockfish path |
 | Repository, OpenAPI, package resources, isolated wheel | Passed locally | Source and built distributions |
 | Real Stockfish session and tutor integration | Passed locally | Installed Stockfish 18 |
 | Real Chromium core flow at desktop and 390x844 | Passed locally | Headless local Chromium |

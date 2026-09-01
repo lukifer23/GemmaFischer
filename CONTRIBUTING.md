@@ -25,5 +25,5 @@ user outcome, affected contracts, tests run, evidence artifact and commit, and
 open hardware, browser, data, or human-acceptance gates. A green portable suite
 is not a hardware or coaching-quality claim.
 
-Model-free coverage is ratcheted at 70% across the whole Python package. Raise the threshold
+The local-alpha model-free suite ratchets coverage at 70% across the whole Python package. Raise the threshold
 when tests increase it; do not narrow the measured source set to make the number green.

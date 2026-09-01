@@ -147,12 +147,12 @@ def run_lichess_puzzle_accuracy_benchmark(
 ) -> dict[str, Any]:
     if sample_size < 1:
         raise ValueError("sample_size must be at least 1")
+    if not archive_path.is_file():
+        raise FileNotFoundError(f"Lichess puzzle archive not found: {archive_path}")
     try:
         import zstandard
     except ImportError as exc:
         raise RuntimeError("Install the data profile with: uv sync --extra data") from exc
-    if not archive_path.is_file():
-        raise FileNotFoundError(f"Lichess puzzle archive not found: {archive_path}")
     source = load_source(source_manifest_path, "lichess-puzzles-2026-08-02")
     archive_sha256 = sha256_file(archive_path)
     if archive_sha256 != source["sha256"]:

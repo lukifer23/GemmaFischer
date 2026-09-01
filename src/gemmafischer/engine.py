@@ -146,6 +146,35 @@ def legal_moves_for_square(fen: str, from_square: str) -> LegalMovesResult:
     )
 
 
+def validate_player_move(fen: str, move_uci: str) -> None:
+    board, _ = normalize_fen(fen)
+    if board.is_game_over(claim_draw=True):
+        raise ValueError("The game is already over")
+    normalized_move = move_uci.lower()
+    if len(normalized_move) == 4:
+        source: int | None
+        target: int | None
+        try:
+            source = chess.parse_square(normalized_move[:2])
+            target = chess.parse_square(normalized_move[2:])
+        except ValueError:
+            source = target = None
+        piece = board.piece_at(source) if source is not None else None
+        if (
+            piece
+            and piece.piece_type == chess.PAWN
+            and target is not None
+            and chess.square_rank(target) in {0, 7}
+        ):
+            raise ValueError("Promotion move requires q, r, b, or n suffix")
+    try:
+        move = chess.Move.from_uci(normalized_move)
+    except ValueError as exc:
+        raise ValueError("The move is not valid UCI notation") from exc
+    if move not in board.legal_moves:
+        raise ValueError("That move is illegal in this position")
+
+
 def extract_concepts(
     board: chess.Board,
     position_id: str,
@@ -477,33 +506,10 @@ class StockfishProvider:
         engine_reply: bool,
         difficulty: GameDifficulty,
     ) -> BoardMoveResult:
+        validate_player_move(fen, move_uci)
         board, normalized_fen = normalize_fen(fen)
-        if board.is_game_over(claim_draw=True):
-            raise ValueError("The game is already over")
-
         normalized_move = move_uci.lower()
-        if len(normalized_move) == 4:
-            source: int | None
-            target: int | None
-            try:
-                source = chess.parse_square(normalized_move[:2])
-                target = chess.parse_square(normalized_move[2:])
-            except ValueError:
-                source = target = None
-            piece = board.piece_at(source) if source is not None else None
-            if (
-                piece
-                and piece.piece_type == chess.PAWN
-                and target is not None
-                and chess.square_rank(target) in {0, 7}
-            ):
-                raise ValueError("Promotion move requires q, r, b, or n suffix")
-        try:
-            human_move = chess.Move.from_uci(normalized_move)
-        except ValueError as exc:
-            raise ValueError("The move is not valid UCI notation") from exc
-        if human_move not in board.legal_moves:
-            raise ValueError("That move is illegal in this position")
+        human_move = chess.Move.from_uci(normalized_move)
 
         human_san = board.san(human_move)
         board.push(human_move)

@@ -793,7 +793,19 @@ def cmd_verify(args: argparse.Namespace) -> int:
             return 4
     findings = portable_findings(root)
     if args.tier in {"local-alpha", "release"}:
-        if run_command(["uv", "run", "pytest", "-m", "hardware", "tests"]):
+        if run_command(
+            [
+                "uv",
+                "run",
+                "pytest",
+                "--cov=gemmafischer",
+                "--cov-report=term-missing",
+                "--cov-fail-under=70",
+                "-m",
+                "not model",
+                "tests",
+            ]
+        ):
             return 4
         browser_gate = root / "scripts" / "run-browser-acceptance.sh"
         if not browser_gate.is_file():

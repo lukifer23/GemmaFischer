@@ -43,6 +43,7 @@ from .engine import (
     EngineOperationPreempted,
     EngineUnavailable,
     StockfishProvider,
+    validate_player_move,
 )
 from .runtime import GemmaRuntime
 from .storage import AnalysisStore
@@ -491,6 +492,7 @@ class AnalysisService:
             self._worker.join(timeout=2)
 
     def play_move(self, request: BoardMoveRequest) -> BoardMoveResult:
+        validate_player_move(request.fen, request.move_uci)
         return self._engine().play_move(
             request.fen,
             request.move_uci,

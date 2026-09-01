@@ -14,17 +14,7 @@ PORTABLE_COMMANDS = (
     ["uv", "run", "ruff", "check", "src", "tests", "scripts", "data"],
     ["uv", "run", "mypy"],
     ["uv", "pip", "check"],
-    [
-        "uv",
-        "run",
-        "pytest",
-        "--cov=gemmafischer",
-        "--cov-report=term-missing",
-        "--cov-fail-under=70",
-        "-m",
-        "not model",
-        "tests",
-    ],
+    ["uv", "run", "pytest", "-m", "not model and not hardware", "tests"],
     ["node", "--check", "src/gemmafischer/static/app.js"],
 )
 
