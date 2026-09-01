@@ -59,7 +59,7 @@ def session_id(page: Page) -> str:
     return value
 
 
-def run_flow(page: Page, url: str) -> None:
+def run_flow(page: Page, url: str, capture_dir: Path) -> None:
     errors: list[str] = []
 
     def record_console(message: ConsoleMessage) -> None:
@@ -78,7 +78,7 @@ def run_flow(page: Page, url: str) -> None:
     page.locator("#tutor-hint-button").click()
     page.locator("#tutor-hint").wait_for(state="visible")
     page.screenshot(
-        path=ROOT / "output" / "playwright" / "public-alpha-tutor-active-desktop.png",
+        path=capture_dir / "public-alpha-tutor-active-desktop.png",
         full_page=True,
     )
 
@@ -121,17 +121,18 @@ def run_flow(page: Page, url: str) -> None:
     page.set_viewport_size({"width": 390, "height": 844})
     assert_layout(page, mobile=True)
     page.screenshot(
-        path=ROOT / "output" / "playwright" / "public-alpha-tutor-mobile.png",
+        path=capture_dir / "public-alpha-tutor-mobile.png",
         full_page=True,
     )
     assert not errors, "browser console errors: " + json.dumps(errors)
 
 
 def main() -> int:
-    (ROOT / "output" / "playwright").mkdir(parents=True, exist_ok=True)
     port = free_port()
     url = f"http://127.0.0.1:{port}"
     with tempfile.TemporaryDirectory(prefix="gemmafischer-browser-") as directory:
+        capture_dir = Path(directory) / "captures"
+        capture_dir.mkdir()
         process = subprocess.Popen(
             [
                 sys.executable,
@@ -146,7 +147,7 @@ def main() -> int:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
                 page = browser.new_page(viewport={"width": 1280, "height": 900})
-                run_flow(page, url)
+                run_flow(page, url, capture_dir)
                 browser.close()
         finally:
             process.terminate()
