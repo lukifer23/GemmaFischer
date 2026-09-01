@@ -3,12 +3,12 @@
   "release_channel": "public-alpha",
   "claim": "local_release_gates_passed",
   "candidate": {
-    "sha": "3db834b4499cd9932275532938fb3d4b823dcc13",
+    "sha": "4dc8c22564733f71a4bf07f9a79a051dc7503d36",
     "clean_tree": true,
     "application_version": "0.2.0",
     "api_version": "v1",
     "profile": "deterministic",
-    "checked_at": "2026-09-01T15:13:24Z"
+    "checked_at": "2026-09-01T23:14:44Z"
   },
   "receipts": [
     {
@@ -38,7 +38,11 @@
       "artifacts": [
         {
           "path": "output/playwright/public-alpha-tutor-mobile.png",
-          "sha256": "ef23ba74ae8cc82b75e5d8416d53fff63206406542df33c1c53a195b19b1a468"
+          "sha256": "21d6f1a2b0e247235184f46a30c0af4ccc000ec67affaeaa20e13b56966d0de7"
+        },
+        {
+          "path": "output/playwright/public-alpha-tutor-active-desktop.png",
+          "sha256": "7799dc085e60c481c22f9182c3f379ee58fac591db3034e52db18eb1854bc0bd"
         },
         {
           "path": "artifacts/qualification/runtime-2026-08-30.json",
@@ -50,21 +54,21 @@
   "hosted": [
     {
       "kind": "verification",
-      "run_id": 33524208529,
-      "head_sha": "3db834b4499cd9932275532938fb3d4b823dcc13",
+      "run_id": 33570005028,
+      "head_sha": "4dc8c22564733f71a4bf07f9a79a051dc7503d36",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33524208529"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33570005028"
     },
     {
       "kind": "codeql",
-      "run_id": 33524208544,
-      "head_sha": "3db834b4499cd9932275532938fb3d4b823dcc13",
+      "run_id": 33570005066,
+      "head_sha": "4dc8c22564733f71a4bf07f9a79a051dc7503d36",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33524208544"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33570005066"
     }
   ],
   "security_alerts": {
-    "checked_at": "2026-09-01T21:39:48Z",
+    "checked_at": "2026-09-01T23:14:44Z",
     "code_scanning": 0,
     "dependabot": 0,
     "secret_scanning": 0
