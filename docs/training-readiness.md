@@ -4,11 +4,11 @@ No training command exists, and the current state is **blocked**. Run the
 inspectable gates without downloading weights or installing a toolchain:
 
 ```bash
-uv run gemmafischer audit-data --output artifacts/data-audit/current-main.json
+uv run gemmafischer audit-data --output artifacts/data-audit/latest.json
 uv run gemmafischer training-readiness \
-  --audit artifacts/data-audit/current-main.json \
+  --audit artifacts/data-audit/latest.json \
   --manifest training/post-training.json \
-  --output artifacts/training/readiness-current.json
+  --output artifacts/training/readiness-latest.json
 ```
 
 Both commands intentionally return exit status 4 while blocked. The readiness

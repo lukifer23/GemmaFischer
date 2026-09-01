@@ -5,10 +5,12 @@ Use Python 3.12 and `uv`. Portable contributions require no model, engine, crede
 ```bash
 uv sync --frozen --group dev
 uv run gemmafischer doctor --profile dev
-uv run ruff check src/gemmafischer tests
-uv run mypy
-uv run pytest -m "not model" tests
+uv run gemmafischer verify --tier portable
 ```
+
+Before changing the player, install Chromium once with `uv run playwright install chromium`,
+install Stockfish, and run `uv run gemmafischer verify --tier local-alpha`. The browser test
+uses the real local API, engine, and SQLite store. It does not intercept chess requests.
 
 The supported code is under `src/gemmafischer`; its tests are under `tests`. The
 pre-recovery implementation is preserved by the annotated
@@ -22,3 +24,6 @@ require proportionate target-host requalification. Pull requests must state the
 user outcome, affected contracts, tests run, evidence artifact and commit, and
 open hardware, browser, data, or human-acceptance gates. A green portable suite
 is not a hardware or coaching-quality claim.
+
+Model-free coverage is ratcheted at 70% across the whole Python package. Raise the threshold
+when tests increase it; do not narrow the measured source set to make the number green.

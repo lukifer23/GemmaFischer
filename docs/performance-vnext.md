@@ -11,6 +11,16 @@ release claim.
 - MLX-LM 0.31.3 and pinned `mlx-community/gemma-4-e2b-it-4bit`
 - Stockfish node budget: 250,000 per analysis
 
+## Public-alpha browser gate, 2026-09-01
+
+The checked-in Playwright gate launches a real server with temporary SQLite and
+real Stockfish at a reduced functional-test node budget. Chromium completed
+position analysis, cited hint display, legal move submission, deterministic
+grading, the closed follow-up, and return to an unchanged live FEN. Desktop and
+390x844 checks found one board tab stop, zero horizontal overflow, correct
+mobile board-review-controls order, and zero console errors. This is functional
+acceptance, not a release-budget latency, physical-device, or VoiceOver claim.
+
 ## Current 0.2 development-worktree run
 
 Measured locally on 2026-08-30 with the target above:

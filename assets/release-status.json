@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "release_channel": "public-alpha",
+  "product_profile": "deterministic",
+  "checked_at": "2026-09-01",
+  "automated_blockers": [],
+  "local_gates": [
+    "portable verification",
+    "real Stockfish tests",
+    "real Chromium tutor acceptance",
+    "wheel and source distribution smoke"
+  ],
+  "open_acceptance_gates": [
+    "hosted CI on the pushed main commit",
+    "physical-device and VoiceOver acceptance",
+    "100-ply and 1000-request endurance qualification",
+    "blind human tutoring usefulness review",
+    "optional Gemma release-candidate requalification"
+  ],
+  "model_policy": "Gemma is optional and cannot author chess facts or grading."
+}

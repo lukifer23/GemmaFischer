@@ -9,8 +9,10 @@ models reject extra fields, and the HTTP boundary rejects bodies above 64 KiB
 before JSON/model parsing even when `Content-Length` is absent or false. Static
 assets are self-hosted under a restrictive Content Security Policy.
 
-Completed analyses and server-owned sessions are retained in a local SQLite WAL
-ledger. The browser stores only the server session ID and view preferences in
+Completed analyses, server-owned sessions, and redacted tutor state are retained
+in a local SQLite WAL ledger. Internal tutor records also contain copied engine
+evidence and hidden answer keys; only the redacted view crosses the API. The
+browser stores only the server session ID and view preferences in
 same-origin local storage. Neither path is synchronized or intentionally exposed
 beyond the loopback API. History contains FENs, move ledgers, engine evidence,
 and coaching output; the Mac account remains the privacy boundary because the

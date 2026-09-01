@@ -4,6 +4,7 @@ import sqlite3
 from pathlib import Path
 
 from .domain import AnalysisSnapshot, AnalysisState, ErrorDetail, Session, now_utc
+from .tutor import TutorInteractionRecord, deserialize_record, serialize_record
 
 ACTIVE_STATES = (
     AnalysisState.QUEUED,
@@ -52,6 +53,21 @@ class AnalysisStore:
                 "CREATE INDEX IF NOT EXISTS sessions_updated_idx ON sessions(updated_at DESC)"
             )
             connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tutor_interactions (
+                    interaction_id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    record_json TEXT NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+                )
+                """
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS tutor_session_updated_idx "
+                "ON tutor_interactions(session_id, updated_at DESC)"
+            )
+            connection.execute(
                 "CREATE INDEX IF NOT EXISTS analyses_updated_idx ON analyses(updated_at DESC)"
             )
             connection.execute(
@@ -79,7 +95,7 @@ class AnalysisStore:
                 """
             )
             self._backfill_session_analysis_refs(connection)
-            connection.execute("PRAGMA user_version=2")
+            connection.execute("PRAGMA user_version=3")
         self._recover_interrupted()
 
     def save(self, snapshot: AnalysisSnapshot, *, reserve: bool = False) -> None:
@@ -193,6 +209,57 @@ class AnalysisStore:
             )
             self._prune_analyses(connection)
         return cursor.rowcount > 0
+
+    def save_tutor(self, record: TutorInteractionRecord) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO tutor_interactions (
+                    interaction_id, session_id, updated_at, record_json
+                ) VALUES (?, ?, ?, ?)
+                ON CONFLICT(interaction_id) DO UPDATE SET
+                    updated_at=excluded.updated_at,
+                    record_json=excluded.record_json
+                """,
+                (
+                    record.view.interaction_id,
+                    record.view.session_id,
+                    record.view.updated_at.isoformat(),
+                    serialize_record(record),
+                ),
+            )
+            connection.execute(
+                """
+                DELETE FROM tutor_interactions WHERE interaction_id IN (
+                    SELECT interaction_id FROM tutor_interactions
+                    WHERE session_id = ?
+                    ORDER BY updated_at DESC LIMIT -1 OFFSET ?
+                )
+                """,
+                (record.view.session_id, self.retention),
+            )
+
+    def get_tutor(self, interaction_id: str) -> TutorInteractionRecord | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT record_json FROM tutor_interactions WHERE interaction_id = ?",
+                (interaction_id,),
+            ).fetchone()
+        return deserialize_record(row[0]) if row else None
+
+    def recent_tutors(
+        self, session_id: str, limit: int = 20
+    ) -> tuple[TutorInteractionRecord, ...]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT record_json FROM tutor_interactions
+                WHERE session_id = ? ORDER BY updated_at DESC LIMIT ?
+                """,
+                (session_id, bounded_limit),
+            ).fetchall()
+        return tuple(deserialize_record(row[0]) for row in rows)
 
     def _backfill_session_analysis_refs(self, connection: sqlite3.Connection) -> None:
         rows = connection.execute("SELECT session_json FROM sessions").fetchall()

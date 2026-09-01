@@ -20,8 +20,8 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         assert "engine_path" not in health.json()
         page = client.get("/")
         assert page.status_code == 200
-        assert "Explain this position" in page.text
-        assert "Play, analyze, and learn in one session" in page.text
+        assert "Explain current position" in page.text
+        assert "Play the position. Understand the decision." in page.text
         assert "Engine vs engine" in page.text
         assert "https://" not in page.text
 
@@ -261,6 +261,123 @@ def test_exhibition_pause_and_resume_survive_restart(tmp_path: Path) -> None:
         )
         assert resumed.status_code == 200
         assert resumed.json()["status"] == "active"
+
+
+def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Path) -> None:
+    history_path = tmp_path / "history.sqlite3"
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(
+        create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    ) as client:
+        session = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "player", "player_color": "white", "fen": START_FEN},
+        ).json()
+        moved = client.post(
+            f"/api/v1/sessions/{session['session_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 0, "action": "player_move", "move_uci": "e2e4"},
+        ).json()
+        replied = client.post(
+            f"/api/v1/sessions/{session['session_id']}/commands",
+            headers=headers,
+            json={"expected_revision": moved["revision"], "action": "engine_move"},
+        ).json()
+        analysis_id = replied["plies"][0]["analysis_id"]
+        deadline = time.monotonic() + 20
+        while True:
+            analysis = client.get(f"/api/v1/analyses/{analysis_id}").json()
+            if analysis["state"] == "complete":
+                break
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+
+        created = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor",
+            headers=headers,
+            json={"source_analysis_id": analysis_id},
+        )
+        assert created.status_code == 201
+        interaction = created.json()
+        assert interaction["status"] == "awaiting_answer"
+        assert "answer_move_uci" not in created.text
+        hint = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor/"
+            f"{interaction['interaction_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 0, "action": "hint"},
+        ).json()
+        assert hint["hint"]
+        preferred = analysis["evidence"]["candidate_set"]["candidates"][0]["move_uci"]
+        answered = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor/"
+            f"{interaction['interaction_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 1, "action": "answer", "move_uci": preferred},
+        )
+        assert answered.status_code == 200
+        answer = answered.json()
+        assert answer["feedback"]["outcome"] == "matched_engine"
+        option_id = answer["follow_up"]["options"][0]["option_id"]
+        completed = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor/"
+            f"{interaction['interaction_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 2, "action": "follow_up", "option_id": option_id},
+        ).json()
+        assert completed["status"] == "complete"
+        assert completed["follow_up"]["correct"] is True
+        terminal = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor/"
+            f"{interaction['interaction_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 3, "action": "dismiss"},
+        )
+        assert terminal.status_code == 409
+        assert terminal.json()["error"]["code"] == "TUTOR_STATE_CONFLICT"
+        live_session = client.get(f"/api/v1/sessions/{session['session_id']}").json()
+        assert live_session["fen"] == replied["fen"]
+
+    with TestClient(
+        create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    ) as client:
+        restored = client.get(
+            f"/api/v1/sessions/{session['session_id']}/tutor/{interaction['interaction_id']}"
+        )
+        assert restored.status_code == 200
+        assert restored.json()["status"] == "complete"
+
+
+def test_tutor_accepts_completed_analysis_of_current_session_position(tmp_path: Path) -> None:
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(
+        create_app(capability_token=TOKEN, node_budget=1, history_path=tmp_path / "history.sqlite3")
+    ) as client:
+        session = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "player", "player_color": "white", "fen": START_FEN},
+        ).json()
+        analysis = client.post(
+            "/api/v1/analyses",
+            headers=headers,
+            json={"mode": "position", "fen": session["fen"], "rating_bucket": "1400-1599"},
+        ).json()
+        deadline = time.monotonic() + 20
+        while True:
+            completed = client.get(f"/api/v1/analyses/{analysis['analysis_id']}").json()
+            if completed["state"] == "complete":
+                break
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+        tutor = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor",
+            headers=headers,
+            json={"source_analysis_id": analysis["analysis_id"]},
+        )
+        assert tutor.status_code == 201
+        assert tutor.json()["question"]["fen"] == session["fen"]
 
 
 def test_session_preserves_exact_underpromotion_and_revision() -> None:

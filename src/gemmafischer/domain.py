@@ -55,6 +55,13 @@ class SessionStatus(StrEnum):
     COMPLETE = "complete"
 
 
+class TutorStatus(StrEnum):
+    AWAITING_ANSWER = "awaiting_answer"
+    AWAITING_FOLLOW_UP = "awaiting_follow_up"
+    COMPLETE = "complete"
+    DISMISSED = "dismissed"
+
+
 TERMINAL_STATES = {
     AnalysisState.COMPLETE,
     AnalysisState.ENGINE_ONLY,
@@ -465,6 +472,79 @@ class SessionCommandRequest(StrictModel):
             raise ValueError("move_uci is required for player_move")
         if self.action != "player_move" and self.move_uci is not None:
             raise ValueError("move_uci is only accepted for player_move")
+        return self
+
+
+class TutorOption(StrictModel):
+    option_id: str
+    label: str
+
+
+class TutorQuestion(StrictModel):
+    prompt: str
+    fen: str
+    position_id: str
+    source_analysis_id: str
+    hint_available: bool = True
+
+
+class TutorFeedback(StrictModel):
+    submitted_move_uci: str
+    submitted_move_san: str
+    preferred_move_uci: str
+    preferred_move_san: str
+    outcome: Literal["matched_engine", "equivalent", "engine_preferred"]
+    message: str
+    evidence_ids: tuple[str, ...]
+
+
+class TutorFollowUp(StrictModel):
+    prompt: str
+    options: tuple[TutorOption, ...] = Field(min_length=2, max_length=4)
+    selected_option_id: str | None = None
+    correct: bool | None = None
+
+
+class TutorInteractionView(StrictModel):
+    schema_version: Literal["1.0"] = "1.0"
+    interaction_id: str
+    session_id: str
+    revision: int = Field(ge=0)
+    status: TutorStatus
+    question: TutorQuestion
+    hint: str | None = None
+    hint_evidence_ids: tuple[str, ...] = ()
+    feedback: TutorFeedback | None = None
+    follow_up: TutorFollowUp | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TutorInteractionList(StrictModel):
+    items: tuple[TutorInteractionView, ...]
+    count: int = Field(ge=0)
+
+
+class CreateTutorRequest(StrictModel):
+    source_analysis_id: str
+
+
+class TutorCommandRequest(StrictModel):
+    expected_revision: int = Field(ge=0)
+    action: Literal["hint", "answer", "follow_up", "dismiss"]
+    move_uci: str | None = Field(default=None, min_length=4, max_length=5)
+    option_id: str | None = None
+
+    @model_validator(mode="after")
+    def payload_matches_action(self) -> TutorCommandRequest:
+        if self.action == "answer" and self.move_uci is None:
+            raise ValueError("move_uci is required for answer")
+        if self.action != "answer" and self.move_uci is not None:
+            raise ValueError("move_uci is only accepted for answer")
+        if self.action == "follow_up" and self.option_id is None:
+            raise ValueError("option_id is required for follow_up")
+        if self.action != "follow_up" and self.option_id is not None:
+            raise ValueError("option_id is only accepted for follow_up")
         return self
 
 

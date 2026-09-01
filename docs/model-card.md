@@ -1,6 +1,6 @@
 # Model Card: GemmaFischer Model Candidates
 
-Status: **Gemma 4 E2B is the current development candidate; LFM2.5-2.6B is rejected out of the box for the bounded selector workload**.
+Status: **The deterministic coach is the public-alpha product. Gemma 4 E2B remains an optional development candidate; LFM2.5-2.6B is rejected out of the box for the bounded selector workload**.
 
 The optional full-profile candidate is
 `mlx-community/gemma-4-e2b-it-4bit`, derived from

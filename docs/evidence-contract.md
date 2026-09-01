@@ -35,7 +35,17 @@ HTTP routes are:
 - `GET /api/v1/sessions/{session_id}/legal-moves` for authoritative selection;
 - `POST /api/v1/sessions/{session_id}/commands` for player move, engine move,
   undo, pause, and resume with `expected_revision`;
+- `POST` and `GET /api/v1/sessions/{session_id}/tutor` to create and list
+  evidence-anchored practice interactions;
+- `GET /api/v1/sessions/{session_id}/tutor/{interaction_id}` and its
+  `/legal-moves` and `/commands` resources for frozen-position play, hint,
+  answer, follow-up, and dismiss mutations with an independent revision;
 - `GET /api/v1/health` and `/api/v1/capabilities` for local runtime status.
+
+Tutor responses expose the frozen question, cited hint, submitted answer,
+comparison-backed feedback, and closed follow-up options. They never expose the
+hidden best move or correct follow-up key before submission. Tutor state copies
+its immutable source evidence and cannot alter the live session.
 
 The health contract reports capability/status only and never returns resolved
 filesystem paths. Request bodies are limited to 64 KiB at the HTTP boundary;

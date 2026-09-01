@@ -40,8 +40,8 @@ promotion, forced-move, terminal, mate, and material cases. Eleven cases at
 The deterministic tutoring suite passed 15/15 executions. A separate exact
 question-answer contract grades UCI, SAN, and terminal-reason answers without
 substring or prose guessing; 33 positive/adversarial examples across eight
-frozen questions passed 33/33. These fixture-defined questions validate grading,
-not yet the future persisted tutor-question generator.
+frozen questions passed 33/33. These fixture-defined questions validate grading.
+The public-alpha pass added the persisted, redacted tutor state machine and board UI.
 
 Evidence:
 
@@ -89,21 +89,19 @@ The installed 4-bit inference quant is not a training source.
 
 Evidence:
 
-- [data audit](../artifacts/data-audit/current-main.json)
+- [data audit](../artifacts/data-audit/latest.json)
 - [selector smoke](../artifacts/data-audit/selector-smoke-2026-08-30.json)
-- [training readiness](../artifacts/training/readiness-current.json)
+- [training readiness](../artifacts/training/readiness-latest.json)
 
 ## Remaining ordered gates
 
-1. Check in a durable real-browser E2E harness for the full fixture/viewport
-   matrix; this pass measured the browser but did not add the Playwright package.
+1. Expand the checked-in real-browser acceptance from the public-alpha core flow
+   to the full fixture, accessibility, and viewport matrix.
 2. Reduce or justify Stockfish restart churn under rapid gameplay/review load,
    then run 100-ply and 1,000-request endurance/resource gates.
-3. Implement the persisted deterministic tutor interaction vertical slice;
-   current question fixtures qualify grading but are not the product tutor.
-4. Build the full leakage-free 10,000/1,000/1,000 selector corpus and 1,000-case
+3. Build the full leakage-free 10,000/1,000/1,000 selector corpus and 1,000-case
    held-out chess suite.
-5. Complete blinded human usefulness review before promoting Gemma or authorizing
+4. Complete blinded human usefulness review before promoting Gemma or authorizing
    any 7-20-step Unsloth/MLX-LM smoke comparison.
 
 These are explicit unpassed gates, not placeholders or claimed functionality.

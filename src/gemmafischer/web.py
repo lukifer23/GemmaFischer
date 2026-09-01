@@ -17,6 +17,7 @@ from .domain import (
     AnalysisSnapshot,
     BoardMoveRequest,
     CreateSessionRequest,
+    CreateTutorRequest,
     DeleteResult,
     EngineTurnRequest,
     ErrorEnvelope,
@@ -26,9 +27,12 @@ from .domain import (
     Session,
     SessionCommandRequest,
     SessionList,
+    TutorCommandRequest,
+    TutorInteractionList,
+    TutorInteractionView,
 )
 from .engine import EngineUnavailable, legal_moves_for_square, resolve_stockfish
-from .service import AnalysisService, SessionConflict
+from .service import AnalysisService, SessionConflict, TutorStateConflict
 
 STATIC_DIR = Path(__file__).with_name("static")
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
@@ -375,6 +379,96 @@ def create_app(
         if not request.app.state.service.delete_session(session_id):
             return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
         return DeleteResult()
+
+    @app.post(
+        "/api/v1/sessions/{session_id}/tutor",
+        response_model=TutorInteractionView,
+        status_code=201,
+    )
+    def create_tutor(
+        session_id: str, payload: CreateTutorRequest, request: Request
+    ) -> TutorInteractionView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        try:
+            return service.create_tutor(session_id, payload)
+        except KeyError:
+            return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        except ValueError as exc:
+            return _error("TUTOR_UNAVAILABLE", str(exc), "tutor", 422)
+
+    @app.get(
+        "/api/v1/sessions/{session_id}/tutor",
+        response_model=TutorInteractionList,
+    )
+    def list_tutors(
+        session_id: str, request: Request, limit: int = Query(default=20, ge=1, le=100)
+    ) -> TutorInteractionList | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        if service.get_session(session_id) is None:
+            return _error("SESSION_NOT_FOUND", "No session has this ID.", "lookup", 404)
+        items = service.recent_tutors(session_id, limit)
+        return TutorInteractionList(items=items, count=len(items))
+
+    @app.get(
+        "/api/v1/sessions/{session_id}/tutor/{interaction_id}",
+        response_model=TutorInteractionView,
+    )
+    def get_tutor(
+        session_id: str, interaction_id: str, request: Request
+    ) -> TutorInteractionView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        interaction = service.get_tutor(interaction_id)
+        if interaction is None or interaction.session_id != session_id:
+            return _error("TUTOR_NOT_FOUND", "No tutor interaction has this ID.", "lookup", 404)
+        return interaction
+
+    @app.get(
+        "/api/v1/sessions/{session_id}/tutor/{interaction_id}/legal-moves",
+        response_model=LegalMovesResult,
+    )
+    def tutor_legal_moves(
+        session_id: str,
+        interaction_id: str,
+        from_square: str,
+        request: Request,
+    ) -> LegalMovesResult | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        interaction = service.get_tutor(interaction_id)
+        if interaction is None or interaction.session_id != session_id:
+            return _error("TUTOR_NOT_FOUND", "No tutor interaction has this ID.", "lookup", 404)
+        try:
+            return legal_moves_for_square(interaction.question.fen, from_square)
+        except ValueError as exc:
+            return _error("INVALID_POSITION", str(exc), "tutor", 422)
+
+    @app.post(
+        "/api/v1/sessions/{session_id}/tutor/{interaction_id}/commands",
+        response_model=TutorInteractionView,
+    )
+    def command_tutor(
+        session_id: str,
+        interaction_id: str,
+        payload: TutorCommandRequest,
+        request: Request,
+    ) -> TutorInteractionView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        try:
+            return service.command_tutor(session_id, interaction_id, payload)
+        except KeyError:
+            return _error("TUTOR_NOT_FOUND", "No tutor interaction has this ID.", "lookup", 404)
+        except TutorStateConflict as exc:
+            return _error("TUTOR_STATE_CONFLICT", str(exc), "tutor", 409)
+        except SessionConflict as exc:
+            return _error("TUTOR_REVISION_CONFLICT", str(exc), "tutor", 409)
+        except ValueError as exc:
+            return _error("INVALID_TUTOR_COMMAND", str(exc), "tutor", 422)
+        except Exception:
+            return _error(
+                "ENGINE_FAILURE",
+                "The chess engine could not grade this tutor answer.",
+                "engine",
+                503,
+            )
 
     return app
 

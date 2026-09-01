@@ -41,7 +41,7 @@ source rows. Every row passed the exact prompt/target contract, legality,
 metadata, deduplication, conflict, semantic-position isolation, and lineage
 isolation checks. Its threshold-adjusted proof is
 [selector-smoke-2026-08-30.json](../artifacts/data-audit/selector-smoke-2026-08-30.json).
-The production [current-main.json](../artifacts/data-audit/current-main.json)
+The development [latest.json](../artifacts/data-audit/latest.json)
 remains blocked because 84/10/6 is below the required 10,000/1,000/1,000. A
 full build is not authorized merely because the archive is present.
 

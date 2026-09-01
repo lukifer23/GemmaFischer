@@ -586,6 +586,20 @@
         "title": "CreateSessionRequest",
         "type": "object"
       },
+      "CreateTutorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "source_analysis_id": {
+            "title": "Source Analysis Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_analysis_id"
+        ],
+        "title": "CreateTutorRequest",
+        "type": "object"
+      },
       "DeleteResult": {
         "additionalProperties": false,
         "properties": {
@@ -1510,8 +1524,339 @@
         "title": "SessionStatus",
         "type": "string"
       },
+      "TutorCommandRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "hint",
+              "answer",
+              "follow_up",
+              "dismiss"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "move_uci": {
+            "anyOf": [
+              {
+                "maxLength": 5,
+                "minLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move Uci"
+          },
+          "option_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option Id"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "action"
+        ],
+        "title": "TutorCommandRequest",
+        "type": "object"
+      },
+      "TutorFeedback": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "matched_engine",
+              "equivalent",
+              "engine_preferred"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "preferred_move_san": {
+            "title": "Preferred Move San",
+            "type": "string"
+          },
+          "preferred_move_uci": {
+            "title": "Preferred Move Uci",
+            "type": "string"
+          },
+          "submitted_move_san": {
+            "title": "Submitted Move San",
+            "type": "string"
+          },
+          "submitted_move_uci": {
+            "title": "Submitted Move Uci",
+            "type": "string"
+          }
+        },
+        "required": [
+          "submitted_move_uci",
+          "submitted_move_san",
+          "preferred_move_uci",
+          "preferred_move_san",
+          "outcome",
+          "message",
+          "evidence_ids"
+        ],
+        "title": "TutorFeedback",
+        "type": "object"
+      },
+      "TutorFollowUp": {
+        "additionalProperties": false,
+        "properties": {
+          "correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/TutorOption"
+            },
+            "maxItems": 4,
+            "minItems": 2,
+            "title": "Options",
+            "type": "array"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "selected_option_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Option Id"
+          }
+        },
+        "required": [
+          "prompt",
+          "options"
+        ],
+        "title": "TutorFollowUp",
+        "type": "object"
+      },
+      "TutorInteractionList": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TutorInteractionView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "TutorInteractionList",
+        "type": "object"
+      },
+      "TutorInteractionView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TutorFeedback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TutorFollowUp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "hint_evidence_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Hint Evidence Ids",
+            "type": "array"
+          },
+          "interaction_id": {
+            "title": "Interaction Id",
+            "type": "string"
+          },
+          "question": {
+            "$ref": "#/components/schemas/TutorQuestion"
+          },
+          "revision": {
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TutorStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "interaction_id",
+          "session_id",
+          "revision",
+          "status",
+          "question",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TutorInteractionView",
+        "type": "object"
+      },
+      "TutorOption": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "option_id": {
+            "title": "Option Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "option_id",
+          "label"
+        ],
+        "title": "TutorOption",
+        "type": "object"
+      },
+      "TutorQuestion": {
+        "additionalProperties": false,
+        "properties": {
+          "fen": {
+            "title": "Fen",
+            "type": "string"
+          },
+          "hint_available": {
+            "default": true,
+            "title": "Hint Available",
+            "type": "boolean"
+          },
+          "position_id": {
+            "title": "Position Id",
+            "type": "string"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "source_analysis_id": {
+            "title": "Source Analysis Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "fen",
+          "position_id",
+          "source_analysis_id"
+        ],
+        "title": "TutorQuestion",
+        "type": "object"
+      },
+      "TutorStatus": {
+        "enum": [
+          "awaiting_answer",
+          "awaiting_follow_up",
+          "complete",
+          "dismissed"
+        ],
+        "title": "TutorStatus",
+        "type": "string"
+      },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -2211,6 +2556,267 @@
           }
         },
         "summary": "Session Legal Moves"
+      }
+    },
+    "/api/v1/sessions/{session_id}/tutor": {
+      "get": {
+        "operationId": "list_tutors_api_v1_sessions__session_id__tutor_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorInteractionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tutors"
+      },
+      "post": {
+        "operationId": "create_tutor_api_v1_sessions__session_id__tutor_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTutorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorInteractionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Tutor"
+      }
+    },
+    "/api/v1/sessions/{session_id}/tutor/{interaction_id}": {
+      "get": {
+        "operationId": "get_tutor_api_v1_sessions__session_id__tutor__interaction_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "interaction_id",
+            "required": true,
+            "schema": {
+              "title": "Interaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorInteractionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Tutor"
+      }
+    },
+    "/api/v1/sessions/{session_id}/tutor/{interaction_id}/commands": {
+      "post": {
+        "operationId": "command_tutor_api_v1_sessions__session_id__tutor__interaction_id__commands_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "interaction_id",
+            "required": true,
+            "schema": {
+              "title": "Interaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TutorInteractionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Tutor"
+      }
+    },
+    "/api/v1/sessions/{session_id}/tutor/{interaction_id}/legal-moves": {
+      "get": {
+        "operationId": "tutor_legal_moves_api_v1_sessions__session_id__tutor__interaction_id__legal_moves_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "interaction_id",
+            "required": true,
+            "schema": {
+              "title": "Interaction Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_square",
+            "required": true,
+            "schema": {
+              "title": "From Square",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalMovesResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tutor Legal Moves"
       }
     }
   }

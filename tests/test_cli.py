@@ -40,3 +40,8 @@ def test_runtime_qualification_options_are_explicit() -> None:
     assert args.requests == 7
     assert args.nodes == 1234
     assert str(args.output) == "/tmp/run.json"
+
+
+def test_verify_tiers_are_explicit() -> None:
+    assert parser().parse_args(["verify"]).tier == "portable"
+    assert parser().parse_args(["verify", "--tier", "release"]).tier == "release"

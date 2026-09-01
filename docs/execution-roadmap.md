@@ -1,7 +1,7 @@
 # Dependency-Ordered Execution Roadmap
 
-Status: active  
-Baseline: `f682ce1` on `main` (2026-08-30)
+Status: phases 0-3 implemented for public alpha; later release gates remain active
+Baseline: public-alpha implementation worktree on `main` (2026-09-01)
 
 This is the controlling order for the next GemmaFischer pass. It supersedes
 older backlog ordering, but not the repository's evidence, security,
@@ -50,20 +50,21 @@ Studying a position must never mutate the live game.
 
 | Capability | Current implementation |
 |---|---|
-| Evidence and typed lessons | `domain.py`, `evidence.py`, `coach.py` |
+| Evidence and typed lessons | `domain.py`, `engine.py`, `coach.py` |
 | Persistent Stockfish and sessions | `engine.py`, `service.py` |
 | SQLite WAL and recovery | `storage.py` |
 | Local HTTP contracts | `web.py`, `docs/openapi.json` |
-| Unified play/review/exhibition UI | `static/index.html`, `app.js`, `app.css` |
+| Unified play/review/practice/exhibition UI | `static/index.html`, `app.js`, `app.css` |
+| Persisted deterministic tutor | `tutor.py`, `service.py`, `storage.py`, `web.py` |
+| Real browser acceptance | `scripts/browser_acceptance.py` |
 | Accuracy/tutor/model evaluation | `accuracy_eval.py`, `tutor_eval.py`, `model_profile.py` |
 | Governed data acquisition | `data/sources.json`, build/audit commands |
 
-The present evidence is useful but incomplete: 73 tests exist; the constructed
-suite and a 100-position held-out sample passed; Gemma produced visible output
-in 21/21 profiled requests; and ten automated tutoring cases passed factual
-gates. Human usefulness remains open, there is no question/answer contract, the
-current corpus is 94 training and 6 evaluation records, and long-run/browser
-qualification is not complete.
+The public-alpha implementation has 108 automated tests, a 73% whole-package
+model-free coverage ratchet, an installed-wheel smoke, and a real Chromium core tutor flow.
+Earlier constructed, held-out, and optional-Gemma artifacts remain development
+evidence. Human usefulness, physical-device accessibility, the full browser
+fixture matrix, and long-run qualification remain open.
 
 ## Phase 0 - Lock truth, security, and reproducibility
 
@@ -113,6 +114,8 @@ Exit:
 
 ## Phase 2 - Establish durable real-browser acceptance
 
+Public-alpha core slice: implemented. Full fixture and viewport matrix: open.
+
 Add Playwright to the checked-in development/test toolchain and launch the real
 FastAPI app with real Stockfish and a temporary SQLite database. Functional E2E
 may use a low node budget; performance qualification uses the release budget.
@@ -129,6 +132,9 @@ Exit: the real browser harness produces traces/screenshots on failure and proves
 the core session before tutoring changes begin.
 
 ## Phase 3 - Ship the deterministic tutor vertical slice
+
+Status: implemented for the public-alpha find-a-move, cited-hint, Stockfish
+grading, closed follow-up, restart persistence, and live-game isolation flow.
 
 Do not ask Gemma to author questions or grade answers.
 

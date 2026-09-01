@@ -1,12 +1,18 @@
 import pytest
 
 from gemmafischer.domain import GuidanceClaim
+from gemmafischer.resources import bundled_path
 from gemmafischer.runtime import GemmaRuntime, extract_json_array
 
 
 def test_extract_json_array_accepts_markdown_fence() -> None:
     output = '<|channel>final\n```json\n[{"kind":"guidance"}]\n```'
     assert extract_json_array(output) == [{"kind": "guidance"}]
+
+
+def test_bundled_runtime_resources_resolve_from_checkout() -> None:
+    assert bundled_path("assets/model-manifest.json").is_file()
+    assert bundled_path("data/evaluation/diagnostic_positions.jsonl").is_file()
 
 
 def test_extract_json_array_rejects_missing_payload() -> None:

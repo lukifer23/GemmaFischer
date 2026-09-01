@@ -1,9 +1,9 @@
 {
   "schema_version": "2.0",
-  "updated": "2026-08-30",
+  "updated": "2026-09-01",
   "policy": "Only entries marked verified may support current release claims.",
   "entries": [
-    {"scope": "src/gemmafischer and tests", "status": "development_verified", "reason": "Application 0.2, server-owned sessions, evidence 2.0, lifecycle controls, data gates, provider-neutral qualification, and local-model identity checks pass Ruff, strict mypy, 72 non-model tests, one real pinned-model test, and repository audit on the target host. The implementation is in a dirty local worktree and is not a release claim."},
+    {"scope": "src/gemmafischer, scripts, and tests", "status": "development_verified", "reason": "The deterministic public-alpha path, persisted tutor, packaging resources, verification tiers, real Stockfish integration, 107 model-free tests, 70% whole-package coverage ratchet, and real Chromium core flow pass locally. Hosted CI, physical-device accessibility, endurance, and human tutoring acceptance remain separate gates."},
     {"scope": "archive/pre-recovery-2026-08-30", "status": "archived", "reason": "Annotated recovery tag at ddff9f2d4ccb0d1d3aacb7f90c385266164c0e87 preserves the removed legacy implementation and records 51 Git LFS paths."},
     {"scope": "historical training and evaluation corpora", "status": "blocked", "reason": "The 2026-08-30 audit found missing licenses and provenance, invalid positions and labels, conflicts, duplicates, and train-evaluation overlap. No historical corpus may train or qualify 0.2."},
     {"scope": "legacy models, checkpoints, reports, and LC0 assets", "status": "archived_only", "reason": "Removed from main; no archived model, adapter, LC0 network, or report is supported runtime or current evidence."},
@@ -14,6 +14,6 @@
     {"scope": "artifacts/qualification/model-profile-0.2-local.json", "status": "development_verified", "reason": "Twenty-one real Stockfish-derived Gemma prompts passed visible-output, warm TTFT, total-latency, decode-throughput, and exact-model-asset gates. The dirty-worktree result is not release evidence."},
     {"scope": "artifacts/qualification/tutoring-full-0.2-local.json", "status": "automated_verified_human_open", "reason": "Ten of ten current Gemma executions passed automated grounding and stability contracts. Required factual claims remain deterministic; the model contribution is bounded selection. The blinded human-usefulness review remains open."},
     {"scope": "artifacts/qualification/model-bakeoff-0.2-local.json", "status": "candidate_rejected", "reason": "The exact local LFM2.5-2.6B MLX 4-bit artifact produced zero visible answers in five 768-token prompts and failed all eight nonterminal tutoring executions. It is not a supported player runtime."},
-    {"scope": "artifacts/data-audit/current-main.json", "status": "blocked", "reason": "The real pinned Lichess archive and 100-record Stockfish build validate the data path, but 94 training and six evaluation rows are below the explicit 10000 and 1000 minimums. Training remains disabled."}
+    {"scope": "artifacts/data-audit/latest.json", "status": "blocked", "reason": "The real pinned Lichess archive and 100-record Stockfish build validate the data path, but 84 training, 10 validation, and six final-test rows are below the explicit 10000, 1000, and 1000 minimums. Training remains disabled."}
   ]
 }

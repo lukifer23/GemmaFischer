@@ -21,6 +21,7 @@ from .domain import (
     BoardMoveResult,
     CoachingResult,
     CreateSessionRequest,
+    CreateTutorRequest,
     EngineTurnRequest,
     EngineTurnResult,
     ErrorDetail,
@@ -30,6 +31,9 @@ from .domain import (
     SessionCommandRequest,
     SessionMode,
     SessionStatus,
+    TutorCommandRequest,
+    TutorInteractionView,
+    TutorStatus,
     Workflow,
     normalize_fen,
     now_utc,
@@ -42,6 +46,14 @@ from .engine import (
 )
 from .runtime import GemmaRuntime
 from .storage import AnalysisStore
+from .tutor import (
+    TutorInteractionRecord,
+    answer_follow_up,
+    create_interaction,
+    dismiss,
+    grade_answer,
+    reveal_hint,
+)
 
 
 @dataclass
@@ -53,6 +65,10 @@ class _Job:
 
 
 class SessionConflict(RuntimeError):
+    pass
+
+
+class TutorStateConflict(SessionConflict):
     pass
 
 
@@ -78,6 +94,7 @@ class AnalysisService:
         self._provider: StockfishProvider | None = None
         self._jobs: dict[str, _Job] = {}
         self._sessions: dict[str, Session] = {}
+        self._tutors: dict[str, TutorInteractionRecord] = {}
         self._session_locks: dict[str, threading.RLock] = {}
         self._pending_ids: deque[str] = deque()
         self._active_id: str | None = None
@@ -177,9 +194,104 @@ class AnalysisService:
         lock = self._session_lock(session_id)
         with lock, self._condition:
             existed = self._sessions.pop(session_id, None) is not None
+            self._tutors = {
+                key: value
+                for key, value in self._tutors.items()
+                if value.view.session_id != session_id
+            }
             deleted = self._store.delete_session(session_id) if self._store else existed
             self._session_locks.pop(session_id, None)
             return deleted or existed
+
+    def create_tutor(
+        self, session_id: str, request: CreateTutorRequest
+    ) -> TutorInteractionView:
+        lock = self._session_lock(session_id)
+        with lock:
+            session = self.get_session(session_id)
+            if session is None:
+                raise KeyError(session_id)
+            analysis = self.get(request.source_analysis_id)
+            if analysis is None or analysis.evidence is None or analysis.coaching is None:
+                raise ValueError("The source analysis is not complete")
+            session_positions = {session.initial_fen, session.fen}
+            for ply in session.plies:
+                session_positions.update((ply.fen_before, ply.fen_after))
+            linked = request.source_analysis_id in {
+                ply.analysis_id for ply in session.plies if ply.analysis_id is not None
+            }
+            if not linked and analysis.request.fen not in session_positions:
+                raise ValueError("The source analysis does not belong to a session position")
+            record = create_interaction(
+                uuid.uuid4().hex,
+                session_id,
+                request.source_analysis_id,
+                analysis.evidence,
+            )
+            self._save_tutor(record)
+            return record.view
+
+    def get_tutor(self, interaction_id: str) -> TutorInteractionView | None:
+        record = self._tutors.get(interaction_id) or (
+            self._store.get_tutor(interaction_id) if self._store else None
+        )
+        return record.view if record else None
+
+    def recent_tutors(
+        self, session_id: str, limit: int = 20
+    ) -> tuple[TutorInteractionView, ...]:
+        if self._store:
+            return tuple(record.view for record in self._store.recent_tutors(session_id, limit))
+        return tuple(
+            sorted(
+                (
+                    record.view
+                    for record in self._tutors.values()
+                    if record.view.session_id == session_id
+                ),
+                key=lambda item: item.updated_at,
+                reverse=True,
+            )[:limit]
+        )
+
+    def command_tutor(
+        self,
+        session_id: str,
+        interaction_id: str,
+        command: TutorCommandRequest,
+    ) -> TutorInteractionView:
+        lock = self._session_lock(session_id)
+        with lock:
+            record = self._tutors.get(interaction_id) or (
+                self._store.get_tutor(interaction_id) if self._store else None
+            )
+            if record is None or record.view.session_id != session_id:
+                raise KeyError(interaction_id)
+            if command.expected_revision != record.view.revision:
+                raise SessionConflict(
+                    f"Expected tutor revision {command.expected_revision}; "
+                    f"current revision is {record.view.revision}."
+                )
+            if record.view.status in {TutorStatus.COMPLETE, TutorStatus.DISMISSED}:
+                raise TutorStateConflict("This tutor interaction is already terminal")
+            if command.action == "hint":
+                updated = reveal_hint(record)
+            elif command.action == "answer":
+                assert command.move_uci is not None
+                evidence = self._engine().analyze(record.view.question.fen, command.move_uci)
+                updated = grade_answer(record, command.move_uci, evidence)
+            elif command.action == "follow_up":
+                assert command.option_id is not None
+                updated = answer_follow_up(record, command.option_id)
+            else:
+                updated = dismiss(record)
+            self._save_tutor(updated)
+            return updated.view
+
+    def _save_tutor(self, record: TutorInteractionRecord) -> None:
+        self._tutors[record.view.interaction_id] = record
+        if self._store:
+            self._store.save_tutor(record)
 
     def command_session(self, session_id: str, command: SessionCommandRequest) -> Session:
         # A revision check and its mutation are one transaction from the API's

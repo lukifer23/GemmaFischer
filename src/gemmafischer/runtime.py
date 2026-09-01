@@ -10,6 +10,7 @@ from typing import Any, Literal, Protocol
 from pydantic import TypeAdapter, ValidationError
 
 from .domain import CoachingClaim, EngineEvidence, RatingBucket
+from .resources import bundled_path
 
 DEFAULT_MODEL = "mlx-community/gemma-4-e2b-it-4bit"
 DEFAULT_MODEL_REVISION = "238767527555cb75a05732a84dff5d6ba0dd6809"
@@ -63,7 +64,7 @@ def inspect_model_assets(
     manifest_path: Path | None = None,
 ) -> dict[str, object]:
     snapshot = resolve_model_snapshot(model_id, revision)
-    manifest_path = manifest_path or Path(__file__).parents[2] / "assets" / "model-manifest.json"
+    manifest_path = manifest_path or bundled_path("assets/model-manifest.json")
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError) as exc:

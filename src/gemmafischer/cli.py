@@ -41,6 +41,7 @@ from .model_profile import (
 )
 from .qualification import run_deterministic_benchmark, run_full_profile_benchmark
 from .repo_audit import audit_repository
+from .resources import bundled_path
 from .runtime import (
     DEFAULT_MODEL,
     DEFAULT_MODEL_REVISION,
@@ -54,6 +55,12 @@ from .service import AnalysisService
 from .storage import default_history_path
 from .training_readiness import evaluate_training_readiness
 from .tutor_eval import run_tutoring_qualification
+from .verification import (
+    PORTABLE_COMMANDS,
+    portable_findings,
+    run_command,
+    verify_release_status,
+)
 from .web import create_app
 
 EXAMPLE_FEN = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
@@ -160,7 +167,7 @@ def parser() -> argparse.ArgumentParser:
     benchmark.add_argument(
         "--fixtures",
         type=Path,
-        default=Path("data/evaluation/diagnostic_positions.jsonl"),
+        default=bundled_path("data/evaluation/diagnostic_positions.jsonl"),
     )
     model_profile = commands.add_parser(
         "profile-model", help="Measure real pinned-model TTFT, tokens, TPS, and memory"
@@ -168,7 +175,7 @@ def parser() -> argparse.ArgumentParser:
     model_profile.add_argument(
         "--fixtures",
         type=Path,
-        default=Path("data/evaluation/diagnostic_positions.jsonl"),
+        default=bundled_path("data/evaluation/diagnostic_positions.jsonl"),
     )
     model_profile.add_argument("--requests", type=int, default=21)
     model_profile.add_argument("--max-tokens", type=int, default=768)
@@ -179,7 +186,7 @@ def parser() -> argparse.ArgumentParser:
         "--revision", default=DEFAULT_MODEL_REVISION
     )
     model_profile.add_argument(
-        "--manifest", type=Path, default=Path("assets/model-manifest.json")
+        "--manifest", type=Path, default=bundled_path("assets/model-manifest.json")
     )
     model_profile.add_argument(
         "--output",
@@ -196,12 +203,12 @@ def parser() -> argparse.ArgumentParser:
     accuracy.add_argument(
         "--fixtures",
         type=Path,
-        default=Path("data/evaluation/accuracy_positions.jsonl"),
+        default=bundled_path("data/evaluation/accuracy_positions.jsonl"),
     )
     accuracy.add_argument(
         "--archive", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst")
     )
-    accuracy.add_argument("--manifest", type=Path, default=Path("data/sources.json"))
+    accuracy.add_argument("--manifest", type=Path, default=bundled_path("data/sources.json"))
     accuracy.add_argument("--sample-size", type=int, default=100)
     accuracy.add_argument("--repeats", type=int, default=3)
     accuracy.add_argument("--nodes", type=int, default=250_000)
@@ -214,7 +221,7 @@ def parser() -> argparse.ArgumentParser:
     tutor.add_argument(
         "--cases",
         type=Path,
-        default=Path("data/evaluation/tutoring_cases.jsonl"),
+        default=bundled_path("data/evaluation/tutoring_cases.jsonl"),
     )
     tutor.add_argument("--profile", choices=("deterministic", "full"), default="deterministic")
     tutor.add_argument("--repetitions", type=int, default=2)
@@ -223,7 +230,9 @@ def parser() -> argparse.ArgumentParser:
     tutor.add_argument(
         "--revision", default="238767527555cb75a05732a84dff5d6ba0dd6809"
     )
-    tutor.add_argument("--manifest", type=Path, default=Path("assets/model-manifest.json"))
+    tutor.add_argument(
+        "--manifest", type=Path, default=bundled_path("assets/model-manifest.json")
+    )
     tutor.add_argument("--base-url", default=DEFAULT_LM_STUDIO_URL)
     tutor.add_argument("--model-artifact", type=Path)
     tutor.add_argument(
@@ -253,7 +262,10 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/qualification/runtime-latest.json"),
     )
-    commands.add_parser("verify", help="Run the documented portable verification command")
+    verify = commands.add_parser("verify", help="Run portable, local-alpha, or release gates")
+    verify.add_argument(
+        "--tier", choices=("portable", "local-alpha", "release"), default="portable"
+    )
     commands.add_parser("repo-audit", help="Detect duplicate and unsupported repository content")
     return root
 
@@ -775,16 +787,24 @@ def _write_json_atomic(path: Path, payload: object) -> None:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    commands = (
-        ["uv", "run", "ruff", "check", "src/gemmafischer", "tests"],
-        ["uv", "run", "mypy"],
-        ["uv", "run", "pytest", "-m", "not model", "tests"],
-    )
-    for command in commands:
-        print("+ " + " ".join(command), flush=True)
-        completed = subprocess.run(command, check=False)
-        if completed.returncode:
-            return completed.returncode
+    root = Path.cwd()
+    for command in PORTABLE_COMMANDS:
+        if run_command(list(command)):
+            return 4
+    findings = portable_findings(root)
+    if args.tier in {"local-alpha", "release"}:
+        if run_command(["uv", "run", "pytest", "-m", "hardware", "tests"]):
+            return 4
+        browser_gate = root / "scripts" / "run-browser-acceptance.sh"
+        if not browser_gate.is_file():
+            findings.append("scripts/run-browser-acceptance.sh is missing")
+        elif run_command([str(browser_gate)]):
+            return 4
+    if args.tier == "release":
+        findings.extend(verify_release_status(root))
+    if findings:
+        print(json.dumps({"status": "blocked", "findings": findings}, indent=2))
+        return 4
     return 0
 
 

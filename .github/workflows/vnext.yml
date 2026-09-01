@@ -1,9 +1,11 @@
-name: GemmaFischer 0.2 verification
+name: GemmaFischer public alpha verification
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
-  verify:
+  portable:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -15,9 +17,24 @@ jobs:
         with: {python-version: "3.12", enable-cache: true}
       - run: uv sync --frozen --group dev
       - run: uv run gemmafischer doctor --profile dev
-      - run: uv run ruff check src/gemmafischer tests
-      - run: uv run mypy
-      - run: uv run pytest -m "not model"
-      - run: uv run gemmafischer repo-audit
-      - run: uv run python -c "from gemmafischer.web import create_app; import json; print(json.dumps(create_app().openapi(), sort_keys=True, indent=2))" > /tmp/openapi.json
-      - run: diff -u docs/openapi.json /tmp/openapi.json
+      - run: uv run gemmafischer verify --tier portable
+  local-alpha:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {lfs: false}
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12", enable-cache: true}
+      - run: sudo apt-get update && sudo apt-get install -y stockfish
+      - run: uv sync --frozen --group dev
+      - run: uv run playwright install --with-deps chromium
+      - run: echo "/usr/games" >> "$GITHUB_PATH"
+      - run: uv run gemmafischer verify --tier local-alpha
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "3.12", enable-cache: true}
+      - run: uv sync --frozen --group dev --all-extras
+      - run: uv run --with pip-audit pip-audit

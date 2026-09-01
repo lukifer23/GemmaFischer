@@ -87,7 +87,9 @@ The qualification commands write JSON atomically under
 Artifacts use `passed`, `failed`, or `blocked` and list every unmet gate. A
 blocked missing-model or missing-data run is not rewritten as a pass.
 
-The portable `gemmafischer verify` command remains the fast correctness gate.
+`gemmafischer verify --tier portable` is the cross-platform correctness and
+packaging gate. `--tier local-alpha` adds real Stockfish and Chromium acceptance;
+`--tier release` also checks the explicit release-status ledger.
 Hardware, model, endurance, and human qualification are explicit additional
 commands because they consume local resources or require independent judgment.
 

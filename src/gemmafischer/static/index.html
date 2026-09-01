@@ -3,129 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GemmaFischer Position Coach</title>
+  <title>GemmaFischer Local Chess Coach</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/app.css?v=20260830-2">
+  <link rel="stylesheet" href="/app.css?v=20260901-1">
 </head>
 <body>
   <header class="site-header">
-    <div>
-      <p class="eyebrow">Experimental local research preview</p>
-      <h1>GemmaFischer</h1>
-    </div>
-    <p class="privacy">Runs locally · positions stay on this Mac</p>
+    <div><p class="eyebrow">Local chess, accountable coaching</p><h1>GemmaFischer</h1></div>
+    <p class="privacy">Loopback only · positions stay on this device</p>
   </header>
-
   <main>
     <section class="session-bar" aria-labelledby="session-title">
-      <div>
-        <h2 id="session-title">Play, analyze, and learn in one session</h2>
-        <p>Every move can receive an evidence-grounded review without leaving the board.</p>
-      </div>
+      <div><h2 id="session-title">Play the position. Understand the decision.</h2><p>Stockfish owns the chess facts. Every lesson links back to its evidence.</p></div>
       <div class="session-options">
         <label for="session-mode">Session</label>
-        <select id="session-mode">
-          <option value="player" selected>You vs Stockfish</option>
-          <option value="exhibition">Engine vs engine</option>
-        </select>
+        <select id="session-mode"><option value="player" selected>You vs Stockfish</option><option value="exhibition">Engine vs engine</option></select>
         <button id="exhibition" class="quiet" type="button" hidden>Start exhibition</button>
         <span id="coach-mode" class="coach-mode">Checking coach…</span>
       </div>
     </section>
-
     <div class="workspace">
-      <section class="input-pane" aria-labelledby="position-title">
-        <div class="section-heading">
-          <div><p class="step">1 · Board</p><h2 id="position-title">Play on the board</h2></div>
-          <button id="flip" class="quiet" type="button">Flip board</button>
-        </div>
-        <div class="position-workspace">
-          <div id="board" class="board" role="grid" aria-label="Chess position"></div>
-          <div class="position-controls">
-            <details class="position-setup">
-              <summary>Position setup <span>FEN and examples</span></summary>
-              <div class="position-setup-fields">
-                <label for="fen">FEN</label>
-                <textarea id="fen" rows="3" spellcheck="false">r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3</textarea>
-                <button id="load-example" class="text-button" type="button">Load example position</button>
-              </div>
-            </details>
-
-            <div id="game-controls">
-              <label for="difficulty">Opponent strength</label>
-              <select id="difficulty">
-                <option value="casual">Casual</option>
-                <option value="club" selected>Club</option>
-                <option value="strong">Strong</option>
-              </select>
-              <div class="game-actions">
-                <button id="new-game" class="quiet" type="button">New game</button>
-                <button id="undo" class="quiet" type="button" disabled>Undo turn</button>
-              </div>
-              <p id="board-help" class="field-help">Select one of your pieces, then its destination. Choose Q, R, B, or N when promoting.</p>
-            </div>
-
-            <div id="rating-wrap">
-              <label for="rating">Your playing level</label>
-              <select id="rating">
-                <option>1000-1199</option><option>1200-1399</option>
-                <option selected>1400-1599</option><option>1600-1800</option>
-              </select>
-            </div>
-            <p id="input-error" class="error" role="alert" hidden></p>
-            <div class="actions">
-              <button id="analyze" class="primary" type="button">Explain this position</button>
-              <button id="cancel" class="quiet" type="button" hidden>Cancel</button>
-            </div>
-          </div>
-        </div>
+      <section class="board-pane" aria-labelledby="position-title">
+        <div class="section-heading"><div><p class="step">1 · Position</p><h2 id="position-title">Your board</h2></div><button id="flip" class="quiet" type="button">Flip</button></div>
+        <div id="practice-banner" class="practice-banner" hidden><div><strong>Practice position</strong><span>The live game is safe and unchanged.</span></div><button id="return-game" class="quiet" type="button">Return to game</button></div>
+        <div id="board" class="board" role="grid" aria-label="Chess position"></div>
+        <p id="status" class="status" role="status" aria-live="polite">Loading the local session…</p>
+        <p id="input-error" class="error" role="alert" hidden></p>
       </section>
-
       <section class="result-pane" aria-labelledby="result-title">
-        <p class="step">2 · Session review</p>
-        <h2 id="result-title" tabindex="-1">Coach and move history</h2>
-        <div id="status" class="status" role="status" aria-live="polite">White to move. Select a piece.</div>
+        <p class="step">2 · Review</p><h2 id="result-title" tabindex="-1">Coach and move history</h2>
         <div id="game-panel" class="game-panel">
-          <p id="game-kicker" class="game-kicker">You move first from the position shown.</p>
-          <ol id="move-list" class="move-list"></ol>
-          <p id="game-outcome" class="notice" hidden></p>
+          <p id="game-kicker" class="game-kicker">You move, Stockfish replies, and the decision is reviewed.</p>
+          <div class="move-heading" aria-hidden="true"><span>Move</span><span>White</span><span>Black</span></div>
+          <ol id="move-list" class="move-list"></ol><p id="game-outcome" class="notice" hidden></p>
         </div>
         <div id="review-status" class="review-status" role="status" aria-live="polite" hidden></div>
         <div id="result" hidden>
-          <p id="degraded" class="notice" hidden></p>
-          <p id="summary" class="summary"></p>
-          <div id="claims" class="claims"></div>
-          <details class="evidence">
-            <summary>Verified engine evidence</summary>
-            <div id="evidence"></div>
-          </details>
+          <p id="degraded" class="notice" hidden></p><p id="summary" class="summary"></p><div id="claims" class="claims"></div>
+          <button id="practice" class="primary practice-action" type="button" hidden>Practice this position</button>
+          <details class="evidence"><summary>Verified engine evidence</summary><div id="evidence"></div></details>
+        </div>
+        <div id="tutor-panel" class="tutor-panel" hidden>
+          <p class="step">Guided practice</p><h3 id="tutor-question"></h3>
+          <p id="tutor-hint" class="notice" hidden></p><button id="tutor-hint-button" class="quiet" type="button">Show a cited hint</button>
+          <div id="tutor-feedback" hidden></div><div id="tutor-follow-up" hidden></div>
         </div>
         <div id="empty-guide" class="empty-guide" aria-hidden="true">
-          <p class="empty-kicker">Make a move. Get the reply and the lesson.</p>
-          <ol>
-            <li><span>01</span><div><strong>Play naturally</strong><small>Legal destinations appear after piece selection.</small></div></li>
-            <li><span>02</span><div><strong>Automatic review</strong><small>Your move is compared after Stockfish replies.</small></div></li>
-            <li><span>03</span><div><strong>Proof on demand</strong><small>Every position-specific claim opens its evidence.</small></div></li>
-          </ol>
+          <p class="empty-kicker">One board. One decision loop.</p>
+          <ol><li><span>01</span><div><strong>Play naturally</strong><small>Choose a piece, then a marked legal square.</small></div></li><li><span>02</span><div><strong>See the comparison</strong><small>Your move and the engine move receive equal search budgets.</small></div></li><li><span>03</span><div><strong>Practice the lesson</strong><small>Retry the frozen review position without changing the live game.</small></div></li></ol>
           <p class="engine-note">Stockfish 18 · 250,000 nodes · local processing</p>
         </div>
       </section>
+      <aside class="controls-pane" aria-labelledby="controls-title">
+        <p class="step">3 · Controls</p><h2 id="controls-title">Session settings</h2>
+        <details class="position-setup"><summary>Position setup <span>FEN and example</span></summary><div class="position-setup-fields"><label for="fen">FEN</label><textarea id="fen" rows="3" spellcheck="false">r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3</textarea><button id="load-example" class="text-button" type="button">Load example position</button></div></details>
+        <div id="game-controls"><label for="difficulty">Opponent strength</label><select id="difficulty"><option value="casual">Casual</option><option value="club" selected>Club</option><option value="strong">Strong</option></select><div class="game-actions"><button id="new-game" class="quiet" type="button">New game</button><button id="undo" class="quiet" type="button" disabled>Undo turn</button></div><p id="board-help" class="field-help">Select one of your pieces, then choose a marked destination.</p></div>
+        <div id="rating-wrap"><label for="rating">Your playing level</label><select id="rating"><option>1000-1199</option><option>1200-1399</option><option selected>1400-1599</option><option>1600-1800</option></select></div>
+        <div class="actions"><button id="analyze" class="primary" type="button">Explain current position</button><button id="cancel" class="quiet" type="button" hidden>Cancel review</button></div>
+      </aside>
     </div>
   </main>
-  <dialog id="promotion-dialog" aria-labelledby="promotion-title">
-    <div class="promotion-card">
-      <p class="step">Promotion</p>
-      <h2 id="promotion-title">Choose a piece</h2>
-      <p>Your pawn has reached the final rank.</p>
-      <div class="promotion-options">
-        <button type="button" data-promotion="q">Queen</button>
-        <button type="button" data-promotion="r">Rook</button>
-        <button type="button" data-promotion="b">Bishop</button>
-        <button type="button" data-promotion="n">Knight</button>
-      </div>
-      <button id="promotion-cancel" class="text-button" type="button">Cancel promotion</button>
-    </div>
-  </dialog>
-  <script type="module" src="/app.js?v=20260830-4"></script>
+  <dialog id="promotion-dialog" aria-labelledby="promotion-title"><div class="promotion-card"><p class="step">Promotion</p><h2 id="promotion-title">Choose a piece</h2><div class="promotion-options"><button type="button" data-promotion="q">Queen</button><button type="button" data-promotion="r">Rook</button><button type="button" data-promotion="b">Bishop</button><button type="button" data-promotion="n">Knight</button></div><button id="promotion-cancel" class="text-button" type="button">Cancel promotion</button></div></dialog>
+  <script type="module" src="/app.js?v=20260901-1"></script>
 </body>
 </html>

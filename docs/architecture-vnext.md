@@ -7,14 +7,14 @@ are preserved by `archive/pre-recovery-2026-08-30` at commit
 
 ```text
 Browser / CLI
-  -> typed session command or ad hoc analysis request
+  -> typed session, analysis, or tutor command
   -> AnalysisService (durable-review queue plus newest pending interactive work)
   -> one token-owned, gameplay-priority StockfishProvider/process
   -> CandidateSet plus optional matched-budget MoveComparisonEvidence
   -> immutable EngineEvidence 2.0 and deterministic concept extraction
   -> deterministic LessonPlan / validated optional Gemma claim selection
   -> deterministic rendering
-  -> bounded local SQLite analysis and session history
+  -> bounded local SQLite analysis, session, and tutor history
 ```
 
 The loopback-only FastAPI server owns games. A `Session` contains the canonical
@@ -26,6 +26,13 @@ exhibition. The browser stores only a session identifier and view preferences.
 Training, adapter, checkpoint, arbitrary filesystem, model switching, and
 arbitrary process-control routes are absent.
 
+A tutor interaction copies the completed source evidence and freezes its FEN.
+It has its own optimistic revision and moves through `awaiting_answer`,
+`awaiting_follow_up`, and a terminal state. Hints cite copied evidence. Answers
+are legal-move checked and graded by a fresh equal-budget Stockfish comparison.
+The public view omits the answer key, and tutor commands never mutate session
+FEN, plies, or revision.
+
 One analysis runs at a time. Only a pending interactive analysis may supersede
 another pending interactive analysis; automatic ply reviews are durable queue
 entries. Every request receives a monotonic generation. The provider admits one
@@ -35,7 +42,7 @@ close only the exact active analysis token and can never close gameplay.
 Blocking session commands run in FastAPI's worker pool, keeping health and
 polling responsive. Shutdown alone performs an untargeted provider close.
 
-Analyses (250 unreferenced rows by default) and sessions are stored in SQLite WAL under
+Analyses (250 unreferenced rows by default), sessions, and bounded tutor interactions are stored in SQLite WAL under
 `~/Library/Application Support/GemmaFischer/`; interrupted nonterminal analyses
 become explicit `ANALYSIS_INTERRUPTED` failures after restart.
 `analysis_reservations` protects a durable review during the short interval before

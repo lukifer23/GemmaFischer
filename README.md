@@ -1,6 +1,6 @@
 # GemmaFischer
 
-GemmaFischer 0.2 is an experimental, local-first chess learning session. Play, Stockfish replies, move review, position explanation, and engine-v-engine study all stay on one board.
+GemmaFischer 0.2 is a public-alpha, local-first chess coach. Play Stockfish, inspect a cited move review, practice the reviewed position on the same board, get deterministic feedback, and return to the untouched game. Engine-v-engine study uses the same session and review path.
 
 The supported product is intentionally narrow and real:
 
@@ -11,6 +11,7 @@ The supported product is intentionally narrow and real:
 - visible factual coaching is rendered from typed evidence and deterministic concept facts;
 - an optional qualified text model may select typed lesson claims, but never invent moves, scores, or prose;
 - sessions and bounded analysis history persist in local SQLite;
+- guided practice is a persisted, revisioned state machine with hidden answer keys and real Stockfish grading;
 - mutations require a per-launch capability token and the server accepts loopback traffic only.
 
 The pre-recovery application, datasets, adapters, models, and reports were removed from `main` after being preserved in the remote tag `archive/pre-recovery-2026-08-30` (commit `ddff9f2d4ccb0d1d3aacb7f90c385266164c0e87`, tree `6c522a0938165c8d5631b8010fce7071cd8f5a8f`, 51 LFS paths).
@@ -71,7 +72,9 @@ The builder verifies the archive hash, applies the documented Lichess setup move
 ## Verification
 
 ```bash
-uv run gemmafischer verify
+uv run gemmafischer verify --tier portable
+uv run gemmafischer verify --tier local-alpha
+uv run gemmafischer verify --tier release
 uv run gemmafischer repo-audit
 uv run gemmafischer benchmark --profile deterministic --requests 100 \
   --output artifacts/qualification/deterministic-local.json
@@ -93,22 +96,24 @@ uv run gemmafischer profile-model --backend lmstudio \
   --output artifacts/qualification/model-profile-lfm-local.json
 ```
 
-`verify` runs Ruff, strict mypy, and all non-model tests. The suite includes real Stockfish qualification, API security, session revision conflicts, SQLite restart persistence, evidence migration, and data-gate behavior. The generated OpenAPI contract is checked in CI.
+`portable` runs Ruff, strict mypy, JavaScript syntax, the 70% model-free whole-package coverage ratchet, repository and OpenAPI drift audits, dependency compatibility, distribution builds, and an isolated installed-wheel smoke test. `local-alpha` adds real Stockfish tests and the real Chromium flow. `release` also enforces the checked-in release-status ledger. Optional model tests remain separate because missing Gemma assets must not block the deterministic product.
 
-The latest implementation pass also ran the actual browser at 900×600: no horizontal overflow, the complete 336 px board remained in the first viewport, only one square was tabbable, f3 highlighted e5/g5/d4/h4/g1, Stockfish completed the reply, and the console stayed clean. Treat that as local evidence, not universal device acceptance.
+The durable browser gate launches a real FastAPI server, real Stockfish, temporary SQLite, and Chromium. It proves position analysis, cited hint display, legal board answer, evidence-based grading, follow-up completion, return to an unchanged live FEN, one keyboard tab stop, zero console errors, and no horizontal overflow at 390×844. Physical-device, VoiceOver, endurance, human-usefulness, and optional-model release gates remain open and are listed in [release status](docs/release-status.md).
 
 ## Documentation
 
 - [Dependency-ordered execution roadmap](docs/execution-roadmap.md)
 - [Phase 1 execution contract](docs/phase1-execution.md)
 - [Measurement and qualification execution](docs/phase2-execution.md)
-- [Clean stop and resume point](docs/resume-2026-08-30.md)
+- [Current public-alpha release status](docs/release-status.md)
+- [Historical clean stop and resume point](docs/resume-2026-08-30.md)
 - [Architecture and data flow](docs/architecture-vnext.md)
 - [Evidence and HTTP contracts](docs/evidence-contract.md)
 - [Model runtime and qualification](docs/model-card.md)
 - [Training and data policy](docs/data-provenance.md)
 - [Post-training and Unsloth readiness](docs/training-readiness.md)
 - [Performance targets and evidence](docs/performance-vnext.md)
+- [Runtime qualification](docs/runtime-qualification.md)
 - [Qualification plan](docs/qualification-plan.md)
 - [Tutoring review rubric](docs/tutoring-review-rubric.md)
 - [Security model](docs/security-model.md)
