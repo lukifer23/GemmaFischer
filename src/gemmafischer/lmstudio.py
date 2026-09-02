@@ -9,7 +9,12 @@ from typing import Any, Literal
 from urllib.parse import urlparse
 
 from .domain import EngineEvidence, RatingBucket
-from .runtime import ModelClaimSelection, claim_selection_prompt, parse_claim_selection
+from .runtime import (
+    LESSON_SELECTION_SYSTEM_PROMPT,
+    ModelClaimSelection,
+    lesson_selection_prompt,
+    parse_lesson_selection,
+)
 
 DEFAULT_LM_STUDIO_URL = "http://127.0.0.1:1234/v1"
 DEFAULT_LFM_MODEL = "lfm2.5-2.6b-mlx"
@@ -84,8 +89,8 @@ class LMStudioRuntime:
         payload = {
             "model": self.model_id,
             "messages": [
-                {"role": "system", "content": "You select grounded chess coaching claims."},
-                {"role": "user", "content": claim_selection_prompt(evidence, rating)},
+                {"role": "system", "content": LESSON_SELECTION_SYSTEM_PROMPT},
+                {"role": "user", "content": lesson_selection_prompt(evidence, rating)},
             ],
             "temperature": 0,
             "max_tokens": 768,
@@ -103,7 +108,7 @@ class LMStudioRuntime:
             raise LMStudioUnavailable(
                 f"LM Studio returned model {returned_model!r}, expected {self.model_id!r}"
             )
-        return parse_claim_selection(output, evidence)
+        return parse_lesson_selection(output, evidence, rating)
 
 
 def verify_lmstudio_identity(

@@ -19,7 +19,7 @@ and return to the unchanged game.
 | 100-ply and 1,000-request endurance | Open | Target-host release qualification |
 | Blind human tutoring usefulness | Open | At least two chess-literate reviewers |
 | Optional Gemma release candidate | Open | Deterministic mode remains the product baseline |
-| Post-training | Inactive | Historical fail-closed readiness records remain; no training command, adapter, or second checkpoint is supported |
+| Post-training | Active, blocked | Real v2 corpus, labeling, question, MLX preparation/training, and packaging commands exist; no adapter is qualified or shipped |
 
 The machine-readable v2 companion is
 [`assets/release-status.json`](../assets/release-status.json). It binds local
@@ -53,6 +53,7 @@ Python and JavaScript on pushes to `main`, pull requests, and a weekly schedule.
 2. Measure Stockfish recovery and preemption, then run endurance,
    memory-growth, persistence, and shutdown gates.
 3. Complete physical-desktop, VoiceOver, and blind human tutoring review.
-4. Requalify the one pinned Gemma revision only if it improves teaching value
-   without a correctness, latency, or memory regression. A tie is a loss; no
-   post-training work is active.
+4. Complete the v2 corpus audit, frozen baseline/error taxonomy, two-reviewer
+   human gold plus adjudication, native-weight hash preflight, and bounded MLX
+   smoke. Promote only if the one adapter improves teaching value without a
+   correctness, latency, memory, or reliability regression. A tie is a loss.

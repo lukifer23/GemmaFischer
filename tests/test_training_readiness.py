@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -42,8 +43,40 @@ def test_readiness_fails_closed_with_real_blocker_names(tmp_path: Path) -> None:
 
 
 def test_readiness_reports_smoke_eligible_but_never_authorizes_training(tmp_path: Path) -> None:
-    for name in ("taxonomy.json", "baseline.json", "human.json"):
-        write_json(tmp_path / name, {})
+    write_json(
+        tmp_path / "baseline.json",
+        {
+            "status": "passed",
+            "task": "lesson-selection-2.0",
+            "dataset_split": "validation",
+            "record_count": 1,
+        },
+    )
+    baseline_hash = hashlib.sha256((tmp_path / "baseline.json").read_bytes()).hexdigest()
+    write_json(
+        tmp_path / "taxonomy.json",
+        {
+            "status": "passed",
+            "task": "lesson-selection-2.0",
+            "record_count": 1,
+            "baseline_sha256": baseline_hash,
+            "categories": [{"code": "contract_invalid", "count": 1}],
+        },
+    )
+    write_json(
+        tmp_path / "human.json",
+        {
+            "status": "passed",
+            "record_count": 1,
+            "reviewer_count": 2,
+            "exact_selection_agreement": 1.0,
+            "adjudication_complete": True,
+            "rubric_summary": {
+                "mean_scores": {"correctness": 5.0, "clarity": 4.0},
+                "harmful_omission_count": 0,
+            },
+        },
+    )
     audit = tmp_path / "audit.json"
     manifest = tmp_path / "manifest.json"
     write_json(
@@ -55,6 +88,15 @@ def test_readiness_reports_smoke_eligible_but_never_authorizes_training(tmp_path
         manifest,
         {
             "hardware": {"minimum_memory_bytes": 16},
+            "data": {
+                "human_gold_minimum": 1,
+                "baseline_minimum": 1,
+                "minimum_repeated_error_count": 1,
+                "reviewers_required": 2,
+                "agreement_minimum": 0.67,
+                "human_rubric_minimum_mean": 3.0,
+                "human_harmful_omission_maximum": 0,
+            },
             "toolchain": versions,
             "model": {
                 "native_base_model": "provider/base",

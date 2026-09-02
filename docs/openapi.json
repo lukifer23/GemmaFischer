@@ -418,6 +418,11 @@
             "title": "Claims",
             "type": "array"
           },
+          "hint_template_id": {
+            "default": "forcing-moves",
+            "title": "Hint Template Id",
+            "type": "string"
+          },
           "lesson_plan": {
             "anyOf": [
               {
@@ -427,6 +432,16 @@
                 "type": "null"
               }
             ]
+          },
+          "question_template_id": {
+            "default": "find-strongest-move",
+            "enum": [
+              "find-strongest-move",
+              "explain-engine-choice",
+              "compare-candidates"
+            ],
+            "title": "Question Template Id",
+            "type": "string"
           },
           "removed_claim_codes": {
             "default": [],

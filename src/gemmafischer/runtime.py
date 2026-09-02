@@ -5,17 +5,21 @@ import os
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 
 from pydantic import TypeAdapter, ValidationError
 
-from .domain import CoachingClaim, EngineEvidence, RatingBucket
+from .domain import CoachingClaim, EngineEvidence, LineClaim, RatingBucket, canonical_hash
 from .resources import bundled_path
 
 DEFAULT_MODEL = "mlx-community/gemma-4-e2b-it-4bit"
 DEFAULT_MODEL_REVISION = "238767527555cb75a05732a84dff5d6ba0dd6809"
 CLAIM_SELECTION_SYSTEM_PROMPT = "You select grounded chess coaching claims."
 CLAIM_SELECTION_CONTRACT_VERSION = "claim-selection-1.0"
+LESSON_SELECTION_SYSTEM_PROMPT = (
+    "You select a grounded chess lesson using only the supplied IDs."
+)
+LESSON_SELECTION_CONTRACT_VERSION = "lesson-selection-2.0"
 
 
 class ModelUnavailable(RuntimeError):
@@ -113,6 +117,18 @@ class ModelClaimSelection:
     claims: tuple[CoachingClaim, ...]
     removed_claim_codes: tuple[str, ...] = ()
     concept_ids: tuple[str, ...] = ()
+    question_template_id: Literal[
+        "find-strongest-move", "explain-engine-choice", "compare-candidates"
+    ] = "find-strongest-move"
+    hint_template_id: str = "forcing-moves"
+
+
+@dataclass(frozen=True)
+class LessonSelectionCatalog:
+    claims: dict[str, CoachingClaim]
+    concept_ids: tuple[str, ...]
+    question_template_ids: tuple[str, ...]
+    hint_template_ids: tuple[str, ...]
 
 
 class ClaimSelector(Protocol):
@@ -168,6 +184,158 @@ Use this valid structure as your starting point, then select the most useful 2 t
 {{"kind":"score","evidence_ids":["{best_id}"],"candidate_id":"{best_id}"}},
 {{"kind":"guidance","evidence_ids":[],"template_id":"calculate_forcing_moves"}}
 ]"""
+
+
+def lesson_selection_catalog(
+    evidence: EngineEvidence, rating: RatingBucket
+) -> LessonSelectionCatalog:
+    """Build the complete deterministic choice set exposed to a selector model."""
+    from .coach import deterministic_coach
+
+    considered = (
+        evidence.move_comparison.considered_move_uci if evidence.move_comparison else None
+    )
+    baseline = deterministic_coach(evidence, rating, considered)
+    candidates: list[CoachingClaim] = list(baseline.claims)
+    line_length = 4 if rating in {RatingBucket.BEGINNER, RatingBucket.DEVELOPING} else 8
+    for candidate in evidence.candidates:
+        if len(candidate.pv_uci) > 1:
+            candidates.append(
+                LineClaim(
+                    evidence_ids=(candidate.evidence_id,),
+                    candidate_id=candidate.evidence_id,
+                    start_ply=0,
+                    end_ply=min(line_length, len(candidate.pv_uci)),
+                )
+            )
+    claims: dict[str, CoachingClaim] = {}
+    for claim in candidates:
+        claim_id = "claim-" + canonical_hash(claim.model_dump(mode="json"))[:16]
+        claims.setdefault(claim_id, claim)
+    concepts = tuple(
+        item.evidence_id
+        for item in evidence.concepts
+        if bool(item.value) and item.evidence_id not in ()
+    )
+    questions: tuple[str, ...] = ("find-strongest-move", "explain-engine-choice")
+    if len(evidence.candidates) > 1:
+        questions += ("compare-candidates",)
+    hints = ("forcing-moves", *(f"concept:{item}" for item in concepts))
+    return LessonSelectionCatalog(claims, concepts, questions, hints)
+
+
+def deterministic_lesson_selection(
+    evidence: EngineEvidence, rating: RatingBucket
+) -> ModelClaimSelection:
+    """Return the contract-valid baseline target used for fallback and data generation."""
+    from .coach import deterministic_coach
+
+    catalog = lesson_selection_catalog(evidence, rating)
+    considered = (
+        evidence.move_comparison.considered_move_uci if evidence.move_comparison else None
+    )
+    baseline = deterministic_coach(evidence, rating, considered)
+    selected = tuple(
+        claim_id
+        for claim_id, claim in catalog.claims.items()
+        if claim in baseline.claims
+    )
+    concepts = tuple(
+        item.evidence_id
+        for item in evidence.concepts
+        if item.candidate_id == evidence.candidates[0].evidence_id and bool(item.value)
+    )[:4]
+    hint = f"concept:{concepts[0]}" if concepts else "forcing-moves"
+    return ModelClaimSelection(
+        claims=tuple(catalog.claims[item] for item in selected[:5]),
+        concept_ids=concepts,
+        question_template_id="find-strongest-move",
+        hint_template_id=hint,
+    )
+
+
+def lesson_selection_target(
+    evidence: EngineEvidence, rating: RatingBucket
+) -> dict[str, object]:
+    catalog = lesson_selection_catalog(evidence, rating)
+    selection = deterministic_lesson_selection(evidence, rating)
+    reverse = {claim.model_dump_json(): claim_id for claim_id, claim in catalog.claims.items()}
+    return {
+        "claim_ids": [reverse[item.model_dump_json()] for item in selection.claims],
+        "concept_ids": list(selection.concept_ids),
+        "question_template_id": selection.question_template_id,
+        "hint_template_id": selection.hint_template_id,
+    }
+
+
+def lesson_selection_prompt(evidence: EngineEvidence, rating: RatingBucket) -> str:
+    catalog = lesson_selection_catalog(evidence, rating)
+    claim_rows = [
+        {"claim_id": claim_id, "claim": claim.model_dump(mode="json")}
+        for claim_id, claim in catalog.claims.items()
+    ]
+    payload = {
+        "rating_bucket": rating.value,
+        "claims": claim_rows,
+        "concept_ids": list(catalog.concept_ids),
+        "question_template_ids": list(catalog.question_template_ids),
+        "hint_template_ids": list(catalog.hint_template_ids),
+    }
+    return (
+        "Select the most useful grounded lesson for this learner. Return exactly one JSON "
+        "object with claim_ids (2 to 5 unique IDs), concept_ids (up to 4 unique IDs), "
+        "question_template_id, and hint_template_id. Use only supplied IDs.\n"
+        + json.dumps(payload, separators=(",", ":"))
+    )
+
+
+def parse_lesson_selection(
+    output: str, evidence: EngineEvidence, rating: RatingBucket
+) -> ModelClaimSelection:
+    """Strictly parse v2 selector output; partial or invented selections never survive."""
+    start = output.find("{")
+    end = output.rfind("}")
+    if start < 0 or end < start:
+        raise ValueError("Model response did not contain a JSON object")
+    try:
+        raw = json.loads(output[start : end + 1])
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Model returned malformed JSON: {exc}") from exc
+    if not isinstance(raw, dict) or set(raw) != {
+        "claim_ids", "concept_ids", "question_template_id", "hint_template_id"
+    }:
+        raise ValueError("Model lesson selection has an invalid object shape")
+    claim_ids = raw["claim_ids"]
+    concept_ids = raw["concept_ids"]
+    if not isinstance(claim_ids, list) or not 2 <= len(claim_ids) <= 5:
+        raise ValueError("Model lesson selection requires 2 to 5 claim IDs")
+    if not isinstance(concept_ids, list) or len(concept_ids) > 4:
+        raise ValueError("Model lesson selection accepts up to 4 concept IDs")
+    values = (*claim_ids, *concept_ids, raw["question_template_id"], raw["hint_template_id"])
+    if not all(isinstance(item, str) for item in values):
+        raise ValueError("Model lesson selection IDs must be strings")
+    if len(set(claim_ids)) != len(claim_ids) or len(set(concept_ids)) != len(concept_ids):
+        raise ValueError("Model lesson selection IDs must be unique")
+    catalog = lesson_selection_catalog(evidence, rating)
+    if any(item not in catalog.claims for item in claim_ids):
+        raise ValueError("Model lesson selection contains an unknown claim ID")
+    if any(item not in catalog.concept_ids for item in concept_ids):
+        raise ValueError("Model lesson selection contains an unknown concept ID")
+    question = str(raw["question_template_id"])
+    hint = str(raw["hint_template_id"])
+    if question not in catalog.question_template_ids:
+        raise ValueError("Model lesson selection contains an unknown question template")
+    if hint not in catalog.hint_template_ids:
+        raise ValueError("Model lesson selection contains an unknown hint template")
+    return ModelClaimSelection(
+        claims=tuple(catalog.claims[item] for item in claim_ids),
+        concept_ids=tuple(str(item) for item in concept_ids),
+        question_template_id=cast(
+            Literal["find-strongest-move", "explain-engine-choice", "compare-candidates"],
+            question,
+        ),
+        hint_template_id=hint,
+    )
 
 
 def extract_json_array(output: str) -> Any:
@@ -248,9 +416,9 @@ class GemmaRuntime:
     ) -> ModelClaimSelection:
         if not evidence.candidates:
             raise ValueError("Gemma coaching requires at least one engine candidate")
-        prompt = claim_selection_prompt(evidence, rating)
+        prompt = lesson_selection_prompt(evidence, rating)
         messages = [
-            {"role": "system", "content": CLAIM_SELECTION_SYSTEM_PROMPT},
+            {"role": "system", "content": LESSON_SELECTION_SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
         formatted = self._tokenizer.apply_chat_template(
@@ -266,4 +434,4 @@ class GemmaRuntime:
             max_tokens=768,
             verbose=False,
         )
-        return parse_claim_selection(output, evidence)
+        return parse_lesson_selection(output, evidence, rating)

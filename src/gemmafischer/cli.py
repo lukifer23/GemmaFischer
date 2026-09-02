@@ -32,6 +32,12 @@ from .engine import (
     inspect_stockfish_binary,
     resolve_stockfish,
 )
+from .labeling import (
+    adjudicate_label_responses,
+    apply_human_gold,
+    export_label_packet,
+    validate_label_responses,
+)
 from .lifecycle import (
     InstanceAlreadyRunning,
     InstanceLock,
@@ -47,6 +53,7 @@ from .model_profile import (
     validate_profile_outputs,
 )
 from .qualification import run_deterministic_benchmark, run_full_profile_benchmark
+from .question_eval import freeze_question_cases, run_question_grading_qualification
 from .repo_audit import audit_repository
 from .resources import bundled_path
 from .runtime import (
@@ -60,6 +67,14 @@ from .runtime import (
 from .runtime_qualification import run_runtime_qualification
 from .service import AnalysisService
 from .storage import default_history_path
+from .training import (
+    package_training_artifact,
+    prepare_mlx_dataset,
+    run_mlx_sft,
+    training_preflight,
+    validate_training_preflight,
+)
+from .training_eval import evaluate_untuned_training_baseline, freeze_error_taxonomy
 from .training_readiness import evaluate_training_readiness
 from .tutor_eval import run_tutoring_qualification
 from .verification import (
@@ -137,14 +152,128 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/data-audit/latest.json"),
     )
+    data_audit.add_argument("--data-dir", type=Path, default=Path("data/derived/v2"))
     readiness = commands.add_parser(
         "training-readiness", help="Fail-closed data, hardware, and toolchain gate"
     )
     readiness.add_argument(
         "--audit", type=Path, default=Path("artifacts/data-audit/latest.json")
     )
+    prepare_training = commands.add_parser(
+        "prepare-training-data", help="Validate and convert canonical v2 data for MLX"
+    )
+    prepare_training.add_argument(
+        "--source-dir", type=Path, default=Path("data/derived/v2-reviewed")
+    )
+    prepare_training.add_argument(
+        "--output-dir", type=Path, default=Path("artifacts/training/mlx-data")
+    )
+    prepare_training.add_argument("--human-gold", type=Path, required=True)
+    label_export = commands.add_parser(
+        "label-export", help="Export a blind human-review packet from canonical data"
+    )
+    label_export.add_argument("--dataset", type=Path, required=True)
+    label_export.add_argument("--output", type=Path, required=True)
+    label_export.add_argument("--limit", type=int, default=2_500)
+    label_validate = commands.add_parser(
+        "label-validate", help="Validate human selections against the exact v2 catalog"
+    )
+    label_validate.add_argument("--dataset", type=Path, required=True)
+    label_validate.add_argument("--responses", type=Path, required=True)
+    label_validate.add_argument("--output", type=Path, required=True)
+    label_adjudicate = commands.add_parser(
+        "label-adjudicate", help="Resolve every material two-reviewer disagreement"
+    )
+    label_adjudicate.add_argument("--dataset", type=Path, required=True)
+    label_adjudicate.add_argument("--validation", type=Path, required=True)
+    label_adjudicate.add_argument("--adjudications", type=Path, required=True)
+    label_adjudicate.add_argument("--output", type=Path, required=True)
+    label_apply = commands.add_parser(
+        "label-apply", help="Apply adjudicated human selections to canonical train rows"
+    )
+    label_apply.add_argument("--source-dir", type=Path, default=Path("data/derived/v2"))
+    label_apply.add_argument("--human-gold", type=Path, required=True)
+    label_apply.add_argument(
+        "--output-dir", type=Path, default=Path("data/derived/v2-reviewed")
+    )
+    question_freeze = commands.add_parser(
+        "freeze-question-eval", help="Freeze an engine-grounded final-test question set"
+    )
+    question_freeze.add_argument(
+        "--dataset", type=Path, default=Path("data/derived/v2/final_test.jsonl")
+    )
+    question_freeze.add_argument(
+        "--output", type=Path, default=Path("artifacts/evaluation/questions-v2.jsonl")
+    )
+    question_freeze.add_argument("--limit", type=int, default=1_000)
+    question_grade = commands.add_parser(
+        "evaluate-questions", help="Validate the frozen deterministic question grader"
+    )
+    question_grade.add_argument(
+        "--questions", type=Path, default=Path("artifacts/evaluation/questions-v2.jsonl")
+    )
+    question_grade.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/qualification/questions-v2.json"),
+    )
+    baseline = commands.add_parser(
+        "evaluate-training-baseline", help="Run the real untuned model on validation rows"
+    )
+    baseline.add_argument(
+        "--dataset", type=Path, default=Path("data/derived/v2/validation.jsonl")
+    )
+    baseline.add_argument(
+        "--output", type=Path, default=Path("artifacts/training/untuned-baseline.json")
+    )
+    baseline.add_argument("--limit", type=int, default=250)
+    taxonomy = commands.add_parser(
+        "freeze-error-taxonomy", help="Freeze observed errors from an untuned baseline"
+    )
+    taxonomy.add_argument(
+        "--baseline", type=Path, default=Path("artifacts/training/untuned-baseline.json")
+    )
+    taxonomy.add_argument(
+        "--output", type=Path, default=Path("artifacts/training/error-taxonomy.json")
+    )
+    preflight = commands.add_parser(
+        "training-preflight", help="Verify data, native weights, toolchain, and evidence"
+    )
+    preflight.add_argument(
+        "--manifest", type=Path, default=bundled_path("training/post-training.json")
+    )
+    preflight.add_argument("--audit", type=Path, default=Path("artifacts/data-audit/latest.json"))
+    preflight.add_argument("--model", type=Path, required=True)
+    preflight.add_argument(
+        "--data", type=Path, default=Path("artifacts/training/mlx-data")
+    )
+    preflight.add_argument(
+        "--output", type=Path, default=Path("artifacts/training/preflight-latest.json")
+    )
+    preflight.add_argument(
+        "--config", type=Path, default=bundled_path("training/mlx-lora.yaml")
+    )
+    for name, smoke in (("train-smoke", True), ("train-sft", False)):
+        train = commands.add_parser(name, help=f"Run real MLX {'smoke' if smoke else 'SFT'}")
+        train.set_defaults(training_smoke=smoke)
+        train.add_argument("--preflight", type=Path, required=True)
+        train.add_argument("--model", type=Path, required=True)
+        train.add_argument("--data", type=Path, required=True)
+        train.add_argument("--adapter", type=Path, required=True)
+        train.add_argument("--receipt", type=Path, required=True)
+        train.add_argument("--iterations", type=int, default=7 if smoke else 1000)
+        train.add_argument("--max-seq-length", type=int, default=1024)
+        train.add_argument(
+            "--config", type=Path, default=bundled_path("training/mlx-lora.yaml")
+        )
+    package = commands.add_parser(
+        "package-adapter", help="Package exactly one adapter and its receipts"
+    )
+    package.add_argument("--adapter", type=Path, required=True)
+    package.add_argument("--receipt", type=Path, action="append", required=True)
+    package.add_argument("--output", type=Path, required=True)
     readiness.add_argument(
-        "--manifest", type=Path, default=Path("training/post-training.json")
+        "--manifest", type=Path, default=bundled_path("training/post-training.json")
     )
     readiness.add_argument(
         "--output",
@@ -165,9 +294,9 @@ def parser() -> argparse.ArgumentParser:
     build_data.add_argument(
         "--archive", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst")
     )
-    build_data.add_argument("--output-dir", type=Path, default=Path("data/derived"))
-    build_data.add_argument("--limit", type=int, default=1000)
-    build_data.add_argument("--nodes", type=int, default=50_000)
+    build_data.add_argument("--output-dir", type=Path, default=Path("data/derived/v2"))
+    build_data.add_argument("--limit", type=int, default=15_000)
+    build_data.add_argument("--nodes", type=int, default=250_000)
     benchmark = commands.add_parser(
         "benchmark", help="Run the deterministic qualification benchmark"
     )
@@ -672,9 +801,9 @@ def cmd_audit_legacy(args: argparse.Namespace) -> int:
 
 
 def cmd_audit_data(args: argparse.Namespace) -> int:
-    training_paths = sorted(Path("data/derived").glob("train*.jsonl"))
-    validation_paths = sorted(Path("data/derived").glob("validation*.jsonl"))
-    evaluation_paths = sorted(Path("data/derived").glob("final_test*.jsonl"))
+    training_paths = sorted(args.data_dir.glob("train*.jsonl"))
+    validation_paths = sorted(args.data_dir.glob("validation*.jsonl"))
+    evaluation_paths = sorted(args.data_dir.glob("final_test*.jsonl"))
     payload = audit_data(
         training_paths,
         evaluation_paths,
@@ -711,6 +840,143 @@ def cmd_training_readiness(args: argparse.Namespace) -> int:
         "human",
     )
     return 0 if payload["status"] == "ready_for_smoke" else 4
+
+
+def cmd_prepare_training_data(args: argparse.Namespace) -> int:
+    payload = prepare_mlx_dataset(
+        args.source_dir, args.output_dir, human_gold_path=args.human_gold
+    )
+    _emit({**payload, "output": str(args.output_dir)}, "human")
+    return 0
+
+
+def cmd_label_export(args: argparse.Namespace) -> int:
+    payload = export_label_packet(args.dataset, args.output, limit=args.limit)
+    _emit(payload, "human")
+    return 0
+
+
+def cmd_label_validate(args: argparse.Namespace) -> int:
+    payload = validate_label_responses(args.dataset, args.responses, args.output)
+    _emit(
+        {
+            "status": payload["status"],
+            "responses": payload["response_count"],
+            "reviewers": payload["reviewer_count"],
+            "output": str(args.output),
+        },
+        "human",
+    )
+    return 0 if payload["status"] == "passed" else 4
+
+
+def cmd_label_adjudicate(args: argparse.Namespace) -> int:
+    payload = adjudicate_label_responses(
+        args.dataset, args.validation, args.adjudications, args.output
+    )
+    _emit(payload, "human")
+    return 0
+
+
+def cmd_label_apply(args: argparse.Namespace) -> int:
+    payload = apply_human_gold(args.source_dir, args.human_gold, args.output_dir)
+    _emit(payload, "human")
+    return 0
+
+
+def cmd_freeze_question_eval(args: argparse.Namespace) -> int:
+    payload = freeze_question_cases(args.dataset, args.output, limit=args.limit)
+    _emit(payload, "human")
+    return 0
+
+
+def cmd_evaluate_questions(args: argparse.Namespace) -> int:
+    payload = run_question_grading_qualification(args.questions, args.output)
+    _emit(
+        {
+            "status": payload["status"],
+            "questions": payload["summary"]["case_count"],
+            "agreement": payload["summary"]["grading_agreement_rate"],
+            "output": str(args.output),
+        },
+        "human",
+    )
+    return 0 if payload["status"] == "passed" else 4
+
+
+def cmd_evaluate_training_baseline(args: argparse.Namespace) -> int:
+    payload = evaluate_untuned_training_baseline(
+        args.dataset, args.output, limit=args.limit
+    )
+    _emit(
+        {
+            "status": payload["status"],
+            "records": payload["record_count"],
+            "contract_valid_rate": payload["contract_valid_rate"],
+            "exact_target_match_rate": payload["exact_target_match_rate"],
+            "output": str(args.output),
+        },
+        "human",
+    )
+    return 0
+
+
+def cmd_freeze_error_taxonomy(args: argparse.Namespace) -> int:
+    payload = freeze_error_taxonomy(args.baseline, args.output)
+    _emit(payload, "human")
+    return 0
+
+
+def cmd_training_preflight(args: argparse.Namespace) -> int:
+    payload = training_preflight(
+        args.manifest, args.audit, args.model, args.data, args.output, args.config
+    )
+    _emit(
+        {
+            "status": payload["status"],
+            "smoke_ready": payload["smoke_ready"],
+            "blockers": payload["blockers"],
+            "output": str(args.output),
+        },
+        "human",
+    )
+    return 0 if payload["smoke_ready"] else 4
+
+
+def _run_training_command(args: argparse.Namespace) -> int:
+    validate_training_preflight(
+        args.preflight,
+        args.model,
+        args.data,
+        args.config,
+        production=not args.training_smoke,
+    )
+    payload = run_mlx_sft(
+        model_path=args.model,
+        data_path=args.data,
+        adapter_path=args.adapter,
+        receipt_path=args.receipt,
+        iterations=args.iterations,
+        max_seq_length=args.max_seq_length,
+        smoke=args.training_smoke,
+        config_path=args.config,
+    )
+    _emit(payload, "human")
+    return 0
+
+
+def cmd_train_smoke(args: argparse.Namespace) -> int:
+    return _run_training_command(args)
+
+
+def cmd_train_sft(args: argparse.Namespace) -> int:
+    return _run_training_command(args)
+
+
+def cmd_package_adapter(args: argparse.Namespace) -> int:
+    payload = package_training_artifact(args.adapter, args.receipt, args.output)
+    _emit(payload, "human")
+    return 0
 
 
 def cmd_acquire_data(args: argparse.Namespace) -> int:

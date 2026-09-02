@@ -35,24 +35,41 @@ are ignored by Git; the source manifest and audit results are reviewable.
 
 The local archive is 304,384,407 bytes and its SHA-256 is
 `a0ea9129c6b6434dfb34a9ac4ec660c9cfff22b2de465e01854f018fc847f073`,
-matching the pinned manifest. A new real 100-row, 5,000-node Stockfish smoke
-build produced 84 train, 10 validation, and 6 final-test rows with zero rejected
-source rows. Every row passed the exact prompt/target contract, legality,
-metadata, deduplication, conflict, semantic-position isolation, and lineage
-isolation checks. Its threshold-adjusted proof is
-[selector-smoke-2026-08-30.json](../artifacts/data-audit/selector-smoke-2026-08-30.json).
-The development [latest.json](../artifacts/data-audit/latest.json)
-remains blocked because 84/10/6 is below the required 10,000/1,000/1,000. A
-full build is not authorized merely because the archive is present.
+matching the pinned manifest. The builder scans all 6,100,960 source rows and
+uses a bounded content-hash reservoir, so source-file order cannot silently
+select the corpus. Exact position quotas produce 12,000 train, 1,500 validation,
+and 1,500 final-test records from 3,000/375/375 distinct semantic positions.
+Each selected position is rendered once for every product rating bucket and all
+variants remain in the same partition.
 
-The builder now emits only `claim-selection-1.0` examples. Each example stores
-the exact production system/user prompt, complete typed `EngineEvidence`, a
-target that is round-tripped through `parse_claim_selection`, the engine binary
-hash and node budget, and complete source/transformation lineage. Puzzle
-lineages are assigned deterministically to 80% train, 10% validation, and 10%
-final test before publishing. The production gate requires at least
-10,000/1,000/1,000 rows respectively and zero contract, legality, duplication,
-conflict, semantic-position leakage, or lineage-leakage failures.
+The real 64-row, 5,000-node v2 smoke produced 56/4/4 rows from 14/1/1 semantic
+positions with zero rejected rows. It passed the exact contract, legality,
+metadata, duplicate, conflict, semantic-position, and lineage gates in
+[selector-v2-smoke-2026-09-01.json](../artifacts/data-audit/selector-v2-smoke-2026-09-01.json).
+The production [latest.json](../artifacts/data-audit/latest.json) records the
+completed 250,000-node build: 12,000/1,500/1,500 rows from 3,000/375/375 unique
+semantic positions, zero rejected source rows, and zero blocking contract,
+legality, duplicate, conflict, semantic-overlap, or lineage-overlap findings.
+
+The builder emits only `lesson-selection-2.0` examples. Every example stores
+the exact production system/user prompt, complete typed `EngineEvidence`, and a
+strict ID-only target round-tripped through `parse_lesson_selection`, plus the
+engine binary hash, node budget, archive selection method, source item/game/
+position lineage, and transformation record. Production requires zero contract,
+legality, duplicate, conflict, semantic-position leakage, or lineage-leakage
+findings.
+
+The untouched final-test partition is also the only input allowed to
+`freeze-question-eval`. The command freezes 1,000 engine-grounded best-move
+questions with exact UCI/SAN grading examples and evidence hashes. The frozen
+set and deterministic grader passed 1,000/1,000 cases. It never reads training
+rows. Human gold is separate: 2,500 train records require two
+complete independent reviews, the full rubric, an exact-selection agreement of
+at least 0.67, and independent adjudication of every selection or material
+rubric disagreement. `label-apply` replaces only those reviewed train targets
+in a new derived corpus; validation and final-test bytes remain unchanged. The
+MLX preparation receipt is hash-bound to that human-gold artifact, and preflight
+rejects deterministic-only or stale prepared data.
 
 The obsolete `data/create_*finetune_dataset.py`, `data/prepare_dataset.py`, and
 historical summary/validation JSON files were removed. They accepted unlicensed
@@ -60,7 +77,9 @@ free-form inputs, emitted a different task, and included a stale
 `READY_FOR_TRAINING` statement. Git history remains the recovery mechanism;
 none is a supported data authority.
 
-This preparation path is not authorization to train. No adapter is promoted
-until all three derived splits exist, `audit-data` passes, a base-vs-adapter
-evaluation is frozen, and the adapter wins without correctness or latency
-regressions.
+This preparation path is not authorization to train. The data audit, frozen
+error taxonomy, untuned baseline, adjudicated human gold, exact native-weight
+hashes, prepared-data receipt, disk floor, and explicit stage authorization all
+pass through a separate preflight. No adapter is promoted until it beats both
+deterministic selection and untuned Gemma without correctness, grounding,
+latency, memory, or reliability regressions.

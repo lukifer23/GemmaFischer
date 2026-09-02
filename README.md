@@ -59,11 +59,13 @@ uv run gemmafischer analyze --offline --mode compare \
 - LM Studio models are qualification candidates, not silently selected player runtimes. The local LFM2.5-2.6B 4-bit candidate is smaller, but its current always-thinking checkpoint failed the visible-output and tutoring gates described in the model card.
 - `dev` checks portable contributor prerequisites without requiring Stockfish or model assets.
 
-Post-training is not active product work. There is no training command, adapter,
-training checkpoint, or training environment on `main`. Historical data and the
-old readiness gate remain inspectable only as fail-closed governance records.
-Model work stops unless the one pinned Gemma inference candidate first beats the
-deterministic tutor in a frozen blinded human evaluation. A tie is a loss.
+Post-training is now an active, fail-closed workstream. It trains only bounded
+lesson ID selection on the native revision-pinned Gemma base with MLX-LM LoRA;
+it never trains chess authority or grading. The repository permits one native
+upstream base identity, one rolling resume checkpoint during a run, and one
+selected adapter artifact. No trained adapter is currently qualified or
+shipped, and the deterministic tutor remains complete. See the operator
+contract before downloading native weights or running a smoke.
 
 ## Verification
 
@@ -114,7 +116,7 @@ optional-model release gates remain open and are listed in
 - [Evidence and HTTP contracts](docs/evidence-contract.md)
 - [Model runtime and qualification](docs/model-card.md)
 - [Training and data policy](docs/data-provenance.md)
-- [Archived post-training readiness record](docs/training-readiness.md)
+- [Post-training operator contract](docs/training-readiness.md)
 - [Performance targets and evidence](docs/performance-vnext.md)
 - [Runtime qualification](docs/runtime-qualification.md)
 - [Qualification plan](docs/qualification-plan.md)

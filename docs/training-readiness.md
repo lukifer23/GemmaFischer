@@ -1,86 +1,99 @@
-# Archived Post-training Readiness Record
+# Post-training Operator Contract
 
-This is a historical governance record, not an active roadmap or operator
-workflow. Current product work does not include fine-tuning, post-training,
-adapter creation, training-scale data, or a second checkpoint. The only model
-that may later be evaluated in the supported runtime is the single revision in
-`assets/model-manifest.json`, and a tie against deterministic teaching is a loss.
+Post-training is active infrastructure and remains fail-closed. The supported
+path is Apple-Silicon MLX-LM LoRA over the native, revision-pinned
+`google/gemma-4-E2B-it` base. The quantized runtime snapshot is never a training
+source. No adapter is currently qualified or shipped.
 
-No training command exists, and the state is **not authorized**. Contributors
-may inspect the historical gate without downloading weights or installing a
-toolchain:
+The model learns only `lesson-selection-2.0`: it selects supplied claim,
+concept, question-template, and hint-template IDs. Stockfish remains the chess
+authority; deterministic code still owns factual prose, mandatory claims,
+questions, hints, answer keys, and grading.
+
+## Ordered gate
+
+1. Acquire the CC0 Lichess archive through `data/sources.json` and verify its
+   pinned digest.
+2. Build 12,000 train, 1,500 validation, and 1,500 untouched final-test rows.
+   Rows are selected across the complete archive, split by source-game lineage,
+   and expanded across rating buckets only after the source position is split.
+3. Audit the exact prompt/target contract, legality, provenance, duplicates,
+   semantic-position overlap, and lineage overlap.
+4. Freeze 1,000 engine-grounded questions from final-test only and prove their
+   exact UCI/SAN grader.
+5. Export 2,500 training rows for two independent chess-literate reviewers.
+   Every response includes the exact ID selection and complete usefulness
+   rubric. Validate full two-reviewer coverage, then have one independent
+   adjudicator resolve every disagreement.
+6. Run at least 250 validation rows through the real pinned untuned inference
+   model, then derive the frozen error taxonomy from that exact receipt. Point the three `evidence`
+   fields in `training/post-training.json` at passing JSON receipts.
+7. Download the one native base revision into a local cache and verify every
+   declared file hash. Convert the human-gold-applied canonical data to MLX chat
+   JSONL. The hash-pinned `training/mlx-lora.yaml` fixes rank 16, dropout 0.05,
+   and scale 2.0 (alpha 32 divided by rank 16); the command fixes AdamW, batch
+   size 1, gradient accumulation 16, completion-only loss, and seed 3407.
+8. Run the preflight. Only a passing preflight may authorize the explicit 7-20
+   step smoke. Production SFT additionally requires the manifest's separate
+   production authorization.
+9. Package exactly one selected adapter plus its receipts as a GitHub Release
+   asset. Weights, native model files, prepared data, and rolling checkpoints do
+   not enter Git.
+
+## Commands
 
 ```bash
+uv run gemmafischer build-dataset --limit 15000 --nodes 250000
 uv run gemmafischer audit-data --output artifacts/data-audit/latest.json
-uv run gemmafischer training-readiness \
-  --audit artifacts/data-audit/latest.json \
-  --manifest training/post-training.json \
-  --output artifacts/training/readiness-latest.json
+uv run gemmafischer freeze-question-eval --limit 1000
+uv run gemmafischer evaluate-questions
+uv run gemmafischer evaluate-training-baseline --limit 250
+uv run gemmafischer freeze-error-taxonomy
+
+uv run gemmafischer label-export \
+  --dataset data/derived/v2/train.jsonl \
+  --output artifacts/training/labels/packet.json \
+  --limit 2500
+uv run gemmafischer label-validate \
+  --dataset data/derived/v2/train.jsonl \
+  --responses /path/to/two-reviewer-responses.jsonl \
+  --output artifacts/training/labels/validated.json
+uv run gemmafischer label-adjudicate \
+  --dataset data/derived/v2/train.jsonl \
+  --validation artifacts/training/labels/validated.json \
+  --adjudications /path/to/adjudications.jsonl \
+  --output artifacts/training/human-gold.json
+uv run gemmafischer label-apply \
+  --human-gold artifacts/training/human-gold.json
+
+uv run gemmafischer prepare-training-data \
+  --human-gold artifacts/training/human-gold.json
+uv run gemmafischer training-readiness
+uv run gemmafischer training-preflight \
+  --model /path/to/google-gemma-4-E2B-it-native
 ```
 
-Both commands intentionally return exit status 4 while blocked. The readiness
-artifact reports `authorized_to_train: false` even after all prerequisites pass;
-a green result authorizes asking for a bounded smoke run, not silently starting
-one.
+After the preflight reports `smoke_ready: true`, the bounded real run is:
 
-## Current evidence, 2026-08-30
+```bash
+uv run gemmafischer train-smoke \
+  --preflight artifacts/training/preflight-latest.json \
+  --model /path/to/google-gemma-4-E2B-it-native \
+  --data artifacts/training/mlx-data \
+  --adapter artifacts/training/adapters/smoke \
+  --receipt artifacts/training/smoke-receipt.json \
+  --iterations 7 --max-seq-length 1024
+```
 
-The target machine is an Apple M3 Pro (`arm64`) with 18 GiB unified memory. The
-project environment contains MLX 0.32.2 and MLX-LM 0.31.3; `unsloth` and
-`unsloth-zoo` are not installed. Hardware therefore passes only the minimum
-smoke-eligibility check. It does not prove that a chosen base checkpoint,
-optimizer, sequence length, or batch configuration fits.
+`train-sft` is a separate production-authorized command. Both commands refuse
+non-Apple-Silicon hosts, nonempty adapter destinations, unsupported sequence
+lengths, and any result other than exactly one adapter `.safetensors` file.
+`package-adapter` likewise refuses zero or multiple adapters.
 
-The current readiness artifact has four blockers:
+## Promotion boundary
 
-- data contract and partition isolation are not green;
-- an exact Unsloth/MLX toolchain is neither pinned nor installed;
-- native, license-compatible base weights and hashes are not selected;
-- a stable error taxonomy, frozen baseline, and frozen human review are absent.
-
-The installed Gemma 4 E2B 4-bit MLX snapshot and LFM2.5 LM Studio quant are
-inference artifacts, not accepted training sources. Selecting Gemma or LFM for
-post-training requires native upstream weights, an immutable revision, every
-weight hash, license review, and a repeated target-workload failure that cannot
-be fixed in the harness or prompt.
-
-## Why Unsloth remains a candidate
-
-Unsloth's current repository documents macOS MLX training and contains a real
-Apple-Silicon CI smoke that trains a small Gemma model for seven deterministic
-LoRA steps and exercises export. That makes it credible enough to evaluate, not
-safe enough to preselect. Upstream also has current Apple-Silicon loader and
-startup issues, so model-specific load/export/reload evidence is mandatory:
-
-- [Unsloth repository and macOS support](https://github.com/unslothai/unsloth)
-- [real Apple-Silicon MLX CI](https://github.com/unslothai/unsloth/blob/main/.github/workflows/mlx-ci.yml)
-- [current MLX model-config compatibility issue](https://github.com/unslothai/unsloth/issues/8126)
-- [current Studio MLX capability race](https://github.com/unslothai/unsloth/issues/9120)
-
-These links were reviewed on 2026-08-30. Versions must be pinned from the exact
-tested environment; `latest`, an installer script, or a mutable branch is not a
-reproducible training manifest.
-
-## Allowed order
-
-1. Build and pass 10,000/1,000/1,000 contract-valid train, validation, and
-   untouched final-test rows.
-2. Freeze the error taxonomy, untuned baseline, automated evaluation, and blind
-   human packet before adapter training.
-3. Select and hash native base weights. Do not train the production inference
-   quant.
-4. Pin Unsloth, unsloth-zoo, MLX, MLX-LM, tokenizer, chat template, seed, LoRA
-   parameters, optimizer, sequence length, and memory ceiling in
-   `training/post-training.json`.
-5. Rerun `training-readiness`. After explicit authorization, execute only a
-   7-20 step isolated smoke. Capture peak memory, loss, wall time, resume,
-   adapter save, merge/export, and production-harness reload.
-6. Compare the same rows and configuration against a minimal MLX-LM LoRA
-   baseline. Continue only if the toolchain and model contract are reliable.
-7. Promote nothing unless the adapter beats untuned Gemma and deterministic
-   selection on frozen correctness, schema, grounding, usefulness, latency,
-   memory, and regression gates.
-
-Chess facts, legal-move authority, engine scoring, and answer grading remain
-deterministic. Any adapter may select or order already validated coaching claims;
-it may not invent chess evidence or grade the learner.
+The adapter must beat deterministic selection and untuned Gemma on frozen
+schema, grounding, legal-move, top-1/top-3, question, human-usefulness, latency,
+memory, restart, and endurance gates. A tie is a loss. Failure retains the
+negative receipt and the deterministic product; it does not create another
+checkpoint or fallback model path.

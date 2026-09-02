@@ -1,83 +1,83 @@
 {
   "schema_version": "2.0",
   "status": "passed",
-  "generated_at": "2026-09-02T00:33:15.833343+00:00",
+  "generated_at": "2026-09-02T00:11:12.823482+00:00",
   "training": {
     "files": [
       {
-        "path": "data/derived/v2/train.jsonl",
-        "sha256": "efae4197d04c6e5003dc91dc3b3e2280e40ebd0dae510a80a577cd5891ddd683",
-        "records": 12000,
-        "records_with_fen": 12000,
-        "records_with_best_move": 12000,
+        "path": "/tmp/gemmafischer-v2-quota.tYG1hZ/train.jsonl",
+        "sha256": "300740fe44cb66cd085b5b63d0a9072930127d14a27bce1e40b700c36345104a",
+        "records": 56,
+        "records_with_fen": 56,
+        "records_with_best_move": 56,
         "tasks": {
-          "lesson-selection-2.0": 12000
+          "lesson-selection-2.0": 56
         },
         "sources": {
-          "lichess-puzzles-2026-08-02": 12000
+          "lichess-puzzles-2026-08-02": 56
         }
       }
     ],
     "totals": {
-      "records": 12000,
-      "records_with_fen": 12000,
-      "records_with_best_move": 12000
+      "records": 56,
+      "records_with_fen": 56,
+      "records_with_best_move": 56
     },
-    "unique_records": 12000,
-    "unique_semantic_positions": 3000,
-    "unique_lineages": 3000,
+    "unique_records": 56,
+    "unique_semantic_positions": 14,
+    "unique_lineages": 14,
     "issue_samples": []
   },
   "validation": {
     "files": [
       {
-        "path": "data/derived/v2/validation.jsonl",
-        "sha256": "bec79dffd67055808d42728711e65c403233b8bd579e17916d55906c7091d350",
-        "records": 1500,
-        "records_with_fen": 1500,
-        "records_with_best_move": 1500,
+        "path": "/tmp/gemmafischer-v2-quota.tYG1hZ/validation.jsonl",
+        "sha256": "5ea67e72c5389eba3471c4fb567b0f3f3b15a251b430ef347eb19a1b753aa2d6",
+        "records": 4,
+        "records_with_fen": 4,
+        "records_with_best_move": 4,
         "tasks": {
-          "lesson-selection-2.0": 1500
+          "lesson-selection-2.0": 4
         },
         "sources": {
-          "lichess-puzzles-2026-08-02": 1500
+          "lichess-puzzles-2026-08-02": 4
         }
       }
     ],
     "totals": {
-      "records": 1500,
-      "records_with_fen": 1500,
-      "records_with_best_move": 1500
+      "records": 4,
+      "records_with_fen": 4,
+      "records_with_best_move": 4
     },
-    "unique_records": 1500,
-    "unique_semantic_positions": 375,
-    "unique_lineages": 375,
+    "unique_records": 4,
+    "unique_semantic_positions": 1,
+    "unique_lineages": 1,
     "issue_samples": []
   },
   "evaluation": {
     "files": [
       {
-        "path": "data/derived/v2/final_test.jsonl",
-        "sha256": "d14eb9f36a7e580761fb28e00e8d8f4bd4e32adfe97b10357c6a51d3df38a2d7",
-        "records": 1500,
-        "records_with_fen": 1500,
-        "records_with_best_move": 1500,
+        "path": "/tmp/gemmafischer-v2-quota.tYG1hZ/final_test.jsonl",
+        "sha256": "f422e5cc7f07bea6b4bd1148e47ecabccbcda28a183c9e8c790633d4ccc7de35",
+        "records": 4,
+        "records_with_fen": 4,
+        "records_with_best_move": 4,
         "tasks": {
-          "lesson-selection-2.0": 1500
+          "lesson-selection-2.0": 4
         },
         "sources": {
-          "lichess-puzzles-2026-08-02": 1500
+          "lichess-puzzles-2026-08-02": 4
         }
       }
     ],
     "totals": {
-      "records": 1500,
-      "records_with_fen": 1500,
-      "records_with_best_move": 1500
+      "records": 4,
+      "records_with_fen": 4,
+      "records_with_best_move": 4
     },
-    "unique_records": 1500,
-    "unique_semantic_positions": 375,
-    "unique_lineages": 375,
+    "unique_records": 4,
+    "unique_semantic_positions": 1,
+    "unique_lineages": 1,
     "issue_samples": []
   },
   "cross_dataset": {
@@ -143,9 +143,9 @@
   "gate": {
     "ready_for_training": true,
     "requirements": {
-      "minimum_training_records": 12000,
-      "minimum_validation_records": 1500,
-      "minimum_evaluation_records": 1500,
+      "minimum_training_records": 56,
+      "minimum_validation_records": 4,
+      "minimum_evaluation_records": 4,
       "malformed_records": 0,
       "invalid_fens": 0,
       "illegal_best_moves": 0,

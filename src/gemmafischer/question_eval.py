@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,7 +11,15 @@ from typing import Any, Literal
 
 import chess
 
-QuestionKind = Literal["mate_move", "only_legal_move", "terminal_reason"]
+from .domain import EngineEvidence, RatingBucket, canonical_hash
+from .runtime import (
+    LESSON_SELECTION_CONTRACT_VERSION,
+    LESSON_SELECTION_SYSTEM_PROMPT,
+    lesson_selection_prompt,
+    parse_lesson_selection,
+)
+
+QuestionKind = Literal["best_move", "mate_move", "only_legal_move", "terminal_reason"]
 
 
 @dataclass(frozen=True)
@@ -30,6 +39,8 @@ class QuestionCase:
     accepted_moves_uci: tuple[str, ...]
     expected_terminal_reason: str | None
     grading_examples: tuple[GradingExample, ...]
+    rating_bucket: str | None = None
+    evidence_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +78,10 @@ def load_question_cases(path: Path) -> tuple[QuestionCase, ...]:
                     )
                     for example in raw["grading_examples"]
                 ),
+                rating_bucket=(str(raw["rating_bucket"]) if raw.get("rating_bucket") else None),
+                evidence_sha256=(
+                    str(raw["evidence_sha256"]) if raw.get("evidence_sha256") else None
+                ),
             )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError(f"Invalid question fixture at {path}:{line_number}") from exc
@@ -78,6 +93,96 @@ def load_question_cases(path: Path) -> tuple[QuestionCase, ...]:
     if not cases:
         raise ValueError(f"Question fixture file is empty: {path}")
     return tuple(cases)
+
+
+def freeze_question_cases(
+    dataset_path: Path, output_path: Path, *, limit: int = 1_000
+) -> dict[str, Any]:
+    """Freeze engine-grounded questions from untouched canonical final-test rows."""
+    if limit < 1:
+        raise ValueError("Question limit must be positive")
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    with dataset_path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, 1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+                evidence = EngineEvidence.model_validate(record["input"])
+                rating = RatingBucket(record["meta"]["rating_bucket"])
+                response = str(record["response"])
+                source_id = str(record["meta"]["source"])
+                license_id = str(record["license"])
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError(f"Invalid question source at line {line_number}") from exc
+            if record.get("task") != LESSON_SELECTION_CONTRACT_VERSION:
+                raise ValueError(f"Unsupported question source task at line {line_number}")
+            if record.get("system_prompt") != LESSON_SELECTION_SYSTEM_PROMPT:
+                raise ValueError(f"Question source system prompt drift at line {line_number}")
+            if record.get("prompt") != lesson_selection_prompt(evidence, rating):
+                raise ValueError(f"Question source prompt drift at line {line_number}")
+            if record.get("meta", {}).get("split") != "final_test":
+                raise ValueError("Question evaluation can only consume final_test records")
+            parse_lesson_selection(response, evidence, rating)
+            record_id = str(record["record_id"])
+            if record_id in seen:
+                raise ValueError(f"Duplicate question source record: {record_id}")
+            seen.add(record_id)
+            candidate = min(evidence.candidates, key=lambda item: item.rank)
+            board = chess.Board(evidence.fen)
+            best_move = chess.Move.from_uci(candidate.move_uci)
+            if best_move not in board.legal_moves:
+                raise ValueError(f"Engine best move is illegal at line {line_number}")
+            wrong = next(
+                (move.uci() for move in board.legal_moves if move != best_move),
+                "not-a-move",
+            )
+            evidence_payload = evidence.model_dump(mode="json")
+            rows.append(
+                {
+                    "id": f"best-move:{record_id}",
+                    "source": source_id,
+                    "source_record_id": record_id,
+                    "license": license_id,
+                    "fen": evidence.fen,
+                    "prompt": (
+                        f"For a {rating.value} learner, what is Stockfish's strongest "
+                        "move here? Answer in UCI or SAN."
+                    ),
+                    "kind": "best_move",
+                    "accepted_moves_uci": [best_move.uci()],
+                    "expected_terminal_reason": None,
+                    "grading_examples": [
+                        {"answer": best_move.uci(), "expected_correct": True},
+                        {"answer": wrong, "expected_correct": False},
+                    ],
+                    "rating_bucket": rating.value,
+                    "evidence_sha256": canonical_hash(evidence_payload),
+                    "engine_binary_sha256": evidence.engine.binary_sha256,
+                    "engine_node_budget": evidence.engine.node_budget,
+                }
+            )
+            if len(rows) == limit:
+                break
+    if len(rows) != limit:
+        raise ValueError(f"Question source has only {len(rows)} valid rows; {limit} required")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output_path.with_suffix(output_path.suffix + ".tmp")
+    temporary.write_text(
+        "".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    temporary.replace(output_path)
+    return {
+        "schema_version": "1.0",
+        "status": "passed",
+        "question_count": len(rows),
+        "source": str(dataset_path),
+        "source_sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+        "output": str(output_path),
+        "output_sha256": hashlib.sha256(output_path.read_bytes()).hexdigest(),
+    }
 
 
 def grade_question_answer(case: QuestionCase, answer: str) -> GradeResult:
@@ -128,6 +233,18 @@ def run_question_grading_qualification(
         "correct_examples": sum(row["expected_correct"] for row in rows),
         "incorrect_examples": sum(not row["expected_correct"] for row in rows),
     }
+    engine_derived = all(case.kind == "best_move" for case in cases)
+    if engine_derived:
+        summary.update(
+            {
+                "unique_position_count": len(
+                    {" ".join(chess.Board(case.fen).fen().split()[:4]) for case in cases}
+                ),
+                "rating_bucket_counts": dict(
+                    Counter(case.rating_bucket for case in cases if case.rating_bucket)
+                ),
+            }
+        )
     gate = {"required": 1.0, "actual": agreement, "passed": agreement == 1.0}
     payload: dict[str, Any] = {
         "schema_version": "1.0",
@@ -139,7 +256,9 @@ def run_question_grading_qualification(
         "working_tree_clean": not bool(_git_status()),
         "case_path": str(case_path),
         "case_sha256": hashlib.sha256(case_path.read_bytes()).hexdigest(),
-        "question_generation_status": "fixture-defined",
+        "question_generation_status": (
+            "engine-evidence-derived-final-test" if engine_derived else "fixture-defined"
+        ),
         "answer_contract": "exact-uci-san-or-terminal-reason",
         "summary": summary,
         "gates": {"grading_agreement_rate": gate},
@@ -155,7 +274,7 @@ def run_question_grading_qualification(
 def _validate_case(case: QuestionCase, path: Path, line_number: int) -> None:
     if not case.id or not case.source or not case.license or not case.prompt:
         raise ValueError(f"Question metadata cannot be empty at {path}:{line_number}")
-    if case.kind not in {"mate_move", "only_legal_move", "terminal_reason"}:
+    if case.kind not in {"best_move", "mate_move", "only_legal_move", "terminal_reason"}:
         raise ValueError(f"Unknown question kind at {path}:{line_number}")
     try:
         board = chess.Board(case.fen)

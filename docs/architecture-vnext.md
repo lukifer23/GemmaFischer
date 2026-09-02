@@ -12,7 +12,7 @@ Browser / CLI
   -> one token-owned, gameplay-priority StockfishProvider/process
   -> CandidateSet plus optional matched-budget MoveComparisonEvidence
   -> immutable EngineEvidence 2.0 and deterministic concept extraction
-  -> deterministic LessonPlan / validated optional Gemma claim selection
+  -> deterministic lesson spine / validated optional Gemma ID selection
   -> deterministic rendering
   -> bounded local SQLite analysis, session, and tutor history
 ```
@@ -24,7 +24,8 @@ with a 409 conflict. The same screen supports player-v-Stockfish play, automatic
 move review, position explanation, and reviewed Stockfish-v-Stockfish
 exhibition. The browser stores only a session identifier and view preferences.
 Training, adapter, checkpoint, arbitrary filesystem, model switching, and
-arbitrary process-control routes are absent.
+arbitrary process-control HTTP routes are absent. Post-training is an explicit
+offline CLI workflow with separate manifests, receipts, and preflight gates.
 
 A tutor interaction copies the completed source evidence and freezes its FEN.
 It has its own optimistic revision and moves through `awaiting_answer`,
@@ -60,6 +61,8 @@ chess authority. One MultiPV search creates the ordered candidate set. A reviewe
 move is compared with the engine choice by independent, equal-node constrained
 searches and a 15-centipawn equality tolerance; those searches never rewrite
 candidate ranks. Deterministic coaching and typed lesson templates are the
-baseline. The optional pinned, offline Gemma runtime may select only validated
-claim objects and cannot author factual chess prose. Invalid or unavailable
-model output degrades to the deterministic result.
+baseline. The optional pinned, offline Gemma runtime may select only supplied
+claim, concept, question-template, and hint-template IDs and cannot author
+factual chess prose. Mandatory deterministic claims remain present regardless
+of the selection. Invalid or unavailable model output degrades to the
+deterministic result.

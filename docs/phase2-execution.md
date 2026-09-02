@@ -70,27 +70,27 @@ Evidence:
 
 ## Data and post-training
 
-The builder now emits the exact runtime claim-selection prompt/target contract
+The builder now emits the exact runtime `lesson-selection-2.0` prompt/target contract
 and isolates train, validation, and untouched final-test partitions by lineage
 and semantic position. The audit blocks malformed records, illegal moves,
 missing provenance, contract failure, duplicates, transpositions, conflicts,
 semantic overlap, and lineage overlap.
 
-A real 100-row build from the hash-verified local archive produced 84 train, 10
-validation, and 6 final-test rows with zero rejected rows and passed the
-threshold-adjusted smoke audit. The production gate remains blocked at 10,000 /
-1,000 / 1,000 rows.
+A real 64-row v2 build from the hash-verified local archive scanned all
+6,100,960 source rows, produced 56 train, four validation, and four final-test
+rows, and passed the threshold-adjusted smoke audit. Production requires
+12,000 / 1,500 / 1,500 rows.
 
-The M3 Pro/18 GB machine is eligible for a bounded LoRA smoke. Unsloth and
-unsloth-zoo are not installed. Training is blocked until the corpus reaches
-scale, exact toolchain versions and native base weights are pinned and hashed,
-and the error taxonomy, untuned baseline, and blind human evidence are frozen.
-The installed 4-bit inference quant is not a training source.
+The M3 Pro/18 GB machine is eligible for a bounded LoRA smoke. MLX 0.32.2 and
+MLX-LM 0.31.3 are selected. Training remains blocked until the production
+corpus passes, native base files are verified locally, and the error taxonomy,
+untuned baseline, and two-reviewer adjudicated human gold are frozen. The
+installed 4-bit inference quant is not a training source.
 
 Evidence:
 
 - [data audit](../artifacts/data-audit/latest.json)
-- [selector smoke](../artifacts/data-audit/selector-smoke-2026-08-30.json)
+- [v2 selector smoke](../artifacts/data-audit/selector-v2-smoke-2026-09-01.json)
 - [training readiness](../artifacts/training/readiness-latest.json)
 
 ## Remaining ordered gates
@@ -99,9 +99,9 @@ Evidence:
    to the full fixture, accessibility, and viewport matrix.
 2. Reduce or justify Stockfish restart churn under rapid gameplay/review load,
    then run 100-ply and 1,000-request endurance/resource gates.
-3. Build the full leakage-free 10,000/1,000/1,000 selector corpus and 1,000-case
+3. Build the full leakage-free 12,000/1,500/1,500 selector corpus and 1,000-case
    held-out chess suite.
-4. Complete blinded human usefulness review before promoting Gemma or authorizing
-   any 7-20-step Unsloth/MLX-LM smoke comparison.
+4. Complete blinded human usefulness review before promoting Gemma or running
+   the authorized 7-20-step MLX-LM smoke.
 
 These are explicit unpassed gates, not placeholders or claimed functionality.

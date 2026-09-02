@@ -12,21 +12,22 @@ import chess
 
 from .domain import EngineEvidence, RatingBucket
 from .runtime import (
-    CLAIM_SELECTION_CONTRACT_VERSION,
-    CLAIM_SELECTION_SYSTEM_PROMPT,
-    claim_selection_prompt,
-    parse_claim_selection,
+    LESSON_SELECTION_CONTRACT_VERSION,
+    LESSON_SELECTION_SYSTEM_PROMPT,
+    lesson_selection_prompt,
+    parse_lesson_selection,
 )
 
 UCI_PATTERN = re.compile(r"^[a-h][1-8][a-h][1-8][qrbn]?$", re.IGNORECASE)
-MINIMUM_TRAINING_RECORDS = 10_000
-MINIMUM_VALIDATION_RECORDS = 1_000
-MINIMUM_EVALUATION_RECORDS = 1_000
+MINIMUM_TRAINING_RECORDS = 12_000
+MINIMUM_VALIDATION_RECORDS = 1_500
+MINIMUM_EVALUATION_RECORDS = 1_500
 FEN_PATTERN = re.compile(r"(?:FEN|Position):\s*([^\n]+)", re.IGNORECASE)
 REQUIRED_META_FIELDS = (
     "source", "source_item_id", "lineage", "license", "split", "transformation",
     "setup_move", "solution_move", "move_sequence", "evidence_contract_version",
     "model_contract_version", "engine_binary_sha256", "engine_node_budget",
+    "source_game_id", "source_position_id", "selection_method",
 )
 BLOCKING_TOTALS = (
     "malformed_records", "invalid_fens", "illegal_best_moves", "missing_fens",
@@ -137,6 +138,7 @@ def _scan(paths: list[Path], expected_split: str, enforce_model_contract: bool) 
     files: list[dict[str, Any]] = []
     all_hashes: set[str] = set()
     semantic_positions: set[str] = set()
+    semantic_variants: set[str] = set()
     lineages: set[str] = set()
     labels: defaultdict[str, set[str]] = defaultdict(set)
     issue_samples: list[dict[str, Any]] = []
@@ -190,7 +192,7 @@ def _scan(paths: list[Path], expected_split: str, enforce_model_contract: bool) 
                         )
                     if meta.get("split") != expected_split:
                         file_counts["split_mismatches"] += 1
-                    if task != CLAIM_SELECTION_CONTRACT_VERSION:
+                    if task != LESSON_SELECTION_CONTRACT_VERSION:
                         file_counts["unsupported_tasks"] += 1
                 fen = _extract_fen(record, meta)
                 if not fen:
@@ -206,8 +208,11 @@ def _scan(paths: list[Path], expected_split: str, enforce_model_contract: bool) 
                     _sample(issue_samples, path, line_number, "invalid_fen", str(exc))
                     continue
                 semantic = _semantic_position(board)
-                if semantic in semantic_positions:
+                rating_key = str(meta.get("rating_bucket") or "")
+                duplicate_key = f"{semantic}|{rating_key}"
+                if duplicate_key in semantic_variants:
                     file_counts["duplicate_semantic_positions"] += 1
+                semantic_variants.add(duplicate_key)
                 semantic_positions.add(semantic)
                 move = _extract_best_move(record, meta)
                 if not move:
@@ -259,9 +264,9 @@ def _decode_record(
 
 
 def _valid_model_contract(record: dict[str, Any]) -> bool:
-    if record.get("task") != CLAIM_SELECTION_CONTRACT_VERSION:
+    if record.get("task") != LESSON_SELECTION_CONTRACT_VERSION:
         return False
-    if record.get("system_prompt") != CLAIM_SELECTION_SYSTEM_PROMPT:
+    if record.get("system_prompt") != LESSON_SELECTION_SYSTEM_PROMPT:
         return False
     raw_input, response, meta = record.get("input"), record.get("response"), _metadata(record)
     if not isinstance(raw_input, dict) or not isinstance(response, str):
@@ -269,16 +274,15 @@ def _valid_model_contract(record: dict[str, Any]) -> bool:
     try:
         evidence = EngineEvidence.model_validate(raw_input)
         rating = RatingBucket(str(meta.get("rating_bucket")))
-        if record.get("prompt") != claim_selection_prompt(evidence, rating):
+        if record.get("prompt") != lesson_selection_prompt(evidence, rating):
             return False
-        parsed = parse_claim_selection(response, evidence)
+        parsed = parse_lesson_selection(response, evidence, rating)
     except (TypeError, ValueError):
         return False
-    expected = [claim.model_dump(mode="json") for claim in parsed.claims]
     return (
         2 <= len(parsed.claims) <= 5
         and not parsed.removed_claim_codes
-        and record.get("target") == expected
+        and record.get("target") == json.loads(response)
     )
 
 

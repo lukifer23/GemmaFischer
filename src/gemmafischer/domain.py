@@ -361,6 +361,10 @@ class CoachingResult(StrictModel):
     removed_claim_codes: tuple[str, ...] = ()
     source: Literal["deterministic", "gemma", "lfm"]
     lesson_plan: LessonPlan | None = None
+    question_template_id: Literal[
+        "find-strongest-move", "explain-engine-choice", "compare-candidates"
+    ] = "find-strongest-move"
+    hint_template_id: str = "forcing-moves"
 
     @model_validator(mode="before")
     @classmethod

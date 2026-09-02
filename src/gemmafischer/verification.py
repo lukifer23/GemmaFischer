@@ -40,6 +40,8 @@ def verify_package(root: Path) -> list[str]:
         "gemmafischer/static/index.html",
         "gemmafischer/resources/assets/model-manifest.json",
         "gemmafischer/resources/data/evaluation/diagnostic_positions.jsonl",
+        "gemmafischer/resources/training/mlx-lora.yaml",
+        "gemmafischer/resources/training/post-training.json",
     }
     with tempfile.TemporaryDirectory(prefix="gemmafischer-build-") as directory:
         command = ["uv", "build", "--out-dir", directory]

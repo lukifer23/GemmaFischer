@@ -1,14 +1,15 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-08-31T01:09:13.616731+00:00",
+  "generated_at": "2026-09-02T00:41:38.491904+00:00",
   "status": "blocked",
   "authorized_to_train": false,
   "checks": {
     "hardware_smoke_eligible": true,
-    "data_contract_and_isolation": false,
-    "toolchain_exactly_pinned_and_installed": false,
-    "native_base_weights_pinned": false,
-    "error_and_baseline_evidence_frozen": false
+    "data_contract_and_isolation": true,
+    "toolchain_exactly_pinned_and_installed": true,
+    "native_base_weights_pinned": true,
+    "error_and_baseline_evidence_frozen": false,
+    "two_reviewer_human_gold_adjudicated": false
   },
   "hardware": {
     "system": "Darwin",
@@ -17,18 +18,26 @@
     "memory_bytes": 19327352832
   },
   "installed_versions": {
-    "unsloth": null,
-    "unsloth_zoo": null,
     "mlx": "0.32.2",
     "mlx_lm": "0.31.3"
   },
-  "manifest": "training/post-training.json",
+  "manifest": "/Users/admin/Downloads/CodeProjects/GemmaFischer/training/post-training.json",
   "data_audit": "artifacts/data-audit/latest.json",
+  "data_counts": {
+    "actual": {
+      "train": 12000,
+      "validation": 1500,
+      "final_test": 1500
+    },
+    "required": {
+      "train": 12000,
+      "validation": 1500,
+      "final_test": 1500
+    }
+  },
   "blockers": [
-    "data_contract_and_isolation",
-    "toolchain_exactly_pinned_and_installed",
-    "native_base_weights_pinned",
-    "error_and_baseline_evidence_frozen"
+    "error_and_baseline_evidence_frozen",
+    "two_reviewer_human_gold_adjudicated"
   ],
   "next_allowed_action": "resolve blockers and rerun this gate; do not train"
 }

@@ -1,8 +1,14 @@
+import json
+
 import pytest
 
-from gemmafischer.domain import GuidanceClaim
 from gemmafischer.resources import bundled_path
-from gemmafischer.runtime import GemmaRuntime, extract_json_array
+from gemmafischer.runtime import (
+    GemmaRuntime,
+    extract_json_array,
+    lesson_selection_target,
+    parse_lesson_selection,
+)
 
 
 def test_extract_json_array_accepts_markdown_fence() -> None:
@@ -20,12 +26,8 @@ def test_extract_json_array_rejects_missing_payload() -> None:
         extract_json_array("no structured result")
 
 
-def test_claim_selection_keeps_valid_items_and_reports_invalid_ones() -> None:
+def test_runtime_accepts_only_exact_lesson_selection_ids() -> None:
     runtime = object.__new__(GemmaRuntime)
-    runtime._generate = lambda *args, **kwargs: """[
-      {"kind":"guidance","evidence_ids":[],"template_id":"calculate_forcing_moves"},
-      {"kind":"line","evidence_ids":["candidate"],"candidate_id":"candidate"}
-    ]"""
     runtime._model = object()
 
     class Tokenizer:
@@ -60,8 +62,14 @@ def test_claim_selection_keeps_valid_items_and_reports_invalid_ones() -> None:
             "board_facts": [],
         }
     )
+    target = lesson_selection_target(evidence, RatingBucket.CLUB)
+    runtime._generate = lambda *args, **kwargs: json.dumps(target)
 
     selection = runtime.select_claims(evidence, RatingBucket.CLUB)
 
-    assert selection.claims == (GuidanceClaim(template_id="calculate_forcing_moves"),)
-    assert selection.removed_claim_codes == ("MODEL_CLAIM_SCHEMA_INVALID",)
+    assert len(selection.claims) >= 2
+    assert selection.question_template_id == "find-strongest-move"
+
+    target["claim_ids"][0] = "invented"
+    with pytest.raises(ValueError, match="unknown claim"):
+        parse_lesson_selection(json.dumps(target), evidence, RatingBucket.CLUB)

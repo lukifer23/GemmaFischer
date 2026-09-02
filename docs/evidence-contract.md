@@ -19,12 +19,15 @@ comparison records `equal`, `engine_better`, or `considered_better`; centipawn
 scores within 15 cp are equal and mate scores are compared explicitly. These
 constrained searches do not reorder the CandidateSet.
 
-The coach returns a typed `CoachingResult` with zero to five claims and an
-optional typed `LessonPlan`. Lesson steps cite deterministic concept evidence
-and use closed templates. The optional model may return only the closed
-`CoachingClaim` union. Unknown IDs, unsupported objects, and out-of-range PV
-references are removed with reason codes. User-visible factual prose is rendered
-from validated payloads; terminal positions need no filler claims.
+The coach returns a typed `CoachingResult` with zero to five claims, a closed
+question-template ID, a closed hint-template ID, and an optional typed
+`LessonPlan`. Lesson steps cite deterministic concept evidence and use closed
+templates. Under `lesson-selection-2.0`, the optional model may return only
+supplied claim, concept, question-template, and hint-template IDs. The parser
+rejects partial objects, unknown IDs, duplicates, and out-of-range selections;
+mandatory deterministic claims are restored by the merge. User-visible factual
+prose is rendered from validated payloads, and terminal positions need no filler
+claims.
 
 HTTP routes are:
 

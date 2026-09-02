@@ -394,6 +394,8 @@ class AnalysisService:
                 session_id,
                 request.source_analysis_id,
                 analysis.evidence,
+                question_template_id=analysis.coaching.question_template_id,
+                hint_template_id=analysis.coaching.hint_template_id,
             )
             self._save_tutor(
                 record,
@@ -869,6 +871,8 @@ class AnalysisService:
                                 lesson_plan=order_lesson_plan(
                                     baseline.lesson_plan, selection.concept_ids
                                 ),
+                                question_template_id=selection.question_template_id,
+                                hint_template_id=selection.hint_template_id,
                             )
                         else:
                             state = AnalysisState.ENGINE_ONLY

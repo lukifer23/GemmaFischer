@@ -63,6 +63,9 @@ def create_interaction(
     session_id: str,
     source_analysis_id: str,
     evidence: EngineEvidence,
+    *,
+    question_template_id: str = "find-strongest-move",
+    hint_template_id: str = "forcing-moves",
 ) -> TutorInteractionRecord:
     if not evidence.candidates:
         raise ValueError("A terminal analysis cannot create a move question")
@@ -80,13 +83,22 @@ def create_interaction(
     ]
     options = (TutorOption(option_id=correct_id, label=correct_label), *distractors)
     timestamp = now_utc()
+    prompts = {
+        "find-strongest-move": f"Find the strongest move for {evidence.side_to_move}.",
+        "explain-engine-choice": "Find the move that best demonstrates the engine's idea.",
+        "compare-candidates": "Compare the candidate moves and play the strongest one.",
+    }
+    if question_template_id not in prompts:
+        raise ValueError("Unknown tutor question template")
+    if hint_template_id != "forcing-moves" and not hint_template_id.startswith("concept:"):
+        raise ValueError("Unknown tutor hint template")
     view = TutorInteractionView(
         interaction_id=interaction_id,
         session_id=session_id,
         revision=0,
         status=TutorStatus.AWAITING_ANSWER,
         question=TutorQuestion(
-            prompt=f"Find the strongest move for {evidence.side_to_move}.",
+            prompt=prompts[question_template_id],
             fen=evidence.fen,
             position_id=evidence.position_id,
             source_analysis_id=source_analysis_id,
@@ -102,7 +114,7 @@ def create_interaction(
         view=view,
         evidence=evidence,
         answer_move_uci=best.move_uci,
-        follow_up_answer_id=correct_id,
+        follow_up_answer_id=f"{correct_id}|{hint_template_id}",
     )
 
 
@@ -115,12 +127,21 @@ def reveal_hint(record: TutorInteractionRecord) -> TutorInteractionRecord:
         for concept in record.evidence.concepts
         if concept.candidate_id == best.evidence_id and bool(concept.value)
     )
+    _answer_id, _, selected_hint = record.follow_up_answer_id.partition("|")
+    selected_concept = selected_hint.removeprefix("concept:") if selected_hint else ""
+    chosen = next((item for item in concepts if item.evidence_id == selected_concept), None)
     hint = (
+        f"Look for a move that can: {CONCEPT_LABELS[chosen.concept].lower()}."
+        if chosen
+        else
         f"Look for a move that can: {CONCEPT_LABELS[concepts[0].concept].lower()}."
         if concepts
         else "Compare forcing checks, captures, and threats before choosing."
     )
-    evidence_ids = (concepts[0].evidence_id,) if concepts else (best.evidence_id,)
+    evidence_ids = (
+        (chosen.evidence_id,) if chosen else
+        ((concepts[0].evidence_id,) if concepts else (best.evidence_id,))
+    )
     return _update(record, hint=hint, hint_evidence_ids=evidence_ids)
 
 
@@ -172,7 +193,7 @@ def answer_follow_up(record: TutorInteractionRecord, option_id: str) -> TutorInt
     follow_up = record.view.follow_up.model_copy(
         update={
             "selected_option_id": option_id,
-            "correct": option_id == record.follow_up_answer_id,
+            "correct": option_id == record.follow_up_answer_id.partition("|")[0],
         }
     )
     return _update(record, status=TutorStatus.COMPLETE, follow_up=follow_up)

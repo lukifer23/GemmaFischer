@@ -60,10 +60,10 @@ Studying a position must never mutate the live game.
 | Accuracy/tutor/model evaluation | `accuracy_eval.py`, `tutor_eval.py`, `model_profile.py` |
 | Governed data acquisition | `data/sources.json`, build/audit commands |
 
-The public-alpha implementation currently passes 130 model-free tests (with one
-model-only skip and one deselection), a 70% whole-package model-free coverage
-ratchet (70.10% observed on 2026-09-01), an installed-wheel smoke, and a real
-Chromium core tutor flow.
+The public-alpha implementation currently passes 124 portable tests and 142
+local non-model tests (with one model deselection), a 70% whole-package
+model-free coverage ratchet (70.78% observed on 2026-09-01), an installed-wheel
+smoke, and a real Chromium core tutor flow.
 Earlier constructed, held-out, and optional-Gemma artifacts remain development
 evidence. Human usefulness, physical-device accessibility, the full browser
 fixture matrix, and long-run qualification remain open.
@@ -208,17 +208,17 @@ Exit:
 
 ## Phase 4 - Correct and scale the data/evaluation system
 
-Do not scale the current builder unchanged. Its FEN-to-UCI prompt and
-deterministic `LessonPlan` target do not match the runtime model contract, which
-is an exact claim-selection prompt to bounded claim/concept JSON.
+The corrected builder and runtime now share `lesson-selection-2.0`: exact
+ID-only selection over supplied grounded claims, concepts, question templates,
+and hint templates. Scaling and qualification gates below remain fail-closed.
 
 Work in order:
 
 1. Freeze separate schemas for chess-authority evaluation, deterministic tutor
    evaluation, model-selection training, question evaluation, and human review.
    A legitimate selector-training row must contain the exact runtime system
-   prompt, `claim_selection_prompt` user payload, a target accepted by
-   `parse_claim_selection`, evidence/configuration hashes, source/transformation
+   prompt, `lesson_selection_prompt` user payload, a target accepted by
+   `parse_lesson_selection`, evidence/configuration hashes, source/transformation
    provenance, and a model-contract version. A FEN-to-UCI row is not selector
    training data.
 2. Make the audit require source/game/puzzle lineage, full provenance, evidence
@@ -233,7 +233,7 @@ Work in order:
    make it resumable/content-addressed if a full run is not safely bounded.
 6. Split by source-game lineage and semantic position, ignoring FEN clocks for
    duplicate detection. Freeze three partitions before target construction: at
-   least 10,000 training, 1,000 validation, and 1,000 untouched final-test rows.
+   at least 12,000 training, 1,500 validation, and 1,500 untouched final-test rows.
    Build by quota across the complete archive rather than accepting the first
    qualifying rows.
 7. Expand held-out chess agreement to at least 1,000 positions and report legal,
@@ -245,9 +245,9 @@ Work in order:
 9. Extend human packets and validated ingestion/adjudication to include every
    rubric field, including harmful omission.
 
-Exit: 10,000/1,000/1,000 task-aligned, leakage-free train/validation/final-test
+Exit: 12,000/1,500/1,500 task-aligned, leakage-free train/validation/final-test
 records and the frozen chess, question, and human-review artifacts pass every
-zero-tolerance gate. A training command still does not exist.
+zero-tolerance gate. Real training commands exist but remain preflight-gated.
 
 ## Phase 5 - Finish interaction quality and accessibility
 
@@ -310,35 +310,27 @@ LFM2.5-2.6B remains a recorded failed candidate for the current frozen harness;
 that is not a claim about the whole model family and is not repaired by grading
 it differently.
 
-## Archived decision boundary - post-training is not active work
+## Phase 8 - Execute bounded post-training
 
-Post-training is outside the active product roadmap. The deterministic learning
-loop and human usefulness gate come first; the single pinned Gemma inference
-candidate is evaluated only after that loop passes. A tie is a loss. Unless
-Gemma first produces a statistically meaningful blinded win with no correctness,
-grounding, latency, memory, or reliability regression, model work stops and no
-training-scale corpus, native checkpoint, adapter, or training environment is
-created.
-
-The material below is retained as a historical fail-closed decision record. It
-does not authorize setup, downloads, toolchain installation, a smoke run, or a
-second model checkpoint.
+Post-training is active but fail-closed. The deterministic learning loop stays
+complete, Stockfish remains authoritative, and a tie is a loss. The repository
+supports one native Gemma base identity, one rolling resume checkpoint, and one
+selected adapter—not parallel model checkpoints.
 
 Fine-tuning was considered only after Phases 1-7 pass, the task-aligned corpus is
 audited, repeated model errors form a stable taxonomy, and harness/schema errors
 have been ruled out on frozen evaluation.
 
-Unsloth is a real candidate toolchain, not a commitment. As of this roadmap,
-its upstream project has an Apple Silicon MLX training path with real LoRA smoke
-tests and MLX export, so it may fit this M3 Pro/18GB machine. It is also rapidly
-changing and has recent model-specific MLX issues. Before a real run:
+MLX-LM 0.31.3 on MLX 0.32.2 is the selected Mac-only baseline. Unsloth remains
+unselected until an authorized real 20-step comparison justifies adding its
+complexity. Before a real run:
 
-1. pin exact Unsloth, unsloth-zoo, MLX, MLX-LM, model revision, and native base
+1. pin exact MLX, MLX-LM, model revision, and native base
    weight hashes in an isolated environment;
 2. run a tiny seven-to-twenty-step LoRA smoke test and prove resume, merge/export,
    reload in the production inference harness, memory ceiling, and deterministic
    seed/config capture;
-3. compare Unsloth MLX against a minimal MLX-LM LoRA baseline on the same rows;
+3. consider Unsloth only after MLX-LM smoke evidence establishes a concrete need;
 4. use native license-compatible source weights, not the 4-bit inference artifact;
 5. proceed to SFT/adapter experiments only if the smoke artifact is complete.
 

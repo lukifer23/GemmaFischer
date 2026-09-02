@@ -144,6 +144,12 @@ data/raw/*.json
 data/raw/*.zst
 data/derived/
 
+# Local post-training working state. Only manifests and deliberate receipts are tracked.
+artifacts/training/mlx-data/
+artifacts/training/adapters/
+artifacts/training/releases/
+artifacts/training/labels/
+
 # Logs
 *.log
 logs/

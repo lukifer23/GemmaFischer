@@ -1,27 +1,80 @@
 {
-  "schema_version": "1.0",
-  "status": "archived_not_in_active_scope",
-  "task": "claim-selection-1.0",
+  "schema_version": "2.0",
+  "status": "active_fail_closed",
+  "task": "lesson-selection-2.0",
   "model": {
-    "native_base_model": null,
-    "revision": null,
-    "weight_sha256": {},
+    "native_base_model": "google/gemma-4-E2B-it",
+    "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+    "license": "Apache-2.0",
+    "weight_sha256": {
+      "model.safetensors": "2db5482b20d746879bb3ef79b5203e9075a2e2b98f54ec7c2f281c1477ddc550",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "config.json": "1b28f3d2c3100f6c594754b81107428bd7b822a7f48272ca681dae9d2ec38330",
+      "generation_config.json": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+      "processor_config.json": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c",
+      "tokenizer_config.json": "9f4fec4b1dc6ecddf8f4a92e9caea5971c0e67d81309f3f9066a2bee8c362633"
+    },
     "inference_quant_is_training_source": false
   },
   "toolchain": {
-    "unsloth": null,
-    "unsloth_zoo": null,
-    "mlx": null,
-    "mlx_lm": null
+    "backend": "mlx-lm",
+    "packages": {
+      "mlx": "0.32.2",
+      "mlx_lm": "0.31.3"
+    },
+    "unsloth_candidate": "not_selected_until_real_20_step_comparison"
   },
   "hardware": {
     "minimum_memory_bytes": 17179869184,
+    "maximum_training_memory_bytes": 16642998272,
+    "minimum_free_bytes": 21474836480,
     "smoke_step_minimum": 7,
     "smoke_step_maximum": 20
+  },
+  "training": {
+    "method": "lora_sft",
+    "seed": 3407,
+    "rank": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "batch_size": 1,
+    "gradient_accumulation_steps": 16,
+    "learning_rate": 0.0002,
+    "maximum_epochs": 3,
+    "optimizer": "adamw",
+    "recipe": "training/mlx-lora.yaml",
+    "recipe_sha256": "76a839eaf7e8ff4a159b5aedbb9da37c0aeab54603564ff19de97158c5bf674c",
+    "allowed_sequence_lengths": [1024, 2048, 4096],
+    "completion_only_loss": true,
+    "checkpoint_policy": "one_rolling_resume_plus_one_selected_adapter"
+  },
+  "data": {
+    "minimum_train": 12000,
+    "minimum_validation": 1500,
+    "minimum_final_test": 1500,
+    "split_authority": "source_game_lineage_before_target_construction",
+    "human_gold_minimum": 2500,
+    "baseline_minimum": 250,
+    "minimum_repeated_error_count": 10,
+    "reviewers_required": 2,
+    "agreement_minimum": 0.67,
+    "human_rubric_minimum_mean": 3.0,
+    "human_harmful_omission_maximum": 0
   },
   "evidence": {
     "error_taxonomy": null,
     "frozen_baseline": null,
     "frozen_human_review": null
+  },
+  "authorization": {
+    "smoke": true,
+    "production": false,
+    "source": "Explicit user request to implement the locked post-training plan on 2026-09-01"
+  },
+  "artifacts": {
+    "authority": "draft_github_release",
+    "weights_in_git": false,
+    "publish_before_qualification": false,
+    "maximum_retained_adapters": 1
   }
 }

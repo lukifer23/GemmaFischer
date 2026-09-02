@@ -46,6 +46,7 @@ packages = ["src/gemmafischer"]
 "data/evaluation/test_questions.jsonl" = "gemmafischer/resources/data/evaluation/test_questions.jsonl"
 "data/evaluation/tutoring_cases.jsonl" = "gemmafischer/resources/data/evaluation/tutoring_cases.jsonl"
 "training/post-training.json" = "gemmafischer/resources/training/post-training.json"
+"training/mlx-lora.yaml" = "gemmafischer/resources/training/mlx-lora.yaml"
 
 [tool.hatch.build.targets.sdist]
 include = ["src/gemmafischer", "README.md", "LICENSE", "assets", "data", "training"]

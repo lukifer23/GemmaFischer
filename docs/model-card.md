@@ -77,9 +77,10 @@ on `main` today.
 
 ## Fine-tuning decision
 
-Do not fine-tune the installed 4-bit inference artifact. If later evidence shows
-a stable, repeated selector error worth training, select a license-compatible
-native checkpoint for the chosen model family, pin every weight hash, run the
-bounded Unsloth and MLX-LM LoRA smoke comparison, and export a separately pinned
-MLX inference artifact. Training stays blocked until the task-aligned corpus,
-frozen evaluations, and blind human baseline meet the documented gates.
+Do not fine-tune the installed 4-bit inference artifact. The active fail-closed
+path selects the native `google/gemma-4-E2B-it` revision and pins every required
+file hash. MLX-LM is the Mac-only LoRA baseline; Unsloth is not another supported
+path unless a later authorized comparison earns it. Training stays blocked
+until the task-aligned corpus, frozen evaluations, two-reviewer adjudicated
+human gold, and local native-file preflight meet the documented gates. Exactly
+one adapter may be selected for qualification; no adapter is supported today.

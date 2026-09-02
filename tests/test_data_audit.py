@@ -1,13 +1,13 @@
 import json
 from pathlib import Path
 
-from gemmafischer.coach import deterministic_coach
 from gemmafischer.data_audit import audit_data
 from gemmafischer.domain import EngineEvidence, RatingBucket
 from gemmafischer.runtime import (
-    CLAIM_SELECTION_CONTRACT_VERSION,
-    CLAIM_SELECTION_SYSTEM_PROMPT,
-    claim_selection_prompt,
+    LESSON_SELECTION_CONTRACT_VERSION,
+    LESSON_SELECTION_SYSTEM_PROMPT,
+    lesson_selection_prompt,
+    lesson_selection_target,
 )
 
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -202,7 +202,7 @@ def test_audit_rejects_wrong_model_target_contract(tmp_path: Path) -> None:
     assert result["training"]["totals"]["invalid_model_contracts"] == 1
 
 
-def test_audit_accepts_exact_claim_selection_contract(tmp_path: Path) -> None:
+def test_audit_accepts_exact_lesson_selection_contract(tmp_path: Path) -> None:
     fen = "8/8/8/8/8/8/4K3/6k1 w - - 0 1"
     evidence = EngineEvidence.model_validate({
         "position_id": "position",
@@ -225,14 +225,13 @@ def test_audit_accepts_exact_claim_selection_contract(tmp_path: Path) -> None:
         }],
         "board_facts": [],
     })
-    claims = deterministic_coach(evidence, RatingBucket.CLUB, "e2e3").claims
-    target = [claim.model_dump(mode="json") for claim in claims]
+    target = lesson_selection_target(evidence, RatingBucket.CLUB)
     training = tmp_path / "train.jsonl"
     write_jsonl(training, [{
         "record_id": "record",
-        "task": CLAIM_SELECTION_CONTRACT_VERSION,
-        "system_prompt": CLAIM_SELECTION_SYSTEM_PROMPT,
-        "prompt": claim_selection_prompt(evidence, RatingBucket.CLUB),
+        "task": LESSON_SELECTION_CONTRACT_VERSION,
+        "system_prompt": LESSON_SELECTION_SYSTEM_PROMPT,
+        "prompt": lesson_selection_prompt(evidence, RatingBucket.CLUB),
         "response": json.dumps(target, separators=(",", ":")),
         "license": "CC0-1.0",
         "input": evidence.model_dump(mode="json"),
@@ -245,15 +244,18 @@ def test_audit_accepts_exact_claim_selection_contract(tmp_path: Path) -> None:
             "move_sequence": ["g1g2", "e2e3"],
             "source": "fixture",
             "source_item_id": "one",
+            "source_game_id": "game-one",
+            "source_position_id": "position-one",
             "lineage": "fixture:one",
             "license": "CC0-1.0",
             "split": "train",
             "transformation": "fixture",
             "rating_bucket": RatingBucket.CLUB.value,
             "evidence_contract_version": "2.0",
-            "model_contract_version": CLAIM_SELECTION_CONTRACT_VERSION,
+            "model_contract_version": LESSON_SELECTION_CONTRACT_VERSION,
             "engine_binary_sha256": "a" * 64,
             "engine_node_budget": 1,
+            "selection_method": "fixture",
         },
     }])
 
