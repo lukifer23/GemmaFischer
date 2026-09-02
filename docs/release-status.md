@@ -14,7 +14,7 @@ and return to the unchanged game.
 | Repository, OpenAPI, package resources, isolated wheel | Passed locally | Source and built distributions |
 | Real Stockfish session and tutor integration | Passed locally | Installed Stockfish 18 |
 | Real Chromium core flow at desktop and 390x844 | Passed locally | Headless local Chromium |
-| Hosted GitHub Actions | Commit-specific | Verify the exact release SHA in GitHub Actions |
+| Hosted GitHub Actions | Passed | Verification `33577748598` and CodeQL `33577748591` passed on candidate `dc3589ce5df2a35b627c2bef0c4d3007fc39263d` |
 | Physical device and VoiceOver | Open | Human/device acceptance |
 | 100-ply and 1,000-request endurance | Open | Target-host release qualification |
 | Blind human tutoring usefulness | Open | At least two chess-literate reviewers |
