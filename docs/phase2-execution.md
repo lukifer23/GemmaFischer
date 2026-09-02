@@ -76,16 +76,16 @@ and semantic position. The audit blocks malformed records, illegal moves,
 missing provenance, contract failure, duplicates, transpositions, conflicts,
 semantic overlap, and lineage overlap.
 
-A real 64-row v2 build from the hash-verified local archive scanned all
-6,100,960 source rows, produced 56 train, four validation, and four final-test
-rows, and passed the threshold-adjusted smoke audit. Production requires
-12,000 / 1,500 / 1,500 rows.
+The production v2 build scanned all 6,100,960 source rows, produced 12,000
+train, 1,500 validation, and 1,500 final-test rows, and passed the complete
+contract, legality, provenance, duplicate, semantic-position, and lineage audit.
 
 The M3 Pro/18 GB machine is eligible for a bounded LoRA smoke. MLX 0.32.2 and
-MLX-LM 0.31.3 are selected. Training remains blocked until the production
-corpus passes, native base files are verified locally, and the error taxonomy,
-untuned baseline, and two-reviewer adjudicated human gold are frozen. The
-installed 4-bit inference quant is not a training source.
+MLX-LM 0.31.3 are selected. The production corpus, native base hashes, error
+taxonomy, untuned baseline, and machine-supervision preparation pass. Human
+review is optional evidence for pedagogy claims. Smoke and production training
+are currently unauthorized, and the installed 4-bit inference quant is not a
+training source.
 
 Evidence:
 
@@ -99,9 +99,8 @@ Evidence:
    to the full fixture, accessibility, and viewport matrix.
 2. Reduce or justify Stockfish restart churn under rapid gameplay/review load,
    then run 100-ply and 1,000-request endurance/resource gates.
-3. Build the full leakage-free 12,000/1,500/1,500 selector corpus and 1,000-case
-   held-out chess suite.
-4. Complete blinded human usefulness review before promoting Gemma or running
-   the authorized 7-20-step MLX-LM smoke.
+3. Measure the 1,024-token truncation rate and resolve it before production SFT.
+4. Reauthorize and rerun the 7-20-step MLX-LM smoke only on explicit request.
+5. Complete blinded human usefulness review only before making pedagogy claims.
 
 These are explicit unpassed gates, not placeholders or claimed functionality.

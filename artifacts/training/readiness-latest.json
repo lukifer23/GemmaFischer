@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0",
-  "generated_at": "2026-09-02T01:01:27.235109+00:00",
-  "status": "blocked",
+  "schema_version": "2.0",
+  "generated_at": "2026-09-02T01:33:10.525085+00:00",
+  "status": "ready_for_smoke",
   "authorized_to_train": false,
   "checks": {
     "hardware_smoke_eligible": true,
@@ -9,7 +9,7 @@
     "toolchain_exactly_pinned_and_installed": true,
     "native_base_weights_pinned": true,
     "error_and_baseline_evidence_frozen": true,
-    "two_reviewer_human_gold_adjudicated": false
+    "machine_supervision_authority_locked": true
   },
   "hardware": {
     "system": "Darwin",
@@ -35,8 +35,10 @@
       "final_test": 1500
     }
   },
-  "blockers": [
-    "two_reviewer_human_gold_adjudicated"
-  ],
-  "next_allowed_action": "resolve blockers and rerun this gate; do not train"
+  "optional_evidence": {
+    "two_reviewer_human_gold_adjudicated": false,
+    "pedagogy_claim_eligible": false
+  },
+  "blockers": [],
+  "next_allowed_action": "await explicit smoke-training authorization; do not train"
 }

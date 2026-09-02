@@ -10,6 +10,7 @@ from gemmafischer.labeling import (
     export_label_packet,
     validate_label_responses,
 )
+from gemmafischer.mlx_training import sanitize_gemma4_shared_kv_weights
 from gemmafischer.question_eval import freeze_question_cases, load_question_cases
 from gemmafischer.runtime import (
     LESSON_SELECTION_CONTRACT_VERSION,
@@ -84,12 +85,35 @@ def test_prepare_mlx_dataset_preserves_valid_chat_contract(tmp_path: Path) -> No
     receipt = prepare_mlx_dataset(source, output)
 
     assert receipt["counts"] == {"train": 1, "valid": 1, "test": 1}
+    assert receipt["supervision_authority"] == "stockfish-deterministic-v2"
+    assert receipt["human_gold_sha256"] is None
     row = json.loads((output / "train.jsonl").read_text(encoding="utf-8"))
     assert [message["role"] for message in row["messages"]] == [
         "system",
         "user",
         "assistant",
     ]
+
+
+def test_gemma4_shared_kv_sanitizer_drops_only_architecture_unused_weights() -> None:
+    weights = {
+        "language_model.model.layers.14.self_attn.k_proj.weight": "active-k",
+        "language_model.model.layers.15.self_attn.k_proj.weight": "unused-k",
+        "language_model.model.layers.15.self_attn.v_proj.weight": "unused-v",
+        "language_model.model.layers.15.self_attn.k_norm.weight": "unused-norm",
+        "language_model.model.layers.15.self_attn.q_proj.weight": "active-q",
+        "language_model.model.layers.34.mlp.down_proj.weight": "active-mlp",
+    }
+
+    sanitized = sanitize_gemma4_shared_kv_weights(
+        weights, num_hidden_layers=35, num_kv_shared_layers=20
+    )
+
+    assert sanitized == {
+        "language_model.model.layers.14.self_attn.k_proj.weight": "active-k",
+        "language_model.model.layers.15.self_attn.q_proj.weight": "active-q",
+        "language_model.model.layers.34.mlp.down_proj.weight": "active-mlp",
+    }
 
 
 def test_prepare_mlx_dataset_rejects_prompt_drift(tmp_path: Path) -> None:
@@ -201,9 +225,7 @@ def test_package_training_artifact_retains_exactly_one_adapter_and_receipt(
     receipt = tmp_path / "smoke-receipt.json"
     receipt.write_text('{"status":"passed"}\n', encoding="utf-8")
 
-    result = package_training_artifact(
-        adapter, [receipt], tmp_path / "release" / "adapter.tar.gz"
-    )
+    result = package_training_artifact(adapter, [receipt], tmp_path / "release" / "adapter.tar.gz")
 
     assert result["members"] == {
         "adapter.safetensors": sha256_file(weight),
@@ -247,30 +269,26 @@ def test_training_preflight_verifies_every_bound_input(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    human = tmp_path / "human.json"
-    human.write_text(
-        json.dumps(
-            {
-                "status": "passed",
-                "record_count": 1,
-                "reviewer_count": 2,
-                "exact_selection_agreement": 1.0,
-                "adjudication_complete": True,
-                "rubric_summary": {
-                    "mean_scores": {"correctness": 5.0},
-                    "harmful_omission_count": 0,
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
+    source_hashes = {
+        "train.jsonl": "a" * 64,
+        "validation.jsonl": "b" * 64,
+        "final_test.jsonl": "c" * 64,
+    }
     files = {}
     for name in ("train.jsonl", "valid.jsonl", "test.jsonl"):
         path = data / name
         path.write_text('{"messages":[]}\n', encoding="utf-8")
         files[name] = sha256_file(path)
     (data / "dataset-receipt.json").write_text(
-        json.dumps({"sha256": files, "human_gold_sha256": sha256_file(human)}),
+        json.dumps(
+            {
+                "task": "lesson-selection-2.0",
+                "sha256": files,
+                "source_sha256": source_hashes,
+                "supervision_authority": "stockfish-deterministic-v2",
+                "human_gold_sha256": None,
+            }
+        ),
         encoding="utf-8",
     )
     audit.write_text(
@@ -279,9 +297,33 @@ def test_training_preflight_verifies_every_bound_input(tmp_path: Path) -> None:
                 "schema_version": "2.0",
                 "status": "passed",
                 "gate": {"ready_for_training": True},
-                "training": {"totals": {"records": 1}},
-                "validation": {"totals": {"records": 1}},
-                "evaluation": {"totals": {"records": 1}},
+                "training": {
+                    "totals": {"records": 1},
+                    "files": [
+                        {
+                            "path": "data/derived/v2/train.jsonl",
+                            "sha256": source_hashes["train.jsonl"],
+                        }
+                    ],
+                },
+                "validation": {
+                    "totals": {"records": 1},
+                    "files": [
+                        {
+                            "path": "data/derived/v2/validation.jsonl",
+                            "sha256": source_hashes["validation.jsonl"],
+                        }
+                    ],
+                },
+                "evaluation": {
+                    "totals": {"records": 1},
+                    "files": [
+                        {
+                            "path": "data/derived/v2/final_test.jsonl",
+                            "sha256": source_hashes["final_test.jsonl"],
+                        }
+                    ],
+                },
             }
         ),
         encoding="utf-8",
@@ -305,6 +347,8 @@ def test_training_preflight_verifies_every_bound_input(tmp_path: Path) -> None:
                     "minimum_final_test": 1,
                     "baseline_minimum": 1,
                     "minimum_repeated_error_count": 1,
+                    "training_supervision_authority": "stockfish-deterministic-v2",
+                    "human_review_policy": "optional_pedagogy_claim_only",
                     "human_gold_minimum": 1,
                     "reviewers_required": 2,
                     "agreement_minimum": 0.67,
@@ -314,7 +358,7 @@ def test_training_preflight_verifies_every_bound_input(tmp_path: Path) -> None:
                 "evidence": {
                     "frozen_baseline": str(baseline),
                     "error_taxonomy": str(taxonomy),
-                    "frozen_human_review": str(human),
+                    "frozen_human_review": None,
                 },
                 "authorization": {"smoke": True, "production": False},
             }
@@ -336,6 +380,8 @@ def test_training_preflight_verifies_every_bound_input(tmp_path: Path) -> None:
     assert result["smoke_ready"] is True
     assert result["blockers"] == []
     assert result["prepared_data_passed"] is True
+    assert result["prepared_human_gold_matches"] is None
+    assert result["prepared_source_hashes_match_audit"] is True
 
 
 def test_freeze_question_eval_uses_only_valid_final_test_records(tmp_path: Path) -> None:
@@ -478,7 +524,8 @@ def test_human_label_disagreement_requires_independent_adjudication(tmp_path: Pa
                     }
                 ),
             )
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     validation_path = tmp_path / "validation.json"
@@ -499,9 +546,7 @@ def test_human_label_disagreement_requires_independent_adjudication(tmp_path: Pa
         encoding="utf-8",
     )
     human_gold = tmp_path / "human-gold.json"
-    result = adjudicate_label_responses(
-        dataset, validation_path, adjudications, human_gold
-    )
+    result = adjudicate_label_responses(dataset, validation_path, adjudications, human_gold)
     assert result["status"] == "passed"
     assert result["adjudication_complete"] is True
     assert result["adjudicator_ids"] == ["c"]

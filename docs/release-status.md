@@ -19,7 +19,7 @@ and return to the unchanged game.
 | 100-ply and 1,000-request endurance | Open | Target-host release qualification |
 | Blind human tutoring usefulness | Open | At least two chess-literate reviewers |
 | Optional Gemma release candidate | Open | Deterministic mode remains the product baseline |
-| Post-training | Active, blocked | The audited v2 corpus, frozen question set, real untuned baseline/error taxonomy, labeling, MLX preparation/training, and packaging paths exist; human gold and a native-weight preflight remain open, and no adapter is qualified or shipped |
+| Post-training | Ready, unauthorized | The audited v2 corpus, frozen question set, real untuned baseline/error taxonomy, machine-supervision MLX data, seven native-file hashes, and technical preflight pass; smoke and production authorization are revoked, no trainer is running, and no adapter exists |
 
 The machine-readable v2 companion is
 [`assets/release-status.json`](../assets/release-status.json). It binds local
@@ -53,12 +53,12 @@ Python and JavaScript on pushes to `main`, pull requests, and a weekly schedule.
 2. Measure Stockfish recovery and preemption, then run endurance,
    memory-growth, persistence, and shutdown gates.
 3. Complete physical-desktop, VoiceOver, and blind human tutoring review.
-4. Obtain two independent reviews for all 2,500 blind labeling rows and one
-   independent adjudication for every dispute; apply that human gold without
-   changing validation or final-test bytes.
-5. Download the one pinned native base revision, verify all six declared file
-   hashes, prepare the human-gold MLX data, pass preflight, and run the bounded
-   7-20-step smoke. Production training remains separately unauthorized.
+4. Measure and eliminate unacceptable 1,024-token training truncation, then
+   rerun preflight. The native revision and seven required files are verified.
+5. Reauthorize the bounded 7-20-step smoke only on explicit request; production
+   authorization remains separate. No training process or adapter exists now.
 6. Promote only if the single selected adapter beats the deterministic product
    and untuned Gemma without a correctness, latency, memory, reliability, or
    teaching-value regression. A tie is a loss.
+7. Run two-reviewer human validation only before making claims about improved
+   clarity, pedagogy, or human usefulness.

@@ -68,6 +68,7 @@ from .runtime_qualification import run_runtime_qualification
 from .service import AnalysisService
 from .storage import default_history_path
 from .training import (
+    acquire_native_training_model,
     package_training_artifact,
     prepare_mlx_dataset,
     run_mlx_sft,
@@ -156,19 +157,27 @@ def parser() -> argparse.ArgumentParser:
     readiness = commands.add_parser(
         "training-readiness", help="Fail-closed data, hardware, and toolchain gate"
     )
-    readiness.add_argument(
-        "--audit", type=Path, default=Path("artifacts/data-audit/latest.json")
-    )
+    readiness.add_argument("--audit", type=Path, default=Path("artifacts/data-audit/latest.json"))
     prepare_training = commands.add_parser(
         "prepare-training-data", help="Validate and convert canonical v2 data for MLX"
     )
-    prepare_training.add_argument(
-        "--source-dir", type=Path, default=Path("data/derived/v2-reviewed")
-    )
+    prepare_training.add_argument("--source-dir", type=Path, default=Path("data/derived/v2"))
     prepare_training.add_argument(
         "--output-dir", type=Path, default=Path("artifacts/training/mlx-data")
     )
-    prepare_training.add_argument("--human-gold", type=Path, required=True)
+    prepare_training.add_argument("--human-gold", type=Path)
+    acquire_training_model = commands.add_parser(
+        "acquire-training-model",
+        help="Download and hash-verify the one pinned native training base",
+    )
+    acquire_training_model.add_argument(
+        "--manifest", type=Path, default=bundled_path("training/post-training.json")
+    )
+    acquire_training_model.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/training/native-model.json"),
+    )
     label_export = commands.add_parser(
         "label-export", help="Export a blind human-review packet from canonical data"
     )
@@ -193,9 +202,7 @@ def parser() -> argparse.ArgumentParser:
     )
     label_apply.add_argument("--source-dir", type=Path, default=Path("data/derived/v2"))
     label_apply.add_argument("--human-gold", type=Path, required=True)
-    label_apply.add_argument(
-        "--output-dir", type=Path, default=Path("data/derived/v2-reviewed")
-    )
+    label_apply.add_argument("--output-dir", type=Path, default=Path("data/derived/v2-reviewed"))
     question_freeze = commands.add_parser(
         "freeze-question-eval", help="Freeze an engine-grounded final-test question set"
     )
@@ -220,9 +227,7 @@ def parser() -> argparse.ArgumentParser:
     baseline = commands.add_parser(
         "evaluate-training-baseline", help="Run the real untuned model on validation rows"
     )
-    baseline.add_argument(
-        "--dataset", type=Path, default=Path("data/derived/v2/validation.jsonl")
-    )
+    baseline.add_argument("--dataset", type=Path, default=Path("data/derived/v2/validation.jsonl"))
     baseline.add_argument(
         "--output", type=Path, default=Path("artifacts/training/untuned-baseline.json")
     )
@@ -244,15 +249,11 @@ def parser() -> argparse.ArgumentParser:
     )
     preflight.add_argument("--audit", type=Path, default=Path("artifacts/data-audit/latest.json"))
     preflight.add_argument("--model", type=Path, required=True)
-    preflight.add_argument(
-        "--data", type=Path, default=Path("artifacts/training/mlx-data")
-    )
+    preflight.add_argument("--data", type=Path, default=Path("artifacts/training/mlx-data"))
     preflight.add_argument(
         "--output", type=Path, default=Path("artifacts/training/preflight-latest.json")
     )
-    preflight.add_argument(
-        "--config", type=Path, default=bundled_path("training/mlx-lora.yaml")
-    )
+    preflight.add_argument("--config", type=Path, default=bundled_path("training/mlx-lora.yaml"))
     for name, smoke in (("train-smoke", True), ("train-sft", False)):
         train = commands.add_parser(name, help=f"Run real MLX {'smoke' if smoke else 'SFT'}")
         train.set_defaults(training_smoke=smoke)
@@ -263,9 +264,7 @@ def parser() -> argparse.ArgumentParser:
         train.add_argument("--receipt", type=Path, required=True)
         train.add_argument("--iterations", type=int, default=7 if smoke else 1000)
         train.add_argument("--max-seq-length", type=int, default=1024)
-        train.add_argument(
-            "--config", type=Path, default=bundled_path("training/mlx-lora.yaml")
-        )
+        train.add_argument("--config", type=Path, default=bundled_path("training/mlx-lora.yaml"))
     package = commands.add_parser(
         "package-adapter", help="Package exactly one adapter and its receipts"
     )
@@ -283,9 +282,7 @@ def parser() -> argparse.ArgumentParser:
     acquire = commands.add_parser("acquire-data", help="Download and verify a pinned source")
     acquire.add_argument("--manifest", type=Path, default=Path("data/sources.json"))
     acquire.add_argument("--source", default="lichess-puzzles-2026-08-02")
-    acquire.add_argument(
-        "--output", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst")
-    )
+    acquire.add_argument("--output", type=Path, default=Path("data/raw/lichess_db_puzzle.csv.zst"))
     build_data = commands.add_parser(
         "build-dataset", help="Build typed, lineage-isolated lesson records"
     )
@@ -318,9 +315,7 @@ def parser() -> argparse.ArgumentParser:
     model_profile.add_argument("--nodes", type=int, default=250_000)
     model_profile.add_argument("--backend", choices=("mlx", "lmstudio"), default="mlx")
     model_profile.add_argument("--model")
-    model_profile.add_argument(
-        "--revision", default=DEFAULT_MODEL_REVISION
-    )
+    model_profile.add_argument("--revision", default=DEFAULT_MODEL_REVISION)
     model_profile.add_argument(
         "--manifest", type=Path, default=bundled_path("assets/model-manifest.json")
     )
@@ -348,9 +343,7 @@ def parser() -> argparse.ArgumentParser:
     accuracy.add_argument("--sample-size", type=int, default=100)
     accuracy.add_argument("--repeats", type=int, default=3)
     accuracy.add_argument("--nodes", type=int, default=250_000)
-    accuracy.add_argument(
-        "--output-dir", type=Path, default=Path("artifacts/qualification")
-    )
+    accuracy.add_argument("--output-dir", type=Path, default=Path("artifacts/qualification"))
     tutor = commands.add_parser(
         "evaluate-tutoring", help="Run automated tutoring and blinded-review qualification"
     )
@@ -363,12 +356,8 @@ def parser() -> argparse.ArgumentParser:
     tutor.add_argument("--repetitions", type=int, default=2)
     tutor.add_argument("--backend", choices=("mlx", "lmstudio"), default="mlx")
     tutor.add_argument("--model")
-    tutor.add_argument(
-        "--revision", default="238767527555cb75a05732a84dff5d6ba0dd6809"
-    )
-    tutor.add_argument(
-        "--manifest", type=Path, default=bundled_path("assets/model-manifest.json")
-    )
+    tutor.add_argument("--revision", default="238767527555cb75a05732a84dff5d6ba0dd6809")
+    tutor.add_argument("--manifest", type=Path, default=bundled_path("assets/model-manifest.json"))
     tutor.add_argument("--base-url", default=DEFAULT_LM_STUDIO_URL)
     tutor.add_argument("--model-artifact", type=Path)
     tutor.add_argument(
@@ -376,9 +365,7 @@ def parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/qualification/tutoring-latest.json"),
     )
-    benchmark.add_argument(
-        "--profile", choices=("deterministic", "full"), default="deterministic"
-    )
+    benchmark.add_argument("--profile", choices=("deterministic", "full"), default="deterministic")
     benchmark.add_argument("--requests", type=int, default=100)
     benchmark.add_argument(
         "--output",
@@ -615,6 +602,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if args.profile == "full":
         try:
             import mlx_lm  # noqa: F401
+
             checks.append({"code": "MLX_LM", "ok": True})
             checks.append({"code": "MODEL_ASSETS", "ok": True, **inspect_model_assets()})
         except ImportError:
@@ -815,9 +803,7 @@ def cmd_audit_data(args: argparse.Namespace) -> int:
             "status": payload["status"],
             "ready_for_training": payload["gate"]["ready_for_training"],
             "training_records": payload["training"]["totals"].get("records", 0),
-            "conflicting_best_move_fens": payload["cross_dataset"][
-                "conflicting_best_move_fens"
-            ],
+            "conflicting_best_move_fens": payload["cross_dataset"]["conflicting_best_move_fens"],
             "train_evaluation_fen_overlap": payload["cross_dataset"][
                 "train_evaluation_fen_overlap"
             ],
@@ -843,10 +829,24 @@ def cmd_training_readiness(args: argparse.Namespace) -> int:
 
 
 def cmd_prepare_training_data(args: argparse.Namespace) -> int:
-    payload = prepare_mlx_dataset(
-        args.source_dir, args.output_dir, human_gold_path=args.human_gold
-    )
+    payload = prepare_mlx_dataset(args.source_dir, args.output_dir, human_gold_path=args.human_gold)
     _emit({**payload, "output": str(args.output_dir)}, "human")
+    return 0
+
+
+def cmd_acquire_training_model(args: argparse.Namespace) -> int:
+    payload = acquire_native_training_model(args.manifest, args.output)
+    _emit(
+        {
+            "status": payload["status"],
+            "model_id": payload["model_id"],
+            "revision": payload["revision"],
+            "snapshot_path": payload["snapshot_path"],
+            "snapshot_count": payload["snapshot_count"],
+            "output": str(args.output),
+        },
+        "human",
+    )
     return 0
 
 
@@ -905,9 +905,7 @@ def cmd_evaluate_questions(args: argparse.Namespace) -> int:
 
 
 def cmd_evaluate_training_baseline(args: argparse.Namespace) -> int:
-    payload = evaluate_untuned_training_baseline(
-        args.dataset, args.output, limit=args.limit
-    )
+    payload = evaluate_untuned_training_baseline(args.dataset, args.output, limit=args.limit)
     _emit(
         {
             "status": payload["status"],
@@ -1135,9 +1133,11 @@ def cmd_profile_model(args: argparse.Namespace) -> int:
         {
             "status": "passed" if all(item["passed"] for item in gates.values()) else "failed",
             "commit": _git_revision(),
-            "working_tree_clean": not bool(subprocess.run(
-                ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
-            ).stdout.strip()),
+            "working_tree_clean": not bool(
+                subprocess.run(
+                    ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
+                ).stdout.strip()
+            ),
             "fixture_path": str(args.fixtures),
             "fixture_sha256": _sha256_path(args.fixtures),
             "engine_sha256": engine_sha256,
@@ -1183,8 +1183,7 @@ def cmd_evaluate_tutoring(args: argparse.Namespace) -> int:
         args.output,
         profile=args.profile,
         repetitions=args.repetitions,
-        model_id=args.model
-        or (DEFAULT_LFM_MODEL if args.backend == "lmstudio" else DEFAULT_MODEL),
+        model_id=args.model or (DEFAULT_LFM_MODEL if args.backend == "lmstudio" else DEFAULT_MODEL),
         model_revision=args.revision,
         model_manifest_path=args.manifest,
         model_backend=args.backend,

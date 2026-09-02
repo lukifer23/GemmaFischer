@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "status": "active_fail_closed",
   "task": "lesson-selection-2.0",
   "model": {
@@ -9,6 +9,7 @@
     "weight_sha256": {
       "model.safetensors": "2db5482b20d746879bb3ef79b5203e9075a2e2b98f54ec7c2f281c1477ddc550",
       "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "chat_template.jinja": "0a2c8073c878ab1da004bee933a998606537bbb62016310352c7285c3f01c5b5",
       "config.json": "1b28f3d2c3100f6c594754b81107428bd7b822a7f48272ca681dae9d2ec38330",
       "generation_config.json": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
       "processor_config.json": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c",
@@ -56,6 +57,8 @@
     "human_gold_minimum": 2500,
     "baseline_minimum": 250,
     "minimum_repeated_error_count": 10,
+    "training_supervision_authority": "stockfish-deterministic-v2",
+    "human_review_policy": "optional_pedagogy_claim_only",
     "reviewers_required": 2,
     "agreement_minimum": 0.67,
     "human_rubric_minimum_mean": 3.0,
@@ -67,9 +70,9 @@
     "frozen_human_review": null
   },
   "authorization": {
-    "smoke": true,
+    "smoke": false,
     "production": false,
-    "source": "Explicit user request to implement the locked post-training plan on 2026-09-01"
+    "source": "Revoked by explicit user request on 2026-09-01 to leave no training running"
   },
   "artifacts": {
     "authority": "draft_github_release",

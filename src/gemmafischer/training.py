@@ -22,6 +22,8 @@ from .runtime import (
 )
 from .training_readiness import evaluate_training_readiness
 
+MACHINE_SUPERVISION_AUTHORITY = "stockfish-deterministic-v2"
+
 
 def prepare_mlx_dataset(
     source_dir: Path, output_dir: Path, *, human_gold_path: Path | None = None
@@ -39,20 +41,27 @@ def prepare_mlx_dataset(
             or application.get("human_gold_sha256") != human_gold_sha256
         ):
             raise ValueError("Prepared source is not bound to passing human gold")
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise ValueError(
+            "Prepared-data destination must be empty; duplicate datasets are forbidden"
+        )
     mapping = {"train": "train", "validation": "valid", "final_test": "test"}
     output_dir.mkdir(parents=True, exist_ok=True)
     counts: dict[str, int] = {}
     hashes: dict[str, str] = {}
+    source_hashes: dict[str, str] = {}
     for source_name, output_name in mapping.items():
         source = source_dir / f"{source_name}.jsonl"
         if not source.is_file():
             raise ValueError(f"Missing canonical partition: {source}")
+        source_hashes[source.name] = sha256_file(source)
         destination = output_dir / f"{output_name}.jsonl"
         temporary = destination.with_suffix(".jsonl.tmp")
         count = 0
-        with source.open(encoding="utf-8") as reader, temporary.open(
-            "w", encoding="utf-8"
-        ) as writer:
+        with (
+            source.open(encoding="utf-8") as reader,
+            temporary.open("w", encoding="utf-8") as writer,
+        ):
             for line_number, line in enumerate(reader, 1):
                 if not line.strip():
                     continue
@@ -97,6 +106,12 @@ def prepare_mlx_dataset(
         "generated_at": datetime.now(UTC).isoformat(),
         "counts": counts,
         "sha256": hashes,
+        "source_sha256": source_hashes,
+        "supervision_authority": (
+            "two-reviewer-adjudicated-human-gold"
+            if human_gold_sha256
+            else MACHINE_SUPERVISION_AUTHORITY
+        ),
         "human_gold_sha256": human_gold_sha256,
     }
     _write_json_atomic(output_dir / "dataset-receipt.json", receipt)
@@ -150,16 +165,36 @@ def training_preflight(
             }
     evidence = manifest.get("evidence", {})
     human_path = evidence.get("frozen_human_review") if isinstance(evidence, dict) else None
-    human_gold_matches = bool(
-        isinstance(human_path, str)
-        and Path(human_path).is_file()
-        and prepared_receipt.get("human_gold_sha256") == sha256_file(Path(human_path))
+    human_gold_matches: bool | None = (
+        bool(
+            isinstance(human_path, str)
+            and Path(human_path).is_file()
+            and prepared_receipt.get("human_gold_sha256") == sha256_file(Path(human_path))
+        )
+        if human_path is not None
+        else None
+    )
+    audit_source_hashes = _audit_source_hashes(_read_json(audit_path))
+    prepared_source_hashes = prepared_receipt.get("source_sha256")
+    source_hashes_match = bool(
+        isinstance(prepared_source_hashes, dict) and prepared_source_hashes == audit_source_hashes
+    )
+    data_config = manifest.get("data", {})
+    required_supervision = (
+        data_config.get("training_supervision_authority") if isinstance(data_config, dict) else None
+    )
+    supervision_matches = bool(
+        required_supervision == MACHINE_SUPERVISION_AUTHORITY
+        and prepared_receipt.get("supervision_authority") == required_supervision
+        and prepared_receipt.get("human_gold_sha256") is None
     )
     data_ready = bool(
         data_receipt.is_file()
         and len(data_file_checks) == 3
         and all(check["passed"] for check in data_file_checks.values())
-        and human_gold_matches
+        and prepared_receipt.get("task") == LESSON_SELECTION_CONTRACT_VERSION
+        and source_hashes_match
+        and supervision_matches
     )
     disk_root = model_path.parent if model_path.parent.exists() else Path.cwd()
     free_bytes = shutil.disk_usage(disk_root).free
@@ -177,6 +212,8 @@ def training_preflight(
         "prepared_data_passed": data_ready,
         "prepared_data_files": data_file_checks,
         "prepared_human_gold_matches": human_gold_matches,
+        "prepared_source_hashes_match_audit": source_hashes_match,
+        "prepared_supervision_authority": prepared_receipt.get("supervision_authority"),
         "prepared_data_receipt_sha256": (
             sha256_file(data_receipt) if data_receipt.is_file() else None
         ),
@@ -198,10 +235,12 @@ def training_preflight(
         and free_bytes >= int(manifest.get("hardware", {}).get("minimum_free_bytes", 0))
     )
     preflight_blockers = list(readiness.get("blockers", []))
+    if readiness.get("authorized_to_train") is not True:
+        preflight_blockers.append("smoke_training_not_authorized")
     if not preflight["model_hashes_passed"]:
         preflight_blockers.append("native_model_files_hash_verified")
     if not data_ready:
-        preflight_blockers.append("prepared_data_and_human_gold_hash_verified")
+        preflight_blockers.append("prepared_machine_supervision_data_hash_verified")
     if not config_ready:
         preflight_blockers.append("training_recipe_hash_verified")
     if free_bytes < int(manifest.get("hardware", {}).get("minimum_free_bytes", 0)):
@@ -287,8 +326,7 @@ def run_mlx_sft(
     command = [
         sys.executable,
         "-m",
-        "mlx_lm",
-        "lora",
+        "gemmafischer.mlx_training",
         "--model",
         str(model_path.resolve()),
         "--train",
@@ -378,6 +416,80 @@ def package_training_artifact(
         "members": {item.name: sha256_file(item) for item in members},
     }
     _write_json_atomic(output_path.with_suffix(output_path.suffix + ".json"), result)
+    return result
+
+
+def acquire_native_training_model(manifest_path: Path, receipt_path: Path) -> dict[str, Any]:
+    """Acquire and hash-verify the one revision-pinned native training base."""
+    from huggingface_hub import snapshot_download
+
+    manifest = _read_json(manifest_path)
+    model = manifest.get("model")
+    if not isinstance(model, dict):
+        raise ValueError("Post-training manifest model authority is missing")
+    model_id = model.get("native_base_model")
+    revision = model.get("revision")
+    expected = model.get("weight_sha256")
+    if (
+        not isinstance(model_id, str)
+        or not model_id
+        or not isinstance(revision, str)
+        or not revision
+        or not isinstance(expected, dict)
+        or not expected
+        or not all(
+            isinstance(name, str) and isinstance(digest, str) for name, digest in expected.items()
+        )
+    ):
+        raise ValueError("Native model ID, revision, and file hashes must be pinned")
+    snapshot = Path(
+        snapshot_download(
+            repo_id=model_id,
+            revision=revision,
+            allow_patterns=sorted(expected),
+        )
+    ).resolve()
+    snapshots = sorted(path for path in snapshot.parent.iterdir() if path.is_dir())
+    if snapshots != [snapshot]:
+        raise ValueError(
+            f"Native base cache contains {len(snapshots)} snapshots; exactly one is permitted"
+        )
+    checks: dict[str, dict[str, object]] = {}
+    for relative, digest in expected.items():
+        path = snapshot / relative
+        actual = sha256_file(path) if path.is_file() else None
+        checks[relative] = {"expected": digest, "actual": actual, "passed": actual == digest}
+    if not checks or not all(bool(check["passed"]) for check in checks.values()):
+        raise ValueError("Native base download failed exact file-hash verification")
+    receipt = {
+        "schema_version": "1.0",
+        "status": "passed",
+        "model_id": model_id,
+        "revision": revision,
+        "snapshot_path": str(snapshot),
+        "snapshot_count": 1,
+        "files": checks,
+        "generated_at": datetime.now(UTC).isoformat(),
+    }
+    _write_json_atomic(receipt_path, receipt)
+    return receipt
+
+
+def _audit_source_hashes(audit: dict[str, Any]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for section in ("training", "validation", "evaluation"):
+        payload = audit.get(section)
+        files = payload.get("files") if isinstance(payload, dict) else None
+        if not isinstance(files, list):
+            return {}
+        for item in files:
+            if not isinstance(item, dict):
+                return {}
+            path = item.get("path")
+            digest = item.get("sha256")
+            if not isinstance(path, str) or not isinstance(digest, str):
+                return {}
+            result[Path(path).name] = digest
     return result
 
 

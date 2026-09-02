@@ -336,9 +336,10 @@ complexity. Before a real run:
 
 Train model selection and pedagogical ordering, never chess facts or free-form
 grading. Track hashes, seeds, train/eval loss, exact-schema rate, grounding,
-question selection, human usefulness, latency, and memory. Ship an adapter only
-if it beats deterministic and untuned Gemma on frozen automated and blind human
-gates; otherwise preserve the negative result and keep the simpler profile.
+question selection, latency, and memory. Ship a technically qualified adapter
+only if it beats deterministic and untuned Gemma on frozen automated gates;
+otherwise preserve the negative result and keep the simpler profile. Blind
+human evidence is required only for claims about pedagogy or human usefulness.
 
 ## Phase 9 - Release proof and documentation closure
 

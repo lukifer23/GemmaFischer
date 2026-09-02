@@ -63,20 +63,6 @@ def test_readiness_reports_smoke_eligible_but_never_authorizes_training(tmp_path
             "categories": [{"code": "contract_invalid", "count": 1}],
         },
     )
-    write_json(
-        tmp_path / "human.json",
-        {
-            "status": "passed",
-            "record_count": 1,
-            "reviewer_count": 2,
-            "exact_selection_agreement": 1.0,
-            "adjudication_complete": True,
-            "rubric_summary": {
-                "mean_scores": {"correctness": 5.0, "clarity": 4.0},
-                "harmful_omission_count": 0,
-            },
-        },
-    )
     audit = tmp_path / "audit.json"
     manifest = tmp_path / "manifest.json"
     write_json(
@@ -92,6 +78,8 @@ def test_readiness_reports_smoke_eligible_but_never_authorizes_training(tmp_path
                 "human_gold_minimum": 1,
                 "baseline_minimum": 1,
                 "minimum_repeated_error_count": 1,
+                "training_supervision_authority": "stockfish-deterministic-v2",
+                "human_review_policy": "optional_pedagogy_claim_only",
                 "reviewers_required": 2,
                 "agreement_minimum": 0.67,
                 "human_rubric_minimum_mean": 3.0,
@@ -107,7 +95,7 @@ def test_readiness_reports_smoke_eligible_but_never_authorizes_training(tmp_path
             "evidence": {
                 "error_taxonomy": str(tmp_path / "taxonomy.json"),
                 "frozen_baseline": str(tmp_path / "baseline.json"),
-                "frozen_human_review": str(tmp_path / "human.json"),
+                "frozen_human_review": None,
             },
         },
     )
@@ -122,3 +110,7 @@ def test_readiness_reports_smoke_eligible_but_never_authorizes_training(tmp_path
 
     assert result["status"] == "ready_for_smoke"
     assert result["authorized_to_train"] is False
+    assert result["next_allowed_action"] == (
+        "await explicit smoke-training authorization; do not train"
+    )
+    assert result["optional_evidence"]["pedagogy_claim_eligible"] is False

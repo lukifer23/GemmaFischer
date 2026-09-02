@@ -65,7 +65,8 @@ it never trains chess authority or grading. The repository permits one native
 upstream base identity, one rolling resume checkpoint during a run, and one
 selected adapter artifact. No trained adapter is currently qualified or
 shipped, and the deterministic tutor remains complete. See the operator
-contract before downloading native weights or running a smoke.
+contract before running a smoke. The native base is hash-verified; both smoke
+and production authorization are currently revoked, and no trainer is running.
 
 ## Verification
 

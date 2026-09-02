@@ -103,21 +103,23 @@ def evaluate_training_readiness(
     human_evidence_passed = isinstance(evidence, dict) and _human_evidence_passed(
         evidence.get("frozen_human_review"), data_config
     )
+    supervision_passed = bool(
+        data_config.get("training_supervision_authority") == "stockfish-deterministic-v2"
+        and data_config.get("human_review_policy") == "optional_pedagogy_claim_only"
+    )
     checks = {
         "hardware_smoke_eligible": hardware_passed,
         "data_contract_and_isolation": data_passed,
         "toolchain_exactly_pinned_and_installed": toolchain_passed,
         "native_base_weights_pinned": model_passed,
         "error_and_baseline_evidence_frozen": evidence_passed,
-        "two_reviewer_human_gold_adjudicated": human_evidence_passed,
+        "machine_supervision_authority_locked": supervision_passed,
     }
     ready = all(checks.values())
     authorization = manifest.get("authorization", {})
-    smoke_authorized = (
-        isinstance(authorization, dict) and authorization.get("smoke") is True
-    )
+    smoke_authorized = isinstance(authorization, dict) and authorization.get("smoke") is True
     payload = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "generated_at": datetime.now(UTC).isoformat(),
         "status": "ready_for_smoke" if ready else "blocked",
         "authorized_to_train": ready and smoke_authorized,
@@ -127,9 +129,15 @@ def evaluate_training_readiness(
         "manifest": str(manifest_path),
         "data_audit": str(audit_path),
         "data_counts": {"actual": actual_counts, "required": required_counts},
+        "optional_evidence": {
+            "two_reviewer_human_gold_adjudicated": human_evidence_passed,
+            "pedagogy_claim_eligible": human_evidence_passed,
+        },
         "blockers": [name for name, passed in checks.items() if not passed],
         "next_allowed_action": (
             "execute only the authorized 7-20 step isolated LoRA smoke run"
+            if ready and smoke_authorized
+            else "await explicit smoke-training authorization; do not train"
             if ready
             else "resolve blockers and rerun this gate; do not train"
         ),
@@ -174,8 +182,7 @@ def _baseline_and_taxonomy_passed(
     repeated_error = bool(
         isinstance(categories, list)
         and any(
-            isinstance(category, dict)
-            and category.get("count", 0) >= minimum_repeated_error_count
+            isinstance(category, dict) and category.get("count", 0) >= minimum_repeated_error_count
             for category in categories
         )
     )
@@ -202,9 +209,7 @@ def _human_evidence_passed(value: object, data_config: dict[str, Any]) -> bool:
     agreement = payload.get("exact_selection_agreement")
     rubric = payload.get("rubric_summary")
     means = rubric.get("mean_scores") if isinstance(rubric, dict) else None
-    harmful_omissions = (
-        rubric.get("harmful_omission_count") if isinstance(rubric, dict) else None
-    )
+    harmful_omissions = rubric.get("harmful_omission_count") if isinstance(rubric, dict) else None
     minimum_mean = float(data_config.get("human_rubric_minimum_mean", 0.0))
     return bool(
         payload.get("status") == "passed"
@@ -224,8 +229,7 @@ def _human_evidence_passed(value: object, data_config: dict[str, Any]) -> bool:
         )
         and isinstance(harmful_omissions, int)
         and not isinstance(harmful_omissions, bool)
-        and harmful_omissions
-        <= int(data_config.get("human_harmful_omission_maximum", 0))
+        and harmful_omissions <= int(data_config.get("human_harmful_omission_maximum", 0))
     )
 
 

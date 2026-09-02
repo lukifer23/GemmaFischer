@@ -149,6 +149,8 @@ artifacts/training/mlx-data/
 artifacts/training/adapters/
 artifacts/training/releases/
 artifacts/training/labels/
+artifacts/training/native-model.json
+artifacts/training/preflight-latest.json
 
 # Logs
 *.log

@@ -80,7 +80,9 @@ on `main` today.
 Do not fine-tune the installed 4-bit inference artifact. The active fail-closed
 path selects the native `google/gemma-4-E2B-it` revision and pins every required
 file hash. MLX-LM is the Mac-only LoRA baseline; Unsloth is not another supported
-path unless a later authorized comparison earns it. Training stays blocked
-until the task-aligned corpus, frozen evaluations, two-reviewer adjudicated
-human gold, and local native-file preflight meet the documented gates. Exactly
-one adapter may be selected for qualification; no adapter is supported today.
+path unless a later authorized comparison earns it. The technical path trains
+from the audited Stockfish/deterministic target corpus; two-reviewer evidence is
+optional and only authorizes pedagogy claims. The corpus, frozen evaluations,
+and native-file preflight pass, but smoke and production authorization are
+currently revoked. Exactly one adapter may be selected for qualification; no
+adapter is supported today.

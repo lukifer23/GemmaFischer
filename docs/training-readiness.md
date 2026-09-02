@@ -21,22 +21,22 @@ questions, hints, answer keys, and grading.
    semantic-position overlap, and lineage overlap.
 4. Freeze 1,000 engine-grounded questions from final-test only and prove their
    exact UCI/SAN grader.
-5. Export 2,500 training rows for two independent chess-literate reviewers.
-   Every response includes the exact ID selection and complete usefulness
-   rubric. Validate full two-reviewer coverage, then have one independent
-   adjudicator resolve every disagreement.
-6. Run at least 250 validation rows through the real pinned untuned inference
+5. Run at least 250 validation rows through the real pinned untuned inference
    model, then derive the frozen error taxonomy from that exact receipt. The
    committed 250-row baseline is contract-valid on 43.6% of rows and exactly
    matches none of the deterministic targets. Its observed taxonomy contains
    141 contract failures, 109 claim-selection mismatches, 91 hint-selection
    mismatches, 65 concept-selection mismatches, and 4 question-selection
    mismatches. This clears the repeated-error rationale; it does not qualify a
-   model. Point the three `evidence` fields in `training/post-training.json` at
-   passing JSON receipts.
-7. Download the one native base revision into a local cache and verify every
-   declared file hash. Convert the human-gold-applied canonical data to MLX chat
-   JSONL. The hash-pinned `training/mlx-lora.yaml` fixes rank 16, dropout 0.05,
+   model. Point the baseline and taxonomy evidence fields in
+   `training/post-training.json` at passing JSON receipts.
+6. Prepare MLX chat JSONL directly from the audited canonical corpus. The
+   receipt binds every prepared file to the exact audited source SHA and records
+   `stockfish-deterministic-v2` as the supervision authority. Human labels are
+   optional and cannot be substituted with model-generated reviews.
+7. Download the one native base revision into the Hugging Face cache and verify
+   all seven declared file hashes, including the official chat template. The
+   hash-pinned `training/mlx-lora.yaml` fixes rank 16, dropout 0.05,
    and scale 2.0 (alpha 32 divided by rank 16); the command fixes AdamW, batch
    size 1, gradient accumulation 16, completion-only loss, and seed 3407.
 8. Run the preflight. Only a passing preflight may authorize the explicit 7-20
@@ -45,6 +45,11 @@ questions, hints, answer keys, and grading.
 9. Package exactly one selected adapter plus its receipts as a GitHub Release
    asset. Weights, native model files, prepared data, and rolling checkpoints do
    not enter Git.
+
+Independent human review is a separate product-research track. It is required
+before claiming improved clarity, teaching quality, or human usefulness. It is
+not a technical training prerequisite and its absence is reported as
+`pedagogy_claim_eligible: false` rather than replaced by synthetic evidence.
 
 ## Commands
 
@@ -56,30 +61,15 @@ uv run gemmafischer evaluate-questions
 uv run gemmafischer evaluate-training-baseline --limit 250
 uv run gemmafischer freeze-error-taxonomy
 
-uv run gemmafischer label-export \
-  --dataset data/derived/v2/train.jsonl \
-  --output artifacts/training/labels/packet.json \
-  --limit 2500
-uv run gemmafischer label-validate \
-  --dataset data/derived/v2/train.jsonl \
-  --responses /path/to/two-reviewer-responses.jsonl \
-  --output artifacts/training/labels/validated.json
-uv run gemmafischer label-adjudicate \
-  --dataset data/derived/v2/train.jsonl \
-  --validation artifacts/training/labels/validated.json \
-  --adjudications /path/to/adjudications.jsonl \
-  --output artifacts/training/human-gold.json
-uv run gemmafischer label-apply \
-  --human-gold artifacts/training/human-gold.json
-
-uv run gemmafischer prepare-training-data \
-  --human-gold artifacts/training/human-gold.json
+uv run gemmafischer prepare-training-data
+uv run gemmafischer acquire-training-model
 uv run gemmafischer training-readiness
 uv run gemmafischer training-preflight \
   --model /path/to/google-gemma-4-E2B-it-native
 ```
 
-After the preflight reports `smoke_ready: true`, the bounded real run is:
+After the manifest contains explicit smoke authorization and the preflight
+reports `smoke_ready: true`, the bounded real run is:
 
 ```bash
 uv run gemmafischer train-smoke \
@@ -96,10 +86,16 @@ non-Apple-Silicon hosts, nonempty adapter destinations, unsupported sequence
 lengths, and any result other than exactly one adapter `.safetensors` file.
 `package-adapter` likewise refuses zero or multiple adapters.
 
+Current state: the audited data, untuned baseline, error taxonomy, prepared MLX
+data, native model hashes, and technical preflight pass. Both smoke and
+production authorization are revoked. The smoke was stopped during initial
+validation at the user's request; it produced no adapter weights, and its
+partial configuration was removed. No training process is running.
+
 ## Promotion boundary
 
 The adapter must beat deterministic selection and untuned Gemma on frozen
-schema, grounding, legal-move, top-1/top-3, question, human-usefulness, latency,
-memory, restart, and endurance gates. A tie is a loss. Failure retains the
-negative receipt and the deterministic product; it does not create another
-checkpoint or fallback model path.
+schema, grounding, legal-move, top-1/top-3, question, latency, memory, restart,
+and endurance gates. A tie is a loss. Failure retains the negative receipt and
+the deterministic product; it does not create another checkpoint or model path.
+Human usefulness remains an optional, separately labeled claim gate.
