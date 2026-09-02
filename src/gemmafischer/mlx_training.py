@@ -45,7 +45,8 @@ def main() -> None:
 
     model_class: Any = Model
     model_class.sanitize = sanitize
-    lora.main()  # type: ignore[no-untyped-call]
+    lora_main: Any = lora.main
+    lora_main()
 
 
 if __name__ == "__main__":
