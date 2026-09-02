@@ -1,0 +1,91 @@
+{
+  "baseline": "artifacts/training/untuned-baseline.json",
+  "baseline_sha256": "0eb88f164779686b6445a05ed58a66649f66756c16a6f3a8b6875347ac69fd61",
+  "categories": [
+    {
+      "code": "claim_selection_mismatch",
+      "count": 109,
+      "example_record_ids": [
+        "c2b8a2d847abacfd323d10369e786228f97849dce5ff80f957ae8502fc806cd6",
+        "4d5138b585f9fa08013b1cea9c5e9f4680a39177ab6ec05201e5eca9e8ed5eca",
+        "4f7395b5c0b67e7cf13aeb733aff2326abd07b22cfc56cbf8d296fc075074f1d",
+        "a7189d8f0e751569ea0cd2d44e398e7370441ad2fbe80158e1b7e9d7e3be71d7",
+        "2b327bee39f446351e914f077884f5be51ac60b2347b7faf6dc5b6c989aadd2f",
+        "7265b9e486f82ae7ae6969be5e4822c8e303609fd08617094ee9e144558d03e6",
+        "06c5e78f89c5f22ac021ca8ea8aeaabf980b63e714f793d1aeb1c9aa460e390b",
+        "fab746859001085aa65a9ffad6d505369a39f904488941c7b9096c3dc8e4ee7e",
+        "e360edd98789684e61b82552e5b443adcbee8daf57ca281a327c3eb76034a6f6",
+        "29d4f4a7ca5f027b0385515f7098dd2c3720d311ee08f92fd0de2190ca605b36"
+      ],
+      "rate": 0.436
+    },
+    {
+      "code": "concept_selection_mismatch",
+      "count": 65,
+      "example_record_ids": [
+        "c2b8a2d847abacfd323d10369e786228f97849dce5ff80f957ae8502fc806cd6",
+        "29d4f4a7ca5f027b0385515f7098dd2c3720d311ee08f92fd0de2190ca605b36",
+        "c23dcf513c27f100a47dfaf0d79e9448bf5051a7125c2d7f312efd21fe8138fd",
+        "c0c229299f8371190f726bb54ad0b3fd5c14f5d19cfa5fc7e6d911aec1f16a62",
+        "83ac107470d3ffccea215dd489381d1eb2c41dfcce614c206c0dae990d8e3a52",
+        "c7e4b6d9a6d7a308d347a7eb26422380f978af84c31022ec012090a7c9cfdd63",
+        "43c983d682c7af2d565adb5c9c41d06a13258c828fc429c04e7d739f746d6f7f",
+        "3ec9437b2a9ee1f66ac6f59cca1fcfbcccd7f0291135a504e73fa67683755875",
+        "d1c1b4afc661f027eab0ab46b2ef8b645e500cc489ddc807b46b49788ad27996",
+        "2ef42cd8620c53e132b5f01c2862f83599d2c607aada9bf4b2a167bb2b0f4d8d"
+      ],
+      "rate": 0.26
+    },
+    {
+      "code": "contract_invalid",
+      "count": 141,
+      "example_record_ids": [
+        "86d00698caec7cf956116f760bc8f7002e8101034cdf9042b80b16ce29a61dc8",
+        "4bd1fc8d620d6bcebafc56c27f08b8551496ab298565621defa0dd772a1c5836",
+        "5461b70b362a386fcbaf07e777826cd7586b80ba122b4f0b085039d4ab7c20e6",
+        "758cb9227acffc322f40183113cd7429b32193ee8d42363b93237f0a74568cb3",
+        "1a1bf00e6fb0afa44ff58503c5ed3ba500319a339128f287ac782c47b52e6e86",
+        "28b6fb3d0c00ec1a84e3d0d0840677edf13646025697e8fdfb135252141fbc64",
+        "c526387e7b981f21ed7d8c38a403e3296c692a60eab6e631e511aed0039e9812",
+        "1df67384a38a7474dc5f5eb21b013d8400612275a88ebe9d1869faec82bffe34",
+        "efba83dec1e51d1f7f2b3d213ce06e563f037e5064e949f160867070000aa5de",
+        "bef7985b0a92c15c2bf42b8cbcb12cff9cc47d18d2215b5eba7432630d111ca3"
+      ],
+      "rate": 0.564
+    },
+    {
+      "code": "hint_selection_mismatch",
+      "count": 91,
+      "example_record_ids": [
+        "c2b8a2d847abacfd323d10369e786228f97849dce5ff80f957ae8502fc806cd6",
+        "4d5138b585f9fa08013b1cea9c5e9f4680a39177ab6ec05201e5eca9e8ed5eca",
+        "4f7395b5c0b67e7cf13aeb733aff2326abd07b22cfc56cbf8d296fc075074f1d",
+        "a7189d8f0e751569ea0cd2d44e398e7370441ad2fbe80158e1b7e9d7e3be71d7",
+        "2b327bee39f446351e914f077884f5be51ac60b2347b7faf6dc5b6c989aadd2f",
+        "7265b9e486f82ae7ae6969be5e4822c8e303609fd08617094ee9e144558d03e6",
+        "06c5e78f89c5f22ac021ca8ea8aeaabf980b63e714f793d1aeb1c9aa460e390b",
+        "fab746859001085aa65a9ffad6d505369a39f904488941c7b9096c3dc8e4ee7e",
+        "e360edd98789684e61b82552e5b443adcbee8daf57ca281a327c3eb76034a6f6",
+        "29d4f4a7ca5f027b0385515f7098dd2c3720d311ee08f92fd0de2190ca605b36"
+      ],
+      "rate": 0.364
+    },
+    {
+      "code": "question_selection_mismatch",
+      "count": 4,
+      "example_record_ids": [
+        "819ddb2c87d3ca32ebdebdc600319f933d5b9a98f125ae67d8a9c9a5d73c0294",
+        "0ca930aaf603ac1b127d7ba0ea72a1821663980e52b40b131dd02f3b50dd809c",
+        "4af423cfad7e94f0c09a4ca33b8fc06c31bc79fb77667426d1595f6f7858fab6",
+        "2146fa841802267507e55729888c74d66135af9c00e2d9ec0ba6d046d45303b9"
+      ],
+      "rate": 0.016
+    }
+  ],
+  "generated_at": "2026-09-02T01:01:00.588780+00:00",
+  "record_count": 250,
+  "schema_version": "1.0",
+  "status": "passed",
+  "task": "lesson-selection-2.0",
+  "total_error_assignments": 410
+}

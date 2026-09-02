@@ -1,0 +1,3269 @@
+{
+  "contract_valid_rate": 0.436,
+  "dataset": "data/derived/v2/validation.jsonl",
+  "dataset_sha256": "bec79dffd67055808d42728711e65c403233b8bd579e17916d55906c7091d350",
+  "dataset_split": "validation",
+  "error_counts": {
+    "claim_selection_mismatch": 109,
+    "concept_selection_mismatch": 65,
+    "contract_invalid": 141,
+    "hint_selection_mismatch": 91,
+    "question_selection_mismatch": 4
+  },
+  "exact_target_match_rate": 0.0,
+  "generated_at": "2026-09-02T01:00:56.148895+00:00",
+  "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+  "profile_summary": {
+    "all_requests": {
+      "generation_tokens_per_second": {
+        "max": 77.10872320517336,
+        "mean": 65.62101995720367,
+        "min": 19.570632884569907,
+        "p50": 66.31380716011942,
+        "p95": 75.51128090268743
+      },
+      "prompt_tokens_per_second": {
+        "max": 2859.986328351337,
+        "mean": 2473.1528772415013,
+        "min": 1094.8901972959377,
+        "p50": 2482.8983531799413,
+        "p95": 2816.2455485635023
+      },
+      "time_to_first_token_seconds": {
+        "max": 1.5444952500001818,
+        "mean": 0.7474792953000724,
+        "min": 0.5005652920008288,
+        "p50": 0.7228597909997916,
+        "p95": 0.9553297080019547
+      },
+      "time_to_first_visible_token_seconds": {
+        "max": 1.5444952500001818,
+        "mean": 0.7474792953000724,
+        "min": 0.5005652920008288,
+        "p50": 0.7228597909997916,
+        "p95": 0.9553297080019547
+      },
+      "total_latency_seconds": {
+        "max": 10.715089125002123,
+        "mean": 3.3449763137999544,
+        "min": 1.787672083999496,
+        "p50": 3.296465374998661,
+        "p95": 3.9363797080004588
+      }
+    },
+    "contract_checked_request_count": 0,
+    "contract_valid_request_count": 0,
+    "contract_valid_request_rate": null,
+    "failed_request_count": 0,
+    "peak_mlx_memory_bytes": 3591239374,
+    "request_count": 250,
+    "successful_request_count": 250,
+    "successful_request_rate": 1.0,
+    "total_output_tokens": 41028,
+    "total_prompt_tokens": 343138,
+    "warm_requests": {
+      "generation_tokens_per_second": {
+        "max": 77.10872320517336,
+        "mean": 65.63510878352548,
+        "min": 19.570632884569907,
+        "p50": 66.31791903697064,
+        "p95": 75.51128090268743
+      },
+      "prompt_tokens_per_second": {
+        "max": 2859.986328351337,
+        "mean": 2478.6880687272264,
+        "min": 1210.2644653741997,
+        "p50": 2484.045130462891,
+        "p95": 2816.2455485635023
+      },
+      "time_to_first_token_seconds": {
+        "max": 1.5444952500001818,
+        "mean": 0.7444685078313984,
+        "min": 0.5005652920008288,
+        "p50": 0.7228597909997916,
+        "p95": 0.9547611669986509
+      },
+      "time_to_first_visible_token_seconds": {
+        "max": 1.5444952500001818,
+        "mean": 0.7444685078313984,
+        "min": 0.5005652920008288,
+        "p50": 0.7228597909997916,
+        "p95": 0.9547611669986509
+      },
+      "total_latency_seconds": {
+        "max": 10.715089125002123,
+        "mean": 3.339890144546134,
+        "min": 1.787672083999496,
+        "p50": 3.296465374998661,
+        "p95": 3.92822412500027
+      }
+    }
+  },
+  "record_count": 250,
+  "results": [
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 4.611432458001218,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-08bfc450e08134d3\",\n    \"claim-cfac2434ff90fb80\"\n  ],\n  \"concept_ids\": [\n    \"c38f4095e50b34cb6fea0e758e6cbac28b05d33538f8cd3a9874256aff1ffc5d\",\n    \"99fc2eafe8b9c51dfd5b1577a2f6757c5bd8cd7ab2298592503df5e58dfee19b\"\n  ],\n  \"question_template_id\": \"find",
+      "peak_mlx_memory_bytes": 3449862902,
+      "rating_bucket": "1000-1199",
+      "record_id": "86d00698caec7cf956116f760bc8f7002e8101034cdf9042b80b16ce29a61dc8"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5707834999993793,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-08bfc450e08134d3\",\n    \"claim-cfac2434ff90fb80\"\n  ],\n  \"concept_ids\": [\n    \"c38f4095e50b34cb6fea0e758e6cbac28b05d33538f8cd3a9874256aff1ffc5d\",\n    \"99fc2eafe8b9c51dfd5b1577a2f6757c5bd8cd7ab2298592503df5e58dfee19b\"\n  ],\n  \"question_template_id\": \"find",
+      "peak_mlx_memory_bytes": 3456952994,
+      "rating_bucket": "1200-1399",
+      "record_id": "4bd1fc8d620d6bcebafc56c27f08b8551496ab298565621defa0dd772a1c5836"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5344180409992987,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-08bfc450e08134d3\",\n    \"claim-cfac2434ff90fb80\"\n  ],\n  \"concept_ids\": [\n    \"c38f4095e50b34cb6fea0e758e6cbac28b05d33538f8cd3a9874256aff1ffc5d\",\n    \"99fc2eafe8b9c51dfd5b1577a2f6757c5bd8cd7ab2298592503df5e58dfee19b\"\n  ],\n  \"question_template_id\": \"find",
+      "peak_mlx_memory_bytes": 3457690274,
+      "rating_bucket": "1400-1599",
+      "record_id": "5461b70b362a386fcbaf07e777826cd7586b80ba122b4f0b085039d4ab7c20e6"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0738522079991526,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-08bfc450e08134d3\",\n    \"claim-cfac2434ff90fb80\"\n  ],\n  \"concept_ids\": [\n    \"c38f4095e50b34cb6fea0e758e6cbac28b05d33538f8cd3a9874256aff1ffc5d\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3457693370,
+      "rating_bucket": "1600-1800",
+      "record_id": "c2b8a2d847abacfd323d10369e786228f97849dce5ff80f957ae8502fc806cd6"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1051396250004473,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-12720970e8259b4f\"\n  ],\n  \"concept_ids\": [\n    \"f0089b254d4147820fe59e01d62a2fbfe9f849b9076fd17dc9909421a71708ab\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3590813388,
+      "rating_bucket": "1000-1199",
+      "record_id": "758cb9227acffc322f40183113cd7429b32193ee8d42363b93237f0a74568cb3"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1442431670002406,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-12720970e8259b4f\"\n  ],\n  \"concept_ids\": [\n    \"f0089b254d4147820fe59e01d62a2fbfe9f849b9076fd17dc9909421a71708ab\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3590813388,
+      "rating_bucket": "1200-1399",
+      "record_id": "1a1bf00e6fb0afa44ff58503c5ed3ba500319a339128f287ac782c47b52e6e86"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.027766375002102,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-12720970e8259b4f\"\n  ],\n  \"concept_ids\": [\n    \"9eae8360278cd775143c874acc534a21ad15da142421e42e29c6f07a4914d222\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3590518476,
+      "rating_bucket": "1400-1599",
+      "record_id": "28b6fb3d0c00ec1a84e3d0d0840677edf13646025697e8fdfb135252141fbc64"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.071857082999486,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-12720970e8259b4f\"\n  ],\n  \"concept_ids\": [\n    \"9eae8360278cd775143c874acc534a21ad15da142421e42e29c6f07a4914d222\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3590518476,
+      "rating_bucket": "1600-1800",
+      "record_id": "c526387e7b981f21ed7d8c38a403e3296c692a60eab6e631e511aed0039e9812"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.557414874998358,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0f4300a678e72f17\"\n  ],\n  \"concept_ids\": [\n    \"48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8202d3fbac\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8",
+      "peak_mlx_memory_bytes": 3453712102,
+      "rating_bucket": "1000-1199",
+      "record_id": "1df67384a38a7474dc5f5eb21b013d8400612275a88ebe9d1869faec82bffe34"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.666579542001273,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0f4300a678e72f17\"\n  ],\n  \"concept_ids\": [\n    \"48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8202d3fbac\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8",
+      "peak_mlx_memory_bytes": 3453712102,
+      "rating_bucket": "1200-1399",
+      "record_id": "efba83dec1e51d1f7f2b3d213ce06e563f037e5064e949f160867070000aa5de"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6540728750005655,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0f4300a678e72f17\"\n  ],\n  \"concept_ids\": [\n    \"48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8202d3fbac\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8",
+      "peak_mlx_memory_bytes": 3455071974,
+      "rating_bucket": "1400-1599",
+      "record_id": "bef7985b0a92c15c2bf42b8cbcb12cff9cc47d18d2215b5eba7432630d111ca3"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5416634579996753,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0f4300a678e72f17\"\n  ],\n  \"concept_ids\": [\n    \"48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8202d3fbac\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:48fd703af683dfa91c4b21543a8d7e74063e60355d689396e6385a8",
+      "peak_mlx_memory_bytes": 3455071974,
+      "rating_bucket": "1600-1800",
+      "record_id": "4d70405289f15d35db1e1540a3b2ad10561a4803c0f113c86de5edb20d553246"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.165906707999966,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b6764a32856072d4\",\n    \"claim-af89d278284d6a8f\"\n  ],\n  \"concept_ids\": [\n    \"9812a75182ddd20a993e613ea080deb4f11c373bd0d9aa8c8aa53f7c9c907ff2\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3457149038,
+      "rating_bucket": "1000-1199",
+      "record_id": "4d5138b585f9fa08013b1cea9c5e9f4680a39177ab6ec05201e5eca9e8ed5eca"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.113801291998243,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b6764a32856072d4\",\n    \"claim-af89d278284d6a8f\"\n  ],\n  \"concept_ids\": [\n    \"9812a75182ddd20a993e613ea080deb4f11c373bd0d9aa8c8aa53f7c9c907ff2\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3457141614,
+      "rating_bucket": "1200-1399",
+      "record_id": "4f7395b5c0b67e7cf13aeb733aff2326abd07b22cfc56cbf8d296fc075074f1d"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0098261249986535,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b6764a32856072d4\",\n    \"claim-af89d278284d6a8f\"\n  ],\n  \"concept_ids\": [\n    \"9812a75182ddd20a993e613ea080deb4f11c373bd0d9aa8c8aa53f7c9c907ff2\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3458681710,
+      "rating_bucket": "1400-1599",
+      "record_id": "a7189d8f0e751569ea0cd2d44e398e7370441ad2fbe80158e1b7e9d7e3be71d7"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.081760042001406,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b6764a32856072d4\",\n    \"claim-af89d278284d6a8f\"\n  ],\n  \"concept_ids\": [\n    \"9812a75182ddd20a993e613ea080deb4f11c373bd0d9aa8c8aa53f7c9c907ff2\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3458681710,
+      "rating_bucket": "1600-1800",
+      "record_id": "2b327bee39f446351e914f077884f5be51ac60b2347b7faf6dc5b6c989aadd2f"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.162132792000193,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-78e76b7a49e0fcb1\",\n    \"claim-472b54d758ac31a2\"\n  ],\n  \"concept_ids\": [\n    \"c562edf416921beb8f7beb6a18540b3b3297eb3e1576a4511e9f138f9c32d954\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3453384388,
+      "rating_bucket": "1000-1199",
+      "record_id": "7265b9e486f82ae7ae6969be5e4822c8e303609fd08617094ee9e144558d03e6"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1649942090007244,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-78e76b7a49e0fcb1\",\n    \"claim-472b54d758ac31a2\"\n  ],\n  \"concept_ids\": [\n    \"c562edf416921beb8f7beb6a18540b3b3297eb3e1576a4511e9f138f9c32d954\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3453384388,
+      "rating_bucket": "1200-1399",
+      "record_id": "06c5e78f89c5f22ac021ca8ea8aeaabf980b63e714f793d1aeb1c9aa460e390b"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1830207079983666,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-78e76b7a49e0fcb1\",\n    \"claim-472b54d758ac31a2\"\n  ],\n  \"concept_ids\": [\n    \"c562edf416921beb8f7beb6a18540b3b3297eb3e1576a4511e9f138f9c32d954\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3450271428,
+      "rating_bucket": "1400-1599",
+      "record_id": "fab746859001085aa65a9ffad6d505369a39f904488941c7b9096c3dc8e4ee7e"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1185031660024833,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-78e76b7a49e0fcb1\",\n    \"claim-472b54d758ac31a2\"\n  ],\n  \"concept_ids\": [\n    \"c562edf416921beb8f7beb6a18540b3b3297eb3e1576a4511e9f138f9c32d954\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3450271428,
+      "rating_bucket": "1600-1800",
+      "record_id": "e360edd98789684e61b82552e5b443adcbee8daf57ca281a327c3eb76034a6f6"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.32387354200182,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7c06d8aef2121f94\",\n    \"claim-2a284ad4b9297025\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3499468542,
+      "rating_bucket": "1000-1199",
+      "record_id": "6d21fea0f3154093a24bbfd04d7f9585cfbf7c3e9a1bdd6b09d1fb443478bf81"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.2696252499990806,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7c06d8aef2121f94\",\n    \"claim-2a284ad4b9297025\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3499468542,
+      "rating_bucket": "1200-1399",
+      "record_id": "3ce9148ff88d341d24a87b5e99112a0bb7e6c5a1ec0e6ad0e1456034d789a156"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.278071666998585,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7c06d8aef2121f94\",\n    \"claim-2a284ad4b9297025\"\n  ],\n  \"concept_ids\": [\n    \"move\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3495356158,
+      "rating_bucket": "1400-1599",
+      "record_id": "3722fdb1b468e3f09ba019b2f8ce8a076a37546671d45389e854e57624408837"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.214965958999528,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7c06d8aef2121f94\",\n    \"claim-2a284ad4b9297025\"\n  ],\n  \"concept_ids\": [\n    \"move\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3495356158,
+      "rating_bucket": "1600-1800",
+      "record_id": "e645ed6365a105ce1586de9249d9d0fcc16948004dd2c1b3e6e834cbfbbdc1b2"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5487154580005154,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a0ab69cbe5449222\",\n    \"claim-a95669810e611cea\"\n  ],\n  \"concept_ids\": [\n    \"644142b507f62b2667c51210a14f88d1a6d6618cc96061f527acb9020f67bb0a\",\n    \"1200eb189dc3ca5450c2a89928c93ba69bdc55710689bf3491ac57fcc610814d\"\n  ],\n",
+      "peak_mlx_memory_bytes": 3394926330,
+      "rating_bucket": "1000-1199",
+      "record_id": "747d901ffc71f7250db5cd4f7886367942cfaa0c1167ec1b26836b6167e0645a"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1551359590012,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a0ab69cbe5449222\",\n    \"claim-a95669810e611cea\"\n  ],\n  \"concept_ids\": [\n    \"1200eb189dc3ca5450c2a89928c93ba69bdc55710689bf3491ac57fcc610814d\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3394926330,
+      "rating_bucket": "1200-1399",
+      "record_id": "29d4f4a7ca5f027b0385515f7098dd2c3720d311ee08f92fd0de2190ca605b36"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.636839457998576,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a0ab69cbe5449222\",\n    \"claim-a95669810e611cea\"\n  ],\n  \"concept_ids\": [\n    \"644142b507f62b2667c51210a14f88d1a6d6618cc96061f527acb9020f67bb0a\",\n    \"1200eb189dc3ca5450c2a89928c93ba69bdc55710689bf3491ac57fcc610814d\"\n  ],\n",
+      "peak_mlx_memory_bytes": 3396138746,
+      "rating_bucket": "1400-1599",
+      "record_id": "c78c4beb2c40de579d33bc990c3967e9b02006771e60cb4a01047af8572f6834"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7641045000018494,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a0ab69cbe5449222\",\n    \"claim-a95669810e611cea\"\n  ],\n  \"concept_ids\": [\n    \"644142b507f62b2667c51210a14f88d1a6d6618cc96061f527acb9020f67bb0a\",\n    \"1200eb189dc3ca5450c2a89928c93ba69bdc55710689bf3491ac57fcc610814d\"\n  ],\n",
+      "peak_mlx_memory_bytes": 3396138746,
+      "rating_bucket": "1600-1800",
+      "record_id": "3d659500153fc71a68260e1d7b5f726e4422f5de634bed23ca65154c00b82779"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1344622500000696,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-086c067d86a5fc60\",\n    \"claim-d04ba6345391b614\"\n  ],\n  \"concept_ids\": [\n    \"26d05dee31a760f2374aa905a5cf4880277e025bb659fdccfd4054e6effd4abc\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3375773388,
+      "rating_bucket": "1000-1199",
+      "record_id": "c23dcf513c27f100a47dfaf0d79e9448bf5051a7125c2d7f312efd21fe8138fd"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0526466250012163,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-086c067d86a5fc60\",\n    \"claim-d04ba6345391b614\"\n  ],\n  \"concept_ids\": [\n    \"26d05dee31a760f2374aa905a5cf4880277e025bb659fdccfd4054e6effd4abc\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3386701566,
+      "rating_bucket": "1200-1399",
+      "record_id": "c0c229299f8371190f726bb54ad0b3fd5c14f5d19cfa5fc7e6d911aec1f16a62"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.103577292000409,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-086c067d86a5fc60\",\n    \"claim-d04ba6345391b614\"\n  ],\n  \"concept_ids\": [\n    \"26d05dee31a760f2374aa905a5cf4880277e025bb659fdccfd4054e6effd4abc\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3388208894,
+      "rating_bucket": "1400-1599",
+      "record_id": "83ac107470d3ffccea215dd489381d1eb2c41dfcce614c206c0dae990d8e3a52"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.9919698749981762,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-086c067d86a5fc60\",\n    \"claim-d04ba6345391b614\"\n  ],\n  \"concept_ids\": [\n    \"26d05dee31a760f2374aa905a5cf4880277e025bb659fdccfd4054e6effd4abc\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3388208894,
+      "rating_bucket": "1600-1800",
+      "record_id": "c7e4b6d9a6d7a308d347a7eb26422380f978af84c31022ec012090a7c9cfdd63"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.2940229589985393,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-d9569a5d2a07c2b0\",\n    \"claim-2b13e9ee6db845d5\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3408721592,
+      "rating_bucket": "1000-1199",
+      "record_id": "b62e34c9200ab014b4a04003e98de2d1b4824c64d71bc505db1656c19c5f0fcd"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.2555040000006557,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-d9569a5d2a07c2b0\",\n    \"claim-2b13e9ee6db845d5\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3408737976,
+      "rating_bucket": "1200-1399",
+      "record_id": "8d1c5bde55bab0c7e42a0926b6e2113b19ff631d30b62a37d0287efeda2abb7d"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.2074831249992712,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-32cb656a985c8158\",\n    \"claim-b525950c09d2d96f\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3407263416,
+      "rating_bucket": "1400-1599",
+      "record_id": "7e59d6aa08b24ce473b7e56c59da2ece3334698a949a222c7792627fecca6e9e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.27998395800023,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-32cb656a985c8158\",\n    \"claim-b525950c09d2d96f\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3407263416,
+      "rating_bucket": "1600-1800",
+      "record_id": "11fad85b8ada3efcff535c26ea0c762b29468376741d4c858a59e58a08ac00a6"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4049952080022194,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-470699c2083ee9bf\",\n    \"claim-b604fc4541660e4c\",\n    \"claim-86455babf829d3f9\"\n  ],\n  \"concept_ids\": [\n    \"a3551a4e99981ff635d95eba0b961d69fb1789ba9fc362f0c0ba6f78f1521de1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3460658884,
+      "rating_bucket": "1000-1199",
+      "record_id": "43c983d682c7af2d565adb5c9c41d06a13258c828fc429c04e7d739f746d6f7f"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4054317500012985,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-470699c2083ee9bf\",\n    \"claim-b604fc4541660e4c\",\n    \"claim-86455babf829d3f9\"\n  ],\n  \"concept_ids\": [\n    \"a3551a4e99981ff635d95eba0b961d69fb1789ba9fc362f0c0ba6f78f1521de1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3460658884,
+      "rating_bucket": "1200-1399",
+      "record_id": "3ec9437b2a9ee1f66ac6f59cca1fcfbcccd7f0291135a504e73fa67683755875"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4466364169966255,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-470699c2083ee9bf\",\n    \"claim-b604fc4541660e4c\",\n    \"claim-3697a3e791d05b89\"\n  ],\n  \"concept_ids\": [\n    \"a3551a4e99981ff635d95eba0b961d69fb1789ba9fc362f0c0ba6f78f1521de1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3460380356,
+      "rating_bucket": "1400-1599",
+      "record_id": "d1c1b4afc661f027eab0ab46b2ef8b645e500cc489ddc807b46b49788ad27996"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.424658708001516,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-470699c2083ee9bf\",\n    \"claim-b604fc4541660e4c\",\n    \"claim-3697a3e791d05b89\"\n  ],\n  \"concept_ids\": [\n    \"a3551a4e99981ff635d95eba0b961d69fb1789ba9fc362f0c0ba6f78f1521de1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3460380356,
+      "rating_bucket": "1600-1800",
+      "record_id": "2ef42cd8620c53e132b5f01c2862f83599d2c607aada9bf4b2a167bb2b0f4d8d"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3378499160025967,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-579dcf7f893b3e04\",\n    \"claim-475f7cd5de4a316c\"\n  ],\n  \"concept_ids\": [\n    \"9c854047bc33311c204956b1a2062642fd8affb2fda5afd2bf511495ac28b8c5\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3544987366,
+      "rating_bucket": "1000-1199",
+      "record_id": "5993d3c261f89e5b1268e3ebfcba6e864213ec14060b36ad928674dea5135154"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2719269579974934,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-579dcf7f893b3e04\"\n  ],\n  \"concept_ids\": [\n    \"07a0e4152185e999ba84fd3a7f00ff50902c67550f650c3d2d416c4a29c4aef3\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3544987366,
+      "rating_bucket": "1200-1399",
+      "record_id": "add7e3f8260aa06852259ec7dd575018110fe3a6a2e72969cb4e77da1afc9ba8"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1764324590003525,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-71e93f576a8d1583\"\n  ],\n  \"concept_ids\": [\n    \"9c854047bc33311c204956b1a2062642fd8affb2fda5afd2bf511495ac28b8c5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3544987366,
+      "rating_bucket": "1400-1599",
+      "record_id": "309274d9ea09e034090d6b1496775d75efb67db7ebbd7a673c587c31441c3f07"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.103783958002168,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-71e93f576a8d1583\"\n  ],\n  \"concept_ids\": [\n    \"9c854047bc33311c204956b1a2062642fd8affb2fda5afd2bf511495ac28b8c5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3544987366,
+      "rating_bucket": "1600-1800",
+      "record_id": "ce732977f7428e179aff8b5e80338ae5f3700b9bdf44b4c18186e6ba8359ecf1"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2459116660029395,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0187be9601a659a8\",\n    \"claim-3aa18234011dea6e\"\n  ],\n  \"concept_ids\": [\n    \"b0a21314619c76c3552f6a260e25e26e18be95d66733917b2c7737c0f2100df7\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1000-1199",
+      "record_id": "d5990646a00d9548d13c904d40c4a2db757ff9dec0f9459f6273d91e7011aa43"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.437930290998338,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0187be9601a659a8\",\n    \"claim-3aa18234011dea6e\"\n  ],\n  \"concept_ids\": [\n    \"b0a21314619c76c3552f6a260e25e26e18be95d66733917b2c7737c0f2100df7\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1200-1399",
+      "record_id": "b23262949a215e432fc11385aec02685a4938a47e1789ba84365d3189682c7cd"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.537076000000525,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1c8a8c1a7eb8dba4\",\n    \"claim-5d33afb32722a8f2\"\n  ],\n  \"concept_ids\": [\n    \"b0a21314619c76c3552f6a260e25e26e18be95d66733917b2c7737c0f2100df7\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1400-1599",
+      "record_id": "710515a99ac201e77c8efb438c9972c1b25147c717f598ba63de998e27744701"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.320458416001202,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0187be9601a659a8\",\n    \"claim-1c8a8c1a7eb8dba4\"\n  ],\n  \"concept_ids\": [\n    \"b0a21314619c76c3552f6a260e25e26e18be95d66733917b2c7737c0f2100df7\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1600-1800",
+      "record_id": "bfc9773517fc116d69b0bfb3f945b1fd587188fc536c44396274bf1591767904"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.353225000002567,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-24e6062bc68199f2\",\n    \"claim-edb123296932da03\",\n    \"claim-c2f95dfa65d3eff6\"\n  ],\n  \"concept_ids\": [\n    \"eff4fb44c3fe67a739817bf0f8638cab1a3998140ce3f04ae846a9bc198201fd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3485522400,
+      "rating_bucket": "1000-1199",
+      "record_id": "dfdb83c1479c2d3ccaf97a303d1886fa115b6f91b390d45ab0626e2a445d0ccc"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.408368625001458,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-24e6062bc68199f2\",\n    \"claim-edb123296932da03\",\n    \"claim-c2f95dfa65d3eff6\"\n  ],\n  \"concept_ids\": [\n    \"eff4fb44c3fe67a739817bf0f8638cab1a3998140ce3f04ae846a9bc198201fd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3485518688,
+      "rating_bucket": "1200-1399",
+      "record_id": "f903592c8092da18f3ab14b2b731487e607a19322fb4150913ec25ff97853e32"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5594280829973286,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-046b6744ee9580c2\",\n    \"claim-a11fb6b7e1507d2a\"\n  ],\n  \"concept_ids\": [\n    \"eff4fb44c3fe67a739817bf0f8638cab1a3998140ce3f04ae846a9bc198201fd\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"concept:eff4fb44c3fe67a739817bf0f8638cab1a3998140ce3f04ae846",
+      "peak_mlx_memory_bytes": 3487828832,
+      "rating_bucket": "1400-1599",
+      "record_id": "681a2821f785974edee742c30b8fb287c2e03f556427f421c445b443bcd931f0"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5388989169987326,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-24e6062bc68199f2\",\n    \"claim-edb123296932da03\",\n    \"claim-046b6744ee9580c2\"\n  ],\n  \"concept_ids\": [\n    \"eff4fb44c3fe67a739817bf0f8638cab1a3998140ce3f04ae846a9bc198201fd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:eff4fb44c3fe67a739817bf",
+      "peak_mlx_memory_bytes": 3487828832,
+      "rating_bucket": "1600-1800",
+      "record_id": "8e1ea2d855ac2632fe19d0d05a8163b21a30198a7293591551d99ac647ba7163"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3764634580002166,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-2bd91d531a55b396\",\n    \"claim-9c0eff2cecce0291\"\n  ],\n  \"concept_ids\": [\n    \"7d551bbd6d9b3594c195ae70af914ca4a27d4161d21656484ba725c13f53f989\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3581638348,
+      "rating_bucket": "1000-1199",
+      "record_id": "3f5ae76edc406a3f0ed5e17ca5d10b363ee27eb1a084d7d4f57ec5c7bbc32295"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2913195000000997,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-2bd91d531a55b396\",\n    \"claim-9c0eff2cecce0291\"\n  ],\n  \"concept_ids\": [\n    \"7d551bbd6d9b3594c195ae70af914ca4a27d4161d21656484ba725c13f53f989\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3581638348,
+      "rating_bucket": "1200-1399",
+      "record_id": "c2e7b5ced699829e2ae73d463d75b18141917e2e89516369b1edc8aea569711f"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.244006583998271,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-2bd91d531a55b396\",\n    \"claim-ae9059d66134693a\"\n  ],\n  \"concept_ids\": [\n    \"2209281cc0c15731bad3e37d7f3e4f5eff2b5dd8bf537fccc48cd83cb9259ef5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3587929804,
+      "rating_bucket": "1400-1599",
+      "record_id": "7160b2b7fd749890f5a42ae6df734f11f1c6dd4395092fa5bd0c414e423570a3"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.325342250001995,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-2bd91d531a55b396\",\n    \"claim-ae9059d66134693a\"\n  ],\n  \"concept_ids\": [\n    \"2209281cc0c15731bad3e37d7f3e4f5eff2b5dd8bf537fccc48cd83cb9259ef5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3587929804,
+      "rating_bucket": "1600-1800",
+      "record_id": "079824766a68bb4e4bce5c7e5777be0efd837926680d732810c32f8ae5c01e40"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5051971670000057,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-13df0f349e6c5bb1\"\n  ],\n  \"concept_ids\": [\n    \"3a0573ad4ff7aad94c1ae6f5c08adb29a981cd688dac5cf0a921383da388a1a8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:3a0573ad4ff7aad94c1ae6f5c08adb29a981cd688dac5cf0a921383da388a1a8\"\n}\n```",
+      "peak_mlx_memory_bytes": 3486956768,
+      "rating_bucket": "1000-1199",
+      "record_id": "2e79efdde28bf78a75faf22d44471201571473e5be696509b46b6314a8b0e94b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.470802583000477,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-13df0f349e6c5bb1\"\n  ],\n  \"concept_ids\": [\n    \"3a0573ad4ff7aad94c1ae6f5c08adb29a981cd688dac5cf0a921383da388a1a8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:3a0573ad4ff7aad94c1ae6f5c08adb29a981cd688dac5cf0a921383da388a1a8\"\n}\n```",
+      "peak_mlx_memory_bytes": 3486956768,
+      "rating_bucket": "1200-1399",
+      "record_id": "f87431a46fda23c182926c89492d7abf903bc540d7e70a6e316344b066791735"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "question_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.944662916001107,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8152a5072d38c388\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"3a0573ad4ff7aad94c1ae6f5c08adb29a981cd688dac5cf0a921383da388a1a8\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3451669358,
+      "rating_bucket": "1400-1599",
+      "record_id": "819ddb2c87d3ca32ebdebdc600319f933d5b9a98f125ae67d8a9c9a5d73c0294"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.502494915999705,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-c9e31ee3087fcc47\",\n    \"claim-340c866090f85134\",\n    \"claim-8152a5072d38c388\"\n  ],\n  \"concept_ids\": [\n    \"3a0573ad4ff7aad94c1ae6f5c08adb29a981cd688dac5cf0a921383da388a1a8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:3a0573ad4ff7aad94c1ae6",
+      "peak_mlx_memory_bytes": 3451669358,
+      "rating_bucket": "1600-1800",
+      "record_id": "31a0c5043577c5a2095a1000ab0db0fc617f8819c939498ce9cb55bc76ba4275"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6289444159992854,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6545cb8e450567a0\",\n    \"claim-bad003c397b1a2c9\",\n    \"claim-a024cd1c527a60a4\"\n  ],\n  \"concept_ids\": [\n    \"ae96fde916254ec61ec944e7de2181a087d67bb752a50f2bfa181647bfcd903b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3581376204,
+      "rating_bucket": "1000-1199",
+      "record_id": "f51007fd9f68f201192ebb287d6f87bfbce51e7018f9c5f194908c6eea44c4cd"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5815305409996654,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6545cb8e450567a0\",\n    \"claim-bad003c397b1a2c9\",\n    \"claim-a024cd1c527a60a4\"\n  ],\n  \"concept_ids\": [\n    \"ae96fde916254ec61ec944e7de2181a087d67bb752a50f2bfa181647bfcd903b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3581376204,
+      "rating_bucket": "1200-1399",
+      "record_id": "dae72529a5eb2daeea7e41b8ed74315d1d674e5ddf2e9ddb7b153633a5d9f4cb"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.674887082997884,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6545cb8e450567a0\",\n    \"claim-bad003c397b1a2c9\",\n    \"claim-a024cd1c527a60a4\"\n  ],\n  \"concept_ids\": [\n    \"ae96fde916254ec61ec944e7de2181a087d67bb752a50f2bfa181647bfcd903b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3583506124,
+      "rating_bucket": "1400-1599",
+      "record_id": "70225abdea1446d35ff560027acf675ae51e0ed73f619d9616bfeb36058e6720"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7037889169987466,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6545cb8e450567a0\",\n    \"claim-bad003c397b1a2c9\",\n    \"claim-a024cd1c527a60a4\"\n  ],\n  \"concept_ids\": [\n    \"ae96fde916254ec61ec944e7de2181a087d67bb752a50f2bfa181647bfcd903b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3583506124,
+      "rating_bucket": "1600-1800",
+      "record_id": "6aa0e5f4608cbcb195934e8cfd8283c70c11a1f06153f7fd05c8f8c7aca540f0"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6274834590003593,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a8c5be3dbebeaefb\",\n    \"claim-e779f87b9a1586ca\",\n    \"claim-71bb74784c689c9c\"\n  ],\n  \"concept_ids\": [\n    \"77f7e782bd07e52aeb5a5fd4835cab912d4ee34ebbddda2bf94e449e46129719\",\n    \"42d7a795effff42055d809d8ebcb0ea4f2282f1686f2784e35eaeb69e4",
+      "peak_mlx_memory_bytes": 3398137594,
+      "rating_bucket": "1000-1199",
+      "record_id": "b7c0c1da661747a77604d1cf9ee500e5fbc3af072bf9db7def6a99a031fbaf78"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.659405499998684,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a8c5be3dbebeaefb\",\n    \"claim-e779f87b9a1586ca\",\n    \"claim-71bb74784c689c9c\"\n  ],\n  \"concept_ids\": [\n    \"77f7e782bd07e52aeb5a5fd4835cab912d4ee34ebbddda2bf94e449e46129719\",\n    \"42d7a795effff42055d809d8ebcb0ea4f2282f1686f2784e35eaeb69e4",
+      "peak_mlx_memory_bytes": 3398137594,
+      "rating_bucket": "1200-1399",
+      "record_id": "a202330b9096d88279cc08b03dd87010685f85994ec7cbdc006700ce9709f3f9"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.165050125000562,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1f6ec0f6c08151cc\",\n    \"claim-f3f127818af98e27\"\n  ],\n  \"concept_ids\": [\n    \"77f7e782bd07e52aeb5a5fd4835cab912d4ee34ebbddda2bf94e449e46129719\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3397826298,
+      "rating_bucket": "1400-1599",
+      "record_id": "4b2be80acfe36a0add34fbb2dcecd883ab3e8f2e84f70d8dbfb8fc95b62fa122"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1914505410022684,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1f6ec0f6c08151cc\",\n    \"claim-f3f127818af98e27\"\n  ],\n  \"concept_ids\": [\n    \"77f7e782bd07e52aeb5a5fd4835cab912d4ee34ebbddda2bf94e449e46129719\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3397826298,
+      "rating_bucket": "1600-1800",
+      "record_id": "d29bff1b4289f29df94f8c59666d36833ba37fafd68b827018109c432cbeb397"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.159146582998801,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8422f18f0651f899\",\n    \"claim-f0141730959fe266\"\n  ],\n  \"concept_ids\": [\n    \"aab6a1143b0de0c651c81d2f48a8d8476065c28cdb7e0fc663d0bd5d80199770\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3472291524,
+      "rating_bucket": "1000-1199",
+      "record_id": "fd02e4c5aff0b8fa45f23d05d644dcc222a5663146ac5e5fbdce01e2faaecdb7"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.205590082998242,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8422f18f0651f899\",\n    \"claim-f0141730959fe266\"\n  ],\n  \"concept_ids\": [\n    \"aab6a1143b0de0c651c81d2f48a8d8476065c28cdb7e0fc663d0bd5d80199770\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3472291524,
+      "rating_bucket": "1200-1399",
+      "record_id": "e591ab14d8f7ee503749e2e7b9271350285b9bbac956e40bf6232c7549d00ad1"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.218555249997735,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8422f18f0651f899\",\n    \"claim-266393be72521ede\"\n  ],\n  \"concept_ids\": [\n    \"aab6a1143b0de0c651c81d2f48a8d8476065c28cdb7e0fc663d0bd5d80199770\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3472291524,
+      "rating_bucket": "1400-1599",
+      "record_id": "fe8ae49dd063b43e95460abc32288c95f1720cd28395dd0181b76c0d2e318a43"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.269565957998566,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8422f18f0651f899\",\n    \"claim-266393be72521ede\"\n  ],\n  \"concept_ids\": [\n    \"aab6a1143b0de0c651c81d2f48a8d8476065c28cdb7e0fc663d0bd5d80199770\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3472291524,
+      "rating_bucket": "1600-1800",
+      "record_id": "0828994af0b00b450f03bc11254a6de39daa62b0a23d34682ae92a3d0dedf2d8"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.043584084000031,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f6fe976514e60d6f\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3443144376,
+      "rating_bucket": "1000-1199",
+      "record_id": "bd3c82b9262c8f0ddd43b49ec14990e597317b3bc9610139af575b06a6ec5000"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.0243712499977846,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f6fe976514e60d6f\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3443144376,
+      "rating_bucket": "1200-1399",
+      "record_id": "a8b345332273b96689f43dc24f630b08ff3c2ee6daa2ccaaaf3e36df59853584"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 1.9759290410001995,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0e1041a947cf43a3\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3446585016,
+      "rating_bucket": "1400-1599",
+      "record_id": "76d960ab15f531ae5794ddfa15502f791ad4b0c1907ea3df127a948814b8fe2f"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.7463035420005326,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-cd01a6f44596f50d\",\n    \"claim-8679c838afb3f4e9\",\n    \"claim-0e1041a947cf43a3\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3446585016,
+      "rating_bucket": "1600-1800",
+      "record_id": "ac52d5c6c80783a691f48dad6985344c37875ece3b97d3049bda15a51912d8a5"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.346804249998968,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-3c903563bb88b4db\",\n    \"claim-116735e9a295a992\"\n  ],\n  \"concept_ids\": [\n    \"e77fad9b97e25dec6d5d763bad95adb13e729d224e0683cd6086f9c6845803cd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3472750274,
+      "rating_bucket": "1000-1199",
+      "record_id": "4af823340f8c941156075579d032a9ab7aac07e4fb6c183f80004bf050149f44"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2765764169998874,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-3c903563bb88b4db\",\n    \"claim-116735e9a295a992\"\n  ],\n  \"concept_ids\": [\n    \"e77fad9b97e25dec6d5d763bad95adb13e729d224e0683cd6086f9c6845803cd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3472750274,
+      "rating_bucket": "1200-1399",
+      "record_id": "fee351f6bc8ce680e7f620cc2f135a86d19e45d2dfe8ed160c90657d0db4f6ba"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.221745833998284,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-3c903563bb88b4db\",\n    \"claim-116735e9a295a992\"\n  ],\n  \"concept_ids\": [\n    \"e77fad9b97e25dec6d5d763bad95adb13e729d224e0683cd6086f9c6845803cd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3474192066,
+      "rating_bucket": "1400-1599",
+      "record_id": "bcf96bc42fab42297a14156fb1d8235dd16fd83845ecc43047cb8b9b7bc438b5"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3533076669991715,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-3c903563bb88b4db\",\n    \"claim-116735e9a295a992\"\n  ],\n  \"concept_ids\": [\n    \"e77fad9b97e25dec6d5d763bad95adb13e729d224e0683cd6086f9c6845803cd\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3474192066,
+      "rating_bucket": "1600-1800",
+      "record_id": "ab47d3283905f69f394bd8744b850b4cef4b796cf13571dcbaa73b4bf926faae"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6219073749998643,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e7586f4ad379a1da\",\n    \"claim-c42069942f911509\",\n    \"claim-f20a34233bd7e14d\"\n  ],\n  \"concept_ids\": [\n    \"0a8956f306cbfc5b1abe7691468aa401ba179d05ae20298373534104096200db\",\n    \"287842207a302e3292cc91427ce575b323923875dd14d6",
+      "peak_mlx_memory_bytes": 3381720830,
+      "rating_bucket": "1000-1199",
+      "record_id": "2c761ec263dbeffb8819917be1de022a33b9c46b3cdf2a0505f3c0273aabb285"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.685805249999248,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e7586f4ad379a1da\",\n    \"claim-c42069942f911509\",\n    \"claim-f20a34233bd7e14d\"\n  ],\n  \"concept_ids\": [\n    \"0a8956f306cbfc5b1abe7691468aa401ba179d05ae20298373534104096200db\",\n    \"287842207a302e3292cc91427ce575b323923875dd14d6",
+      "peak_mlx_memory_bytes": 3381720830,
+      "rating_bucket": "1200-1399",
+      "record_id": "2cfe4a2ae755f487b00bd8bebc70c7b249bb31d14a05506865005006bf467bb7"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.659647833002964,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e7586f4ad379a1da\",\n    \"claim-c42069942f911509\",\n    \"claim-2db302ee474244b9\"\n  ],\n  \"concept_ids\": [\n    \"0a8956f306cbfc5b1abe7691468aa401ba179d05ae20298373534104096200db\",\n    \"287842207a302e3292cc91427ce575b323923875dd14d66",
+      "peak_mlx_memory_bytes": 3379885822,
+      "rating_bucket": "1400-1599",
+      "record_id": "b89b55c78cae8577e484f8f9fb121c5c75d618dd363d41c59a2df7a6d338605d"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.717696874999092,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e7586f4ad379a1da\",\n    \"claim-c42069942f911509\",\n    \"claim-2db302ee474244b9\"\n  ],\n  \"concept_ids\": [\n    \"0a8956f306cbfc5b1abe7691468aa401ba179d05ae20298373534104096200db\",\n    \"287842207a302e3292cc91427ce575b323923875dd14d66",
+      "peak_mlx_memory_bytes": 3379885822,
+      "rating_bucket": "1600-1800",
+      "record_id": "5c641f16963ce520f19e328eade5704111119023860648bf4fb653634efb4fad"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.221811125000386,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1a92a623cf472b1e\",\n    \"claim-975e1d5661eafdfe\"\n  ],\n  \"concept_ids\": [\n    \"1fd9784f3d499dbde99b8a31442f5dd8db2aad7d9bcff026e5dbca36b5c1fc63\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3483006638,
+      "rating_bucket": "1000-1199",
+      "record_id": "c3dd714f1acd74312fd0c43d465fa25bcea89e91fe9d3c4764049fe7cdb86a6b"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.096736209001392,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1a92a623cf472b1e\",\n    \"claim-975e1d5661eafdfe\"\n  ],\n  \"concept_ids\": [\n    \"1fd9784f3d499dbde99b8a31442f5dd8db2aad7d9bcff026e5dbca36b5c1fc63\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3483006638,
+      "rating_bucket": "1200-1399",
+      "record_id": "0a8b7a14867f30a7f2c1da2b0a4895e993f7bfa41d6202dae14e55ee31fb3a8f"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.183292458001233,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1a92a623cf472b1e\",\n    \"claim-74fe78f81686e9bf\"\n  ],\n  \"concept_ids\": [\n    \"1fd9784f3d499dbde99b8a31442f5dd8db2aad7d9bcff026e5dbca36b5c1fc63\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3483317934,
+      "rating_bucket": "1400-1599",
+      "record_id": "602436d3dd738ea67f91cb911aaea89b2882360cde529ca3e89eb631741114d3"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2085586249995686,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1a92a623cf472b1e\",\n    \"claim-74fe78f81686e9bf\"\n  ],\n  \"concept_ids\": [\n    \"1fd9784f3d499dbde99b8a31442f5dd8db2aad7d9bcff026e5dbca36b5c1fc63\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3483317934,
+      "rating_bucket": "1600-1800",
+      "record_id": "2c96fe1c6f5e69aee0266375abe543d25c96543af2ccd827abfb2598480345d6"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.647847375003039,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7f412c06f8cdcb51\",\n    \"claim-97976988493a2f67\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"guidance\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3517474558,
+      "rating_bucket": "1000-1199",
+      "record_id": "25836f6d1ba36fe182b78e03b1c1f411b02a9ced49f342b47218db30b04faa86"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.6299412499975006,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7f412c06f8cdcb51\",\n    \"claim-97976988493a2f67\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"guidance\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3517474558,
+      "rating_bucket": "1200-1399",
+      "record_id": "f5691b1adf8fbcdd788e97c563aff79a7c745f7d528d4ee559765f513bbd0c65"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.6987704999992275,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7f412c06f8cdcb51\",\n    \"claim-97976988493a2f67\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"guidance\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3515524862,
+      "rating_bucket": "1400-1599",
+      "record_id": "62c90e327c78b030bf93824d2e02483ce2b5b70eb72c99560d4f7f512cba9115"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.657995249999658,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7f412c06f8cdcb51\",\n    \"claim-97976988493a2f67\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"guidance\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3515524862,
+      "rating_bucket": "1600-1800",
+      "record_id": "fd45a3527899b14789cf403a6c6b053f99244b009bd4588c39b67ba362b1c641"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.1620542499986186,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-272ebfaa7004982d\",\n    \"claim-ec955c679c59003b\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3436701414,
+      "rating_bucket": "1000-1199",
+      "record_id": "e7336d1f4436606a0e3868c9e496dae24a39d1a41419ed782022d2360609c7e3"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.234393375001673,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-272ebfaa7004982d\",\n    \"claim-ec955c679c59003b\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3436701414,
+      "rating_bucket": "1200-1399",
+      "record_id": "eb0147f82205734ba5a64a1dfab41a8b977bd635fb65d010a57983a559a690e2"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.4700589169988234,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-272ebfaa7004982d\",\n    \"claim-ec955c679c59003b\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"guidance\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3435816678,
+      "rating_bucket": "1400-1599",
+      "record_id": "14fa9be388436440f028b5b569fed995bfd829a07627490c25aab7f763c7673a"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.5517102910016547,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-272ebfaa7004982d\",\n    \"claim-ec955c679c59003b\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"guidance\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3435816678,
+      "rating_bucket": "1600-1800",
+      "record_id": "e7daada44d881cbb873ed7938fd626ebe65f7c39fc79f781599bd69fb707bf42"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 1.9808470000025409,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8b331185b46a5b97\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3401152184,
+      "rating_bucket": "1000-1199",
+      "record_id": "ade2b757f2f25c3438792393186f609cc90da36c7a5562908cd633b07a84aeb5"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 1.994298958001309,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8b331185b46a5b97\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3401152184,
+      "rating_bucket": "1200-1399",
+      "record_id": "b148ef4b1da4cab1bbd487d64a8b6fd80dd9a61b37348c36ce59602a93410543"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.206581582999206,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-bb758fac60953e74\",\n    \"claim-90ad491eb0c46a1a\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3393660984,
+      "rating_bucket": "1400-1599",
+      "record_id": "0bcb57c707a27c9241fe43fde60ac2d5c778f0cd2dee7ac099f6eddffc81f949"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.6951722080011677,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-693b62a975f700cb\",\n    \"claim-8a985cc037a56486\",\n    \"claim-bb758fac60953e74\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\",\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3393660984,
+      "rating_bucket": "1600-1800",
+      "record_id": "1f2244f2403eaa4aac8c19bee22c4158aff18402d13b40b758047f884819085b"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.396163291999983,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-69c40835e72f00f8\",\n    \"claim-ad895244c5ce5053\"\n  ],\n  \"concept_ids\": [\n    \"797528a1199eb003d87cc54e1a6b0518720e8df06da384cfcd0f4360dcb40ca4\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3516036812,
+      "rating_bucket": "1000-1199",
+      "record_id": "e4da059a645f9bd43025df79fbeb3f13a62b29c549e6f1e3b464b2c265a1ecba"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2223252920011873,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-69c40835e72f00f8\"\n  ],\n  \"concept_ids\": [\n    \"d1b158e4922b30e0b02e08e1280f28f32b85fbd0938b32ccc800896b4087dcde\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3516036812,
+      "rating_bucket": "1200-1399",
+      "record_id": "edff9c8c7b6eea27fcec5e77419ccd0db85e46ab7e0f28339ba227aacef3422e"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4720504580000124,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-833954195cc313f3\",\n    \"claim-517f6986379af74b\"\n  ],\n  \"concept_ids\": [\n    \"d1b158e4922b30e0b02e08e1280f28f32b85fbd0938b32ccc800896b4087dcde\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3514169036,
+      "rating_bucket": "1400-1599",
+      "record_id": "f7f10398be10cb860b369348044b52db6251f624cbd5da91ae962dcd02cfb729"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5396900000014284,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-833954195cc313f3\",\n    \"claim-517f6986379af74b\"\n  ],\n  \"concept_ids\": [\n    \"d1b158e4922b30e0b02e08e1280f28f32b85fbd0938b32ccc800896b4087dcde\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3514169036,
+      "rating_bucket": "1600-1800",
+      "record_id": "c35b50c09e074660c9d292c6f59d75880cc2f979b9a4a823cce6902fb5e41959"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4123951669971575,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-761644c5347faaad\",\n    \"claim-7161bb1d7913fa3f\"\n  ],\n  \"concept_ids\": [\n    \"9e39c0b31beab16d124e6d9008921b15c6be56f9c798a136504fc608fe58440a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3493246638,
+      "rating_bucket": "1000-1199",
+      "record_id": "d739d6e92dfe1d159054fa808d72830afed60c5018bb53bbddcdcab0a77a57d4"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2923955420010316,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-761644c5347faaad\",\n    \"claim-7161bb1d7913fa3f\"\n  ],\n  \"concept_ids\": [\n    \"9e39c0b31beab16d124e6d9008921b15c6be56f9c798a136504fc608fe58440a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3493246638,
+      "rating_bucket": "1200-1399",
+      "record_id": "17b330e1038576f47c074b81de9b50b339e8cb0f91bb2ee6557125b6e1785c65"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4189649999971152,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b7b2699849c31983\",\n    \"claim-c00bf09407f2ed06\"\n  ],\n  \"concept_ids\": [\n    \"9e39c0b31beab16d124e6d9008921b15c6be56f9c798a136504fc608fe58440a\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3495425710,
+      "rating_bucket": "1400-1599",
+      "record_id": "cb57bff5c5b3e131d06b2aba9c085906dc098fab337646da2cdc62fa92b0d869"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.373016083998664,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b7b2699849c31983\",\n    \"claim-c00bf09407f2ed06\"\n  ],\n  \"concept_ids\": [\n    \"9e39c0b31beab16d124e6d9008921b15c6be56f9c798a136504fc608fe58440a\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3495425710,
+      "rating_bucket": "1600-1800",
+      "record_id": "c4fe9eecf26d1b0ad32638d76941b6be5a0bb9ebde13b84949d9be6ad0c25111"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.498474249998253,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4934c01231de4613\",\n    \"claim-3f9385b67bf9a078\"\n  ],\n  \"concept_ids\": [\n    \"145cb680ce4436db4e4dc2031bd423dda47d98f4119087cf60973099e833cb63\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3516544742,
+      "rating_bucket": "1000-1199",
+      "record_id": "a71533baeec235cca84677880b068f4a987e53367370ffb7baa07e4563cba7b5"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4025281250033004,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4934c01231de4613\",\n    \"claim-3f9385b67bf9a078\"\n  ],\n  \"concept_ids\": [\n    \"145cb680ce4436db4e4dc2031bd423dda47d98f4119087cf60973099e833cb63\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3516544742,
+      "rating_bucket": "1200-1399",
+      "record_id": "319c6373a860b993f7f3be6972e282c2b37b69c98fba26d50d4522ca299c7e0e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4011836249992484,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-737b58f2b254d163\",\n    \"claim-4b4cbb5919960194\"\n  ],\n  \"concept_ids\": [\n    \"145cb680ce4436db4e4dc2031bd423dda47d98f4119087cf60973099e833cb63\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3516544742,
+      "rating_bucket": "1400-1599",
+      "record_id": "68abf19a9ee70b259d1c6dd93f0fbd6f95bbd449d709239a50ff62179fd92853"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4133375830024306,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-737b58f2b254d163\",\n    \"claim-4b4cbb5919960194\"\n  ],\n  \"concept_ids\": [\n    \"145cb680ce4436db4e4dc2031bd423dda47d98f4119087cf60973099e833cb63\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3516544742,
+      "rating_bucket": "1600-1800",
+      "record_id": "871ffed761d1ad84ccbfc020e247be919bc16050638e70ad8746720e14b5480b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.139050624999072,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-60476df34093e326\",\n    \"claim-58665b432cc1c6fe\"\n  ],\n  \"concept_ids\": [\n    \"bb579567277156799beff9200d14b2ad19122b1b70ada258f1757cb16bded9e7\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421943466,
+      "rating_bucket": "1000-1199",
+      "record_id": "8c8dad37c11e1ab7195322a62477acd30e2e6fc390e718a6cfdeac3cfd13fab4"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.19665595799961,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-60476df34093e326\",\n    \"claim-58665b432cc1c6fe\"\n  ],\n  \"concept_ids\": [\n    \"bb579567277156799beff9200d14b2ad19122b1b70ada258f1757cb16bded9e7\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421943466,
+      "rating_bucket": "1200-1399",
+      "record_id": "a20176b37df22a723279817caf94c1d98432558013b5c55891bca3d0c10e4758"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6697004579982604,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4192968ef8d74a87\",\n    \"claim-f10d4f1951b149ae\",\n    \"claim-aa6afbec2564a8f9\"\n  ],\n  \"concept_ids\": [\n    \"bb579567277156799beff9200d14b2ad19122b1b70ada258f1757cb16bded9e7\",\n    \"dfdebcc8ab6744abe9618060efca916ac312e82d92a5fc42a18cf2ffea7d1",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1400-1599",
+      "record_id": "d4eb0e7d926848643bd229256ba6a853691f51124e9f86e652b2b775eb293697"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.672269292001147,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4192968ef8d74a87\",\n    \"claim-f10d4f1951b149ae\",\n    \"claim-aa6afbec2564a8f9\"\n  ],\n  \"concept_ids\": [\n    \"bb579567277156799beff9200d14b2ad19122b1b70ada258f1757cb16bded9e7\",\n    \"dfdebcc8ab6744abe9618060efca916ac312e82d92a5fc42a18cf2ffea7d1",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1600-1800",
+      "record_id": "763b02f9c595e7a0f655f22ec56d5989d532da34e846465a719d14bb0830af51"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.053856625003391,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-9e6ee3148c93efab\"\n  ],\n  \"concept_ids\": [\n    \"d69172b535df3f3b4cf8097534e7ee827a428e7c9525341e127ec5d5b5138bc5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3589912270,
+      "rating_bucket": "1000-1199",
+      "record_id": "8ec0a73986dfcc115f4b5e34359e4efdbb8a3f56a50693582eff3f527d257920"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.079688375000842,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-9e6ee3148c93efab\"\n  ],\n  \"concept_ids\": [\n    \"d69172b535df3f3b4cf8097534e7ee827a428e7c9525341e127ec5d5b5138bc5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3589912270,
+      "rating_bucket": "1200-1399",
+      "record_id": "5405f6c6a7f87f3a9889fcfd95e993124524ca50d8eda822be5e3ed27c1f2ca9"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.881694791998598,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-825e0325cc98a745\",\n    \"claim-9660bc440e1492f5\",\n    \"claim-a3c6b47a8dd6e137\"\n  ],\n  \"concept_ids\": [\n    \"20dc9a6fe3c65d5941107fa35ee41f4263935d4be9b345a52d6fc18e2efea19c\",\n    \"55757022c90ac969f2e0465fceacc3eea6a8e74868120823bf",
+      "peak_mlx_memory_bytes": 3591239374,
+      "rating_bucket": "1400-1599",
+      "record_id": "9626ceab6c645b98eab4aa17cd18206f8f7534888c9c442ac9a95b454740049e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.872772916998656,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-825e0325cc98a745\",\n    \"claim-9660bc440e1492f5\",\n    \"claim-a3c6b47a8dd6e137\"\n  ],\n  \"concept_ids\": [\n    \"20dc9a6fe3c65d5941107fa35ee41f4263935d4be9b345a52d6fc18e2efea19c\",\n    \"55757022c90ac969f2e0465fceacc3eea6a8e74868120823bf",
+      "peak_mlx_memory_bytes": 3591239374,
+      "rating_bucket": "1600-1800",
+      "record_id": "a94d8eb3e30afcc2ac124310942661e7d0b2ab9a1edca1cc8eec5b0c8c39e9c4"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.872594542001025,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e714f311afb8fc20\",\n    \"claim-00e153c7639f8254\",\n    \"claim-e1f35597644c2be8\"\n  ],\n  \"concept_ids\": [\n    \"c5cad6825b495b037c833deae1ab4e6251cdf218ebe6bbd295cc658028e37716\",\n    \"43f1fec5f83279f74217b2dd80d0c106058774223b162501",
+      "peak_mlx_memory_bytes": 3587667660,
+      "rating_bucket": "1000-1199",
+      "record_id": "18a0d0eb276ef1ed3a73c3ad9c9e09db1a90e379fcc47261040acd1b6c68d5db"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.342951708000328,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e714f311afb8fc20\",\n    \"claim-00e153c7639f8254\"\n  ],\n  \"concept_ids\": [\n    \"c5cad6825b495b037c833deae1ab4e6251cdf218ebe6bbd295cc658028e37716\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3587667660,
+      "rating_bucket": "1200-1399",
+      "record_id": "c88fea2b6215228435e258b1bb4521c459acc3bf2c5cfdce2f03adb92733c106"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0907013340001868,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-94b01cc51ebc281c\"\n  ],\n  \"concept_ids\": [\n    \"910b7dd8f16b1d56a0ae5529ac33eed1403ab2aa46f634561f6e74202f781798\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3586930380,
+      "rating_bucket": "1400-1599",
+      "record_id": "538295ff71f3def1aae4657ef2da88c4b5e3c9bd2c2a75e740d5c59c65f5e5ee"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0391361250003683,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-94b01cc51ebc281c\"\n  ],\n  \"concept_ids\": [\n    \"910b7dd8f16b1d56a0ae5529ac33eed1403ab2aa46f634561f6e74202f781798\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3586930380,
+      "rating_bucket": "1600-1800",
+      "record_id": "96bfb5ba1cc131faedbd4d9a9987a2de28f3916d9086e106e6db71adb5c6bd18"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2088495409989264,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-60f6fac1cbd0b35b\",\n    \"claim-2e40bc039147816f\"\n  ],\n  \"concept_ids\": [\n    \"989bd8a006cf8279eda91a0fd2db060cb079878a028e29afc6726c9be3d11f49\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3468818094,
+      "rating_bucket": "1000-1199",
+      "record_id": "4e25935dabc768546f6f0b1422743b4026eb742b082f511926b87fac5f5fc7bc"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.656954083002347,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-60f6fac1cbd0b35b\",\n    \"claim-2e40bc039147816f\"\n  ],\n  \"concept_ids\": [\n    \"989bd8a006cf8279eda91a0fd2db060cb079878a028e29afc6726c9be3d11f49\",\n    \"edcbfff82893414fe2a2a844086433c5f57ab3c6e572c9b68396c8103593ce19\"\n  ],\n  \"question_template_",
+      "peak_mlx_memory_bytes": 3468818094,
+      "rating_bucket": "1200-1399",
+      "record_id": "c7adadf2d70eebe6382c0e4d67f72cdf98d8cec259495afd7bc762c5f118cf96"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7858955830015475,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-60f6fac1cbd0b35b\",\n    \"claim-2e40bc039147816f\"\n  ],\n  \"concept_ids\": [\n    \"989bd8a006cf8279eda91a0fd2db060cb079878a028e29afc6726c9be3d11f49\",\n    \"a9b309d20983a2ac84f37e12179197c34dbd4c206d0ffc07db2670f0d5681148\"\n  ],\n  \"question",
+      "peak_mlx_memory_bytes": 3467851438,
+      "rating_bucket": "1400-1599",
+      "record_id": "25ce43a0badf4b06be0f3961a2ca8a731dac552191090e55e3752fea506f76d8"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.9897477500016976,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-60f6fac1cbd0b35b\",\n    \"claim-2e40bc039147816f\"\n  ],\n  \"concept_ids\": [\n    \"989bd8a006cf8279eda91a0fd2db060cb079878a028e29afc6726c9be3d11f49\",\n    \"a9b309d20983a2ac84f37e12179197c34dbd4c206d0ffc07db2670f0d5681148\"\n  ],\n  \"question",
+      "peak_mlx_memory_bytes": 3467851438,
+      "rating_bucket": "1600-1800",
+      "record_id": "6de4b0bd05caddf4254a8c147f3ff8a134b2aa696b09ddcec27ba825594a0f3a"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.934997125001246,
+      "output": "{\"claim_ids\":[\"claim-e866e5ab78d2791e\",\"claim-8caaba87a316b48f\"],\"concept_ids\":[\"e4f8b5a2e264af55a25d00271f43986e55c3f012919f77177d889c18e781a877\"],\"question_template_id\":\"find-strongest-move\",\"hint_template_id\":\"forcing-moves\"}",
+      "peak_mlx_memory_bytes": 3531634350,
+      "rating_bucket": "1000-1199",
+      "record_id": "171140891a9fb7cec9befa2536ef91809bb0c152c99208310ff0cb82f0a03147"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7650082090003707,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-e866e5ab78d2791e\",\n    \"claim-8caaba87a316b48f\"\n  ],\n  \"concept_ids\": [\n    \"e4f8b5a2e264af55a25d00271f43986e55c3f012919f77177d889c18e781a877\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3531634350,
+      "rating_bucket": "1200-1399",
+      "record_id": "4a85f70f9ee12c85865aa0cfcbaeacf7f918a38844acb4db03e167160463c9f1"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 5.57685862499784,
+      "output": "{\"claim_ids\":[\"claim-e866e5ab78d2791e\",\"claim-8caaba87a316b48f\"],\"concept_ids\":[\"e4f8b5a2e264af55a25d00271f43986e55c3f012919f77177d889c18e781a877\",\"35fd47d601add4d20c4274bf33aad40ca3fff833e63c897301c8d1337015f1d4\"],\"question_template_id\":\"find-strongest-move\",\"hint_template_id\":\"forcing-moves\"}",
+      "peak_mlx_memory_bytes": 3530094254,
+      "rating_bucket": "1400-1599",
+      "record_id": "8a301a70c33a0c5481c9c7f9cdf342e0cebcba772c04270efe9d1ce213ae95c5"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 6.64520983300099,
+      "output": "{\"claim_ids\":[\"claim-e866e5ab78d2791e\",\"claim-8caaba87a316b48f\"],\"concept_ids\":[\"e4f8b5a2e264af55a25d00271f43986e55c3f012919f77177d889c18e781a877\",\"35fd47d601add4d20c4274bf33aad40ca3fff833e63c897301c8d1337015f1d4\"],\"question_template_id\":\"find-strongest-move\",\"hint_template_id\":\"forcing-moves\"}",
+      "peak_mlx_memory_bytes": 3530094254,
+      "rating_bucket": "1600-1800",
+      "record_id": "7af9a62d8ad0bdc0643afdbd3ecb58927dfd88867f6a9f0bbfa3f1b520ee5065"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 7.75114166700223,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1fb0f73dcd5995ef\"\n  ],\n  \"concept_ids\": [\n    \"7be07ff75f72e5f4c514e8a935bafd74859b0f151df91ce776beb7289118fab6\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3573184204,
+      "rating_bucket": "1000-1199",
+      "record_id": "7f9a7934acebe7690f6aef9155a156acc01c448266cc2a1e1267055c23bc3a3e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 6.8896149170032,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1fb0f73dcd5995ef\"\n  ],\n  \"concept_ids\": [\n    \"7be07ff75f72e5f4c514e8a935bafd74859b0f151df91ce776beb7289118fab6\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3573184204,
+      "rating_bucket": "1200-1399",
+      "record_id": "7b4980309fc3e7d64c8d1a77adb1fb071329723132a72c912dd7aa272450cf63"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 5.2138804999995045,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6f99fd1da83f5545\"\n  ],\n  \"concept_ids\": [\n    \"7be07ff75f72e5f4c514e8a935bafd74859b0f151df91ce776beb7289118fab6\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3574363852,
+      "rating_bucket": "1400-1599",
+      "record_id": "f23ef48c2d9a2eb4fe3940936ec9e14a8945073d947a4fd5b1c89e9d978d97da"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0054608749996987,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6f99fd1da83f5545\"\n  ],\n  \"concept_ids\": [\n    \"7be07ff75f72e5f4c514e8a935bafd74859b0f151df91ce776beb7289118fab6\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3574363852,
+      "rating_bucket": "1600-1800",
+      "record_id": "734d8f9ef297439bdca4a2527202ce91fd00f9197b77738f11ec945473443e60"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5439593339979183,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-08333bfb1fc68782\",\n    \"claim-a904e26999aa655d\",\n    \"claim-b7a02a520cb494ca\"\n  ],\n  \"concept_ids\": [\n    \"65f4f4cdb8c2383b94f2ce0100fe4692ac2f6c61a92b307d8eca895d8f01b136\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:65f4f4cdb8c2383",
+      "peak_mlx_memory_bytes": 3460192750,
+      "rating_bucket": "1000-1199",
+      "record_id": "e4e63447e0715f48a317efe42141875307be90a379c4c34f4f67e0e27ddc4d0b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7883681250023074,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-08333bfb1fc68782\",\n    \"claim-a904e26999aa655d\",\n    \"claim-b7a02a520cb494ca\"\n  ],\n  \"concept_ids\": [\n    \"65f4f4cdb8c2383b94f2ce0100fe4692ac2f6c61a92b307d8eca895d8f01b136\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:65f4f4cdb8c2383",
+      "peak_mlx_memory_bytes": 3460189038,
+      "rating_bucket": "1200-1399",
+      "record_id": "c101966468f69631bb6a1c420de9415c1a60192a21b4fac6cfb15a53c9230be2"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0100010830028623,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-5415ad45bbdd81cb\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"65f4f4cdb8c2383b94f2ce0100fe4692ac2f6c61a92b307d8eca895d8f01b136\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3457846126,
+      "rating_bucket": "1400-1599",
+      "record_id": "95999e42e50a727a279d34fceceee8335ae80edee466a6b2cfcd80e935543cb4"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0754348749978817,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-5415ad45bbdd81cb\",\n    \"claim-eda7c94c0aa99fb2\"\n  ],\n  \"concept_ids\": [\n    \"65f4f4cdb8c2383b94f2ce0100fe4692ac2f6c61a92b307d8eca895d8f01b136\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3457846126,
+      "rating_bucket": "1600-1800",
+      "record_id": "231e5af74664e300cdd3ca9d9031da161f069fe898c1d3b248cbac381daf7c39"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4503439580003032,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-719dfe116e0069f1\",\n    \"claim-ca62081e0695ee78\"\n  ],\n  \"concept_ids\": [\n    \"6d1f28d11210b5792a3a1e15a7bfccc609cafa2fea743080937c13f24a1074d9\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3422828282,
+      "rating_bucket": "1000-1199",
+      "record_id": "513ecee12d02e751f881f4477b350981f5b6df73f78e0905177dd7b646076b70"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 5.872432583000773,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-719dfe116e0069f1\"\n  ],\n  \"concept_ids\": [\n    \"6d1f28d11210b5792a3a1e15a7bfccc609cafa2fea743080937c13f24a1074d9\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:6d1f28d11210b5792a3a1e15a7bfccc609cafa2fea743080937c13f24a1074d",
+      "peak_mlx_memory_bytes": 3422828282,
+      "rating_bucket": "1200-1399",
+      "record_id": "822d84e88a3cf4ec6d28a4271c30c1ecf8edd67da9bb7bb5de26f2d7dd8d6d54"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 6.893310750001547,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0c9e4833aafc763f\",\n    \"claim-35229b08ca1acb26\",\n    \"claim-e4ccbcdc55afb998\"\n  ],\n  \"concept_ids\": [\n    \"758f0a5192f59d980d437d6e32ebb2d4e85f02b62915a6fc93e573d65c525020\",\n    \"6d1f28d11210b5792a3a1e15a7bfccc609cafa2fea74308093",
+      "peak_mlx_memory_bytes": 3417175722,
+      "rating_bucket": "1400-1599",
+      "record_id": "9673a65c4e8f637783c4586a054dffbac1b219e460fd3412b90d263db92ef4bc"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 10.715089125002123,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0c9e4833aafc763f\",\n    \"claim-35229b08ca1acb26\",\n    \"claim-e4ccbcdc55afb998\"\n  ],\n  \"concept_ids\": [\n    \"758f0a5192f59d980d437d6e32ebb2d4e85f02b62915a6fc93e573d65c525020\",\n    \"6d1f28d11210b5792a3a1e15a7bfccc609cafa2fea74308093",
+      "peak_mlx_memory_bytes": 3421009658,
+      "rating_bucket": "1600-1800",
+      "record_id": "9942b3fbecf7fd63d69a2e77b8ef70583d99d4ab1a6d48d3bee674462c9aa3a1"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 5.595129875000566,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-348c20a1840c9e17\",\n    \"claim-89c2b526a088b8b4\"\n  ],\n  \"concept_ids\": [\n    \"1d2438612a1952e158fa200b46ac5d6c0e32bad8ef7b2d15982aa6e0bd4ec7d1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3446388398,
+      "rating_bucket": "1000-1199",
+      "record_id": "8ba305644ab6f8f9baece88476b63221bc313fc7c3a387aeeb6d640b9a8a6698"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.451003750000382,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-348c20a1840c9e17\",\n    \"claim-89c2b526a088b8b4\"\n  ],\n  \"concept_ids\": [\n    \"1d2438612a1952e158fa200b46ac5d6c0e32bad8ef7b2d15982aa6e0bd4ec7d1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3446388398,
+      "rating_bucket": "1200-1399",
+      "record_id": "25c24360e4582b016c3180c02f1df7c4132827fee599bf5eceaaf082ed1281ec"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.249809582997841,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-348c20a1840c9e17\",\n    \"claim-89c2b526a088b8b4\"\n  ],\n  \"concept_ids\": [\n    \"1d2438612a1952e158fa200b46ac5d6c0e32bad8ef7b2d15982aa6e0bd4ec7d1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3445192366,
+      "rating_bucket": "1400-1599",
+      "record_id": "d435261e43a8e194d06bd901e62b73041091de8c9ff1c15709b7def78b16ccae"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.322803125000064,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-348c20a1840c9e17\",\n    \"claim-89c2b526a088b8b4\"\n  ],\n  \"concept_ids\": [\n    \"1d2438612a1952e158fa200b46ac5d6c0e32bad8ef7b2d15982aa6e0bd4ec7d1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3445192366,
+      "rating_bucket": "1600-1800",
+      "record_id": "360fe1568440394fa3561703bae973883f5fa1e8e1b549fa6f96509c9e5487b4"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.236892541000998,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-495487dd7d95dced\",\n    \"claim-0e828c8d3b7d38e0\"\n  ],\n  \"concept_ids\": [\n    \"d3d1ecf3c804a62bbdff06f2e993cbbdb0394261de2c54eac172cbea34443a9b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3391076094,
+      "rating_bucket": "1000-1199",
+      "record_id": "572ed3a240c0ba4b7fa82536275bcabbd58d4de32a16fdee44822b074b96a32e"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2717994169979647,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-495487dd7d95dced\",\n    \"claim-0e828c8d3b7d38e0\"\n  ],\n  \"concept_ids\": [\n    \"d3d1ecf3c804a62bbdff06f2e993cbbdb0394261de2c54eac172cbea34443a9b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3391076094,
+      "rating_bucket": "1200-1399",
+      "record_id": "df483f3a14f67d7a2d107b77306ba85db1460e44f01d802a5072441dfb66b768"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.24368054200022,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-495487dd7d95dced\",\n    \"claim-0e828c8d3b7d38e0\"\n  ],\n  \"concept_ids\": [\n    \"d3d1ecf3c804a62bbdff06f2e993cbbdb0394261de2c54eac172cbea34443a9b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3391076094,
+      "rating_bucket": "1400-1599",
+      "record_id": "0bec0b0289bd3dd411246dcc041cc1641287d09c0b1a9b6cdc68d9bed3aa00fe"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.174331792000885,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-495487dd7d95dced\",\n    \"claim-0e828c8d3b7d38e0\"\n  ],\n  \"concept_ids\": [\n    \"d3d1ecf3c804a62bbdff06f2e993cbbdb0394261de2c54eac172cbea34443a9b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3391076094,
+      "rating_bucket": "1600-1800",
+      "record_id": "ca89dcc01ab35cd97232a8ff23cdf61f29d83695dae512f1446cb42bcc1e968f"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.65036633300042,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-469d59bf06e46e15\",\n    \"claim-c456c55446770b4a\",\n    \"claim-ecf222828b697c64\"\n  ],\n  \"concept_ids\": [\n    \"25c9efd00e66c531304d2858e275f38e4514bd523fdd352188ff6ea476aeac8a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3405412090,
+      "rating_bucket": "1000-1199",
+      "record_id": "eeb99d36fc67337b1b1e747292c360ffeeb68e9a31bf2ab4b7456241a5891711"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7049004590007826,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-469d59bf06e46e15\",\n    \"claim-c456c55446770b4a\",\n    \"claim-ecf222828b697c64\"\n  ],\n  \"concept_ids\": [\n    \"25c9efd00e66c531304d2858e275f38e4514bd523fdd352188ff6ea476aeac8a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3405412090,
+      "rating_bucket": "1200-1399",
+      "record_id": "33109ff62952ccd0a00aac753bf19cb804215e9a3c28bc6e1e3ecc27f5dc3f09"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7859157499988214,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-469d59bf06e46e15\",\n    \"claim-c456c55446770b4a\",\n    \"claim-a2e09101b12d97ce\"\n  ],\n  \"concept_ids\": [\n    \"25c9efd00e66c531304d2858e275f38e4514bd523fdd352188ff6ea476aeac8a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3402561274,
+      "rating_bucket": "1400-1599",
+      "record_id": "096804a2e34785d6ab70b725766771f498605da741294d1ca9310f705d606830"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.743961666998075,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-469d59bf06e46e15\",\n    \"claim-c456c55446770b4a\",\n    \"claim-a2e09101b12d97ce\"\n  ],\n  \"concept_ids\": [\n    \"25c9efd00e66c531304d2858e275f38e4514bd523fdd352188ff6ea476aeac8a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3402561274,
+      "rating_bucket": "1600-1800",
+      "record_id": "8565de3a92ce80bffb7902781eb2c5b0b974ba3c504c2a3c4ebe5a1a0daf62c5"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "question_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.296465374998661,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1cb14deedec4a78c\",\n    \"claim-8a645d95a45d55a1\"\n  ],\n  \"concept_ids\": [\n    \"6b65991e8bd7317e52c3e723e46d9ca5086bdc8491cf0bfd9a344239bc2579da\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3448125102,
+      "rating_bucket": "1000-1199",
+      "record_id": "0ca930aaf603ac1b127d7ba0ea72a1821663980e52b40b131dd02f3b50dd809c"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2564959580013237,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-ca64a9b98de2f517\",\n    \"claim-1cb14deedec4a78c\"\n  ],\n  \"concept_ids\": [\n    \"b1b666d0cee9c17207d86e1cc32744b7412496ceea006cca0686aa47d604e8ce\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3448125102,
+      "rating_bucket": "1200-1399",
+      "record_id": "2495954abf4c4ccd1a380aa4a6117be8a79cd7bc2466cd32021acc8dc17d23b3"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3777476659997774,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-ca64a9b98de2f517\",\n    \"claim-1cb14deedec4a78c\"\n  ],\n  \"concept_ids\": [\n    \"b1b666d0cee9c17207d86e1cc32744b7412496ceea006cca0686aa47d604e8ce\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3449353902,
+      "rating_bucket": "1400-1599",
+      "record_id": "d482e208b405f1133b1a75c0830ac72fd6945761714f57c8e632740c501a67b1"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.539156416998594,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-ca64a9b98de2f517\",\n    \"claim-1cb14deedec4a78c\"\n  ],\n  \"concept_ids\": [\n    \"b1b666d0cee9c17207d86e1cc32744b7412496ceea006cca0686aa47d604e8ce\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3449353902,
+      "rating_bucket": "1600-1800",
+      "record_id": "0b926f652daa9e2c0368a6dd3110d0fd13a6c56ff3550fe0e2d9cacbf55a916d"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7729117089984356,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7ff25aeae94ad4ed\",\n    \"claim-e512e2b06232187b\",\n    \"claim-4f6db46e2e864a2f\"\n  ],\n  \"concept_ids\": [\n    \"bf6936b7770927b52cfcbecadafbb9dd4721bf8f19f507d9d4ca67bae547dc7e\",\n    \"dbf0b05253a2429b7716b2847b65b9ed884c336ef312556cbd55ad23bcd",
+      "peak_mlx_memory_bytes": 3479484098,
+      "rating_bucket": "1000-1199",
+      "record_id": "9eb6109f712336a3c8b9f865893e9d673b3389dcd6fc2f2675f611e3e23c5b0d"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.8021132500034582,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7ff25aeae94ad4ed\",\n    \"claim-e512e2b06232187b\",\n    \"claim-4f6db46e2e864a2f\"\n  ],\n  \"concept_ids\": [\n    \"bf6936b7770927b52cfcbecadafbb9dd4721bf8f19f507d9d4ca67bae547dc7e\",\n    \"dbf0b05253a2429b7716b2847b65b9ed884c336ef312556cbd55ad23bcd",
+      "peak_mlx_memory_bytes": 3479484098,
+      "rating_bucket": "1200-1399",
+      "record_id": "144d693472e04902eb5ac5f03f6313868c384ca9a21d2404345eb80e0d7601b0"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7833699580005486,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7ff25aeae94ad4ed\",\n    \"claim-e512e2b06232187b\",\n    \"claim-1722626cc604c417\"\n  ],\n  \"concept_ids\": [\n    \"bf6936b7770927b52cfcbecadafbb9dd4721bf8f19f507d9d4ca67bae547dc7e\",\n    \"dbf0b05253a2429b7716b2847b65b9ed884c336ef312556cbd55ad23bcd",
+      "peak_mlx_memory_bytes": 3480467138,
+      "rating_bucket": "1400-1599",
+      "record_id": "7c7c757181e8ad02b7996a0f2b7dc1d086edd7c8f7348a257a1118dc3e998727"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.7988137920001463,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7ff25aeae94ad4ed\",\n    \"claim-e512e2b06232187b\",\n    \"claim-1722626cc604c417\"\n  ],\n  \"concept_ids\": [\n    \"bf6936b7770927b52cfcbecadafbb9dd4721bf8f19f507d9d4ca67bae547dc7e\",\n    \"182037dbf40c990020409fb61cfef2fb5d4daaf5308ab3b99e07e55ea1bdd5",
+      "peak_mlx_memory_bytes": 3480467138,
+      "rating_bucket": "1600-1800",
+      "record_id": "e25bf6ef63f0d0c9634b1074f2a0d151999f9c1c5ab7bae47dd1159b8d7d5b08"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4218950829999812,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-91a1814031381c15\",\n    \"claim-7b4e43632af4ba5f\"\n  ],\n  \"concept_ids\": [\n    \"504b2b15dce5d7081198340f527db0b861aca44f2569b1a3393f4b1ba183dc49\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3535484590,
+      "rating_bucket": "1000-1199",
+      "record_id": "f2617961da0e0855cc9ada08f3f9e2ad29148c2069c84e804f78f5447cb5ab4d"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5154022499991697,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-91a1814031381c15\",\n    \"claim-7b4e43632af4ba5f\"\n  ],\n  \"concept_ids\": [\n    \"504b2b15dce5d7081198340f527db0b861aca44f2569b1a3393f4b1ba183dc49\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3535484590,
+      "rating_bucket": "1200-1399",
+      "record_id": "538440d1377387d536d45f67994162ae0b551193ce76591c6771043ae7c0a298"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.357754083997861,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-91a1814031381c15\",\n    \"claim-7b4e43632af4ba5f\"\n  ],\n  \"concept_ids\": [\n    \"504b2b15dce5d7081198340f527db0b861aca44f2569b1a3393f4b1ba183dc49\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3535484590,
+      "rating_bucket": "1400-1599",
+      "record_id": "474d3a38a7d6471c5f9af91eae14c38da62c90dbdd9b6192fac1c6b8da22a3e7"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3183234999996785,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-91a1814031381c15\",\n    \"claim-7b4e43632af4ba5f\"\n  ],\n  \"concept_ids\": [\n    \"504b2b15dce5d7081198340f527db0b861aca44f2569b1a3393f4b1ba183dc49\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3535484590,
+      "rating_bucket": "1600-1800",
+      "record_id": "1a4db8089941f1291b42dbe606386df11a8ea7b925b2cecd8fdac5ce41b76262"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.836356916999648,
+      "output": "{\"claim_ids\":[\"claim-071b4938eebfeb52\",\"claim-9b76f07ac9f20348\",\"claim-4e3a0fa0f0657245\"],\"concept_ids\":[\"0112f9caf3e45f65fef4f965a31b26abdd1eb27b3c36f78320bccccb31b1bda4\"],\"question_template_id\":\"find-strongest-move\",\"hint_template_id\":[\"forcing-moves\"]}",
+      "peak_mlx_memory_bytes": 3463804612,
+      "rating_bucket": "1000-1199",
+      "record_id": "85ff1439197805a47b5ddca82631970bf4646448505b8e890f0f24f8d7897b8f"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.8122188330016797,
+      "output": "{\"claim_ids\":[\"claim-071b4938eebfeb52\",\"claim-9b76f07ac9f20348\",\"claim-4e3a0fa0f0657245\"],\"concept_ids\":[\"0112f9caf3e45f65fef4f965a31b26abdd1eb27b3c56f78320bccccb31b1bda4\"],\"question_template_id\":\"find-strongest-move\",\"hint_template_id\":[\"forcing-moves\"]}",
+      "peak_mlx_memory_bytes": 3463804612,
+      "rating_bucket": "1200-1399",
+      "record_id": "be59b833f2495593873caa1164c4d5c83e33e9e0ea028190d488d05447219c49"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.460152957999526,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-071b4938eebfeb52\",\n    \"claim-9b76f07ac9f20348\",\n    \"claim-da3560a1ea4289af\"\n  ],\n  \"concept_ids\": [\n    \"0112f9caf3e45f65fef4f965a31b26abdd1eb27b3c56f78320bccccb31b1bda4\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3464214212,
+      "rating_bucket": "1400-1599",
+      "record_id": "249ad61db74a1f9570c3d80851b4dba2df8f123f856bf5f8ad18217e9524e9c4"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4517931249974936,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-071b4938eebfeb52\",\n    \"claim-9b76f07ac9f20348\",\n    \"claim-da3560a1ea4289af\"\n  ],\n  \"concept_ids\": [\n    \"0112f9caf3e45f65fef4f965a31b26abdd1eb27b3c56f78320bccccb31b1bda4\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3464214212,
+      "rating_bucket": "1600-1800",
+      "record_id": "08b2877eefa074ba6e178e5aad63284d5539dcc0a6e4d881aee81389d7ec8211"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6767220419969817,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6a63dc6355e0217d\",\n    \"claim-eb908c1f2cb70e2f\",\n    \"claim-08059d92a5ef7907\"\n  ],\n  \"concept_ids\": [\n    \"379bb6159e2fd0596e3ffdf13fafb9930589ea25aa42b7eb30586f9603d7b1d0\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3474192066,
+      "rating_bucket": "1000-1199",
+      "record_id": "e9030e58628c5741c9de32669a5f67deb12b01c2df4dc48303208ae5228cb62f"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.897026165999705,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6a63dc6355e0217d\",\n    \"claim-eb908c1f2cb70e2f\",\n    \"claim-08059d92a5ef7907\"\n  ],\n  \"concept_ids\": [\n    \"379bb6159e2fd0596e3ffdf13fafb9930589ea25aa42b7eb30586f9603d7b1d0\",\n    \"91e108b23786936841acbde9001015d4a79e69447af39388",
+      "peak_mlx_memory_bytes": 3474192066,
+      "rating_bucket": "1200-1399",
+      "record_id": "44c38a40468d04847fabdd378b8133b3162991414aa3a06fbfc34baa8f718a94"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3837047500019253,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6a63dc6355e0217d\",\n    \"claim-eb908c1f2cb70e2f\"\n  ],\n  \"concept_ids\": [\n    \"379bb6159e2fd0596e3ffdf13fafb9930589ea25aa42b7eb30586f9603d7b1d0\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3473635010,
+      "rating_bucket": "1400-1599",
+      "record_id": "80a98a9ac32cb28bea6db7d52629f4b6bf6c376d547b2c5c71938e378ef8f169"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.852733249997982,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-6a63dc6355e0217d\",\n    \"claim-eb908c1f2cb70e2f\",\n    \"claim-08059d92a5ef7907\"\n  ],\n  \"concept_ids\": [\n    \"379bb6159e2fd0596e3ffdf13fafb9930589ea25aa42b7eb30586f9603d7b1d0\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3473635010,
+      "rating_bucket": "1600-1800",
+      "record_id": "80f1ae7b6595ed47b58db40bd7cc6e2e8346d6682243375f0e526be516fa1698"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.71652795800037,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-52ff61a1c7feeef4\"\n  ],\n  \"concept_ids\": [\n    \"6e934ef1ecb314e54af36f28992033d7b8e9f7e34776b54828f68c24e45fdbc8\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"concept:6e934ef1ecb314e54af36f28992033d7b8e9f7e34776b54828f68c24e45fdbc8",
+      "peak_mlx_memory_bytes": 3438130906,
+      "rating_bucket": "1000-1199",
+      "record_id": "39f32211006565c50a7f368042887e8cf3ecb3537cd24764181ae761550d658b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5653555409990076,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-52ff61a1c7feeef4\"\n  ],\n  \"concept_ids\": [\n    \"6e934ef1ecb314e54af36f28992033d7b8e9f7e34776b54828f68c24e45fdbc8\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"concept:6e934ef1ecb314e54af36f28992033d7b8e9f7e34776b54828f68c24e45fdbc8",
+      "peak_mlx_memory_bytes": 3438130906,
+      "rating_bucket": "1200-1399",
+      "record_id": "7c1c0ddbd5c62739a88c28d3d33941520e7fe15c91f7816003690853944df58c"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.959294291998958,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f907c79f9191ee16\"\n  ],\n  \"concept_ids\": [\n    \"6e934ef1ecb314e54af36f28992033d7b8e9f7e34776b54828f68c24e45fdbc8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3437426394,
+      "rating_bucket": "1400-1599",
+      "record_id": "314dd0ba4951ac789c2fed3916f983ca98aeddf1f67c00b508e33afad182b110"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.956705749998946,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f907c79f9191ee16\"\n  ],\n  \"concept_ids\": [\n    \"6e934ef1ecb314e54af36f28992033d7b8e9f7e34776b54828f68c24e45fdbc8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3437426394,
+      "rating_bucket": "1600-1800",
+      "record_id": "717970911517e045433d1c3e69a97ef46ce4be93907ae1cda274ec441c0ec49b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6820314159995178,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-110fdc99f71675ec\",\n    \"claim-f96680e521936397\",\n    \"claim-e5057fd252d0d92d\"\n  ],\n  \"concept_ids\": [\n    \"07b624a57f1c458ba8ff882b0a7580969370010c35e127017530e4a5857f2f43\",\n    \"acf7731be8fc732af65252abd5778373a5ad23746dd8f0",
+      "peak_mlx_memory_bytes": 3486348974,
+      "rating_bucket": "1000-1199",
+      "record_id": "62658c701d965c659ba39e9cd351aff48b5aea104ba111800953c4e6f6dcd914"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6990372910004226,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-110fdc99f71675ec\",\n    \"claim-f96680e521936397\",\n    \"claim-e5057fd252d0d92d\"\n  ],\n  \"concept_ids\": [\n    \"07b624a57f1c458ba8ff882b0a7580969370010c35e127017530e4a5857f2f43\",\n    \"acf7731be8fc732af65252abd5778373a5ad23746dd8f0",
+      "peak_mlx_memory_bytes": 3486348974,
+      "rating_bucket": "1200-1399",
+      "record_id": "0234aa9e59d16265c3e162b8355b4849b8af599daefe137764058d7e6582278b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.953757334002148,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8b8d664e5e4af4cb\"\n  ],\n  \"concept_ids\": [\n    \"288090b60fbce2a0f16d9e0ba626fcef985c633fd706414dc20c9bf58b3ea6f4\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3489281710,
+      "rating_bucket": "1400-1599",
+      "record_id": "070acb6adbc4c5c0864cb6c065cef7fe552bbf1ca3c7da649270f24820904cc0"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.724808082999516,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-110fdc99f71675ec\",\n    \"claim-f96680e521936397\",\n    \"claim-8b8d664e5e4af4cb\"\n  ],\n  \"concept_ids\": [\n    \"07b624a57f1c458ba8ff882b0a7580969370010c35e127017530e4a5857f2f43\",\n    \"acf7731be8fc732af65252abd5778373a5ad23746dd8f0ab",
+      "peak_mlx_memory_bytes": 3489281710,
+      "rating_bucket": "1600-1800",
+      "record_id": "4e13506e9def57918b14829d17a2a00aab2dd368c7d3461fc3298e2d8b2bb0f1"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3595453330017335,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7d11a9679464302f\",\n    \"claim-509f880c68b98fba\"\n  ],\n  \"concept_ids\": [\n    \"a3dafe47999721d62151c9b0f76163e196689f30b56f8a0522eca6e7a8701d92\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3424876202,
+      "rating_bucket": "1000-1199",
+      "record_id": "3dca91372e92e6dffe9a82db4ff07aa06f8c841da138f54e15c0531385d03d87"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.097021624998888,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-39971bcf6dba3cf0\",\n    \"claim-8555090da9f68d60\"\n  ],\n  \"concept_ids\": [\n    \"7e1f5afff28caefda0b200f55d92eededebacd7dd30440d4c8649c20812e070b\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3424876202,
+      "rating_bucket": "1200-1399",
+      "record_id": "7910da204e9ea0117a39b290bfb8f56a6528a1eb78cd7c9302f286a534d65274"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.253891416999977,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-7d11a9679464302f\",\n    \"claim-509f880c68b98fba\"\n  ],\n  \"concept_ids\": [\n    \"a3dafe47999721d62151c9b0f76163e196689f30b56f8a0522eca6e7a8701d92\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3425482410,
+      "rating_bucket": "1400-1599",
+      "record_id": "11ce0d207c8c7dc9d53de7f9e280c8573c6ad4a5f145892b73920835fbc050a5"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6401404999996885,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-0ff1ab3408c71f2a\",\n    \"claim-30bba68371dbb53b\"\n  ],\n  \"concept_ids\": [\n    \"7e1f5afff28caefda0b200f55d92eededebacd7dd30440d4c8649c20812e070b\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"concept:7e1f5afff28caefda0b200f55d92eededebacd7dd30440d4c8649c2081",
+      "peak_mlx_memory_bytes": 3425482410,
+      "rating_bucket": "1600-1800",
+      "record_id": "e63103b2f004bc9efa34f3ca40345fcb6c4f955474d5f6f7c07800b4d07b585b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.866950916002679,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-672f489f402949c7\"\n  ],\n  \"concept_ids\": [\n    \"dd80152d0567afb17f41cdbc6fd0998236e069820ef92c0faa8035ffdacdd15a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3426186922,
+      "rating_bucket": "1000-1199",
+      "record_id": "d62b80dec6828f1c3ab14c8bf79acb9366f68d01627c0f5b4933610a7f59c4aa"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.8781290000006265,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-672f489f402949c7\"\n  ],\n  \"concept_ids\": [\n    \"dd80152d0567afb17f41cdbc6fd0998236e069820ef92c0faa8035ffdacdd15a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3426186922,
+      "rating_bucket": "1200-1399",
+      "record_id": "887f0576927b1483ff9a38f9492c696ef13af56997d6a973e15dd3ee5c93ea99"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.729710875002638,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a8effa8bed9f6a35\"\n  ],\n  \"concept_ids\": [\n    \"dd80152d0567afb17f41cdbc6fd0998236e069820ef92c0faa8035ffdacdd15a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421943466,
+      "rating_bucket": "1400-1599",
+      "record_id": "b518b4bf88a37c8cbc042ee2c32767a03d1bb588f88b698187888840e21c320e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.8105509580018406,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-a8effa8bed9f6a35\"\n  ],\n  \"concept_ids\": [\n    \"dd80152d0567afb17f41cdbc6fd0998236e069820ef92c0faa8035ffdacdd15a\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421943466,
+      "rating_bucket": "1600-1800",
+      "record_id": "efee75c1c16010f01db06224accefc70810d74cfd3b0fdaa712587ff44176288"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.070047707999038,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-17aeb6666469f72f\",\n    \"claim-543c99dfb5ac3740\"\n  ],\n  \"concept_ids\": [\n    \"9c4003ef925b09a22383e253e0c33dad17c3832f6f3bcbace1cabee044bc9cf5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3458250424,
+      "rating_bucket": "1000-1199",
+      "record_id": "66f9b25faa9c365da1762c2c9cbb9c5e7fb92ce35c1c35805af5e5d0bcde0ef6"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0147286249994067,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-17aeb6666469f72f\",\n    \"claim-543c99dfb5ac3740\"\n  ],\n  \"concept_ids\": [\n    \"9c4003ef925b09a22383e253e0c33dad17c3832f6f3bcbace1cabee044bc9cf5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3458250424,
+      "rating_bucket": "1200-1399",
+      "record_id": "a3a6b131d970cba5b65fa639aac7c9adafbdcd2af59e8eec825b99f50fdade06"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.034015000001091,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-17aeb6666469f72f\",\n    \"claim-543c99dfb5ac3740\"\n  ],\n  \"concept_ids\": [\n    \"9c4003ef925b09a22383e253e0c33dad17c3832f6f3bcbace1cabee044bc9cf5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3460413112,
+      "rating_bucket": "1400-1599",
+      "record_id": "0609c0ae24c5b33b137218a56f67f8a3664a3a25b0e16e1436ae877167d0511f"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.0795475829982024,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-17aeb6666469f72f\",\n    \"claim-543c99dfb5ac3740\"\n  ],\n  \"concept_ids\": [\n    \"9c4003ef925b09a22383e253e0c33dad17c3832f6f3bcbace1cabee044bc9cf5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3460413112,
+      "rating_bucket": "1600-1800",
+      "record_id": "48a21fe80369230d5512c6c3190f3f502fc9631221261303126bb738ba7a503f"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6121603329993377,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-543eaf92f40e5dab\",\n    \"claim-5213b237c6268ba0\"\n  ],\n  \"concept_ids\": [\n    \"d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be195a149df62e528012969c\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"concept:d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be195",
+      "peak_mlx_memory_bytes": 3438343866,
+      "rating_bucket": "1000-1199",
+      "record_id": "d5e56055e062fc8bd310979aaec4a872d1a01a8cf35cf47bedd2458e86dedb45"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.580735874998936,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-543eaf92f40e5dab\",\n    \"claim-5213b237c6268ba0\"\n  ],\n  \"concept_ids\": [\n    \"d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be195a149df62e528012969c\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"concept:d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be1",
+      "peak_mlx_memory_bytes": 3438343866,
+      "rating_bucket": "1200-1399",
+      "record_id": "d032daf155f3ac89ecad648da097a3a6a5697d4e1a0df5afddfc68e65fe39973"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5522784999993746,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4a274b659c8bbfa2\",\n    \"claim-ec16ce34dea9ecbd\"\n  ],\n  \"concept_ids\": [\n    \"d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be195a149df62e528012969c\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be19",
+      "peak_mlx_memory_bytes": 3435804346,
+      "rating_bucket": "1400-1599",
+      "record_id": "56bc30d88c6c218bbaf226d68632dc76373357f11e3a769af08948798dab267d"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5064348749983765,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4a274b659c8bbfa2\",\n    \"claim-ec16ce34dea9ecbd\"\n  ],\n  \"concept_ids\": [\n    \"d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be195a149df62e528012969c\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"concept:d6f2a838aeb7798b7fdf5d03ce6eecb1608c7710be19",
+      "peak_mlx_memory_bytes": 3435804346,
+      "rating_bucket": "1600-1800",
+      "record_id": "6e3c9b3b21c5b202b0e9e195a23484e8b22a0993f9319779f8cb57193af06679"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.256423957998777,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-af1a265f16ff6ca1\",\n    \"claim-9165712275ff3e43\"\n  ],\n  \"concept_ids\": [\n    \"e1d4d2b4bc0e0c053bbc787f209d187c3dd326e127a85170c69ec8c3d2d5b1b9\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3473389230,
+      "rating_bucket": "1000-1199",
+      "record_id": "3a0e1556049141827f4b4061bd7bc0512126c280605079f437adc0d0ebcf5185"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3006219579983735,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-af1a265f16ff6ca1\",\n    \"claim-9165712275ff3e43\"\n  ],\n  \"concept_ids\": [\n    \"e1d4d2b4bc0e0c053bbc787f209d187c3dd326e127a85170c69ec8c3d2d5b1b9\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3473389230,
+      "rating_bucket": "1200-1399",
+      "record_id": "c08e8dbee9ae096ca7845af6c7bb587f2ee19bc35c3215fab43ba012f6dca1fa"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.196867791000841,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-af1a265f16ff6ca1\",\n    \"claim-9165712275ff3e43\"\n  ],\n  \"concept_ids\": [\n    \"e1d4d2b4bc0e0c053bbc787f209d187c3dd326e127a85170c69ec8c3d2d5b1b9\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3476993710,
+      "rating_bucket": "1400-1599",
+      "record_id": "4b5675c4985ddf865ab1b93ad6cab7bbb504536b9b33c98318ae2f13a7a61e4c"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2305656249991443,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-af1a265f16ff6ca1\",\n    \"claim-9165712275ff3e43\"\n  ],\n  \"concept_ids\": [\n    \"e1d4d2b4bc0e0c053bbc787f209d187c3dd326e127a85170c69ec8c3d2d5b1b9\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3476993710,
+      "rating_bucket": "1600-1800",
+      "record_id": "d565bc8b602ee590a458963f8cef45f1253fda549365c416c584b3ec729ecfb1"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.1241221249983937,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4af4609fff0a1b3d\",\n    \"claim-9ebc958c8c2e35ff\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3395496012,
+      "rating_bucket": "1000-1199",
+      "record_id": "81cf4ce82a457f337834985957531e1a926efd424cb1e067fcd4be1ac7a3bfe3"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.2027791250002338,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4af4609fff0a1b3d\",\n    \"claim-9ebc958c8c2e35ff\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3395496012,
+      "rating_bucket": "1200-1399",
+      "record_id": "c364f06018a5332847464360d717e8689abdc4638bb6bd76bb2ddec72a3dda74"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.213428541999747,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-62c760ed1f4814b8\",\n    \"claim-44333f5161a65e87\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3401856696,
+      "rating_bucket": "1400-1599",
+      "record_id": "ddba06ed01e30b482cf94271dfad696aaeb061131af69bb12597e29b5cd7460f"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.3109659159999865,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-62c760ed1f4814b8\",\n    \"claim-44333f5161a65e87\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3401856696,
+      "rating_bucket": "1600-1800",
+      "record_id": "ee505918d46503379892b2b1c4a5c96780c88f2dd8055d0abb46629df6ee6d8e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.9363797080004588,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f456781bbfb2ee68\",\n    \"claim-da99184d23cb0e5a\",\n    \"claim-89cd6fd4083dbf21\"\n  ],\n  \"concept_ids\": [\n    \"2a56e9b2c58799a26ff3a969339130522e5a1f507063a9942fada7254ddc76f2\",\n    \"3f63547d965079c0dbff72c2d28610d225d92122bed54aa2",
+      "peak_mlx_memory_bytes": 3511957156,
+      "rating_bucket": "1000-1199",
+      "record_id": "3937ab91262749516c1110e727fe2b0caff363b665c235b5bfaf21d2b35bb53e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.92822412500027,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f456781bbfb2ee68\",\n    \"claim-da99184d23cb0e5a\",\n    \"claim-89cd6fd4083dbf21\"\n  ],\n  \"concept_ids\": [\n    \"2a56e9b2c58799a26ff3a969339130522e5a1f507063a9942fada7254ddc76f2\",\n    \"3f63547d965079c0dbff72c2d28610d225d92122bed54aa2",
+      "peak_mlx_memory_bytes": 3511957156,
+      "rating_bucket": "1200-1399",
+      "record_id": "eba7ed4fda9981cc7688120db4482c7cbdb6f40677d532da1c8bd30163629be2"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 4.1872233750000305,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f456781bbfb2ee68\",\n    \"claim-da99184d23cb0e5a\",\n    \"claim-89cd6fd4083dbf21\"\n  ],\n  \"concept_ids\": [\n    \"2a56e9b2c58799a26ff3a969339130522e5a1f507063a9942fada7254ddc76f2\",\n    \"3f63547d965079c0dbff72c2d28610d225d92122bed54aa2",
+      "peak_mlx_memory_bytes": 3511252644,
+      "rating_bucket": "1400-1599",
+      "record_id": "450b8e8d084f01142b2d825e412c63983ace38fbaf93a5748aaed36d1ac7b96a"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6430141660021036,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f456781bbfb2ee68\",\n    \"claim-da99184d23cb0e5a\",\n    \"claim-89cd6fd4083dbf21\"\n  ],\n  \"concept_ids\": [\n    \"2a56e9b2c58799a26ff3a969339130522e5a1f507063a9942fada7254ddc76f2\",\n    \"3f63547d965079c0dbff72c2d28610d225d92122bed54aa2",
+      "peak_mlx_memory_bytes": 3511252644,
+      "rating_bucket": "1600-1800",
+      "record_id": "0e68b647b0370cb0045375658135db397965dc1c7b815fe0006bf407f88e97a4"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.340503166000417,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f38be145ec4d76d1\",\n    \"claim-ef3bcd9a4b8756f2\",\n    \"claim-02b8054642b6fabc\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3413489336,
+      "rating_bucket": "1000-1199",
+      "record_id": "f4c2e8ed0a98d55babdc07dce280e648ddeea4431c1e3fe84015dc7d7245650c"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.389185832998919,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f38be145ec4d76d1\",\n    \"claim-ef3bcd9a4b8756f2\",\n    \"claim-02b8054642b6fabc\"\n  ],\n  \"concept_ids\": [\n    \"move\",\n    \"score\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3413505720,
+      "rating_bucket": "1200-1399",
+      "record_id": "4cfbe817601a536c07db37fe11a2895068b616afe2c17e7e98728f43a92f9a97"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 1.8307602079985372,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1533b4f253840a0e\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3413505720,
+      "rating_bucket": "1400-1599",
+      "record_id": "829b558aaf1a5d0b46493cb2a4f4f7806f7c92d8b2b24b57d7f003c1bdbc3a30"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 1.787672083999496,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1533b4f253840a0e\"\n  ],\n  \"concept_ids\": [\n    \"line\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3413505720,
+      "rating_bucket": "1600-1800",
+      "record_id": "4ce1ff16c38966cbb8b57949ddfffd1bf888fea2e0f1b0f6a892b70a1b741f46"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "question_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.8624345829994127,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-ea2cd08e2833a34f\",\n    \"claim-ab22adc305abd418\"\n  ],\n  \"concept_ids\": [\n    \"67cfc2653f9efc433801cb666e0433505f04e95e714717f318bf01695fe817e5\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3486758594,
+      "rating_bucket": "1000-1199",
+      "record_id": "4af423cfad7e94f0c09a4ca33b8fc06c31bc79fb77667426d1595f6f7858fab6"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch",
+        "question_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.039688708002359,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-ea2cd08e2833a34f\",\n    \"claim-ab22adc305abd418\"\n  ],\n  \"concept_ids\": [\n    \"67cfc2653f9efc433801cb666e0433505f04e95e714717f318bf01695fe817e5\"\n  ],\n  \"question_template_id\": \"compare-candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3486758594,
+      "rating_bucket": "1200-1399",
+      "record_id": "2146fa841802267507e55729888c74d66135af9c00e2d9ec0ba6d046d45303b9"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.6948144169982697,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-dc2dd65a81dbc195\"\n  ],\n  \"concept_ids\": [\n    \"67cfc2653f9efc433801cb666e0433505f04e95e714717f318bf01695fe817e5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3485791938,
+      "rating_bucket": "1400-1599",
+      "record_id": "e5e56c21640805d5919a60c74debc4b73391659da49557f19ebf5111f0a27d71"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.649118291999912,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-dc2dd65a81dbc195\"\n  ],\n  \"concept_ids\": [\n    \"67cfc2653f9efc433801cb666e0433505f04e95e714717f318bf01695fe817e5\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3485791938,
+      "rating_bucket": "1600-1800",
+      "record_id": "b736097a2164d3e8e0a83199c7ad9eaa4c84ac989a1588964f47f3b9b8ec9283"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3699639170008595,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-83b0fa1113822dea\",\n    \"claim-9062237f87f863bc\",\n    \"claim-e3b80cdaae0a66ec\"\n  ],\n  \"concept_ids\": [\n    \"dee37d6403a88b906ed1d919ec2ae6c74c3399c59ae737810daf4d9453c95507\",\n    \"d1c5b5298dbc7a799bc819809385b78c536e33100015702c42",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1000-1199",
+      "record_id": "6b3ee13596d9f9f973bd043ad6b3e75b1d6d9110b3547817b37eb0cf6d204de6"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3616858330024115,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-83b0fa1113822dea\",\n    \"claim-9062237f87f863bc\",\n    \"claim-e3b80cdaae0a66ec\"\n  ],\n  \"concept_ids\": [\n    \"dee37d6403a88b906ed1d919ec2ae6c74c3399c59ae737810daf4d9453c95507\",\n    \"d1c5b5298dbc7a799bc819809385b78c536e33100015702c42",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1200-1399",
+      "record_id": "ecaf008ea2954964fd1f1d27b74ccb3fa0587e15104a5530255621cb9344cd49"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4972344169982534,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-83b0fa1113822dea\",\n    \"claim-9062237f87f863bc\",\n    \"claim-e3b80cdaae0a66ec\"\n  ],\n  \"concept_ids\": [\n    \"dee37d6403a88b906ed1d919ec2ae6c74c3399c59ae737810daf4d9453c95507\",\n    \"d1c5b5298dbc7a799bc819809385b78c536e33100015702c42",
+      "peak_mlx_memory_bytes": 3423991546,
+      "rating_bucket": "1400-1599",
+      "record_id": "d2f686e7a92afb2dc86307e2f08b62d5236e816198fd2d81441935d1f6aceef7"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4291024999984074,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-83b0fa1113822dea\",\n    \"claim-9062237f87f863bc\",\n    \"claim-e3b80cdaae0a66ec\"\n  ],\n  \"concept_ids\": [\n    \"dee37d6403a88b906ed1d919ec2ae6c74c3399c59ae737810daf4d9453c95507\",\n    \"d1c5b5298dbc7a799bc819809385b78c536e33100015702c42",
+      "peak_mlx_memory_bytes": 3423991546,
+      "rating_bucket": "1600-1800",
+      "record_id": "f7719b62b54cbddc0f0bdbc22241ef98c1f378c53c116f3ee873a15b2a56c5b3"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3212499170003866,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-42a2f2556ca0e0c3\",\n    \"claim-ab866a75ecd74fcd\",\n    \"claim-220ffacc79986614\"\n  ],\n  \"concept_ids\": [\n    \"7ae565ddfc63543175d694339648038737d96f64ead4ea7cec9b368bd8c1d7b5\"\n  ],\n  \"question_template_id\": \"compare_candidates\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3464312494,
+      "rating_bucket": "1000-1199",
+      "record_id": "f7d567a38001c3c50098306c5c388fee8f64958d6879da5f9638aae753fade71"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.344155499999033,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-42a2f2556ca0e0c3\",\n    \"claim-ab866a75ecd74fcd\",\n    \"claim-220ffacc79986614\"\n  ],\n  \"concept_ids\": [\n    \"7ae565ddfc63543175d694339648038737d96f64ead4ea7cec9b368bd8c1d7b5\",\n    \"48ae718bf92b8a44d50b2354c80b7a970172fb06ea4d6ff5e0feb6cbee",
+      "peak_mlx_memory_bytes": 3464312494,
+      "rating_bucket": "1200-1399",
+      "record_id": "3192c8b64aa8506c0b20907fb06013055292bcf4b9ba62386cce7ebf6457a39b"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.220684625001013,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1a6d865224553f65\",\n    \"claim-7578fe3e787015a1\",\n    \"claim-25c44397ba9fb171\"\n  ],\n  \"concept_ids\": [\n    \"48ae718bf92b8a44d50b2354c80b7a970172fb06ea4d6ff5e0feb6cbee597a7a\",\n    \"dc0e561274c7bd0064ca084a710a9c545d5fb888f267bdac98",
+      "peak_mlx_memory_bytes": 3465901742,
+      "rating_bucket": "1400-1599",
+      "record_id": "7f8e4feeca37525b14445a7ef25d0e2383609d00eaad5372fd1ddcb6cd497ebd"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2244130420003785,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-1a6d865224553f65\",\n    \"claim-7578fe3e787015a1\",\n    \"claim-25c44397ba9fb171\"\n  ],\n  \"concept_ids\": [\n    \"48ae718bf92b8a44d50b2354c80b7a970172fb06ea4d6ff5e0feb6cbee597a7a\",\n    \"dc0e561274c7bd0064ca084a710a9c545d5fb888f267bdac98",
+      "peak_mlx_memory_bytes": 3465901742,
+      "rating_bucket": "1600-1800",
+      "record_id": "a6b2dc3b98d3d6f52317184121dff7464cc67a3cdd7c54535b3465b71837f35d"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.039556708998134,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8aee006cc00b239c\",\n    \"claim-9d18d9878117f364\",\n    \"claim-381ac57c2b6a0475\"\n  ],\n  \"concept_ids\": [\n    \"593abb641475a5c8ac77b327cbefc7fff9a7da443ccbe16066caa21919b1cc9e\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3475257028,
+      "rating_bucket": "1000-1199",
+      "record_id": "e0cc6012710e23f90c1ce75b17844df739817e812ab7dc58efe4311646933475"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.9801217499989434,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-8aee006cc00b239c\",\n    \"claim-9d18d9878117f364\",\n    \"claim-381ac57c2b6a0475\"\n  ],\n  \"concept_ids\": [\n    \"593abb641475a5c8ac77b327cbefc7fff9a7da443ccbe16066caa21919b1cc9e\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3475257028,
+      "rating_bucket": "1200-1399",
+      "record_id": "f49bf59ac6efd52ad36a0654ce9d5e0787445becf63354e3fe7fded69c714833"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1491684169996006,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4dfb5d47908fff25\",\n    \"claim-98c9da0787d82c05\"\n  ],\n  \"concept_ids\": [\n    \"593abb641475a5c8ac77b327cbefc7fff9a7da443ccbe16066caa21919b1cc9e\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"concept:593abb641475a5c8ac77b327cbefc7fff9a7da443ccbe16066caa21919b",
+      "peak_mlx_memory_bytes": 3472291524,
+      "rating_bucket": "1400-1599",
+      "record_id": "ec4f87b3090cf6d9de537fb36b15869472312e537a5877ecaf95a91eb79c9131"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.1557558339991374,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-4dfb5d47908fff25\",\n    \"claim-98c9da0787d82c05\"\n  ],\n  \"concept_ids\": [\n    \"593abb641475a5c8ac77b327cbefc7fff9a7da443ccbe16066caa21919b1cc9e\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"concept:593abb641475a5c8ac77b327cbefc7fff9a7da443ccbe16066caa21919b",
+      "peak_mlx_memory_bytes": 3472291524,
+      "rating_bucket": "1600-1800",
+      "record_id": "d64c0bf9dd307c00588fa492bb65426fa2153d6d2052b8f1996bb92480ed3fd3"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.468172000000777,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-32e84b2fb5fa6fcb\"\n  ],\n  \"concept_ids\": [\n    \"22b10372829d3eb8aa2e57a1e791e00685269c5470e1d07070eb16b6fa091700\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"concept:22b10372829d3eb8aa2e57a1e791e00685269c5470e1d07070eb16b6fa09170",
+      "peak_mlx_memory_bytes": 3447600826,
+      "rating_bucket": "1000-1199",
+      "record_id": "e1dad4d43319c65a98aec339bf514dff2510c3575323241babfd670b39983214"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.3265098750016477,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b999d21ece3118b0\",\n    \"claim-37140d8b756f9e8b\",\n    \"claim-32e84b2fb5fa6fcb\"\n  ],\n  \"concept_ids\": [\n    \"22b10372829d3eb8aa2e57a1e791e00685269c5470e1d07070eb16b6fa091700\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3447600826,
+      "rating_bucket": "1200-1399",
+      "record_id": "dc78cddcf78ef08e22a58d16ba1076ce9c12a924f77f1b737ac2613c7e470537"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.353558292001253,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b999d21ece3118b0\",\n    \"claim-37140d8b756f9e8b\",\n    \"claim-30a362ff3432a078\"\n  ],\n  \"concept_ids\": [\n    \"22b10372829d3eb8aa2e57a1e791e00685269c5470e1d07070eb16b6fa091700\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3452253882,
+      "rating_bucket": "1400-1599",
+      "record_id": "1eeb04de6727deba668738e3b5c02722a0ce1b14752071f35f85a46d32cefc19"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "hint_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.6561647089984035,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-b999d21ece3118b0\",\n    \"claim-37140d8b756f9e8b\",\n    \"claim-30a362ff3432a078\"\n  ],\n  \"concept_ids\": [\n    \"22b10372829d3eb8aa2e57a1e791e00685269c5470e1d07070eb16b6fa091700\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3452253882,
+      "rating_bucket": "1600-1800",
+      "record_id": "2cbea71198018a96a958450eb075a273578aeb51907ca91cb527401375e7aeb9"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.926882874999137,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-d23ad1df42f8074e\",\n    \"claim-78ec6462ab2aab25\"\n  ],\n  \"concept_ids\": [\n    \"7304145652578b62489f8f948d98e1faee6c5f7cb55a97021ab61511802a56b8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3461199544,
+      "rating_bucket": "1000-1199",
+      "record_id": "674d681e603c9b612071ce26afb17e3bd1321f430024e7058081bbaa1de58bfe"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.2242889999979525,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-d23ad1df42f8074e\",\n    \"claim-78ec6462ab2aab25\"\n  ],\n  \"concept_ids\": [\n    \"7304145652578b62489f8f948d98e1faee6c5f7cb55a97021ab61511802a56b8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3461199544,
+      "rating_bucket": "1200-1399",
+      "record_id": "783759793084e65b20b944ff8fe5480851d887ad0a62159ffb2f5a386b0d1474"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.8237864170005196,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-d23ad1df42f8074e\",\n    \"claim-78ec6462ab2aab25\"\n  ],\n  \"concept_ids\": [\n    \"7304145652578b62489f8f948d98e1faee6c5f7cb55a97021ab61511802a56b8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3461199544,
+      "rating_bucket": "1400-1599",
+      "record_id": "5c0a1cd391d13e1e69cb0de33a7b62ffff61d200e0f9139d0aa470f948b0adcc"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.040350915998715,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-d23ad1df42f8074e\",\n    \"claim-78ec6462ab2aab25\"\n  ],\n  \"concept_ids\": [\n    \"7304145652578b62489f8f948d98e1faee6c5f7cb55a97021ab61511802a56b8\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3461199544,
+      "rating_bucket": "1600-1800",
+      "record_id": "1a6f109ec97313c00302d9a1b9caf6f395cdbc72c8eafd3bd645ab6f558013c1"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4058698329972685,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f3bb09d4c82bf7b9\",\n    \"claim-7e7cc607de14c650\"\n  ],\n  \"concept_ids\": [\n    \"260c7e22d13b7987b683351eec3c368308b3f7305c287f46e6b3151153dab79c\",\n    \"5eaac5132a15eef4902f0c38fdb68ff8933516f08dc3356129a80fb6f855168c\"\n  ],",
+      "peak_mlx_memory_bytes": 3374200568,
+      "rating_bucket": "1000-1199",
+      "record_id": "be2a135aca232be1e0046ed27cdee301e6c40ca04f87e31b708b771832abe831"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.5882766659997287,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f3bb09d4c82bf7b9\",\n    \"claim-7e7cc607de14c650\"\n  ],\n  \"concept_ids\": [\n    \"260c7e22d13b7987b683351eec3c368308b3f7305c287f46e6b3151153dab79c\",\n    \"5eaac5132a15eef4902f0c38fdb68ff8933516f08dc3356129a80fb6f855168c\"\n  ],",
+      "peak_mlx_memory_bytes": 3374200568,
+      "rating_bucket": "1200-1399",
+      "record_id": "82a53be7f45270b68b88ee023bdb597f88e4ad03ff4f08da1e75440c3b804d19"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.307177374997991,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f3bb09d4c82bf7b9\",\n    \"claim-7e7cc607de14c650\"\n  ],\n  \"concept_ids\": [\n    \"260c7e22d13b7987b683351eec3c368308b3f7305c287f46e6b3151153dab79c\",\n    \"6cf561e2e4d152b3279bad4dc1366baa47b36c9e0f2b754f28fec8c829b7321c\"\n  ],",
+      "peak_mlx_memory_bytes": 3381720830,
+      "rating_bucket": "1400-1599",
+      "record_id": "533db7040920aed81a4c9d9454be0029aa1d3c6784b0b128a9bbbf6872d198dd"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4193287909984065,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-f3bb09d4c82bf7b9\",\n    \"claim-7e7cc607de14c650\"\n  ],\n  \"concept_ids\": [\n    \"260c7e22d13b7987b683351eec3c368308b3f7305c287f46e6b3151153dab79c\",\n    \"6cf561e2e4d152b3279bad4dc1366baa47b36c9e0f2b754f28fec8c829b7321c\"\n  ],",
+      "peak_mlx_memory_bytes": 3381720830,
+      "rating_bucket": "1600-1800",
+      "record_id": "612c8e250902f2c892000b645a41d5f8598ad0ec272b47c4017d79a1458dac16"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.102409874998557,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-5fbe4f9a2db54f3e\",\n    \"claim-49f3e78685c549d0\"\n  ],\n  \"concept_ids\": [\n    \"aa4752d3b5dea0e5688ad467e27664c4436d1be43d90bd659e9aa98ed37c3df1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1000-1199",
+      "record_id": "d31b041e54a7b3c6557c7a4d8dc4474a483f5af000b9541680b1f5e42fddf7b3"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.8906358329986688,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-5fbe4f9a2db54f3e\",\n    \"claim-49f3e78685c549d0\"\n  ],\n  \"concept_ids\": [\n    \"aa4752d3b5dea0e5688ad467e27664c4436d1be43d90bd659e9aa98ed37c3df1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3421337258,
+      "rating_bucket": "1200-1399",
+      "record_id": "eef542da5c132e0c2b1b14173c32eb531ed393de5c6fbe4cb8d8a001f14d4083"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.4610426670005836,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-5fbe4f9a2db54f3e\",\n    \"claim-49f3e78685c549d0\",\n    \"claim-a088fa6884cd823c\"\n  ],\n  \"concept_ids\": [\n    \"aa4752d3b5dea0e5688ad467e27664c4436d1be43d90bd659e9aa98ed37c3df1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3420403450,
+      "rating_bucket": "1400-1599",
+      "record_id": "99c1717501e6e08f78b7286521389b3b608b3e46defe53843ee19d5452bdbe7a"
+    },
+    {
+      "contract_valid": true,
+      "error_codes": [
+        "claim_selection_mismatch",
+        "concept_selection_mismatch"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.105401749999146,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-5fbe4f9a2db54f3e\",\n    \"claim-49f3e78685c549d0\",\n    \"claim-a088fa6884cd823c\"\n  ],\n  \"concept_ids\": [\n    \"aa4752d3b5dea0e5688ad467e27664c4436d1be43d90bd659e9aa98ed37c3df1\"\n  ],\n  \"question_template_id\": \"find-strongest-move\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3420403450,
+      "rating_bucket": "1600-1800",
+      "record_id": "8aa66fe9e70f7681be66b4955f43d54838a0d9dd920d8eb0ee5a07614cef5ff0"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 3.179165416997421,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-c6cefa3eb4383689\",\n    \"claim-4ea5a0041c5fccd6\",\n    \"claim-bb9b3b9c193c0932\"\n  ],\n  \"concept_ids\": [\n    \"e6f687880ca4fd2c2e8e17143322e9f071a395d4790ffaae9e47df0074f93b22\",\n    \"ce6b23a0252f51059e0788f044e42ef58733c46a0bdfecf66",
+      "peak_mlx_memory_bytes": 3422828282,
+      "rating_bucket": "1000-1199",
+      "record_id": "ea68bbdefeb8aa96a02d3d97609507e22c36b27fe80649fbee545e191031411e"
+    },
+    {
+      "contract_valid": false,
+      "error_codes": [
+        "contract_invalid"
+      ],
+      "exact_target_match": false,
+      "latency_seconds": 2.7332564579992322,
+      "output": "```json\n{\n  \"claim_ids\": [\n    \"claim-bb9b3b9c193c0932\",\n    \"claim-acd13b4a65164acd\"\n  ],\n  \"concept_ids\": [\n    \"e6f687880ca4fd2c2e8e17143322e9f071a395d4790ffaae9e47df0074f93b22\"\n  ],\n  \"question_template_id\": \"line\",\n  \"hint_template_id\": \"forcing-moves\"\n}\n```",
+      "peak_mlx_memory_bytes": 3422828282,
+      "rating_bucket": "1200-1399",
+      "record_id": "8d0380d701ebb2ec4af70611d82870a7ac51c08bbedb2f0d84403766cc053d55"
+    }
+  ],
+  "revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+  "schema_version": "1.0",
+  "status": "passed",
+  "task": "lesson-selection-2.0"
+}

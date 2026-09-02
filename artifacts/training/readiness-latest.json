@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-02T00:41:38.491904+00:00",
+  "generated_at": "2026-09-02T01:01:27.235109+00:00",
   "status": "blocked",
   "authorized_to_train": false,
   "checks": {
@@ -8,7 +8,7 @@
     "data_contract_and_isolation": true,
     "toolchain_exactly_pinned_and_installed": true,
     "native_base_weights_pinned": true,
-    "error_and_baseline_evidence_frozen": false,
+    "error_and_baseline_evidence_frozen": true,
     "two_reviewer_human_gold_adjudicated": false
   },
   "hardware": {
@@ -36,7 +36,6 @@
     }
   },
   "blockers": [
-    "error_and_baseline_evidence_frozen",
     "two_reviewer_human_gold_adjudicated"
   ],
   "next_allowed_action": "resolve blockers and rerun this gate; do not train"

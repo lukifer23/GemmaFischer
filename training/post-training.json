@@ -62,8 +62,8 @@
     "human_harmful_omission_maximum": 0
   },
   "evidence": {
-    "error_taxonomy": null,
-    "frozen_baseline": null,
+    "error_taxonomy": "artifacts/training/error-taxonomy.json",
+    "frozen_baseline": "artifacts/training/untuned-baseline.json",
     "frozen_human_review": null
   },
   "authorization": {

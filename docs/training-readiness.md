@@ -26,8 +26,14 @@ questions, hints, answer keys, and grading.
    rubric. Validate full two-reviewer coverage, then have one independent
    adjudicator resolve every disagreement.
 6. Run at least 250 validation rows through the real pinned untuned inference
-   model, then derive the frozen error taxonomy from that exact receipt. Point the three `evidence`
-   fields in `training/post-training.json` at passing JSON receipts.
+   model, then derive the frozen error taxonomy from that exact receipt. The
+   committed 250-row baseline is contract-valid on 43.6% of rows and exactly
+   matches none of the deterministic targets. Its observed taxonomy contains
+   141 contract failures, 109 claim-selection mismatches, 91 hint-selection
+   mismatches, 65 concept-selection mismatches, and 4 question-selection
+   mismatches. This clears the repeated-error rationale; it does not qualify a
+   model. Point the three `evidence` fields in `training/post-training.json` at
+   passing JSON receipts.
 7. Download the one native base revision into a local cache and verify every
    declared file hash. Convert the human-gold-applied canonical data to MLX chat
    JSONL. The hash-pinned `training/mlx-lora.yaml` fixes rank 16, dropout 0.05,
