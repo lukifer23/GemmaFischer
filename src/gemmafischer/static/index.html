@@ -5,15 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GemmaFischer Local Chess Coach</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/app.css?v=20260901-2">
+  <link rel="stylesheet" href="/app.css?v=20260904">
 </head>
 <body>
   <header class="site-header">
     <div><p class="eyebrow">Local chess, accountable coaching</p><h1>GemmaFischer</h1></div>
+    <nav class="product-nav" aria-label="Primary">
+      <button class="nav-tab active" data-view="learn" type="button">Learn</button>
+      <button class="nav-tab" data-view="review" type="button">Review <span id="due-count">0</span></button>
+      <button class="nav-tab" data-view="progress" type="button">Progress</button>
+      <button class="nav-tab" data-view="lab" type="button">Position Lab</button>
+    </nav>
     <p class="privacy">Loopback only · positions stay on this device</p>
   </header>
   <div id="storage-banner" class="storage-banner" role="alert" hidden><span></span><button id="retry-storage" class="quiet" type="button">Retry local storage</button></div>
-  <main>
+  <main id="learn-view" class="product-view study-shell">
+    <section class="study-hero">
+      <div><p class="step">Learn from your own game</p><h2>Turn one PGN into the decisions worth remembering.</h2><p>Stockfish screens every move you played, verifies the strongest moments at full depth, then asks you to solve before it reveals the answer.</p></div>
+      <form id="pgn-form" class="import-card">
+        <label for="pgn">One game in PGN format</label>
+        <textarea id="pgn" rows="9" required spellcheck="false" placeholder="[Event &quot;Club game&quot;]&#10;[White &quot;Your name&quot;]&#10;[Black &quot;Opponent&quot;]&#10;&#10;1. e4 e5 2. Nf3 …"></textarea>
+        <div class="import-options">
+          <label for="study-perspective">Learn as</label><select id="study-perspective"><option value="auto">Detect by player name</option><option value="white">White</option><option value="black">Black</option></select>
+          <label for="player-name">Player name</label><input id="player-name" maxlength="120" autocomplete="name">
+          <label for="study-rating">Playing level</label><select id="study-rating"><option>1000-1199</option><option>1200-1399</option><option selected>1400-1599</option><option>1600-1800</option></select>
+        </div>
+        <button class="primary" type="submit">Find my learning moments</button>
+        <p id="study-error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+    <section id="study-work" class="study-work" aria-live="polite" hidden>
+      <div class="study-progress"><div><p class="step">Game analysis</p><h2 id="study-state">Preparing your game…</h2></div><progress id="study-progress" max="1" value="0"></progress><button id="cancel-study" class="quiet" type="button">Cancel</button></div>
+      <div id="moment-list" class="moment-list"></div>
+    </section>
+    <section id="practice-work" class="practice-work" hidden>
+      <div class="section-heading"><div><p class="step" id="practice-phase">Solve before reveal</p><h2 id="practice-title">Find your move</h2></div><button id="close-study-practice" class="quiet" type="button">Back to moments</button></div>
+      <div class="practice-layout"><div><div id="study-board" class="board study-board" role="grid" aria-label="Practice chess position"></div><p id="study-board-status" class="status" role="status">Choose a piece, then a destination.</p></div><aside class="practice-coach"><p id="moment-context"></p><div id="attempt-feedback" class="review-status" hidden></div><button id="retry-moment" class="primary" type="button" hidden>Retry this position</button><button id="transfer-moment" class="primary" type="button" hidden>Try a related position</button></aside></div>
+    </section>
+  </main>
+  <main id="review-view" class="product-view study-shell" hidden><section class="study-hero"><div><p class="step">Due review</p><h2>Bring the right ideas back before they fade.</h2><p>Reviews are scheduled from your actual attempts, with lapses returning sooner.</p></div><div id="review-list" class="moment-list"></div></section></main>
+  <main id="progress-view" class="product-view study-shell" hidden><section><p class="step">Learning progress</p><h2>Mastery, not activity.</h2><div id="progress-grid" class="progress-grid"></div><button id="delete-progress" class="quiet danger" type="button">Delete practice history</button></section></main>
+  <main id="lab-view" class="product-view" hidden>
     <section class="session-bar" aria-labelledby="session-title">
       <div><h2 id="session-title">Play the position. Understand the decision.</h2><p>Stockfish owns the chess facts. Every lesson links back to its evidence.</p></div>
       <div class="session-options">
@@ -70,6 +102,7 @@
     </div>
   </main>
   <dialog id="promotion-dialog" aria-labelledby="promotion-title"><div class="promotion-card"><p class="step">Promotion</p><h2 id="promotion-title">Choose a piece</h2><div class="promotion-options"><button type="button" data-promotion="q">Queen</button><button type="button" data-promotion="r">Rook</button><button type="button" data-promotion="b">Bishop</button><button type="button" data-promotion="n">Knight</button></div><button id="promotion-cancel" class="text-button" type="button">Cancel promotion</button></div></dialog>
-  <script type="module" src="/app.js?v=20260901-2"></script>
+  <script type="module" src="/app.js?v=20260904"></script>
+  <script type="module" src="/study.js?v=20260904"></script>
 </body>
 </html>

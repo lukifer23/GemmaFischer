@@ -112,6 +112,33 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def inspect_adapter_assets(
+    adapter_path: Path, expected_sha256: str | None = None
+) -> dict[str, object]:
+    resolved = adapter_path.expanduser().resolve()
+    if not resolved.is_dir():
+        raise ModelUnavailable(f"Adapter directory does not exist: {resolved}")
+    weights = sorted(resolved.glob("*.safetensors"))
+    if len(weights) != 1:
+        raise ModelUnavailable(
+            "A runtime adapter directory must contain exactly one safetensors file"
+        )
+    config = resolved / "adapter_config.json"
+    if not config.is_file():
+        raise ModelUnavailable("The runtime adapter is missing adapter_config.json")
+    digest = _sha256_file(weights[0])
+    if expected_sha256 and digest != expected_sha256:
+        raise ModelUnavailable(
+            "The runtime adapter hash does not match GEMMAFISCHER_ADAPTER_SHA256"
+        )
+    return {
+        "status": "verified-local",
+        "path": str(resolved),
+        "weights": weights[0].name,
+        "sha256": digest,
+    }
+
+
 @dataclass(frozen=True)
 class ModelClaimSelection:
     claims: tuple[CoachingClaim, ...]
@@ -389,6 +416,8 @@ class GemmaRuntime:
         model_id: str = DEFAULT_MODEL,
         revision: str | None = DEFAULT_MODEL_REVISION,
         manifest_path: Path | None = None,
+        adapter_path: Path | None = None,
+        adapter_sha256: str | None = None,
     ) -> None:
         try:
             from mlx_lm import generate, load
@@ -397,8 +426,21 @@ class GemmaRuntime:
         self._generate = generate
         verified = inspect_model_assets(model_id, revision, manifest_path)
         snapshot = Path(str(verified["snapshot"]))
+        configured_adapter = adapter_path
+        if configured_adapter is None and os.environ.get("GEMMAFISCHER_ADAPTER_PATH"):
+            configured_adapter = Path(os.environ["GEMMAFISCHER_ADAPTER_PATH"])
+        expected_adapter_hash = adapter_sha256 or os.environ.get(
+            "GEMMAFISCHER_ADAPTER_SHA256"
+        )
+        self.adapter: dict[str, object] | None
         try:
-            loaded = load(str(snapshot))
+            if configured_adapter is not None:
+                adapter = inspect_adapter_assets(configured_adapter, expected_adapter_hash)
+                loaded = load(str(snapshot), adapter_path=str(adapter["path"]))
+                self.adapter = adapter
+            else:
+                loaded = load(str(snapshot))
+                self.adapter = None
         except (OSError, RuntimeError, ValueError) as exc:
             raise ModelUnavailable(f"Pinned model assets could not be loaded: {exc}") from exc
         self._model, self._tokenizer = loaded[0], loaded[1]

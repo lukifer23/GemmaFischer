@@ -174,6 +174,15 @@
         "title": "AnalysisState",
         "type": "string"
       },
+      "AttemptOutcome": {
+        "enum": [
+          "correct",
+          "equivalent",
+          "incorrect"
+        ],
+        "title": "AttemptOutcome",
+        "type": "string"
+      },
       "BoardFact": {
         "additionalProperties": false,
         "properties": {
@@ -921,6 +930,193 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ImportedGame": {
+        "additionalProperties": false,
+        "properties": {
+          "black": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Black"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "initial_fen": {
+            "title": "Initial Fen",
+            "type": "string"
+          },
+          "moves_san": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 400,
+            "minItems": 1,
+            "title": "Moves San",
+            "type": "array"
+          },
+          "moves_uci": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 400,
+            "minItems": 1,
+            "title": "Moves Uci",
+            "type": "array"
+          },
+          "perspective": {
+            "enum": [
+              "white",
+              "black"
+            ],
+            "title": "Perspective",
+            "type": "string"
+          },
+          "rating_bucket": {
+            "$ref": "#/components/schemas/RatingBucket"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "white": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "White"
+          }
+        },
+        "required": [
+          "game_id",
+          "source_sha256",
+          "initial_fen",
+          "moves_uci",
+          "moves_san",
+          "perspective",
+          "rating_bucket"
+        ],
+        "title": "ImportedGame",
+        "type": "object"
+      },
+      "LearningMomentView": {
+        "additionalProperties": false,
+        "properties": {
+          "concept_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Concept Keys",
+            "type": "array"
+          },
+          "fen": {
+            "title": "Fen",
+            "type": "string"
+          },
+          "mate_loss": {
+            "default": false,
+            "title": "Mate Loss",
+            "type": "boolean"
+          },
+          "moment_id": {
+            "title": "Moment Id",
+            "type": "string"
+          },
+          "played_move_san": {
+            "title": "Played Move San",
+            "type": "string"
+          },
+          "played_move_uci": {
+            "title": "Played Move Uci",
+            "type": "string"
+          },
+          "practice_status": {
+            "default": "new",
+            "enum": [
+              "new",
+              "in_progress",
+              "scheduled",
+              "mastered"
+            ],
+            "title": "Practice Status",
+            "type": "string"
+          },
+          "rank": {
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "severity_cp": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Cp"
+          },
+          "source_ply": {
+            "minimum": 1.0,
+            "title": "Source Ply",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "moment_id",
+          "rank",
+          "source_ply",
+          "fen",
+          "played_move_uci",
+          "played_move_san",
+          "reason_codes"
+        ],
+        "title": "LearningMomentView",
+        "type": "object"
+      },
       "LegalMovesRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1205,6 +1401,48 @@
         "title": "MoveComparisonEvidence",
         "type": "object"
       },
+      "PGNImportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "perspective": {
+            "default": "auto",
+            "enum": [
+              "auto",
+              "white",
+              "black"
+            ],
+            "title": "Perspective",
+            "type": "string"
+          },
+          "pgn": {
+            "maxLength": 262144,
+            "minLength": 1,
+            "title": "Pgn",
+            "type": "string"
+          },
+          "player_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Name"
+          },
+          "rating_bucket": {
+            "$ref": "#/components/schemas/RatingBucket",
+            "default": "1400-1599"
+          }
+        },
+        "required": [
+          "pgn"
+        ],
+        "title": "PGNImportRequest",
+        "type": "object"
+      },
       "Ply": {
         "additionalProperties": false,
         "properties": {
@@ -1261,6 +1499,232 @@
         "title": "Ply",
         "type": "object"
       },
+      "PracticeAttemptRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "hint_used": {
+            "default": false,
+            "title": "Hint Used",
+            "type": "boolean"
+          },
+          "move_uci": {
+            "maxLength": 5,
+            "minLength": 4,
+            "title": "Move Uci",
+            "type": "string"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/PracticePhase"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "phase",
+          "move_uci"
+        ],
+        "title": "PracticeAttemptRequest",
+        "type": "object"
+      },
+      "PracticeAttemptView": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "attempt_number": {
+            "minimum": 1.0,
+            "title": "Attempt Number",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PracticeFeedback"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hint_used": {
+            "title": "Hint Used",
+            "type": "boolean"
+          },
+          "moment_id": {
+            "title": "Moment Id",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/AttemptOutcome"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/PracticePhase"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "submitted_move_uci": {
+            "title": "Submitted Move Uci",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "moment_id",
+          "phase",
+          "attempt_number",
+          "submitted_move_uci",
+          "outcome",
+          "hint_used",
+          "created_at"
+        ],
+        "title": "PracticeAttemptView",
+        "type": "object"
+      },
+      "PracticeFeedback": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "next_fen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Fen"
+          },
+          "next_phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PracticePhase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preferred_move_san": {
+            "title": "Preferred Move San",
+            "type": "string"
+          },
+          "preferred_move_uci": {
+            "title": "Preferred Move Uci",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preferred_move_uci",
+          "preferred_move_san",
+          "message",
+          "evidence_ids"
+        ],
+        "title": "PracticeFeedback",
+        "type": "object"
+      },
+      "PracticePhase": {
+        "enum": [
+          "original",
+          "retry",
+          "transfer",
+          "delayed_review"
+        ],
+        "title": "PracticePhase",
+        "type": "string"
+      },
+      "ProgressSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "minimum": 0.0,
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "delayed_accuracy": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Delayed Accuracy",
+            "type": "number"
+          },
+          "due": {
+            "minimum": 0.0,
+            "title": "Due",
+            "type": "integer"
+          },
+          "learning": {
+            "minimum": 0.0,
+            "title": "Learning",
+            "type": "integer"
+          },
+          "mastered": {
+            "minimum": 0.0,
+            "title": "Mastered",
+            "type": "integer"
+          },
+          "original_accuracy": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Original Accuracy",
+            "type": "number"
+          },
+          "retaining": {
+            "minimum": 0.0,
+            "title": "Retaining",
+            "type": "integer"
+          },
+          "retry_accuracy": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Retry Accuracy",
+            "type": "number"
+          },
+          "transfer_accuracy": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Transfer Accuracy",
+            "type": "number"
+          }
+        },
+        "required": [
+          "due",
+          "learning",
+          "retaining",
+          "mastered",
+          "attempts",
+          "original_accuracy",
+          "retry_accuracy",
+          "transfer_accuracy",
+          "delayed_accuracy"
+        ],
+        "title": "ProgressSummary",
+        "type": "object"
+      },
       "RatingBucket": {
         "enum": [
           "1000-1199",
@@ -1270,6 +1734,87 @@
         ],
         "title": "RatingBucket",
         "type": "string"
+      },
+      "ReviewCard": {
+        "additionalProperties": false,
+        "properties": {
+          "concept_key": {
+            "title": "Concept Key",
+            "type": "string"
+          },
+          "due_at": {
+            "format": "date-time",
+            "title": "Due At",
+            "type": "string"
+          },
+          "interval_days": {
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Interval Days",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "lapses": {
+            "minimum": 0.0,
+            "title": "Lapses",
+            "type": "integer"
+          },
+          "mastered": {
+            "default": false,
+            "title": "Mastered",
+            "type": "boolean"
+          },
+          "moment": {
+            "$ref": "#/components/schemas/LearningMomentView"
+          },
+          "moment_id": {
+            "title": "Moment Id",
+            "type": "string"
+          },
+          "successful_delayed_reviews": {
+            "minimum": 0.0,
+            "title": "Successful Delayed Reviews",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "moment_id",
+          "moment",
+          "concept_key",
+          "due_at",
+          "interval_days",
+          "successful_delayed_reviews",
+          "lapses"
+        ],
+        "title": "ReviewCard",
+        "type": "object"
+      },
+      "ReviewCardList": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewCard"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "ReviewCardList",
+        "type": "object"
       },
       "RuntimeCapabilities": {
         "additionalProperties": false,
@@ -1590,6 +2135,197 @@
           "worker_status"
         ],
         "title": "StorageRecoveryResult",
+        "type": "object"
+      },
+      "StudyJobAccepted": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StudyJobState"
+          }
+        },
+        "required": [
+          "job_id",
+          "state",
+          "revision"
+        ],
+        "title": "StudyJobAccepted",
+        "type": "object"
+      },
+      "StudyJobCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "resume",
+            "title": "Action",
+            "type": "string"
+          },
+          "expected_revision": {
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "action"
+        ],
+        "title": "StudyJobCommand",
+        "type": "object"
+      },
+      "StudyJobList": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StudyJobView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "StudyJobList",
+        "type": "object"
+      },
+      "StudyJobState": {
+        "enum": [
+          "queued",
+          "parsing",
+          "screening",
+          "deep_analysis",
+          "building_transfer",
+          "ready",
+          "paused_interrupted",
+          "paused_storage",
+          "cancelled",
+          "failed"
+        ],
+        "title": "StudyJobState",
+        "type": "string"
+      },
+      "StudyJobView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "game": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportedGame"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "moments": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LearningMomentView"
+            },
+            "maxItems": 3,
+            "title": "Moments",
+            "type": "array"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/StudyProgress"
+          },
+          "revision": {
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StudyJobState"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "revision",
+          "state",
+          "created_at",
+          "updated_at",
+          "progress"
+        ],
+        "title": "StudyJobView",
+        "type": "object"
+      },
+      "StudyProgress": {
+        "additionalProperties": false,
+        "properties": {
+          "completed_units": {
+            "minimum": 0.0,
+            "title": "Completed Units",
+            "type": "integer"
+          },
+          "current_ply": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ply"
+          },
+          "total_units": {
+            "minimum": 0.0,
+            "title": "Total Units",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed_units",
+          "total_units"
+        ],
+        "title": "StudyProgress",
         "type": "object"
       },
       "TutorCommandRequest": {
@@ -1998,7 +2734,7 @@
   },
   "info": {
     "title": "GemmaFischer local API",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -2343,6 +3079,82 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/v1/progress": {
+      "delete": {
+        "operationId": "delete_progress_api_v1_progress_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Delete Progress"
+      },
+      "get": {
+        "operationId": "get_progress_api_v1_progress_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Progress"
+      }
+    },
+    "/api/v1/reviews/due": {
+      "get": {
+        "operationId": "list_due_reviews_api_v1_reviews_due_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewCardList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Due Reviews"
       }
     },
     "/api/v1/sessions": {
@@ -2961,6 +3773,539 @@
           }
         },
         "summary": "Retry Storage"
+      }
+    },
+    "/api/v1/studies/{job_id}": {
+      "delete": {
+        "operationId": "delete_study_api_v1_studies__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Study"
+      }
+    },
+    "/api/v1/studies/{job_id}/moments/{moment_id}": {
+      "get": {
+        "operationId": "get_learning_moment_api_v1_studies__job_id__moments__moment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "moment_id",
+            "required": true,
+            "schema": {
+              "title": "Moment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningMomentView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Learning Moment"
+      }
+    },
+    "/api/v1/studies/{job_id}/moments/{moment_id}/attempts": {
+      "post": {
+        "operationId": "create_practice_attempt_api_v1_studies__job_id__moments__moment_id__attempts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "moment_id",
+            "required": true,
+            "schema": {
+              "title": "Moment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeAttemptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeAttemptView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Practice Attempt"
+      }
+    },
+    "/api/v1/studies/{job_id}/moments/{moment_id}/legal-moves": {
+      "get": {
+        "operationId": "learning_moment_legal_moves_api_v1_studies__job_id__moments__moment_id__legal_moves_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "moment_id",
+            "required": true,
+            "schema": {
+              "title": "Moment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_square",
+            "required": true,
+            "schema": {
+              "title": "From Square",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalMovesResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Learning Moment Legal Moves"
+      }
+    },
+    "/api/v1/study-jobs": {
+      "get": {
+        "operationId": "list_study_jobs_api_v1_study_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyJobList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Study Jobs"
+      },
+      "post": {
+        "operationId": "create_study_job_api_v1_study_jobs_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PGNImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyJobAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Create Study Job"
+      }
+    },
+    "/api/v1/study-jobs/{job_id}": {
+      "delete": {
+        "operationId": "cancel_study_job_api_v1_study_jobs__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyJobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Study Job"
+      },
+      "get": {
+        "operationId": "get_study_job_api_v1_study_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyJobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Study Job"
+      }
+    },
+    "/api/v1/study-jobs/{job_id}/commands": {
+      "post": {
+        "operationId": "command_study_job_api_v1_study_jobs__job_id__commands_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyJobCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyJobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Study Job"
       }
     }
   }

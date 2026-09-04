@@ -1,5 +1,7 @@
 # Phase 1 Execution Contract
 
+> Historical 0.2 execution record. See [current state](current-state.md) for 0.3.
+
 Status: implemented; repository and browser verification recorded on completion.
 
 This phase fixes execution ownership, persistent review linkage, stale browser

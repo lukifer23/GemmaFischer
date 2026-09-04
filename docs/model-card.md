@@ -7,7 +7,10 @@ The optional full-profile candidate is
 `google/gemma-4-E2B-it`, using MLX-LM 0.31.3. The revision is pinned and resolved
 with Hugging Face local-files-only mode; the player never silently downloads a
 model. Asset absence, corruption, or load failure degrades to deterministic
-coaching.
+coaching. An optional adapter is loaded only from
+`GEMMAFISCHER_ADAPTER_PATH`; the directory must contain exactly one safetensors
+file and `adapter_config.json`. `GEMMAFISCHER_ADAPTER_SHA256` can pin the weight
+bytes.
 
 ## Current target-host evidence
 
@@ -46,6 +49,13 @@ Evidence:
 - [LFM tutoring qualification](../artifacts/qualification/tutoring-lfm2.5-2.6b-local.json)
 - [Candidate decision](../artifacts/qualification/model-bakeoff-0.2-local.json)
 
+A 2026-09-04 qualification rerun against the installed pinned Gemma snapshot
+returned only one `claim_id` for the real test position. The contract requires
+two to five, so the strict parser rejected it. The application correctly degrades
+to deterministic coaching, but the optional model test is currently failing and
+Gemma is not a 0.3 release candidate. The invalid response is not padded or
+reported as a model success.
+
 The first target-host load on 2026-08-30 exposed a stale MLX-LM 0.28.4 pin, which rejected model type `gemma4`. MLX-LM 0.31.3 added the required architecture. The pinned model revision `238767527555cb75a05732a84dff5d6ba0dd6809` now loads on the M3 Pro/18 GB host.
 
 The five-position run in
@@ -80,9 +90,11 @@ on `main` today.
 Do not fine-tune the installed 4-bit inference artifact. The active fail-closed
 path selects the native `google/gemma-4-E2B-it` revision and pins every required
 file hash. MLX-LM is the Mac-only LoRA baseline; Unsloth is not another supported
-path unless a later authorized comparison earns it. The technical path trains
-from the audited Stockfish/deterministic target corpus; two-reviewer evidence is
-optional and only authorizes pedagogy claims. The corpus, frozen evaluations,
-and native-file preflight pass, but smoke and production authorization are
-currently revoked. Exactly one adapter may be selected for qualification; no
-adapter is supported today.
+path unless a later authorized comparison earns it. Stockfish defines the valid
+choice catalog, but deterministic imitation is not accepted as a claim of
+improved teaching. Production selection targets require two independent human
+reviewers and complete adjudication. Final-test rows stay outside the trainer
+directory, and training is fixed at 4096 tokens to remove the known 1024-token
+truncation path. Smoke and production authorization are currently revoked.
+Exactly one adapter may be selected for qualification; no adapter is supported
+today.

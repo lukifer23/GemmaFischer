@@ -41,10 +41,22 @@ from .storage import (
     StorageError,
     StorageUnavailable,
 )
+from .study_domain import (
+    LearningMomentView,
+    PGNImportRequest,
+    PracticeAttemptRequest,
+    PracticeAttemptView,
+    ProgressSummary,
+    ReviewCardList,
+    StudyJobAccepted,
+    StudyJobCommand,
+    StudyJobList,
+    StudyJobView,
+)
 
 STATIC_DIR = Path(__file__).with_name("static")
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "testserver"}
-MAX_REQUEST_BODY_BYTES = 64 * 1024
+MAX_REQUEST_BODY_BYTES = 300 * 1024
 
 
 class RequestBodyTooLarge(Exception):
@@ -89,7 +101,10 @@ def create_app(
             f"http://{host}:{request.url.port}",
         }:
             return _error("INVALID_ORIGIN", "The request origin is not local.", "security", 403)
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        protected_history_read = request.method == "GET" and request.url.path.startswith(
+            ("/api/v1/study", "/api/v1/reviews", "/api/v1/progress")
+        )
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} or protected_history_read:
             supplied = request.headers.get("x-gemmafischer-token") or request.cookies.get(
                 "gemmafischer_token"
             )
@@ -229,6 +244,14 @@ def create_app(
     async def js() -> FileResponse:
         return FileResponse(
             STATIC_DIR / "app.js",
+            media_type="text/javascript",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get("/study.js", include_in_schema=False)
+    async def study_js() -> FileResponse:
+        return FileResponse(
+            STATIC_DIR / "study.js",
             media_type="text/javascript",
             headers={"Cache-Control": "no-store"},
         )
@@ -627,6 +650,188 @@ def create_app(
                 retryable=True,
                 remediation=("Retry the answer or run doctor if the failure persists.",),
             )
+
+    @app.post(
+        "/api/v1/study-jobs",
+        status_code=202,
+        response_model=StudyJobAccepted,
+        responses={422: {"model": ErrorEnvelope}},
+    )
+    def create_study_job(
+        payload: PGNImportRequest,
+        request: Request,
+        idempotency_key: str | None = Header(
+            default=None, alias="Idempotency-Key", min_length=8, max_length=128
+        ),
+    ) -> JSONResponse:
+        service: AnalysisService = request.app.state.service
+        job = service.submit_study(payload, idempotency_key=idempotency_key)
+        location = f"/api/v1/study-jobs/{job.job_id}"
+        accepted = StudyJobAccepted(job_id=job.job_id, state=job.state, revision=job.revision)
+        return JSONResponse(
+            status_code=202,
+            content=accepted.model_dump(mode="json"),
+            headers={"Location": location, "Retry-After": "1"},
+        )
+
+    @app.get("/api/v1/study-jobs", response_model=StudyJobList)
+    def list_study_jobs(
+        request: Request, limit: int = Query(default=20, ge=1, le=100)
+    ) -> StudyJobList:
+        service: AnalysisService = request.app.state.service
+        items = service.recent_studies(limit)
+        return StudyJobList(items=items, count=len(items))
+
+    @app.get(
+        "/api/v1/study-jobs/{job_id}",
+        response_model=StudyJobView,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    def get_study_job(job_id: str, request: Request) -> StudyJobView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        job = service.get_study(job_id)
+        if job is None:
+            return _error("STUDY_NOT_FOUND", "No study job has this ID.", "lookup", 404)
+        return job
+
+    @app.delete(
+        "/api/v1/study-jobs/{job_id}",
+        response_model=StudyJobView,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    def cancel_study_job(job_id: str, request: Request) -> StudyJobView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        job = service.cancel_study(job_id)
+        if job is None:
+            return _error("STUDY_NOT_FOUND", "No study job has this ID.", "lookup", 404)
+        return job
+
+    @app.post(
+        "/api/v1/study-jobs/{job_id}/commands",
+        response_model=StudyJobView,
+        responses={404: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}},
+    )
+    def command_study_job(
+        job_id: str, payload: StudyJobCommand, request: Request
+    ) -> StudyJobView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        try:
+            return service.resume_study(job_id, payload.expected_revision)
+        except KeyError:
+            return _error("STUDY_NOT_FOUND", "No study job has this ID.", "lookup", 404)
+        except SessionConflict:
+            return _error(
+                "REVISION_CONFLICT",
+                "The study changed; refresh it before resuming.",
+                "study",
+                409,
+            )
+        except ValueError as exc:
+            return _error("INVALID_STUDY_COMMAND", str(exc), "study", 422)
+
+    @app.delete(
+        "/api/v1/studies/{job_id}",
+        response_model=DeleteResult,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    def delete_study(job_id: str, request: Request) -> DeleteResult | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        if not service.delete_study(job_id):
+            return _error("STUDY_NOT_FOUND", "No study has this ID.", "lookup", 404)
+        return DeleteResult()
+
+    @app.get(
+        "/api/v1/studies/{job_id}/moments/{moment_id}",
+        response_model=LearningMomentView,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    def get_learning_moment(
+        job_id: str, moment_id: str, request: Request
+    ) -> LearningMomentView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        job = service.get_study(job_id)
+        if job is None:
+            return _error("STUDY_NOT_FOUND", "No study has this ID.", "lookup", 404)
+        moment = next((item for item in job.moments if item.moment_id == moment_id), None)
+        if moment is None:
+            return _error("MOMENT_NOT_FOUND", "No learning moment has this ID.", "lookup", 404)
+        return moment
+
+    @app.get(
+        "/api/v1/studies/{job_id}/moments/{moment_id}/legal-moves",
+        response_model=LegalMovesResult,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    def learning_moment_legal_moves(
+        job_id: str, moment_id: str, from_square: str, request: Request
+    ) -> LegalMovesResult | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        job = service.get_study(job_id)
+        moment = (
+            next((item for item in job.moments if item.moment_id == moment_id), None)
+            if job
+            else None
+        )
+        if moment is None:
+            return _error("MOMENT_NOT_FOUND", "No learning moment has this ID.", "lookup", 404)
+        try:
+            return legal_moves_for_square(moment.fen, from_square)
+        except ValueError:
+            return _error("INVALID_POSITION", "The study position is invalid.", "study", 422)
+
+    @app.post(
+        "/api/v1/studies/{job_id}/moments/{moment_id}/attempts",
+        response_model=PracticeAttemptView,
+        responses={404: {"model": ErrorEnvelope}, 409: {"model": ErrorEnvelope}},
+    )
+    def create_practice_attempt(
+        job_id: str,
+        moment_id: str,
+        payload: PracticeAttemptRequest,
+        request: Request,
+        idempotency_key: str | None = Header(
+            default=None, alias="Idempotency-Key", min_length=8, max_length=128
+        ),
+    ) -> PracticeAttemptView | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        try:
+            return service.submit_practice_attempt(
+                job_id, moment_id, payload, idempotency_key=idempotency_key
+            )
+        except KeyError:
+            return _error("MOMENT_NOT_FOUND", "No learning moment has this ID.", "lookup", 404)
+        except SessionConflict:
+            return _error(
+                "REVISION_CONFLICT",
+                "The study changed; refresh it before submitting.",
+                "study",
+                409,
+            )
+        except ValueError:
+            return _error("ILLEGAL_MOVE", "The submitted move is not legal.", "study", 422)
+        except EngineUnavailable:
+            return _error(
+                "ENGINE_UNAVAILABLE", "Stockfish is unavailable.", "engine", 503, retryable=True
+            )
+
+    @app.get("/api/v1/reviews/due", response_model=ReviewCardList)
+    def list_due_reviews(
+        request: Request, limit: int = Query(default=50, ge=1, le=100)
+    ) -> ReviewCardList:
+        service: AnalysisService = request.app.state.service
+        items = service.due_reviews(limit)
+        return ReviewCardList(items=items, count=len(items))
+
+    @app.get("/api/v1/progress", response_model=ProgressSummary)
+    def get_progress(request: Request) -> ProgressSummary:
+        service: AnalysisService = request.app.state.service
+        return service.progress()
+
+    @app.delete("/api/v1/progress", response_model=DeleteResult)
+    def delete_progress(request: Request) -> DeleteResult:
+        service: AnalysisService = request.app.state.service
+        service.delete_progress()
+        return DeleteResult()
 
     return app
 

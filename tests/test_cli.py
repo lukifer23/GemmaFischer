@@ -19,7 +19,7 @@ def test_dev_doctor_needs_no_engine(capsys) -> None:
 def test_version_contract(capsys) -> None:
     assert main(["version", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload == {"application": "0.2.0", "api": "v1", "evidence_schema": "2.0"}
+    assert payload == {"application": "0.3.0", "api": "v1", "evidence_schema": "2.0"}
 
 
 def test_lmstudio_qualification_options_are_explicit() -> None:

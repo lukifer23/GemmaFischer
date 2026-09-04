@@ -1,4 +1,4 @@
-# GemmaFischer 0.2 Architecture
+# GemmaFischer 0.3 Architecture
 
 The supported application lives under `src/gemmafischer`. The legacy Flask,
 inference, MoE, LC0, checkpoint, and training trees were removed from `main` and
@@ -7,25 +7,35 @@ are preserved by `archive/pre-recovery-2026-08-30` at commit
 
 ```text
 Browser / CLI
-  -> typed session, analysis, or tutor command
-  -> AnalysisService (durable-review queue plus newest pending interactive work)
+  -> typed study, practice, session, analysis, or tutor command
+  -> AnalysisService (one study/analysis worker plus gameplay-priority operations)
   -> one token-owned, gameplay-priority StockfishProvider/process
   -> CandidateSet plus optional matched-budget MoveComparisonEvidence
   -> immutable EngineEvidence 2.0 and deterministic concept extraction
   -> deterministic lesson spine / validated optional Gemma ID selection
   -> deterministic rendering
-  -> bounded local SQLite analysis, session, and tutor history
+  -> bounded local SQLite studies, moments, attempts, reviews, sessions, and analyses
 ```
 
-The loopback-only FastAPI server owns games. A `Session` contains the canonical
+The default Learn path accepts exactly one PGN and persists a `StudyJobView`.
+`study.py` validates the complete mainline, extracts only the selected player's
+decision positions, screens them at a bounded node budget, and deeply re-analyzes
+the shortlist. Public `LearningMomentView` objects omit answers. Private moment
+records hold the preferred move, immutable evidence, and an optional concept-matched
+transfer position. Practice is graded by a fresh Stockfish comparison, then one
+transaction writes the attempt and its review card.
+
+The loopback-only FastAPI server also owns Position Lab games. A `Session` contains the canonical
 FEN, mode, status, revision, move ledger, difficulty, and links from plies to
 their reviews. Every command carries `expected_revision`; stale mutations fail
 with a 409 conflict. The same screen supports player-v-Stockfish play, automatic
 move review, position explanation, and reviewed Stockfish-v-Stockfish
 exhibition. The browser stores only a session identifier and view preferences.
-Training, adapter, checkpoint, arbitrary filesystem, model switching, and
+Training, arbitrary filesystem, model switching, and
 arbitrary process-control HTTP routes are absent. Post-training is an explicit
 offline CLI workflow with separate manifests, receipts, and preflight gates.
+The optional runtime can load only an explicitly configured, locally verified
+adapter directory containing one safetensors file and its adapter config.
 
 A tutor interaction copies the completed source evidence and freezes its FEN.
 It has its own optimistic revision and moves through `awaiting_answer`,
@@ -43,7 +53,7 @@ close only the exact active analysis token and can never close gameplay.
 Blocking session commands run in FastAPI's worker pool, keeping health and
 polling responsive. Shutdown alone performs an untargeted provider close.
 
-Analyses (250 unreferenced rows by default), sessions, and bounded tutor
+Analyses (250 unreferenced rows by default), sessions, bounded tutor
 interactions are stored in SQLite WAL under macOS Application Support or the
 Linux XDG data directory. `GEMMAFISCHER_DATA_DIR` is the explicit override.
 Interrupted nonterminal analyses become explicit `ANALYSIS_INTERRUPTED`
@@ -53,7 +63,9 @@ compare-and-swap, and create requests can atomically retain idempotency receipts
 `analysis_reservations` protects a durable review during the short interval before
 its owning ply is committed. `session_analysis_refs` then protects every retained
 ply review from independent pruning and releases it when its session is deleted.
-Exhibition pause and resume are revisioned, persisted session mutations rather
+Study jobs, learning moments, attempts, and review cards use normalized tables
+with foreign-key cascades. Active study work is recovered as
+`paused_interrupted`, never silently restarted. Exhibition pause and resume are revisioned, persisted session mutations rather
 than browser-only flags.
 
 Python 3.12 and `uv.lock` are the executable baseline. Stockfish 18 is the only

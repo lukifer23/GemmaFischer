@@ -1,3 +1,3 @@
-"""GemmaFischer vNext, an evidence-grounded local chess coach."""
+"""GemmaFischer, an evidence-grounded local chess game-to-mastery coach."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

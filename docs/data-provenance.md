@@ -63,14 +63,15 @@ The untouched final-test partition is also the only input allowed to
 `freeze-question-eval`. The command freezes 1,000 engine-grounded best-move
 questions with exact UCI/SAN grading examples and evidence hashes. The frozen
 set and deterministic grader passed 1,000/1,000 cases. It never reads training
-rows. Optional human gold is separate: 2,500 train records require two
+rows. Production human gold is separate: 2,500 train records require two
 complete independent reviews, the full rubric, an exact-selection agreement of
 at least 0.67, and independent adjudication of every selection or material
 rubric disagreement. `label-apply` replaces only those reviewed train targets
-in a new derived corpus; validation and final-test bytes remain unchanged. When
-present, that evidence authorizes pedagogy claims. The technical MLX receipt
-instead binds the Stockfish/deterministic corpus to the exact audited source
-hashes; preflight rejects stale or unaudited prepared data.
+in a new derived corpus; validation and final-test bytes remain unchanged. That
+evidence is required for production pedagogy-selection targets. The MLX trainer
+directory contains only `train.jsonl` and `valid.jsonl`; its receipt binds the
+untouched final-test source hash without copying those rows. Preflight rejects
+stale, unaudited, or incorrectly supervised prepared data.
 
 The obsolete `data/create_*finetune_dataset.py`, `data/prepare_dataset.py`, and
 historical summary/validation JSON files were removed. They accepted unlicensed

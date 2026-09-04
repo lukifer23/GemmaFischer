@@ -457,7 +457,12 @@ class StockfishProvider:
         considered_move_uci: str | None = None,
         *,
         operation_id: str | None = None,
+        node_budget: int | None = None,
+        clear_hash: bool = True,
     ) -> EngineEvidence:
+        effective_budget = node_budget or self.node_budget
+        if effective_budget < 1:
+            raise ValueError("node_budget must be positive")
         board, normalized_fen = normalize_fen(fen)
         position_id = canonical_hash({"schema_version": "2.0", "normalized_fen": normalized_fen})
         if board.is_game_over(claim_draw=False):
@@ -465,7 +470,7 @@ class StockfishProvider:
                 position_id=position_id,
                 fen=normalized_fen,
                 side_to_move="white" if board.turn else "black",
-                engine=self._metadata(name="Stockfish", author=None),
+                engine=self._metadata(name="Stockfish", author=None, node_budget=effective_budget),
                 terminal_reason=board.outcome(claim_draw=False).termination.name.lower(),  # type: ignore[union-attr]
                 candidate_set=None,
                 board_facts=extract_board_facts(board, position_id),
@@ -493,17 +498,17 @@ class StockfishProvider:
                     analysis_options["Skill Level"] = ANALYSIS_SKILL_LEVEL
                 engine.configure(analysis_options)
                 self._applied_options = dict(analysis_options)
-                if "Clear Hash" in engine.options:
+                if clear_hash and "Clear Hash" in engine.options:
                     engine.configure({"Clear Hash": None})
                 identity = engine.id
                 infos = engine.analyse(
                     board,
-                    chess.engine.Limit(nodes=self.node_budget),
+                    chess.engine.Limit(nodes=effective_budget),
                     multipv=min(3, board.legal_moves.count()),
                     info=chess.engine.INFO_ALL,
                 )
                 candidates = [
-                    self._candidate(board, info, rank, position_id)
+                    self._candidate(board, info, rank, position_id, effective_budget)
                     for rank, info in enumerate(infos, 1)
                 ]
                 comparison = None
@@ -511,7 +516,7 @@ class StockfishProvider:
                     best_move = chess.Move.from_uci(candidates[0].move_uci)
                     best_constrained = engine.analyse(
                         board,
-                        chess.engine.Limit(nodes=self.node_budget),
+                        chess.engine.Limit(nodes=effective_budget),
                         root_moves=[best_move],
                         info=chess.engine.INFO_ALL,
                     )
@@ -520,7 +525,7 @@ class StockfishProvider:
                         if considered == best_move
                         else engine.analyse(
                             board,
-                            chess.engine.Limit(nodes=self.node_budget),
+                            chess.engine.Limit(nodes=effective_budget),
                             root_moves=[considered],
                             info=chess.engine.INFO_ALL,
                         )
@@ -532,9 +537,12 @@ class StockfishProvider:
                         best_constrained,
                         considered,
                         considered_info,
+                        effective_budget,
                     )
                 metadata = self._metadata(
-                    identity.get("name", "Stockfish"), identity.get("author")
+                    identity.get("name", "Stockfish"),
+                    identity.get("author"),
+                    node_budget=effective_budget,
                 )
                 return candidates, comparison, metadata
 
@@ -547,7 +555,7 @@ class StockfishProvider:
                 "schema_version": "2.0",
                 "position_id": position_id,
                 "engine_sha256": self.binary_sha256,
-                "node_budget": self.node_budget,
+                "node_budget": effective_budget,
                 "candidate_ids": [item.evidence_id for item in candidates],
             }
         )
@@ -670,18 +678,26 @@ class StockfishProvider:
             turn="white" if board.turn else "black",
         )
 
-    def _metadata(self, name: str, author: str | None) -> EngineMetadata:
+    def _metadata(
+        self, name: str, author: str | None, *, node_budget: int | None = None
+    ) -> EngineMetadata:
+        effective_budget = node_budget or self.node_budget
         return EngineMetadata(
             name=name,
             author=author,
             binary_sha256=self.binary_sha256,
-            options={**self._applied_options, "MultiPV": 3, "nodes": self.node_budget},
-            node_budget=self.node_budget,
+            options={**self._applied_options, "MultiPV": 3, "nodes": effective_budget},
+            node_budget=effective_budget,
             started_at=self._started_at,
         )
 
     def _candidate(
-        self, board: chess.Board, info: chess.engine.InfoDict, rank: int, position_id: str
+        self,
+        board: chess.Board,
+        info: chess.engine.InfoDict,
+        rank: int,
+        position_id: str,
+        node_budget: int,
     ) -> CandidateEvidence:
         pv = info.get("pv") or []
         if not pv:
@@ -699,7 +715,7 @@ class StockfishProvider:
             "schema_version": "2.0",
             "position_id": position_id,
             "engine_sha256": self.binary_sha256,
-            "node_budget": self.node_budget,
+            "node_budget": node_budget,
             "rank": rank,
             "move_uci": first.uci(),
             "score_cp": cp,
@@ -729,6 +745,7 @@ class StockfishProvider:
         engine_info: chess.engine.InfoDict,
         considered_move: chess.Move,
         considered_info: chess.engine.InfoDict,
+        node_budget: int,
     ) -> MoveComparisonEvidence:
         engine_score = engine_info["score"].pov(board.turn)
         considered_score = considered_info["score"].pov(board.turn)
@@ -749,7 +766,7 @@ class StockfishProvider:
             "schema_version": "2.0",
             "position_id": position_id,
             "engine_sha256": self.binary_sha256,
-            "node_budget_each": self.node_budget,
+            "node_budget_each": node_budget,
             "engine_move_uci": engine_move.uci(),
             "considered_move_uci": considered_move.uci(),
             "engine_score_cp": engine_cp,
@@ -767,5 +784,5 @@ class StockfishProvider:
             considered_score_cp=considered_cp,
             considered_mate_in=considered_mate,
             outcome=outcome,  # type: ignore[arg-type]
-            node_budget_each=self.node_budget,
+            node_budget_each=node_budget,
         )

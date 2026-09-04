@@ -1,7 +1,7 @@
 # Compatibility and Migration
 
-GemmaFischer's supported line is application `0.2.0`, experimental API `v1`, and
-evidence schema `2.0`. The 0.2 API replaces browser-owned games with server-owned
+GemmaFischer's supported line is application `0.3.0`, experimental API `v1`, and
+evidence schema `2.0`. The 0.2 API replaced browser-owned games with server-owned
 `Session` resources and optimistic revisions. The old stateless `/board/*`
 routes remain temporarily deprecated for compatibility and are not used by the
 player. API or evidence breaks require a compatibility-table entry and explicit
@@ -12,7 +12,9 @@ path and surfaced as schema 2 objects. They are historical records and cannot
 qualify current engine correctness because they lack scoped CandidateSet and
 matched-budget comparison evidence.
 
-SQLite store schema version 3 retains the schema-2 review protections and adds
+SQLite store schema version 5 adds study jobs, private learning moments, practice
+attempts, and review cards with cascading deletion. Version 4 added optimistic
+session/tutor revisions. Version 3 retained schema-2 review protections and added
 persisted tutor interactions with session-owned foreign-key deletion. Schema version 2 added
 transactionally maintained
 `session_analysis_refs` and short-lived `analysis_reservations`. Opening an older
@@ -22,9 +24,9 @@ queued and the reservation is released only after the owning ply reference is
 committed. A review already removed by older independent retention cannot be
 reconstructed and remains an honest missing historical record.
 
-Opening an existing 0.2 database creates the tutor table and index without
-rewriting sessions or analyses. Tutor records copy their source evidence so a
-completed question remains gradeable after ordinary analysis retention.
+Opening an existing 0.2 database creates later tables and indexes without
+rewriting sessions or analyses. Nonterminal study jobs observed after a restart
+become `paused_interrupted`; they are not silently reported as complete.
 
 Legacy MoE settings, adapters, checkpoints, datasets, caches, and reports are not
 migrated. Their recovery point is annotated tag

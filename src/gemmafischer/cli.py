@@ -263,7 +263,8 @@ def parser() -> argparse.ArgumentParser:
         train.add_argument("--adapter", type=Path, required=True)
         train.add_argument("--receipt", type=Path, required=True)
         train.add_argument("--iterations", type=int, default=7 if smoke else 1000)
-        train.add_argument("--max-seq-length", type=int, default=1024)
+        train.add_argument("--max-seq-length", type=int, default=4096)
+        train.add_argument("--resume", action="store_true")
         train.add_argument("--config", type=Path, default=bundled_path("training/mlx-lora.yaml"))
     package = commands.add_parser(
         "package-adapter", help="Package exactly one adapter and its receipts"
@@ -958,6 +959,7 @@ def _run_training_command(args: argparse.Namespace) -> int:
         max_seq_length=args.max_seq_length,
         smoke=args.training_smoke,
         config_path=args.config,
+        resume=args.resume,
     )
     _emit(payload, "human")
     return 0

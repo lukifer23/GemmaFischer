@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gemmafischer"
-version = "0.2.0"
-description = "A local, evidence-grounded chess position coach"
+version = "0.3.0"
+description = "A local, evidence-grounded chess game-to-mastery coach"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }

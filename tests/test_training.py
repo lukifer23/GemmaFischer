@@ -21,6 +21,7 @@ from gemmafischer.runtime import (
 from gemmafischer.training import (
     package_training_artifact,
     prepare_mlx_dataset,
+    run_mlx_sft,
     sha256_file,
     training_preflight,
     validate_training_preflight,
@@ -84,7 +85,9 @@ def test_prepare_mlx_dataset_preserves_valid_chat_contract(tmp_path: Path) -> No
 
     receipt = prepare_mlx_dataset(source, output)
 
-    assert receipt["counts"] == {"train": 1, "valid": 1, "test": 1}
+    assert receipt["counts"] == {"train": 1, "valid": 1}
+    assert receipt["trainer_files"] == ["train.jsonl", "valid.jsonl"]
+    assert not (output / "test.jsonl").exists()
     assert receipt["supervision_authority"] == "stockfish-deterministic-v2"
     assert receipt["human_gold_sha256"] is None
     row = json.loads((output / "train.jsonl").read_text(encoding="utf-8"))
@@ -93,6 +96,26 @@ def test_prepare_mlx_dataset_preserves_valid_chat_contract(tmp_path: Path) -> No
         "user",
         "assistant",
     ]
+
+
+def test_training_requires_full_context_and_exact_resume_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("gemmafischer.training.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("gemmafischer.training.platform.machine", lambda: "arm64")
+    arguments = {
+        "model_path": tmp_path / "model",
+        "data_path": tmp_path / "data",
+        "adapter_path": tmp_path / "adapter",
+        "receipt_path": tmp_path / "receipt.json",
+        "iterations": 7,
+        "smoke": True,
+        "config_path": tmp_path / "config.yaml",
+    }
+    with pytest.raises(ValueError, match="4096-token"):
+        run_mlx_sft(max_seq_length=1024, **arguments)
+    with pytest.raises(ValueError, match="exactly one existing"):
+        run_mlx_sft(max_seq_length=4096, resume=True, **arguments)
 
 
 def test_gemma4_shared_kv_sanitizer_drops_only_architecture_unused_weights() -> None:
@@ -141,8 +164,7 @@ def test_training_preflight_is_bound_to_unchanged_model_and_data(tmp_path: Path)
     config.write_text("lora_parameters: {}\n", encoding="utf-8")
     training_file = data / "train.jsonl"
     valid_file = data / "valid.jsonl"
-    test_file = data / "test.jsonl"
-    for path in (training_file, valid_file, test_file):
+    for path in (training_file, valid_file):
         path.write_text('{"messages":[]}\n', encoding="utf-8")
     preflight = tmp_path / "preflight.json"
     preflight.write_text(
@@ -164,7 +186,7 @@ def test_training_preflight_is_bound_to_unchanged_model_and_data(tmp_path: Path)
                 "training_config_sha256": sha256_file(config),
                 "prepared_data_files": {
                     path.name: {"expected": sha256_file(path)}
-                    for path in (training_file, valid_file, test_file)
+                    for path in (training_file, valid_file)
                 },
             }
         ),
@@ -275,7 +297,7 @@ def test_training_preflight_verifies_every_bound_input(tmp_path: Path) -> None:
         "final_test.jsonl": "c" * 64,
     }
     files = {}
-    for name in ("train.jsonl", "valid.jsonl", "test.jsonl"):
+    for name in ("train.jsonl", "valid.jsonl"):
         path = data / name
         path.write_text('{"messages":[]}\n', encoding="utf-8")
         files[name] = sha256_file(path)

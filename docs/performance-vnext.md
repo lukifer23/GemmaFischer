@@ -1,8 +1,17 @@
 # Performance Evidence
 
-This page separates the current 0.2 local measurements from historical
-baselines. The current run is a development-worktree qualification, not a
-release claim.
+This page preserves measured 0.2 baselines. They are comparison data, not 0.3
+release claims. The game-to-mastery pipeline needs a fresh benchmark because one
+import performs bounded screening across many positions before deep analysis.
+
+## 0.3 measurement contract
+
+Record PGN parse time, decision count, screening wall time and nodes, shortlist
+count, deep-analysis time, time to first moment, total time to ready, polling
+latency, cancel-to-engine-release time, SQLite growth, and peak process memory.
+Measure short, median, and 200-ply games separately. Browser evidence must include
+Learn, practice, Review, Progress, and Position Lab with reduced-motion enabled
+and disabled. No 0.3 percentile is claimed until those artifacts exist.
 
 ## Target
 

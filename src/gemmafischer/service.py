@@ -5,6 +5,7 @@ import threading
 import uuid
 from collections import deque
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from .coach import (
@@ -54,6 +55,33 @@ from .storage import (
     StorageCorrupt,
     StorageError,
     StorageUnavailable,
+)
+from .study import (
+    MAX_MOMENTS,
+    SCREENING_NODE_BUDGET,
+    StudyWork,
+    build_moment,
+    decision_positions,
+    evidence_ids,
+    failed_study,
+    new_study_work,
+    parse_import,
+    screening_candidate,
+    select_shortlist,
+)
+from .study_domain import (
+    AttemptOutcome,
+    LearningMomentPrivate,
+    PGNImportRequest,
+    PracticeAttemptRequest,
+    PracticeAttemptView,
+    PracticeFeedback,
+    PracticePhase,
+    ProgressSummary,
+    ReviewCard,
+    StudyJobState,
+    StudyJobView,
+    StudyProgress,
 )
 from .tutor import (
     TutorInteractionRecord,
@@ -105,12 +133,15 @@ class AnalysisService:
         self.model_status = "disabled" if not full_profile else "loading"
         self._provider: StockfishProvider | None = None
         self._jobs: dict[str, _Job] = {}
+        self._study_jobs: dict[str, StudyWork] = {}
         self._sessions: dict[str, Session] = {}
         self._tutors: dict[str, TutorInteractionRecord] = {}
         self._session_locks: dict[str, threading.RLock] = {}
         self._creation_lock = threading.RLock()
         self._pending_ids: deque[str] = deque()
+        self._study_pending_ids: deque[str] = deque()
         self._active_id: str | None = None
+        self._active_study_id: str | None = None
         self._generation = 0
         self._job_retention = max(1, history_retention)
         self._condition = threading.Condition()
@@ -119,6 +150,556 @@ class AnalysisService:
         self._worker_status = "ready"
         self._worker = threading.Thread(target=self._run, name="gemmafischer-engine", daemon=True)
         self._worker.start()
+
+    def submit_study(
+        self, request: PGNImportRequest, *, idempotency_key: str | None = None
+    ) -> StudyJobView:
+        with self._condition:
+            self._ensure_open_locked()
+            payload_hash = canonical_hash(request.model_dump(mode="json"))
+            if idempotency_key:
+                replay = self._get_receipt("study:create", idempotency_key, payload_hash)
+                if replay is not None:
+                    return StudyJobView.model_validate_json(replay)
+            work = new_study_work(request)
+            if self._store:
+                try:
+                    self._store.save_study_job(
+                        work.view,
+                        create=True,
+                        receipt=(
+                            "study:create",
+                            idempotency_key,
+                            payload_hash,
+                            "study",
+                            work.view.model_dump_json(),
+                        )
+                        if idempotency_key
+                        else None,
+                    )
+                except StorageError as exc:
+                    self._note_storage_error(exc)
+                    raise
+            self._study_jobs[work.view.job_id] = work
+            self._study_pending_ids.append(work.view.job_id)
+            self._condition.notify_all()
+            return work.view
+
+    def get_study(self, job_id: str) -> StudyJobView | None:
+        with self._condition:
+            work = self._study_jobs.get(job_id)
+            if work:
+                return self._with_practice_statuses(work.view)
+        try:
+            stored = self._store.get_study_job(job_id) if self._store else None
+        except StorageError as exc:
+            self._note_storage_error(exc)
+            raise
+        return self._with_practice_statuses(stored) if stored else None
+
+    def recent_studies(self, limit: int = 20) -> tuple[StudyJobView, ...]:
+        if self._store:
+            try:
+                return tuple(
+                    self._with_practice_statuses(item)
+                    for item in self._store.recent_study_jobs(limit)
+                )
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+        with self._condition:
+            values = sorted(
+                (work.view for work in self._study_jobs.values()),
+                key=lambda item: item.updated_at,
+                reverse=True,
+            )
+            return tuple(values[: max(1, min(limit, 100))])
+
+    def _with_practice_statuses(self, view: StudyJobView) -> StudyJobView:
+        if not self._store or not view.moments:
+            return view
+        try:
+            statuses = self._store.practice_statuses(view.job_id)
+        except StorageError as exc:
+            self._note_storage_error(exc)
+            raise
+        return view.model_copy(
+            update={
+                "moments": tuple(
+                    moment.model_copy(
+                        update={"practice_status": statuses.get(moment.moment_id, "new")}
+                    )
+                    for moment in view.moments
+                )
+            }
+        )
+
+    def cancel_study(self, job_id: str) -> StudyJobView | None:
+        with self._condition:
+            work = self._study_jobs.get(job_id)
+            if work is None:
+                stored = self._store.get_study_job(job_id) if self._store else None
+                if stored is None:
+                    return None
+                work = StudyWork(request=None, view=stored)
+                self._study_jobs[job_id] = work
+            if work.view.state in {StudyJobState.READY, StudyJobState.CANCELLED}:
+                return work.view
+            work.cancelled = True
+            if job_id in self._study_pending_ids:
+                self._study_pending_ids.remove(job_id)
+            if self._active_study_id == job_id and work.operation_id and self._provider:
+                self._provider.interrupt_analysis(work.operation_id, "cancelled")
+            self._update_study(work, StudyJobState.CANCELLED)
+            return work.view
+
+    def resume_study(self, job_id: str, expected_revision: int) -> StudyJobView:
+        with self._condition:
+            view = self.get_study(job_id)
+            if view is None:
+                raise KeyError(job_id)
+            if view.revision != expected_revision:
+                raise SessionConflict("The study job revision changed.")
+            if view.state not in {
+                StudyJobState.PAUSED_INTERRUPTED,
+                StudyJobState.PAUSED_STORAGE,
+                StudyJobState.FAILED,
+                StudyJobState.CANCELLED,
+            }:
+                raise ValueError("This study job cannot be resumed")
+            if view.game is None:
+                raise ValueError("Re-submit a job interrupted before PGN parsing completed")
+            work = StudyWork(request=None, view=view)
+            self._study_jobs[job_id] = work
+            self._update_study(work, StudyJobState.QUEUED)
+            self._study_pending_ids.append(job_id)
+            self._condition.notify_all()
+            return work.view
+
+    def delete_study(self, job_id: str) -> bool:
+        if self.cancel_study(job_id) is None:
+            return False
+        with self._condition:
+            self._study_jobs.pop(job_id, None)
+        return self._store.delete_study_job(job_id) if self._store else True
+
+    def submit_practice_attempt(
+        self,
+        job_id: str,
+        moment_id: str,
+        request: PracticeAttemptRequest,
+        *,
+        idempotency_key: str | None = None,
+    ) -> PracticeAttemptView:
+        with self._creation_lock:
+            return self._submit_practice_attempt_locked(
+                job_id,
+                moment_id,
+                request,
+                idempotency_key=idempotency_key,
+            )
+
+    def _submit_practice_attempt_locked(
+        self,
+        job_id: str,
+        moment_id: str,
+        request: PracticeAttemptRequest,
+        *,
+        idempotency_key: str | None = None,
+    ) -> PracticeAttemptView:
+        payload_hash = canonical_hash(
+            {
+                "job_id": job_id,
+                "moment_id": moment_id,
+                "request": request.model_dump(mode="json"),
+            }
+        )
+        receipt_scope = f"practice-attempt:{moment_id}"
+        if idempotency_key:
+            replay = self._get_receipt(receipt_scope, idempotency_key, payload_hash)
+            if replay is not None:
+                return PracticeAttemptView.model_validate_json(replay)
+        job = self.get_study(job_id)
+        if job is None:
+            raise KeyError(job_id)
+        if job.revision != request.expected_revision:
+            raise SessionConflict("The study job revision changed.")
+        private = self._private_moment(moment_id)
+        if private is None or not any(
+            moment.moment_id == private.view.moment_id for moment in job.moments
+        ):
+            raise KeyError(moment_id)
+        previous = self._store.attempts_for_moment(moment_id) if self._store else ()
+        self._validate_practice_phase(private, previous, request)
+        attempt_number = len(previous) + 1
+        transfer = request.phase is PracticePhase.TRANSFER
+        if transfer and (
+            private.transfer_fen is None
+            or private.transfer_move_uci is None
+            or private.transfer_move_san is None
+        ):
+            raise ValueError("No near-transfer challenge is available for this moment")
+        challenge_fen = private.transfer_fen if transfer else private.view.fen
+        preferred_move = private.transfer_move_uci if transfer else private.preferred_move_uci
+        preferred_san = (
+            private.transfer_move_san if transfer else private.preferred_move_san
+        )
+        assert challenge_fen is not None and preferred_move is not None
+        assert preferred_san is not None
+        evidence = self._engine().analyze(
+            challenge_fen,
+            request.move_uci,
+            node_budget=self.node_budget,
+        )
+        comparison = evidence.move_comparison
+        if comparison is None:
+            raise ValueError("The submitted move could not be compared")
+        if comparison.outcome == "engine_better":
+            outcome = AttemptOutcome.INCORRECT
+        elif request.move_uci == preferred_move:
+            outcome = AttemptOutcome.CORRECT
+        else:
+            outcome = AttemptOutcome.EQUIVALENT
+        reveal = (
+            outcome is not AttemptOutcome.INCORRECT
+            or request.phase is not PracticePhase.ORIGINAL
+        )
+        feedback = (
+            PracticeFeedback(
+                preferred_move_uci=preferred_move,
+                preferred_move_san=preferred_san,
+                message=(
+                    "That move preserves the engine result."
+                    if outcome is not AttemptOutcome.INCORRECT
+                    else "Review the preferred move, then try the idea again."
+                ),
+                evidence_ids=(
+                    (evidence.move_comparison.evidence_id,)
+                    if transfer and evidence.move_comparison
+                    else evidence_ids(private)
+                ),
+                next_phase=(
+                    PracticePhase.TRANSFER
+                    if not transfer and private.transfer_fen is not None
+                    else None
+                ),
+                next_fen=private.transfer_fen if not transfer else None,
+            )
+            if reveal
+            else None
+        )
+        attempt = PracticeAttemptView(
+            attempt_id=uuid.uuid4().hex,
+            moment_id=moment_id,
+            phase=request.phase,
+            attempt_number=attempt_number,
+            submitted_move_uci=request.move_uci,
+            outcome=outcome,
+            hint_used=request.hint_used,
+            feedback=feedback,
+            created_at=now_utc(),
+        )
+        card = self._next_review_card(job_id, private, attempt) if feedback else None
+        if self._store:
+            try:
+                self._store.save_attempt_and_card(
+                    attempt,
+                    card,
+                    idempotency_key,
+                    receipt=(
+                        receipt_scope,
+                        idempotency_key,
+                        payload_hash,
+                        "attempt",
+                        attempt.model_dump_json(),
+                    )
+                    if idempotency_key
+                    else None,
+                )
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+        return attempt
+
+    def _validate_practice_phase(
+        self,
+        moment: LearningMomentPrivate,
+        previous: tuple[PracticeAttemptView, ...],
+        request: PracticeAttemptRequest,
+    ) -> None:
+        if request.phase is PracticePhase.ORIGINAL and previous:
+            raise SessionConflict("The original attempt has already been submitted.")
+        if request.phase is PracticePhase.RETRY and (
+            not previous
+            or previous[-1].phase is not PracticePhase.ORIGINAL
+            or previous[-1].outcome is not AttemptOutcome.INCORRECT
+        ):
+            raise SessionConflict("Retry is available only after a missed original attempt.")
+        if request.phase is PracticePhase.TRANSFER:
+            if (
+                moment.transfer_fen is None
+                or moment.transfer_move_uci is None
+                or moment.transfer_move_san is None
+            ):
+                raise ValueError("No near-transfer challenge is available for this moment")
+            if not previous or previous[-1].phase not in {
+                PracticePhase.ORIGINAL,
+                PracticePhase.RETRY,
+            } or previous[-1].feedback is None:
+                raise SessionConflict("Complete the original challenge before transfer practice.")
+        if request.phase is PracticePhase.DELAYED_REVIEW:
+            card = self._store.get_review_card(moment.view.moment_id) if self._store else None
+            if (
+                not previous
+                or previous[-1].feedback is None
+                or card is None
+                or card.mastered
+                or card.due_at > now_utc()
+            ):
+                raise SessionConflict("This learning moment is not due for review.")
+
+    def due_reviews(self, limit: int = 50) -> tuple[ReviewCard, ...]:
+        if not self._store:
+            return ()
+        try:
+            return self._store.due_reviews(now_utc().isoformat(), limit)
+        except StorageError as exc:
+            self._note_storage_error(exc)
+            raise
+
+    def progress(self) -> ProgressSummary:
+        if self._store:
+            try:
+                return self._store.progress_summary(now_utc().isoformat())
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+        return ProgressSummary(
+            due=0,
+            learning=0,
+            retaining=0,
+            mastered=0,
+            attempts=0,
+            original_accuracy=0,
+            retry_accuracy=0,
+            transfer_accuracy=0,
+            delayed_accuracy=0,
+        )
+
+    def delete_progress(self) -> int:
+        if not self._store:
+            return 0
+        try:
+            return self._store.delete_progress()
+        except StorageError as exc:
+            self._note_storage_error(exc)
+            raise
+
+    def _private_moment(self, moment_id: str) -> LearningMomentPrivate | None:
+        for work in self._study_jobs.values():
+            for moment in work.private_moments:
+                if moment.view.moment_id == moment_id:
+                    return moment
+        return self._store.get_learning_moment(moment_id) if self._store else None
+
+    def _next_review_card(
+        self, job_id: str, moment: LearningMomentPrivate, attempt: PracticeAttemptView
+    ) -> ReviewCard:
+        existing = self._store.get_review_card(moment.view.moment_id) if self._store else None
+        successful = attempt.outcome is not AttemptOutcome.INCORRECT and not attempt.hint_used
+        delayed = attempt.phase is PracticePhase.DELAYED_REVIEW
+        successful_delayed = existing.successful_delayed_reviews if existing else 0
+        lapses = existing.lapses if existing else 0
+        interval = existing.interval_days if existing else 1
+        if delayed and successful:
+            successful_delayed += 1
+            interval = (3, 7, 14, 30)[min(successful_delayed - 1, 3)]
+        elif not successful:
+            lapses += 1
+            interval = 1
+            if delayed:
+                successful_delayed = 0
+        due_at = datetime.now(UTC) + timedelta(days=interval)
+        return ReviewCard(
+            job_id=job_id,
+            moment_id=moment.view.moment_id,
+            moment=moment.view,
+            concept_key=(
+                moment.view.concept_keys[0]
+                if moment.view.concept_keys
+                else "calculation"
+            ),
+            due_at=due_at,
+            interval_days=interval,
+            successful_delayed_reviews=successful_delayed,
+            lapses=lapses,
+            mastered=successful_delayed >= 2,
+        )
+
+    def _update_study(
+        self, work: StudyWork, state: StudyJobState, **values: object
+    ) -> StudyJobView:
+        previous_revision = work.view.revision
+        candidate = work.view.model_copy(
+            update={
+                "revision": previous_revision + 1,
+                "state": state,
+                "updated_at": now_utc(),
+                "error": None,
+                **values,
+            }
+        )
+        if self._store:
+            try:
+                self._store.save_study_job(candidate, expected_revision=previous_revision)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+        work.view = candidate
+        return candidate
+
+    def _process_study(self, work: StudyWork) -> None:
+        try:
+            if work.cancelled:
+                return
+            if work.view.game is None:
+                if work.request is None:
+                    raise ValueError("The original PGN is unavailable")
+                self._update_study(work, StudyJobState.PARSING)
+                game = parse_import(work.request)
+                self._update_study(work, StudyJobState.SCREENING, game=game)
+            else:
+                game = work.view.game
+                self._update_study(work, StudyJobState.SCREENING)
+
+            decisions = decision_positions(game)
+            candidates = []
+            for completed, (ply, fen, move_uci, move_san) in enumerate(decisions, 1):
+                if work.cancelled:
+                    return
+                operation_id = uuid.uuid4().hex
+                work.operation_id = operation_id
+                evidence = self._engine().analyze(
+                    fen,
+                    move_uci,
+                    operation_id=operation_id,
+                    node_budget=min(SCREENING_NODE_BUDGET, self.node_budget),
+                    clear_hash=False,
+                )
+                candidate = screening_candidate(ply, fen, move_uci, move_san, evidence)
+                if candidate is not None:
+                    candidates.append(candidate)
+                if completed % 4 == 0 or completed == len(decisions):
+                    self._update_study(
+                        work,
+                        StudyJobState.SCREENING,
+                        progress=StudyProgress(
+                            completed_units=completed,
+                            total_units=len(decisions),
+                            current_ply=ply,
+                        ),
+                    )
+
+            shortlist = select_shortlist(candidates)
+            total = len(decisions) + len(shortlist)
+            analyzed: list[LearningMomentPrivate] = []
+            for offset, candidate in enumerate(shortlist, 1):
+                if work.cancelled:
+                    return
+                self._update_study(
+                    work,
+                    StudyJobState.DEEP_ANALYSIS,
+                    progress=StudyProgress(
+                        completed_units=len(decisions) + offset - 1,
+                        total_units=total,
+                        current_ply=candidate.source_ply,
+                    ),
+                )
+                operation_id = uuid.uuid4().hex
+                work.operation_id = operation_id
+                evidence = self._engine().analyze(
+                    candidate.fen,
+                    candidate.played_move_uci,
+                    operation_id=operation_id,
+                    node_budget=self.node_budget,
+                )
+                confirmed = screening_candidate(
+                    candidate.source_ply,
+                    candidate.fen,
+                    candidate.played_move_uci,
+                    candidate.played_move_san,
+                    evidence,
+                )
+                if confirmed is not None and len(analyzed) < MAX_MOMENTS:
+                    analyzed.append(build_moment(confirmed, evidence, len(analyzed) + 1))
+
+            work.operation_id = None
+            moments = analyzed[:MAX_MOMENTS]
+            for index, moment in enumerate(moments):
+                alternatives = [
+                    item
+                    for item in analyzed
+                    if item.view.moment_id != moment.view.moment_id
+                    and set(item.view.concept_keys) & set(moment.view.concept_keys)
+                ]
+                if not alternatives:
+                    continue
+                transfer_source = alternatives[index % len(alternatives)]
+                moments[index] = moment.model_copy(
+                    update={
+                        "transfer_fen": transfer_source.view.fen,
+                        "transfer_move_uci": transfer_source.preferred_move_uci,
+                        "transfer_move_san": transfer_source.preferred_move_san,
+                    }
+                )
+            work.private_moments = moments
+            if self._store:
+                self._store.replace_learning_moments(work.view.job_id, moments)
+            self._update_study(
+                work,
+                StudyJobState.READY,
+                moments=tuple(moment.view for moment in moments),
+                progress=StudyProgress(completed_units=total, total_units=total),
+            )
+        except EngineOperationCancelled:
+            work.operation_id = None
+        except EngineOperationPreempted:
+            work.operation_id = None
+            if not work.cancelled:
+                self._update_study(work, StudyJobState.QUEUED)
+                with self._condition:
+                    if work.view.job_id not in self._study_pending_ids:
+                        self._study_pending_ids.appendleft(work.view.job_id)
+                        self._condition.notify_all()
+        except StorageError as exc:
+            self._note_storage_error(exc)
+            work.view = work.view.model_copy(
+                update={"state": StudyJobState.PAUSED_STORAGE, "updated_at": now_utc()}
+            )
+            with self._condition:
+                if (
+                    not isinstance(exc, StorageCorrupt)
+                    and not work.cancelled
+                    and work.view.job_id not in self._study_pending_ids
+                ):
+                    self._study_pending_ids.appendleft(work.view.job_id)
+        except ValueError as exc:
+            work.view = failed_study(work, "INVALID_STUDY_INPUT", str(exc), False)
+            if self._store:
+                self._store.save_study_job(work.view)
+        except EngineUnavailable:
+            work.view = failed_study(
+                work, "ENGINE_UNAVAILABLE", "The chess engine is unavailable.", True
+            )
+            if self._store:
+                self._store.save_study_job(work.view)
+        except Exception:
+            LOGGER.exception("Study worker failed")
+            work.view = failed_study(
+                work, "STUDY_ENGINE_FAILURE", "The game study could not be completed.", True
+            )
+            if self._store:
+                self._store.save_study_job(work.view)
 
     def submit(
         self,
@@ -710,6 +1291,17 @@ class AnalysisService:
                         self._cancel_locked(analysis_id, interrupt_active=False)
                     except StorageError:
                         LOGGER.exception("Failed to persist cancellation during shutdown")
+            for work in self._study_jobs.values():
+                if work.view.state not in {
+                    StudyJobState.READY,
+                    StudyJobState.CANCELLED,
+                    StudyJobState.FAILED,
+                }:
+                    work.cancelled = True
+                    try:
+                        self._update_study(work, StudyJobState.PAUSED_INTERRUPTED)
+                    except StorageError:
+                        LOGGER.exception("Failed to persist study interruption during shutdown")
             self._condition.notify_all()
             provider = self._provider
         try:
@@ -809,15 +1401,33 @@ class AnalysisService:
         while True:
             with self._condition:
                 while not self._closed and (
-                    not self._pending_ids
+                    (not self._pending_ids and not self._study_pending_ids)
                     or self._storage_status not in {"ready", "disabled"}
                 ):
                     self._condition.wait()
                 if self._closed:
                     return
-                analysis_id = self._pending_ids.popleft()
-                self._active_id = analysis_id
-                job = self._jobs[analysis_id]
+                if self._pending_ids:
+                    pulled_id = self._pending_ids.popleft()
+                    analysis_id: str | None = pulled_id
+                    self._active_id = pulled_id
+                    job: _Job | None = self._jobs[pulled_id]
+                    study_work: StudyWork | None = None
+                else:
+                    study_id = self._study_pending_ids.popleft()
+                    self._active_study_id = study_id
+                    study_work = self._study_jobs[study_id]
+                    analysis_id = None
+                    job = None
+            if study_work is not None:
+                try:
+                    self._process_study(study_work)
+                finally:
+                    with self._condition:
+                        if self._active_study_id == study_work.view.job_id:
+                            self._active_study_id = None
+                continue
+            assert analysis_id is not None and job is not None
             if job.cancelled:
                 with self._condition:
                     if self._active_id == analysis_id:

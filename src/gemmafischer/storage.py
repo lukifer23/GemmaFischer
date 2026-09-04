@@ -8,10 +8,19 @@ import sqlite3
 import uuid
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
 from .domain import AnalysisSnapshot, AnalysisState, ErrorDetail, Session, now_utc
+from .study_domain import (
+    LearningMomentPrivate,
+    PracticeAttemptView,
+    ProgressSummary,
+    ReviewCard,
+    StudyJobState,
+    StudyJobView,
+)
 from .tutor import TutorInteractionRecord, deserialize_record, serialize_record
 
 ACTIVE_STATES = (
@@ -22,7 +31,7 @@ ACTIVE_STATES = (
     AnalysisState.MODEL_RUNNING,
 )
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 class StorageError(RuntimeError):
@@ -98,6 +107,7 @@ class AnalysisStore:
             try:
                 self._create_base_schema(connection)
                 self._add_v4_columns(connection)
+                self._add_v5_schema(connection)
                 self._backfill_session_analysis_refs(connection)
                 connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
                 connection.commit()
@@ -226,6 +236,60 @@ class AnalysisStore:
                 "WHERE interaction_id = ?",
                 (record.view.revision, record.view.status.value, row[0]),
             )
+
+    def _add_v5_schema(self, connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS study_jobs (
+                job_id TEXT PRIMARY KEY,
+                state TEXT NOT NULL,
+                revision INTEGER NOT NULL,
+                updated_at TEXT NOT NULL,
+                job_json TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS study_jobs_state_updated_idx
+                ON study_jobs(state, updated_at DESC);
+            CREATE TABLE IF NOT EXISTS learning_moments (
+                moment_id TEXT PRIMARY KEY,
+                job_id TEXT NOT NULL,
+                rank INTEGER NOT NULL CHECK(rank BETWEEN 1 AND 3),
+                source_ply INTEGER NOT NULL,
+                state TEXT NOT NULL DEFAULT 'new',
+                private_json TEXT NOT NULL,
+                UNIQUE(job_id, rank),
+                UNIQUE(job_id, source_ply),
+                FOREIGN KEY(job_id) REFERENCES study_jobs(job_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS learning_moments_job_rank_idx
+                ON learning_moments(job_id, rank);
+            CREATE TABLE IF NOT EXISTS practice_attempts (
+                attempt_id TEXT PRIMARY KEY,
+                moment_id TEXT NOT NULL,
+                phase TEXT NOT NULL,
+                attempt_number INTEGER NOT NULL,
+                outcome TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                attempt_json TEXT NOT NULL,
+                idempotency_key TEXT,
+                UNIQUE(moment_id, phase, attempt_number),
+                UNIQUE(moment_id, idempotency_key),
+                FOREIGN KEY(moment_id) REFERENCES learning_moments(moment_id)
+                    ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS practice_attempts_moment_created_idx
+                ON practice_attempts(moment_id, created_at);
+            CREATE TABLE IF NOT EXISTS review_cards (
+                moment_id TEXT PRIMARY KEY,
+                due_at TEXT NOT NULL,
+                mastered INTEGER NOT NULL,
+                card_json TEXT NOT NULL,
+                FOREIGN KEY(moment_id) REFERENCES learning_moments(moment_id)
+                    ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS review_cards_due_idx
+                ON review_cards(mastered, due_at);
+            """
+        )
 
     def _backup_before_migration(
         self, connection: sqlite3.Connection, version: int
@@ -538,6 +602,228 @@ class AnalysisStore:
             ).fetchall()
         return tuple(deserialize_record(row[0]) for row in rows)
 
+    def save_study_job(
+        self,
+        job: StudyJobView,
+        *,
+        create: bool = False,
+        expected_revision: int | None = None,
+        receipt: tuple[str, str, str, str, str] | None = None,
+    ) -> None:
+        with self._transaction() as connection:
+            values = (
+                job.job_id,
+                job.state.value,
+                job.revision,
+                job.updated_at.isoformat(),
+                job.model_dump_json(),
+            )
+            if create:
+                connection.execute(
+                    "INSERT INTO study_jobs "
+                    "(job_id, state, revision, updated_at, job_json) VALUES (?, ?, ?, ?, ?)",
+                    values,
+                )
+            elif expected_revision is None:
+                connection.execute(
+                    "UPDATE study_jobs SET state=?, revision=?, updated_at=?, job_json=? "
+                    "WHERE job_id=?",
+                    (values[1], values[2], values[3], values[4], values[0]),
+                )
+            else:
+                cursor = connection.execute(
+                    "UPDATE study_jobs SET state=?, revision=?, updated_at=?, job_json=? "
+                    "WHERE job_id=? AND revision=?",
+                    (values[1], values[2], values[3], values[4], values[0], expected_revision),
+                )
+                if cursor.rowcount != 1:
+                    raise StorageConflict(
+                        "The study job revision changed before it could be saved."
+                    )
+            if receipt:
+                self._save_receipt(connection, *receipt)
+
+    def get_study_job(self, job_id: str) -> StudyJobView | None:
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT job_json FROM study_jobs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+        return StudyJobView.model_validate_json(row[0]) if row else None
+
+    def recent_study_jobs(self, limit: int = 20) -> tuple[StudyJobView, ...]:
+        bounded = max(1, min(limit, 100))
+        with self._transaction() as connection:
+            rows = connection.execute(
+                "SELECT job_json FROM study_jobs ORDER BY updated_at DESC LIMIT ?", (bounded,)
+            ).fetchall()
+        return tuple(StudyJobView.model_validate_json(row[0]) for row in rows)
+
+    def delete_study_job(self, job_id: str) -> bool:
+        with self._transaction() as connection:
+            cursor = connection.execute("DELETE FROM study_jobs WHERE job_id = ?", (job_id,))
+        return cursor.rowcount > 0
+
+    def replace_learning_moments(
+        self, job_id: str, moments: Sequence[LearningMomentPrivate]
+    ) -> None:
+        with self._transaction() as connection:
+            connection.execute("DELETE FROM learning_moments WHERE job_id = ?", (job_id,))
+            for moment in moments:
+                connection.execute(
+                    "INSERT INTO learning_moments "
+                    "(moment_id, job_id, rank, source_ply, state, private_json) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        moment.view.moment_id,
+                        job_id,
+                        moment.view.rank,
+                        moment.view.source_ply,
+                        moment.view.practice_status,
+                        moment.model_dump_json(),
+                    ),
+                )
+
+    def get_learning_moment(self, moment_id: str) -> LearningMomentPrivate | None:
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT private_json FROM learning_moments WHERE moment_id = ?", (moment_id,)
+            ).fetchone()
+        return LearningMomentPrivate.model_validate_json(row[0]) if row else None
+
+    def save_attempt_and_card(
+        self,
+        attempt: PracticeAttemptView,
+        card: ReviewCard | None,
+        idempotency_key: str | None,
+        receipt: tuple[str, str, str, str, str] | None = None,
+    ) -> None:
+        with self._transaction() as connection:
+            connection.execute(
+                "INSERT INTO practice_attempts "
+                "(attempt_id, moment_id, phase, attempt_number, outcome, created_at, "
+                "attempt_json, idempotency_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    attempt.attempt_id,
+                    attempt.moment_id,
+                    attempt.phase.value,
+                    attempt.attempt_number,
+                    attempt.outcome.value,
+                    attempt.created_at.isoformat(),
+                    attempt.model_dump_json(),
+                    idempotency_key,
+                ),
+            )
+            if receipt:
+                self._save_receipt(connection, *receipt)
+            if card is not None:
+                connection.execute(
+                    "INSERT INTO review_cards (moment_id, due_at, mastered, card_json) "
+                    "VALUES (?, ?, ?, ?) ON CONFLICT(moment_id) DO UPDATE SET "
+                    "due_at=excluded.due_at, mastered=excluded.mastered, "
+                    "card_json=excluded.card_json",
+                    (
+                        card.moment_id,
+                        card.due_at.isoformat(),
+                        int(card.mastered),
+                        card.model_dump_json(),
+                    ),
+                )
+
+    def attempts_for_moment(self, moment_id: str) -> tuple[PracticeAttemptView, ...]:
+        with self._transaction() as connection:
+            rows = connection.execute(
+                "SELECT attempt_json FROM practice_attempts WHERE moment_id = ? "
+                "ORDER BY created_at",
+                (moment_id,),
+            ).fetchall()
+        return tuple(PracticeAttemptView.model_validate_json(row[0]) for row in rows)
+
+    def practice_statuses(self, job_id: str) -> dict[str, str]:
+        """Derive public practice state from the authoritative attempt/card ledger."""
+        with self._transaction() as connection:
+            rows = connection.execute(
+                "SELECT learning_moments.moment_id, review_cards.mastered, "
+                "(SELECT attempt_json FROM practice_attempts "
+                " WHERE practice_attempts.moment_id = learning_moments.moment_id "
+                " ORDER BY created_at DESC, rowid DESC LIMIT 1) "
+                "FROM learning_moments LEFT JOIN review_cards "
+                "ON review_cards.moment_id = learning_moments.moment_id "
+                "WHERE learning_moments.job_id = ?",
+                (job_id,),
+            ).fetchall()
+        statuses: dict[str, str] = {}
+        for moment_id, mastered, attempt_json in rows:
+            if attempt_json is None:
+                statuses[str(moment_id)] = "new"
+            elif bool(mastered):
+                statuses[str(moment_id)] = "mastered"
+            else:
+                attempt = PracticeAttemptView.model_validate_json(attempt_json)
+                statuses[str(moment_id)] = (
+                    "in_progress"
+                    if attempt.outcome.value == "incorrect" and attempt.feedback is None
+                    else "scheduled"
+                )
+        return statuses
+
+    def due_reviews(self, at: str, limit: int = 50) -> tuple[ReviewCard, ...]:
+        with self._transaction() as connection:
+            rows = connection.execute(
+                "SELECT card_json FROM review_cards WHERE due_at <= ? AND mastered = 0 "
+                "ORDER BY due_at LIMIT ?",
+                (at, max(1, min(limit, 100))),
+            ).fetchall()
+        return tuple(ReviewCard.model_validate_json(row[0]) for row in rows)
+
+    def get_review_card(self, moment_id: str) -> ReviewCard | None:
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT card_json FROM review_cards WHERE moment_id = ?", (moment_id,)
+            ).fetchone()
+        return ReviewCard.model_validate_json(row[0]) if row else None
+
+    def progress_summary(self, at: str) -> ProgressSummary:
+        with self._transaction() as connection:
+            cards = [
+                ReviewCard.model_validate_json(row[0])
+                for row in connection.execute("SELECT card_json FROM review_cards").fetchall()
+            ]
+            attempts = [
+                PracticeAttemptView.model_validate_json(row[0])
+                for row in connection.execute(
+                    "SELECT attempt_json FROM practice_attempts"
+                ).fetchall()
+            ]
+        now = datetime.fromisoformat(at)
+        due = sum(card.due_at <= now and not card.mastered for card in cards)
+        mastered = sum(card.mastered for card in cards)
+        retaining = sum(not card.mastered and card.successful_delayed_reviews > 0 for card in cards)
+        learning = max(0, len(cards) - mastered - retaining)
+
+        def accuracy(phase: str) -> float:
+            selected = [item for item in attempts if item.phase.value == phase]
+            if not selected:
+                return 0.0
+            return sum(item.outcome.value != "incorrect" for item in selected) / len(selected)
+
+        return ProgressSummary(
+            due=due,
+            learning=learning,
+            retaining=retaining,
+            mastered=mastered,
+            attempts=len(attempts),
+            original_accuracy=accuracy("original"),
+            retry_accuracy=accuracy("retry"),
+            transfer_accuracy=accuracy("transfer"),
+            delayed_accuracy=accuracy("delayed_review"),
+        )
+
+    def delete_progress(self) -> int:
+        with self._transaction() as connection:
+            attempts = connection.execute("DELETE FROM practice_attempts").rowcount
+            connection.execute("DELETE FROM review_cards")
+        return attempts
+
     def _backfill_session_analysis_refs(self, connection: sqlite3.Connection) -> None:
         rows = connection.execute("SELECT session_json FROM sessions").fetchall()
         for row in rows:
@@ -596,6 +882,31 @@ class AnalysisStore:
                     update={"state": AnalysisState.FAILED, "updated_at": now_utc(), "error": error}
                 )
             )
+        with self._transaction() as connection:
+            rows = connection.execute(
+                "SELECT job_json FROM study_jobs WHERE state IN "
+                "('queued', 'parsing', 'screening', 'deep_analysis', 'building_transfer')"
+            ).fetchall()
+            for row in rows:
+                job = StudyJobView.model_validate_json(row[0])
+                paused = job.model_copy(
+                    update={
+                        "state": StudyJobState.PAUSED_INTERRUPTED,
+                        "revision": job.revision + 1,
+                        "updated_at": now_utc(),
+                    }
+                )
+                connection.execute(
+                    "UPDATE study_jobs SET state=?, revision=?, updated_at=?, job_json=? "
+                    "WHERE job_id=?",
+                    (
+                        paused.state.value,
+                        paused.revision,
+                        paused.updated_at.isoformat(),
+                        paused.model_dump_json(),
+                        paused.job_id,
+                    ),
+                )
 
     def probe(self) -> Literal["ready"]:
         try:
@@ -666,6 +977,8 @@ class AnalysisStore:
             "analysis": "analysis_id",
             "session": "session_id",
             "tutor": "interaction_id",
+            "study": "job_id",
+            "attempt": "attempt_id",
         }[resource_type]
         return str(payload[field])
 

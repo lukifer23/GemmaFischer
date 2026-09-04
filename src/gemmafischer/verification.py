@@ -17,6 +17,7 @@ PORTABLE_COMMANDS = (
     ["uv", "pip", "check"],
     ["uv", "run", "pytest", "-m", "not model and not hardware", "tests"],
     ["node", "--check", "src/gemmafischer/static/app.js"],
+    ["node", "--check", "src/gemmafischer/static/study.js"],
 )
 
 
@@ -38,6 +39,7 @@ def verify_openapi(root: Path) -> list[str]:
 def verify_package(root: Path) -> list[str]:
     required = {
         "gemmafischer/static/index.html",
+        "gemmafischer/static/study.js",
         "gemmafischer/resources/assets/model-manifest.json",
         "gemmafischer/resources/data/evaluation/diagnostic_positions.jsonl",
         "gemmafischer/resources/training/mlx-lora.yaml",

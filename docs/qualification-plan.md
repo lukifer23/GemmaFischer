@@ -1,8 +1,16 @@
 # Qualification Plan
 
-GemmaFischer is qualified in four separate layers. A green runtime test cannot
+GemmaFischer is qualified in five separate layers. A green runtime test cannot
 substitute for chess accuracy, and automated grounding cannot substitute for a
 useful lesson.
+
+## 0. Game-to-mastery behavior
+
+Use real PGNs and Stockfish to prove exact side selection, legal replay, stable
+ranking, answer redaction, first-miss secrecy, retry reveal, equivalent-move
+acceptance, concept-matched transfer, delayed intervals, restart recovery, and
+cascading deletion. Browser acceptance must complete the same loop at desktop
+and narrow widths with keyboard-only operation and zero console errors.
 
 The dependency order, implementation slices, and release definition are tracked
 in the [execution roadmap](execution-roadmap.md). This document defines the

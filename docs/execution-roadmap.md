@@ -1,5 +1,9 @@
 # Dependency-Ordered Execution Roadmap
 
+> Historical 0.2 execution record. For current product scope and status, use
+> [the documentation index](README.md), [product contract](product-contract.md),
+> and [current state](current-state.md).
+
 Status: phases 0-3 implemented for public alpha; later release gates remain active
 Baseline: public-alpha implementation worktree on `main` (2026-09-01)
 

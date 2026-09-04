@@ -68,6 +68,36 @@ def run_flow(page: Page, url: str, capture_dir: Path) -> None:
 
     page.on("console", record_console)
     page.goto(url, wait_until="networkidle")
+    page.locator("#pgn").fill(
+        '[White "Alice"]\n[Black "Bob"]\n[Result "0-1"]\n\n'
+        "1. f3 e5 2. g4 Qh4# 0-1"
+    )
+    page.locator("#player-name").fill("Alice")
+    page.get_by_role("button", name="Find my learning moments").click()
+    page.get_by_role("heading", name="Your learning moments are ready").wait_for(
+        timeout=60_000
+    )
+    page.get_by_role("article").filter(has_text="Move 2 · g4").get_by_role(
+        "button"
+    ).click()
+    assert page.locator("#study-board .square").count() == 64
+    assert page.locator('#study-board .square[tabindex="0"]').count() == 1
+    page.locator('#study-board [data-square="g2"]').click()
+    page.locator('#study-board [data-square="g4"]').click()
+    page.locator("#retry-moment").wait_for(state="visible", timeout=60_000)
+    assert "engine prefers" not in page.locator("#attempt-feedback").inner_text().lower()
+    page.locator("#retry-moment").click()
+    page.locator('#study-board [data-square="g2"]').click()
+    page.locator('#study-board [data-square="g4"]').click()
+    page.locator("#attempt-feedback").wait_for(state="visible", timeout=60_000)
+    assert "engine prefers" in page.locator("#attempt-feedback").inner_text().lower()
+    page.get_by_role("button", name="Progress").click()
+    page.locator("#progress-grid strong").filter(has_text="2").wait_for()
+    page.screenshot(path=capture_dir / "game-to-mastery-desktop.png", full_page=True)
+
+    page.reload(wait_until="networkidle")
+    page.get_by_role("heading", name="Your learning moments are ready").wait_for()
+    page.get_by_role("button", name="Position Lab").click()
     page.locator("#status").wait_for(state="visible")
     assert_layout(page, mobile=False)
     live_fen = page.locator("#fen").input_value()
@@ -83,6 +113,7 @@ def run_flow(page: Page, url: str, capture_dir: Path) -> None:
     )
 
     page.reload(wait_until="networkidle")
+    page.get_by_role("button", name="Position Lab").click()
     page.locator("#practice-banner").wait_for(state="visible")
     page.locator("#tutor-hint").wait_for(state="visible")
     assert "restored" in page.locator("#status").inner_text().lower()
@@ -120,8 +151,10 @@ def run_flow(page: Page, url: str, capture_dir: Path) -> None:
 
     page.set_viewport_size({"width": 390, "height": 844})
     assert_layout(page, mobile=True)
+    page.get_by_role("button", name="Progress").click()
+    assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
     page.screenshot(
-        path=capture_dir / "public-alpha-tutor-mobile.png",
+        path=capture_dir / "game-to-mastery-mobile.png",
         full_page=True,
     )
     assert not errors, "browser console errors: " + json.dumps(errors)
@@ -157,8 +190,8 @@ def main() -> int:
                 process.kill()
                 process.wait(timeout=5)
     print(
-        "Browser acceptance passed: live analysis, persisted tutor restore/dismiss, "
-        "cited practice, desktop/mobile layout."
+        "Browser acceptance passed: PGN study, hidden retry, persisted restore, progress, "
+        "live analysis, tutor restore/dismiss, cited practice, and desktop/mobile layout."
     )
     return 0
 

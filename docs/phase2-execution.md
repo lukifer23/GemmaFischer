@@ -1,5 +1,7 @@
 # Measurement and Qualification Execution
 
+> Historical 0.2 execution record. See [current state](current-state.md) for 0.3.
+
 Status: implemented development gate, release-scale endurance and human review remain open.
 
 This pass converts performance, model output, question grading, and training

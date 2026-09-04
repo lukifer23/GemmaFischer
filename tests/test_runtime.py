@@ -1,11 +1,14 @@
 import json
+from pathlib import Path
 
 import pytest
 
 from gemmafischer.resources import bundled_path
 from gemmafischer.runtime import (
     GemmaRuntime,
+    ModelUnavailable,
     extract_json_array,
+    inspect_adapter_assets,
     lesson_selection_target,
     parse_lesson_selection,
 )
@@ -19,6 +22,24 @@ def test_extract_json_array_accepts_markdown_fence() -> None:
 def test_bundled_runtime_resources_resolve_from_checkout() -> None:
     assert bundled_path("assets/model-manifest.json").is_file()
     assert bundled_path("data/evaluation/diagnostic_positions.jsonl").is_file()
+
+
+def test_runtime_adapter_requires_one_configured_hash_pinned_checkpoint(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "adapter_config.json").write_text("{}\n", encoding="utf-8")
+    weights = tmp_path / "adapters.safetensors"
+    weights.write_bytes(b"adapter")
+
+    inspected = inspect_adapter_assets(tmp_path)
+
+    assert inspected["weights"] == "adapters.safetensors"
+    assert len(str(inspected["sha256"])) == 64
+    with pytest.raises(ModelUnavailable, match="hash does not match"):
+        inspect_adapter_assets(tmp_path, "0" * 64)
+    (tmp_path / "duplicate.safetensors").write_bytes(b"duplicate")
+    with pytest.raises(ModelUnavailable, match="exactly one"):
+        inspect_adapter_assets(tmp_path)
 
 
 def test_extract_json_array_rejects_missing_payload() -> None:

@@ -103,9 +103,19 @@ def evaluate_training_readiness(
     human_evidence_passed = isinstance(evidence, dict) and _human_evidence_passed(
         evidence.get("frozen_human_review"), data_config
     )
-    supervision_passed = bool(
-        data_config.get("training_supervision_authority") == "stockfish-deterministic-v2"
-        and data_config.get("human_review_policy") == "optional_pedagogy_claim_only"
+    supervision_authority = data_config.get("training_supervision_authority")
+    human_review_policy = data_config.get("human_review_policy")
+    machine_supervision = bool(
+        supervision_authority == "stockfish-deterministic-v2"
+        and human_review_policy == "optional_pedagogy_claim_only"
+    )
+    human_supervision = bool(
+        supervision_authority == "two-reviewer-adjudicated-human-gold"
+        and human_review_policy == "required_for_pedagogy_selection_targets"
+    )
+    supervision_policy_passed = machine_supervision or human_supervision
+    required_supervision_evidence_passed = machine_supervision or (
+        human_supervision and human_evidence_passed
     )
     checks = {
         "hardware_smoke_eligible": hardware_passed,
@@ -113,7 +123,8 @@ def evaluate_training_readiness(
         "toolchain_exactly_pinned_and_installed": toolchain_passed,
         "native_base_weights_pinned": model_passed,
         "error_and_baseline_evidence_frozen": evidence_passed,
-        "machine_supervision_authority_locked": supervision_passed,
+        "training_supervision_policy_locked": supervision_policy_passed,
+        "required_human_supervision_evidence": required_supervision_evidence_passed,
     }
     ready = all(checks.values())
     authorization = manifest.get("authorization", {})
@@ -132,6 +143,7 @@ def evaluate_training_readiness(
         "optional_evidence": {
             "two_reviewer_human_gold_adjudicated": human_evidence_passed,
             "pedagogy_claim_eligible": human_evidence_passed,
+            "required_for_training": human_supervision,
         },
         "blockers": [name for name, passed in checks.items() if not passed],
         "next_allowed_action": (

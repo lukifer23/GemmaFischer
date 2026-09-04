@@ -45,7 +45,7 @@ def prepare_mlx_dataset(
         raise ValueError(
             "Prepared-data destination must be empty; duplicate datasets are forbidden"
         )
-    mapping = {"train": "train", "validation": "valid", "final_test": "test"}
+    mapping = {"train": "train", "validation": "valid"}
     output_dir.mkdir(parents=True, exist_ok=True)
     counts: dict[str, int] = {}
     hashes: dict[str, str] = {}
@@ -100,6 +100,10 @@ def prepare_mlx_dataset(
         temporary.replace(destination)
         counts[output_name] = count
         hashes[destination.name] = sha256_file(destination)
+    final_test = source_dir / "final_test.jsonl"
+    if not final_test.is_file():
+        raise ValueError(f"Missing canonical partition: {final_test}")
+    source_hashes[final_test.name] = sha256_file(final_test)
     receipt = {
         "schema_version": "1.0",
         "task": LESSON_SELECTION_CONTRACT_VERSION,
@@ -107,6 +111,8 @@ def prepare_mlx_dataset(
         "counts": counts,
         "sha256": hashes,
         "source_sha256": source_hashes,
+        "trainer_files": sorted(hashes),
+        "held_out_final_test_sha256": source_hashes[final_test.name],
         "supervision_authority": (
             "two-reviewer-adjudicated-human-gold"
             if human_gold_sha256
@@ -154,7 +160,7 @@ def training_preflight(
     expected_data_hashes = prepared_receipt.get("sha256", {})
     data_file_checks: dict[str, dict[str, object]] = {}
     if isinstance(expected_data_hashes, dict):
-        for name in ("train.jsonl", "valid.jsonl", "test.jsonl"):
+        for name in ("train.jsonl", "valid.jsonl"):
             path = data_path / name
             expected_hash = expected_data_hashes.get(name)
             actual_hash = sha256_file(path) if path.is_file() else None
@@ -184,13 +190,16 @@ def training_preflight(
         data_config.get("training_supervision_authority") if isinstance(data_config, dict) else None
     )
     supervision_matches = bool(
-        required_supervision == MACHINE_SUPERVISION_AUTHORITY
+        isinstance(required_supervision, str)
         and prepared_receipt.get("supervision_authority") == required_supervision
-        and prepared_receipt.get("human_gold_sha256") is None
+        and (
+            required_supervision == MACHINE_SUPERVISION_AUTHORITY
+            or human_gold_matches is True
+        )
     )
     data_ready = bool(
         data_receipt.is_file()
-        and len(data_file_checks) == 3
+        and len(data_file_checks) == 2
         and all(check["passed"] for check in data_file_checks.values())
         and prepared_receipt.get("task") == LESSON_SELECTION_CONTRACT_VERSION
         and source_hashes_match
@@ -240,7 +249,7 @@ def training_preflight(
     if not preflight["model_hashes_passed"]:
         preflight_blockers.append("native_model_files_hash_verified")
     if not data_ready:
-        preflight_blockers.append("prepared_machine_supervision_data_hash_verified")
+        preflight_blockers.append("prepared_training_supervision_data_hash_verified")
     if not config_ready:
         preflight_blockers.append("training_recipe_hash_verified")
     if free_bytes < int(manifest.get("hardware", {}).get("minimum_free_bytes", 0)):
@@ -289,7 +298,7 @@ def validate_training_preflight(
     ):
         raise ValueError("Prepared training data changed after preflight")
     data_files = preflight.get("prepared_data_files")
-    if not isinstance(data_files, dict) or len(data_files) != 3:
+    if not isinstance(data_files, dict) or len(data_files) != 2:
         raise ValueError("Training preflight contains no prepared-data file authority")
     for relative, check in data_files.items():
         if not isinstance(check, dict) or not isinstance(check.get("expected"), str):
@@ -310,6 +319,7 @@ def run_mlx_sft(
     max_seq_length: int,
     smoke: bool,
     config_path: Path,
+    resume: bool = False,
 ) -> dict[str, Any]:
     """Run one real MLX-LM LoRA job and retain exactly one adapter checkpoint."""
     if platform.system() != "Darwin" or platform.machine() != "arm64":
@@ -318,9 +328,12 @@ def run_mlx_sft(
         raise ValueError("Smoke training requires at least 7 iterations")
     if smoke and iterations > 20:
         raise ValueError("Smoke training cannot exceed 20 iterations")
-    if max_seq_length not in {1024, 2048, 4096}:
-        raise ValueError("max sequence length must be 1024, 2048, or 4096")
-    if adapter_path.exists() and any(adapter_path.iterdir()):
+    if max_seq_length != 4096:
+        raise ValueError("GemmaFischer training requires a 4096-token sequence length")
+    existing_adapters = sorted(adapter_path.glob("*.safetensors"))
+    if resume and len(existing_adapters) != 1:
+        raise ValueError("Resume requires exactly one existing adapter checkpoint")
+    if not resume and adapter_path.exists() and any(adapter_path.iterdir()):
         raise ValueError("Adapter destination must be empty; duplicate checkpoints are forbidden")
     adapter_path.mkdir(parents=True, exist_ok=True)
     command = [
@@ -363,6 +376,8 @@ def run_mlx_sft(
         "3407",
         "--grad-checkpoint",
     ]
+    if resume:
+        command.extend(("--resume-adapter-file", str(existing_adapters[0].resolve())))
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     log_path = receipt_path.with_suffix(".log")
     started = time.monotonic()
@@ -387,6 +402,7 @@ def run_mlx_sft(
         "log": str(log_path.resolve()),
         "log_sha256": sha256_file(log_path),
         "command": command,
+        "resumed": resume,
     }
     _write_json_atomic(receipt_path, receipt)
     return receipt
