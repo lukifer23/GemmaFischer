@@ -726,8 +726,13 @@ def create_app(
                 "study",
                 409,
             )
-        except ValueError as exc:
-            return _error("INVALID_STUDY_COMMAND", str(exc), "study", 422)
+        except ValueError:
+            return _error(
+                "INVALID_STUDY_COMMAND",
+                "The requested study transition is not available.",
+                "study",
+                422,
+            )
 
     @app.delete(
         "/api/v1/studies/{job_id}",

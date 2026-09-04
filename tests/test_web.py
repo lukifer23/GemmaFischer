@@ -182,6 +182,28 @@ def test_request_body_limit_does_not_trust_a_false_content_length() -> None:
     assert response.json()["error"]["code"] == "REQUEST_TOO_LARGE"
 
 
+def test_invalid_study_transition_does_not_expose_exception_details(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = create_app(capability_token=TOKEN, node_budget=1)
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(app) as client:
+        def fail_resume(_job_id: str, _expected_revision: int) -> None:
+            raise ValueError("/private/path and internal state must stay private")
+
+        monkeypatch.setattr(app.state.service, "resume_study", fail_resume)
+        response = client.post(
+            "/api/v1/study-jobs/example/commands",
+            headers=headers,
+            json={"expected_revision": 0, "action": "resume"},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_STUDY_COMMAND"
+    assert "/private/path" not in response.text
+    assert "internal state" not in response.text
+
+
 def test_mutation_requires_capability_token() -> None:
     with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
         client.cookies.clear()
