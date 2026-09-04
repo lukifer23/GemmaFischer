@@ -3,12 +3,12 @@
   "release_channel": "public-alpha",
   "claim": "local_release_gates_passed",
   "candidate": {
-    "sha": "1986a70f2d3662c2b3e4bc4b8d0dc54a3082aac8",
+    "sha": "a95396eae5888bdff7347ac79c8a1940f8b1e306",
     "clean_tree": true,
     "application_version": "0.3.0",
     "api_version": "v1",
     "profile": "deterministic",
-    "checked_at": "2026-09-04T18:56:55Z"
+    "checked_at": "2026-09-04T19:28:26Z"
   },
   "receipts": [
     {
@@ -54,11 +54,11 @@
         },
         {
           "path": "artifacts/qualification/runtime-endurance-2026-09-04.json",
-          "sha256": "f67e515b03c05ce93efeefc55d88eb46c01a0ef37bd7da89b707aac9977aeb00"
+          "sha256": "d52cf8c8313ca61a3d3dbdec2157b0a527ee65dffe180471e0ee1686a21f1a34"
         },
         {
           "path": "artifacts/qualification/runtime-release-2026-09-04.json",
-          "sha256": "81f7a4d227dddebe84e4f4a9fe88aef1ad2d56920793b0662ad272fa120ba7ce"
+          "sha256": "6ac0670b5397dadf8b025ac547e1efcb6b840c807f2f3576888ec2c76be0bcb5"
         },
         {
           "path": "artifacts/qualification/study-recovery-2026-09-04.json",
@@ -66,7 +66,7 @@
         },
         {
           "path": "artifacts/qualification/browser-performance-2026-09-04.json",
-          "sha256": "24b945fbd6cd2ca4a594aecf3e041d35a3bad84b37876ef7ce3d87b3546f6f33"
+          "sha256": "baa6d91e2759a4db93677b889ddee660fa61ab701371411ffdf5149cf5c23147"
         }
       ]
     }
@@ -74,21 +74,21 @@
   "hosted": [
     {
       "kind": "verification",
-      "run_id": 33908093108,
-      "head_sha": "1986a70f2d3662c2b3e4bc4b8d0dc54a3082aac8",
+      "run_id": 33911187141,
+      "head_sha": "a95396eae5888bdff7347ac79c8a1940f8b1e306",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33908093108"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33911187141"
     },
     {
       "kind": "codeql",
-      "run_id": 33908093217,
-      "head_sha": "1986a70f2d3662c2b3e4bc4b8d0dc54a3082aac8",
+      "run_id": 33911187191,
+      "head_sha": "a95396eae5888bdff7347ac79c8a1940f8b1e306",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33908093217"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33911187191"
     }
   ],
   "security_alerts": {
-    "checked_at": "2026-09-04T18:56:55Z",
+    "checked_at": "2026-09-04T19:28:26Z",
     "code_scanning": 0,
     "dependabot": 0,
     "secret_scanning": 0
@@ -97,7 +97,7 @@
     {"code": "PHYSICAL_DESKTOP", "status": "open", "owner": "operator"},
     {"code": "VOICEOVER", "status": "open", "owner": "human-reviewer"},
     {"code": "ENDURANCE_CORE", "status": "passed", "owner": "engineering"},
-    {"code": "PROCESS_RESTART_CHURN", "status": "open", "owner": "engineering"},
+    {"code": "PROCESS_RESTART_CHURN", "status": "passed", "owner": "engineering"},
     {"code": "PERFORMANCE_COMPLETION", "status": "open", "owner": "engineering"},
     {"code": "HUMAN_USEFULNESS", "status": "open", "owner": "study-moderator"},
     {"code": "OPTIONAL_GEMMA", "status": "blocked", "owner": "model-review"},
