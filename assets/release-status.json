@@ -3,12 +3,12 @@
   "release_channel": "public-alpha",
   "claim": "local_release_gates_passed",
   "candidate": {
-    "sha": "60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f",
+    "sha": "dd8836df208999ace30fcfc2dfdea48fb86129fd",
     "clean_tree": true,
     "application_version": "0.3.0",
     "api_version": "v1",
     "profile": "deterministic",
-    "checked_at": "2026-09-04T16:37:18Z"
+    "checked_at": "2026-09-04T16:46:13Z"
   },
   "receipts": [
     {
@@ -58,21 +58,21 @@
   "hosted": [
     {
       "kind": "verification",
-      "run_id": 33895962454,
-      "head_sha": "60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f",
+      "run_id": 33896792787,
+      "head_sha": "dd8836df208999ace30fcfc2dfdea48fb86129fd",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33895962454"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33896792787"
     },
     {
       "kind": "codeql",
-      "run_id": 33895962503,
-      "head_sha": "60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f",
+      "run_id": 33896792895,
+      "head_sha": "dd8836df208999ace30fcfc2dfdea48fb86129fd",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33895962503"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33896792895"
     }
   ],
   "security_alerts": {
-    "checked_at": "2026-09-04T16:37:18Z",
+    "checked_at": "2026-09-04T16:46:13Z",
     "code_scanning": 0,
     "dependabot": 0,
     "secret_scanning": 0

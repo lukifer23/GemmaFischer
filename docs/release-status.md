@@ -1,7 +1,7 @@
 # Release Status
 
 GemmaFischer 0.3 is committed on `main`. The machine ledger binds the verified
-code candidate `60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f`; this documentation and
+code candidate `dd8836df208999ace30fcfc2dfdea48fb86129fd`; this documentation and
 ledger update is its allowed ledger-only child.
 
 ## 0.3 worktree gates
@@ -13,9 +13,9 @@ ledger update is its allowed ledger-only child.
 | One-PGN study pipeline | Passed locally | Real Stockfish, SQLite, and TestClient smoke |
 | Generated OpenAPI | Passed locally | Current worktree matches generated contract |
 | Package and isolated-wheel smoke | Passed locally | 0.3.0 sdist and wheel |
-| 70% whole-package coverage | Passed locally | 70.48%, 152 model-free tests |
+| 70% whole-package coverage | Passed locally | 70.59%, 153 model-free tests |
 | Real Chromium Learn and Position Lab | Passed locally | Desktop and 390x844, zero console errors |
-| Hosted CI and CodeQL | Passed | Verification `33895962454` and CodeQL `33895962503` on the exact candidate SHA |
+| Hosted CI and CodeQL | Passed | Verification `33896792787` and CodeQL `33896792895` on the exact candidate SHA |
 | Physical device and VoiceOver | Open | Human/device acceptance |
 | Study cancel/restart/storage/endurance | Open | Target-host long-running qualification |
 | Blind human learning usefulness | Open | At least two chess-literate reviewers |
