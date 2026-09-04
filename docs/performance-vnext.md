@@ -20,6 +20,40 @@ and disabled. No 0.3 percentile is claimed until those artifacts exist.
 - MLX-LM 0.31.3 and pinned `mlx-community/gemma-4-e2b-it-4bit`
 - Stockfish node budget: 250,000 per analysis
 
+## 0.3 clean-candidate evidence, 2026-09-04
+
+Candidate `d67062a08af5c13ffa622fc93713e96225fd95d5` passed these measured
+target-host gates:
+
+- 1,000 real-engine cycles and 4,000 loopback HTTP requests at the 25,000-node
+  endurance budget: engine-move p50 182.3 ms, p95 187.5 ms, max 261.0 ms;
+- process-tree RSS grew 20,873,216 bytes after warm-up against a 52,428,800-byte
+  ceiling; SQLite occupied 4,996,768 bytes and returned `quick_check=ok`;
+- one Stockfish child maximum, zero children after shutdown, and a zero Uvicorn
+  exit status;
+- 20 cycles at the 250,000-node release budget: engine-move p50 266.5 ms,
+  p95 271.3 ms, max 312.9 ms;
+- one legal 200-ply study survived active cancellation, graceful restart,
+  exact-game restore, resume to `ready`, a forced SQLite write lock, typed 503,
+  storage retry, and two clean shutdowns; cancellation took 2.2 ms and engine
+  reuse took 177.1 ms;
+- real Chrome Headless Shell at 1280x720: 28 ms FCP, 19.6 ms full load, seven
+  requests, 78,105 transferred bytes, 60,135 JavaScript bytes, 16,053 CSS
+  bytes, zero horizontal overflow, and zero console errors; 320x720 also had
+  zero horizontal overflow and zero console errors.
+
+The browser remains far inside the absolute budgets, but the 0.3 application
+shell roughly doubled transferred bytes and JavaScript relative to the 0.2
+baseline. The zero-think-time exhibition endurance shape also restarted
+Stockfish 999 times because gameplay preempted the prior background review.
+Neither result is hidden: bundle growth and preemption churn remain optimization
+work even though latency, memory, integrity, concurrency, and cleanup passed.
+
+Evidence: [endurance](../artifacts/qualification/runtime-endurance-2026-09-04.json),
+[release latency](../artifacts/qualification/runtime-release-2026-09-04.json),
+[study recovery](../artifacts/qualification/study-recovery-2026-09-04.json), and
+[browser performance](../artifacts/qualification/browser-performance-2026-09-04.json).
+
 ## Public-alpha browser gate, 2026-09-01
 
 The checked-in Playwright gate launches a real server with temporary SQLite and
@@ -128,13 +162,11 @@ Do not use it as a user-facing 0.2 latency claim.
 
 ## Remaining release-scale gates
 
-Release qualification must still measure five cold starts, a 100-ply
-exhibition, 1,000 analyses, and a 200-ply persisted session.
-Record p50/p95/max wall time, engine time, model first-token and generation time,
-RSS/MLX/system pressure, process counts, cancellation-to-resource-release, and
-post-warm memory growth. Browser runs cover 375, 768, 900x600, and 1280-pixel
-viewports with interaction latency, overflow, layout shift, keyboard behavior,
-and accessibility checks. The four target widths and core mouse interactions
-are covered; keyboard traversal and post-fix instrumented CLS remain open.
-Every release artifact must record commit, lock, fixture,
-engine binary, model revision, and configuration hashes.
+The 1,000-cycle engine endurance, 200-ply persistence/recovery, SQLite pressure,
+process/RSS tracking, and 250,000-node latency samples are complete above.
+Still open are five cold starts, a natural 100-ply exhibition, short/median/long
+PGN stage-level timing, reduced-motion browser capture, keyboard traversal,
+post-fix instrumented CLS, physical-device/VoiceOver acceptance, and cross-device
+latency. Optional Gemma TTFT/TPS remains separate from the deterministic release
+path. Every future release artifact must continue to record the exact commit,
+fixture, engine binary, model revision when applicable, and configuration hashes.

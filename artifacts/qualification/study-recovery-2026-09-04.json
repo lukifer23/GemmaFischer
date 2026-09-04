@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.0",
+  "status": "passed",
+  "generated_at": "2026-09-04T18:42:29.347728+00:00",
+  "commit": "d67062a08af5c13ffa622fc93713e96225fd95d5",
+  "working_tree_clean": true,
+  "platform": "macOS-27.0-arm64-arm-64bit",
+  "machine": "arm64",
+  "python": "3.12.12",
+  "transport": "tcp-loopback",
+  "server": "uvicorn",
+  "node_budget": 25000,
+  "fixture": {
+    "kind": "legal_repetition_game",
+    "plies": 200
+  },
+  "engine_path": "/opt/homebrew/Cellar/stockfish/18/bin/stockfish",
+  "engine_sha256": "ae4c93fa9676ca7750d0714342fd8a5b1d018000fc6e0f6cedf112067b5ef374",
+  "memory": {
+    "warm_rss_bytes": 58589184,
+    "before_restart_rss_bytes": 570720256,
+    "after_resume_rss_bytes": 573816832
+  },
+  "storage": {
+    "sqlite_bytes": 274944,
+    "quick_check": "ok"
+  },
+  "stockfish_lifecycle": {
+    "observed_pids": [
+      35964,
+      35966,
+      35972
+    ],
+    "maximum_children": 1,
+    "orphaned_pids_after_shutdown": []
+  },
+  "gates": {
+    "long_game_plies": {
+      "required": 200,
+      "actual": 200,
+      "passed": true
+    },
+    "active_engine_cancellation_seconds": {
+      "required_max": 2.0,
+      "actual": 0.0022232920018723235,
+      "passed": true
+    },
+    "engine_available_after_cancellation_seconds": {
+      "required_max": 2.0,
+      "actual": 0.17709120799554512,
+      "passed": true
+    },
+    "restart_state": {
+      "required": "paused_interrupted",
+      "actual": "paused_interrupted",
+      "passed": true
+    },
+    "restart_exact_game": {
+      "required": true,
+      "actual": true,
+      "passed": true
+    },
+    "resumed_completion": {
+      "required": "ready",
+      "actual": "ready",
+      "passed": true
+    },
+    "storage_failure_is_typed": {
+      "required": {
+        "status": 503,
+        "code": "STORAGE_UNAVAILABLE"
+      },
+      "actual": {
+        "status": 503,
+        "code": "STORAGE_UNAVAILABLE"
+      },
+      "passed": true
+    },
+    "storage_recovery": {
+      "required": "ready",
+      "actual": "ready",
+      "passed": true
+    },
+    "sqlite_integrity": {
+      "required": "ok",
+      "actual": "ok",
+      "passed": true
+    },
+    "maximum_stockfish_children": {
+      "required_max": 1,
+      "actual": 1,
+      "passed": true
+    },
+    "orphaned_stockfish_processes": {
+      "required_max": 0,
+      "actual": 0,
+      "passed": true
+    },
+    "graceful_shutdowns": {
+      "required": [
+        true,
+        true
+      ],
+      "actual": [
+        true,
+        true
+      ],
+      "passed": true
+    }
+  },
+  "raw": [
+    {
+      "operation": "create_cancel_study",
+      "seconds": 0.0029667920025531203
+    },
+    {
+      "operation": "cancel_active_study",
+      "seconds": 0.0022232920018723235
+    },
+    {
+      "operation": "engine_after_cancel",
+      "seconds": 0.17709120799554512
+    },
+    {
+      "operation": "create_restart_study",
+      "seconds": 0.002102666003338527
+    },
+    {
+      "operation": "resume_interrupted_study",
+      "seconds": 0.001996332997805439
+    },
+    {
+      "operation": "storage_locked_write",
+      "seconds": 0.2900736669980688
+    },
+    {
+      "operation": "storage_recovery",
+      "seconds": 0.006857500004116446
+    }
+  ],
+  "server_log_tail": "\n",
+  "cancelled_job_progress": {
+    "completed_units": 4,
+    "total_units": 100,
+    "current_ply": 7
+  }
+}

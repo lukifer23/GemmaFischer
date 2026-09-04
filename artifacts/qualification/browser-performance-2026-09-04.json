@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "status": "passed_with_budget_growth",
+  "generated_at": "2026-09-04T18:48:28Z",
+  "commit": "d67062a08af5c13ffa622fc93713e96225fd95d5",
+  "working_tree_clean": true,
+  "tool": "gstack browse 0.16.2.0",
+  "browser": "Chrome Headless Shell 145.0.7632.6",
+  "url": "http://127.0.0.1:8899/",
+  "desktop": {
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "horizontal_overflow_px": 0
+    },
+    "ttfb_ms": 1.1,
+    "fcp_ms": 28,
+    "dom_interactive_ms": 6.8,
+    "dom_complete_ms": 19.5,
+    "full_load_ms": 19.6,
+    "total_requests": 7,
+    "total_transfer_bytes": 78105,
+    "js_bundle_bytes": 60135,
+    "css_bundle_bytes": 16053,
+    "console_errors": 0,
+    "lcp_ms": null
+  },
+  "mobile": {
+    "viewport": {
+      "width": 320,
+      "height": 720,
+      "horizontal_overflow_px": 0
+    },
+    "console_errors": 0
+  },
+  "baseline": {
+    "path": "artifacts/qualification/browser-performance-2026-08-30.json",
+    "fcp_ms": 44,
+    "full_load_ms": 33.4,
+    "total_requests": 4,
+    "total_transfer_bytes": 39163,
+    "js_bundle_bytes": 28103,
+    "css_bundle_bytes": 9836
+  },
+  "comparison": {
+    "fcp_percent": -36.4,
+    "full_load_percent": -41.3,
+    "total_requests_percent": 75.0,
+    "total_transfer_percent": 99.4,
+    "js_bundle_percent": 114.0,
+    "css_bundle_percent": 63.2,
+    "regressions": [
+      "total_transfer_bytes",
+      "js_bundle_bytes",
+      "css_bundle_bytes"
+    ],
+    "warnings": [
+      "total_requests"
+    ]
+  },
+  "budget": {
+    "fcp_ms_max": 1800,
+    "total_js_bytes_max": 500000,
+    "total_css_bytes_max": 100000,
+    "total_transfer_bytes_max": 2000000,
+    "http_requests_max": 50,
+    "passed": true
+  },
+  "notes": [
+    "LCP was unavailable and was not estimated.",
+    "The 0.3 Learn, Review, Progress, and Position Lab shell adds a second script and four startup API fetches relative to the 0.2 baseline.",
+    "Absolute browser budgets pass, but bundle and transfer growth remain an optimization target."
+  ]
+}
