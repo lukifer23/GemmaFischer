@@ -22,32 +22,30 @@ and disabled. No 0.3 percentile is claimed until those artifacts exist.
 
 ## 0.3 clean-candidate evidence, 2026-09-04
 
-Candidate `d67062a08af5c13ffa622fc93713e96225fd95d5` passed these measured
+Candidate `2bfd1aeda3336cb18c56fab5c7b46ed24e6497f7` passed these measured
 target-host gates:
 
 - 1,000 real-engine cycles and 4,000 loopback HTTP requests at the 25,000-node
-  endurance budget: engine-move p50 182.3 ms, p95 187.5 ms, max 261.0 ms;
-- process-tree RSS grew 20,873,216 bytes after warm-up against a 52,428,800-byte
-  ceiling; SQLite occupied 4,996,768 bytes and returned `quick_check=ok`;
-- one Stockfish child maximum, zero children after shutdown, and a zero Uvicorn
-  exit status;
+  endurance budget: engine-move p50 9.6 ms, p95 11.0 ms, max 219.3 ms;
+- process-tree RSS grew 12,075,008 bytes after warm-up against a 52,428,800-byte
+  ceiling; SQLite returned `quick_check=ok`;
+- one Stockfish child for the entire run, zero restarts, zero children after
+  shutdown, and a zero Uvicorn exit status;
 - 20 cycles at the 250,000-node release budget: engine-move p50 266.5 ms,
-  p95 271.3 ms, max 312.9 ms;
+  p95 99.8 ms, max 293.5 ms;
 - one legal 200-ply study survived active cancellation, graceful restart,
   exact-game restore, resume to `ready`, a forced SQLite write lock, typed 503,
   storage retry, and two clean shutdowns; cancellation took 2.2 ms and engine
   reuse took 177.1 ms;
-- real Chrome Headless Shell at 1280x720: 28 ms FCP, 19.6 ms full load, seven
-  requests, 78,105 transferred bytes, 60,135 JavaScript bytes, 16,053 CSS
+- five isolated real Chromium loads at 1280x720: median 28 ms FCP, 25.5 ms full
+  load, seven requests, 22,537 transferred bytes, 16,581 JavaScript bytes, 4,240 CSS
   bytes, zero horizontal overflow, and zero console errors; 320x720 also had
   zero horizontal overflow and zero console errors.
 
-The browser remains far inside the absolute budgets, but the 0.3 application
-shell roughly doubled transferred bytes and JavaScript relative to the 0.2
-baseline. The zero-think-time exhibition endurance shape also restarted
-Stockfish 999 times because gameplay preempted the prior background review.
-Neither result is hidden: bundle growth and preemption churn remain optimization
-work even though latency, memory, integrity, concurrency, and cleanup passed.
+Gzip delivery reduced initial resource transfer 42.5% below the 0.2 baseline
+despite the added study workflow. Gameplay preemption now stops the active UCI
+analysis without closing Stockfish, eliminating the 999 process replacements
+observed in the previous candidate. The release gate now rejects any restart.
 
 Evidence: [endurance](../artifacts/qualification/runtime-endurance-2026-09-04.json),
 [release latency](../artifacts/qualification/runtime-release-2026-09-04.json),
@@ -162,8 +160,9 @@ Do not use it as a user-facing 0.2 latency claim.
 
 ## Remaining release-scale gates
 
-The 1,000-cycle engine endurance, 200-ply persistence/recovery, SQLite pressure,
-process/RSS tracking, and 250,000-node latency samples are complete above.
+The 1,000-cycle engine endurance, zero-restart enforcement, 200-ply
+persistence/recovery, SQLite pressure, process/RSS tracking, compressed browser
+delivery, and 250,000-node latency samples are complete above.
 Still open are five cold starts, a natural 100-ply exhibition, short/median/long
 PGN stage-level timing, reduced-motion browser capture, keyboard traversal,
 post-fix instrumented CLS, physical-device/VoiceOver acceptance, and cross-device

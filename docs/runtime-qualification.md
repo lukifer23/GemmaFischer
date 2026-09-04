@@ -18,11 +18,12 @@ to return `ok`.
 
 The runner starts an isolated Uvicorn process with a temporary SQLite history,
 observes its real descendant process tree with `ps`, and records Stockfish PIDs
-after every engine request. It then requests Uvicorn's graceful shutdown,
+after every engine request. Any child-process replacement now fails an explicit
+zero-restart gate. It then requests Uvicorn's graceful shutdown,
 requires a zero exit status, and verifies that every observed Stockfish PID is
-gone. Maximum concurrent children and process restarts are separate measures:
-safe gameplay preemption can restart Stockfish without ever allowing two engine
-children or leaking one after shutdown.
+gone. Maximum concurrent children and process restarts are separate measures.
+Gameplay preemption stops the active UCI analysis and reuses the same engine
+child; a process replacement is reserved for actual engine failure.
 
 `profile-study-recovery` exercises the durable PGN path separately:
 
@@ -38,17 +39,17 @@ recover storage, and check child-process cleanup after both shutdowns.
 
 ## 2026-09-04 clean-candidate results
 
-Candidate `d67062a08af5c13ffa622fc93713e96225fd95d5` passed the 1,000-cycle
-endurance shape at 25,000 nodes: 4,000 HTTP requests, 187.5 ms engine-move p95,
-20,873,216 bytes post-warm process-tree RSS growth, SQLite `quick_check=ok`, one
-Stockfish child maximum, zero orphans, and a clean Uvicorn shutdown. The 20-cycle
-250,000-node release-budget sample passed at 271.3 ms engine-move p95 and 312.9
-ms maximum.
+Candidate `2bfd1aeda3336cb18c56fab5c7b46ed24e6497f7` passed the 1,000-cycle
+endurance shape at 25,000 nodes: 4,000 HTTP requests, 11.0 ms engine-move p95,
+12,075,008 bytes post-warm process-tree RSS growth, SQLite `quick_check=ok`, one
+Stockfish child for the entire run, zero restarts, zero orphans, and a clean
+Uvicorn shutdown. The 20-cycle 250,000-node release-budget sample passed at
+99.8 ms engine-move p95 and 293.5 ms maximum.
 
-The zero-think-time exhibition stress caused 999 Stockfish restarts in 1,000
-cycles because each new gameplay command preempted the prior background review.
-Safety and latency gates pass, but that churn remains an explicit efficiency
-optimization rather than being called closed.
+The previous candidate restarted Stockfish 999 times because preemption closed
+the engine transport. The provider now uses python-chess's supported analysis
+stop operation, requeues the durable review, and preserves the same engine PID.
+The qualification fails if even one replacement is observed.
 
 The 200-ply recovery run passed every functional gate. Active cancellation took
 2.2 ms, engine reuse after cancellation took 177.1 ms, interrupted state and the

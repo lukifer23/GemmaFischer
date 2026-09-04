@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
-  "status": "passed_with_budget_growth",
-  "generated_at": "2026-09-04T18:48:28Z",
-  "commit": "d67062a08af5c13ffa622fc93713e96225fd95d5",
+  "status": "passed",
+  "generated_at": "2026-09-04T19:25:24Z",
+  "commit": "2bfd1aeda3336cb18c56fab5c7b46ed24e6497f7",
   "working_tree_clean": true,
   "tool": "gstack browse 0.16.2.0",
   "browser": "Chrome Headless Shell 145.0.7632.6",
@@ -13,15 +13,15 @@
       "height": 720,
       "horizontal_overflow_px": 0
     },
-    "ttfb_ms": 1.1,
+    "ttfb_ms": 1.8,
     "fcp_ms": 28,
-    "dom_interactive_ms": 6.8,
-    "dom_complete_ms": 19.5,
-    "full_load_ms": 19.6,
+    "dom_interactive_ms": 13.3,
+    "dom_complete_ms": 25.5,
+    "full_load_ms": 25.5,
     "total_requests": 7,
-    "total_transfer_bytes": 78105,
-    "js_bundle_bytes": 60135,
-    "css_bundle_bytes": 16053,
+    "total_transfer_bytes": 22537,
+    "js_bundle_bytes": 16581,
+    "css_bundle_bytes": 4240,
     "console_errors": 0,
     "lcp_ms": null
   },
@@ -44,16 +44,12 @@
   },
   "comparison": {
     "fcp_percent": -36.4,
-    "full_load_percent": -41.3,
+    "full_load_percent": -23.7,
     "total_requests_percent": 75.0,
-    "total_transfer_percent": 99.4,
-    "js_bundle_percent": 114.0,
-    "css_bundle_percent": 63.2,
-    "regressions": [
-      "total_transfer_bytes",
-      "js_bundle_bytes",
-      "css_bundle_bytes"
-    ],
+    "total_transfer_percent": -42.5,
+    "js_bundle_percent": -41.0,
+    "css_bundle_percent": -56.9,
+    "regressions": [],
     "warnings": [
       "total_requests"
     ]
@@ -69,6 +65,6 @@
   "notes": [
     "LCP was unavailable and was not estimated.",
     "The 0.3 Learn, Review, Progress, and Position Lab shell adds a second script and four startup API fetches relative to the 0.2 baseline.",
-    "Absolute browser budgets pass, but bundle and transfer growth remain an optimization target."
+    "Gzip delivery reduces initial resource transfer by 42.5% versus the 0.2 baseline despite the added study workflow. Five isolated Chromium loads produced a 28 ms median FCP and 25.5 ms median full load."
   ]
 }
