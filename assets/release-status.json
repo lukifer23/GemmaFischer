@@ -3,12 +3,12 @@
   "release_channel": "public-alpha",
   "claim": "local_release_gates_passed",
   "candidate": {
-    "sha": "43c09df8140ce4bf5d9182d75c4763279487ada4",
+    "sha": "60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f",
     "clean_tree": true,
-    "application_version": "0.2.0",
+    "application_version": "0.3.0",
     "api_version": "v1",
     "profile": "deterministic",
-    "checked_at": "2026-09-02T01:39:15Z"
+    "checked_at": "2026-09-04T16:37:18Z"
   },
   "receipts": [
     {
@@ -21,12 +21,12 @@
       },
       "artifacts": [
         {
-          "path": "artifacts/data-audit/latest.json",
-          "sha256": "c914baaf429f3fd6aac98e75f924f31e68c430173033a699cab232faa50da96e"
+          "path": "docs/openapi.json",
+          "sha256": "af35a870b165ac773b59a744113c9f55121de255278cd1df1475b3900d10d8ca"
         },
         {
-          "path": "artifacts/qualification/questions-v2.json",
-          "sha256": "a60b5aa3f604bc653097b3035c469f78d5885e323b48b92d06a643337374b774"
+          "path": "training/post-training.json",
+          "sha256": "a412454130709b0d68cdb9fbd5dd1997b1aa8e7553322340cffd681ad2d4dbab"
         },
         {
           "path": "artifacts/training/untuned-baseline.json",
@@ -49,16 +49,8 @@
       },
       "artifacts": [
         {
-          "path": "output/playwright/public-alpha-tutor-mobile.png",
-          "sha256": "21d6f1a2b0e247235184f46a30c0af4ccc000ec67affaeaa20e13b56966d0de7"
-        },
-        {
-          "path": "output/playwright/public-alpha-tutor-active-desktop.png",
-          "sha256": "7799dc085e60c481c22f9182c3f379ee58fac591db3034e52db18eb1854bc0bd"
-        },
-        {
-          "path": "artifacts/qualification/runtime-2026-08-30.json",
-          "sha256": "ed0749bc133a3d574d7bc386382cb936f09cf587852c25705efd31b1512dc272"
+          "path": "scripts/browser_acceptance.py",
+          "sha256": "41976e378c7ffc6e7c7a9b5d8a0e9bd7ff27cc0bb282023d48cbab1bd6fe53f3"
         }
       ]
     }
@@ -66,21 +58,21 @@
   "hosted": [
     {
       "kind": "verification",
-      "run_id": 33580143137,
-      "head_sha": "43c09df8140ce4bf5d9182d75c4763279487ada4",
+      "run_id": 33895962454,
+      "head_sha": "60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33580143137"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33895962454"
     },
     {
       "kind": "codeql",
-      "run_id": 33580143098,
-      "head_sha": "43c09df8140ce4bf5d9182d75c4763279487ada4",
+      "run_id": 33895962503,
+      "head_sha": "60be2561b4c8d98ba8dbb4f794e4ad0c8fb58c0f",
       "conclusion": "success",
-      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33580143098"
+      "url": "https://github.com/lukifer23/GemmaFischer/actions/runs/33895962503"
     }
   ],
   "security_alerts": {
-    "checked_at": "2026-09-02T01:39:15Z",
+    "checked_at": "2026-09-04T16:37:18Z",
     "code_scanning": 0,
     "dependabot": 0,
     "secret_scanning": 0
@@ -90,7 +82,8 @@
     {"code": "VOICEOVER", "status": "open", "owner": "human-reviewer"},
     {"code": "ENDURANCE", "status": "open", "owner": "engineering"},
     {"code": "HUMAN_USEFULNESS", "status": "open", "owner": "study-moderator"},
-    {"code": "OPTIONAL_GEMMA", "status": "open", "owner": "model-review"}
+    {"code": "OPTIONAL_GEMMA", "status": "blocked", "owner": "model-review"},
+    {"code": "HUMAN_GOLD_TRAINING", "status": "blocked", "owner": "training-review"}
   ],
   "model_policy": "Gemma is optional, cannot author chess facts or grading, and a tie is a loss."
 }
