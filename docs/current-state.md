@@ -1,6 +1,6 @@
 # Current State
 
-Status date: 2026-09-04. Version: 0.3.0 development worktree.
+Status date: 2026-09-04. Version: 0.3.0 release candidate on `main`.
 
 ## Implemented
 
@@ -34,8 +34,8 @@ Status date: 2026-09-04. Version: 0.3.0 development worktree.
 - The optional pinned Gemma qualification test is failing honestly: the model
   returned one claim where the schema requires two to five. Runtime fallback remains safe.
 
-Portable verification passes with 132 tests. Local-alpha verification passes
-with 152 model-free tests, 70.48% whole-package coverage, real Stockfish, package
+Portable verification passes with 133 tests. Local-alpha verification passes
+with 153 model-free tests, 70.59% whole-package coverage, real Stockfish, package
 and isolated-wheel checks, and the expanded real Chromium flow. Release-ledger
 and hosted checks still require a final commit.
 
