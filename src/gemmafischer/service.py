@@ -672,6 +672,8 @@ class AnalysisService:
                         self._study_pending_ids.appendleft(work.view.job_id)
                         self._condition.notify_all()
         except StorageError as exc:
+            if work.cancelled:
+                return
             self._note_storage_error(exc)
             work.view = work.view.model_copy(
                 update={"state": StudyJobState.PAUSED_STORAGE, "updated_at": now_utc()}
@@ -684,16 +686,22 @@ class AnalysisService:
                 ):
                     self._study_pending_ids.appendleft(work.view.job_id)
         except ValueError as exc:
+            if work.cancelled:
+                return
             work.view = failed_study(work, "INVALID_STUDY_INPUT", str(exc), False)
             if self._store:
                 self._store.save_study_job(work.view)
         except EngineUnavailable:
+            if work.cancelled:
+                return
             work.view = failed_study(
                 work, "ENGINE_UNAVAILABLE", "The chess engine is unavailable.", True
             )
             if self._store:
                 self._store.save_study_job(work.view)
         except Exception:
+            if work.cancelled:
+                return
             LOGGER.exception("Study worker failed")
             work.view = failed_study(
                 work, "STUDY_ENGINE_FAILURE", "The game study could not be completed.", True

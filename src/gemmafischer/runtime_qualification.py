@@ -6,6 +6,7 @@ import platform
 import secrets
 import signal
 import socket
+import sqlite3
 import statistics
 import subprocess
 import sys
@@ -26,6 +27,7 @@ RUNTIME_GATES_SECONDS = {
     "legal_moves": 0.100,
     "engine_move": 0.500,
 }
+MAX_POST_WARM_RSS_GROWTH_BYTES = 50 * 1024 * 1024
 
 
 def run_runtime_qualification(
@@ -49,6 +51,7 @@ def run_runtime_qualification(
     raw: list[dict[str, Any]] = []
     observed_stockfish_pids: set[int] = set()
     stockfish_counts: list[int] = []
+    rss_samples: list[int] = []
     started_at = time.perf_counter()
     graceful_shutdown = False
     server_returncode: int | None = None
@@ -113,6 +116,10 @@ def run_runtime_qualification(
                     stockfish_pids = _stockfish_descendants(server.pid, engine)
                     stockfish_counts.append(len(stockfish_pids))
                     observed_stockfish_pids.update(stockfish_pids)
+                    rss_samples.append(_process_tree_rss_bytes(server.pid))
+                database_bytes = _sqlite_footprint_bytes(
+                    temporary_path / "qualification.sqlite3"
+                )
             finally:
                 if server.poll() is None:
                     # SIGINT follows Uvicorn's supported graceful-shutdown path and
@@ -126,6 +133,7 @@ def run_runtime_qualification(
                         server.wait(timeout=2)
                 server_returncode = server.returncode
         server_log_text = log_path.read_text(encoding="utf-8", errors="replace")[-4000:]
+        integrity = _sqlite_quick_check(temporary_path / "qualification.sqlite3")
 
     orphaned_pids = sorted(pid for pid in observed_stockfish_pids if _pid_exists(pid))
     summaries = {
@@ -164,6 +172,19 @@ def run_runtime_qualification(
                 "actual": graceful_shutdown,
                 "passed": graceful_shutdown and server_returncode == 0,
             },
+            "post_warm_rss_growth_bytes": {
+                "required_max": MAX_POST_WARM_RSS_GROWTH_BYTES,
+                "actual": max(rss_samples[1:], default=rss_samples[0] if rss_samples else 0)
+                - (rss_samples[0] if rss_samples else 0),
+                "passed": bool(rss_samples)
+                and max(rss_samples[1:], default=rss_samples[0]) - rss_samples[0]
+                <= MAX_POST_WARM_RSS_GROWTH_BYTES,
+            },
+            "sqlite_integrity": {
+                "required": "ok",
+                "actual": integrity,
+                "passed": integrity == "ok",
+            },
         }
     )
     payload: dict[str, Any] = {
@@ -183,6 +204,20 @@ def run_runtime_qualification(
         "engine_path": str(engine),
         "engine_sha256": sha256_file(engine),
         "startup_seconds": startup_seconds,
+        "storage": {
+            "sqlite_bytes": database_bytes,
+            "quick_check": integrity,
+        },
+        "memory": {
+            "process_tree_rss_bytes_after_each_cycle": rss_samples,
+            "warm_baseline_bytes": rss_samples[0] if rss_samples else None,
+            "peak_bytes": max(rss_samples, default=0),
+            "post_warm_growth_bytes": (
+                max(rss_samples[1:], default=rss_samples[0]) - rss_samples[0]
+                if rss_samples
+                else None
+            ),
+        },
         "latency_seconds": summaries,
         "stockfish_lifecycle": {
             "counts_after_engine_request": stockfish_counts,
@@ -318,6 +353,39 @@ def _stockfish_descendants(server_pid: int, engine_path: Path) -> set[int]:
 
 def _pid_exists(pid: int) -> bool:
     return any(row_pid == pid for row_pid, _parent, _command in _process_rows())
+
+
+def _process_tree_rss_bytes(root_pid: int) -> int:
+    rows = _process_rows()
+    descendants = {root_pid}
+    changed = True
+    while changed:
+        changed = False
+        for pid, parent_pid, _command in rows:
+            if parent_pid in descendants and pid not in descendants:
+                descendants.add(pid)
+                changed = True
+    output = subprocess.run(
+        ["ps", "-o", "pid=,rss=", "-p", ",".join(str(pid) for pid in descendants)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return sum(int(line.split()[1]) * 1024 for line in output.splitlines() if line.split())
+
+
+def _sqlite_footprint_bytes(database: Path) -> int:
+    return sum(
+        candidate.stat().st_size
+        for candidate in (database, Path(f"{database}-wal"), Path(f"{database}-shm"))
+        if candidate.exists()
+    )
+
+
+def _sqlite_quick_check(database: Path) -> str:
+    with sqlite3.connect(database) as connection:
+        row = connection.execute("PRAGMA quick_check").fetchone()
+    return str(row[0]) if row else "missing-result"
 
 
 def _latency_summary(values: list[float]) -> dict[str, float]:

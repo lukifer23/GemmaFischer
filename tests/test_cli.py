@@ -48,6 +48,23 @@ def test_runtime_qualification_options_are_explicit() -> None:
     assert str(args.output) == "/tmp/run.json"
 
 
+def test_study_recovery_qualification_options_are_explicit() -> None:
+    args = parser().parse_args(
+        [
+            "profile-study-recovery",
+            "--nodes",
+            "4321",
+            "--timeout",
+            "90",
+            "--output",
+            "/tmp/study.json",
+        ]
+    )
+    assert args.nodes == 4321
+    assert args.timeout == 90
+    assert str(args.output) == "/tmp/study.json"
+
+
 def test_verify_tiers_are_explicit() -> None:
     assert parser().parse_args(["verify"]).tier == "portable"
     assert parser().parse_args(["verify", "--tier", "release"]).tier == "release"

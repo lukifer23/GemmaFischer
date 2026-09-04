@@ -67,6 +67,7 @@ from .runtime import (
 from .runtime_qualification import run_runtime_qualification
 from .service import AnalysisService
 from .storage import default_history_path
+from .study_qualification import run_study_recovery_qualification
 from .training import (
     acquire_native_training_model,
     package_training_artifact,
@@ -385,6 +386,18 @@ def parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         default=Path("artifacts/qualification/runtime-latest.json"),
+    )
+    study_profile = commands.add_parser(
+        "profile-study-recovery",
+        help="Qualify long-study cancellation, restart, and SQLite recovery",
+    )
+    study_profile.add_argument("--nodes", type=int, default=25_000)
+    study_profile.add_argument("--timeout", type=float, default=120.0)
+    study_profile.add_argument("--shutdown-timeout", type=float, default=10.0)
+    study_profile.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/qualification/study-recovery-latest.json"),
     )
     verify = commands.add_parser("verify", help="Run portable, local-alpha, or release gates")
     verify.add_argument(
@@ -1037,6 +1050,27 @@ def cmd_profile_runtime(args: argparse.Namespace) -> int:
                 "output": str(args.output),
                 "status": payload["status"],
                 "latency_seconds": payload["latency_seconds"],
+                "stockfish_lifecycle": payload["stockfish_lifecycle"],
+            },
+            indent=2,
+        )
+    )
+    return 0 if payload["status"] == "passed" else 4
+
+
+def cmd_profile_study_recovery(args: argparse.Namespace) -> int:
+    payload = run_study_recovery_qualification(
+        args.output,
+        node_budget=args.nodes,
+        timeout=args.timeout,
+        shutdown_timeout=args.shutdown_timeout,
+    )
+    print(
+        json.dumps(
+            {
+                "output": str(args.output),
+                "status": payload["status"],
+                "gates": payload["gates"],
                 "stockfish_lifecycle": payload["stockfish_lifecycle"],
             },
             indent=2,
