@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, Header, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import __version__
 from .domain import (
@@ -88,6 +89,7 @@ def create_app(
         redoc_url=None,
         lifespan=lifespan,
     )
+    app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
     app.state.capability_token = token
 
     @app.middleware("http")

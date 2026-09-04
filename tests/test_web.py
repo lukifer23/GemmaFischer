@@ -28,6 +28,15 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         assert "https://" not in page.text
 
 
+def test_static_application_assets_are_compressed_for_transfer() -> None:
+    with TestClient(create_app(capability_token=TOKEN, node_budget=1)) as client:
+        for path in ("/", "/app.css", "/app.js", "/study.js"):
+            response = client.get(path, headers={"Accept-Encoding": "gzip"})
+            assert response.status_code == 200
+            assert response.headers["Content-Encoding"] == "gzip"
+            assert int(response.headers["Content-Length"]) < len(response.content)
+
+
 def test_health_does_not_disclose_configured_engine_path() -> None:
     private_path = "/Users/private/bin/stockfish"
     with TestClient(

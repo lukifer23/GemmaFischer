@@ -36,6 +36,12 @@ def test_real_gameplay_preempts_analysis_and_provider_recovers() -> None:
                 provider.analyze, START_FEN, operation_id=token
             )
             _wait_for_operation(provider, token)
+            deadline = time.monotonic() + 3
+            while provider._engine is None or provider._active_analysis is None:
+                assert time.monotonic() < deadline
+                time.sleep(0.005)
+            engine_before = provider._engine
+            assert engine_before is not None
             gameplay = executor.submit(
                 provider.play_engine_turn, START_FEN, difficulty=GameDifficulty.CLUB
             )
@@ -45,9 +51,11 @@ def test_real_gameplay_preempts_analysis_and_provider_recovers() -> None:
             result = gameplay.result(timeout=5)
 
         assert result.move_uci
+        assert provider._engine is engine_before
         assert provider.operation_status() is None
         follow_up = provider.play_engine_turn(START_FEN, difficulty=GameDifficulty.CASUAL)
         assert follow_up.move_uci
+        assert provider._engine is engine_before
     finally:
         provider.close()
 

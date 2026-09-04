@@ -167,6 +167,11 @@ def run_runtime_qualification(
                 "actual": len(orphaned_pids),
                 "passed": not orphaned_pids,
             },
+            "stockfish_process_restarts": {
+                "required_max": 0,
+                "actual": max(0, len(observed_stockfish_pids) - 1),
+                "passed": len(observed_stockfish_pids) == 1,
+            },
             "graceful_server_shutdown": {
                 "required": True,
                 "actual": graceful_shutdown,

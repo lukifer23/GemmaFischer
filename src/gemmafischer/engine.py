@@ -280,6 +280,7 @@ class StockfishProvider:
         self._engine: chess.engine.SimpleEngine | None = None
         self._condition = threading.Condition()
         self._active_operation: EngineOperation | None = None
+        self._active_analysis: chess.engine.SimpleAnalysisResult | None = None
         self._analysis_waiters: set[str] = set()
         self._gameplay_waiters: deque[str] = deque()
         self._interrupt_reasons: dict[str, Literal["cancelled", "preempted"]] = {}
@@ -305,9 +306,16 @@ class StockfishProvider:
             if self._closed and self._engine is None:
                 return
             self._closed = True
+            analysis = self._active_analysis
+            self._condition.notify_all()
+        if analysis is not None:
+            with suppress(chess.engine.EngineTerminatedError):
+                analysis.stop()
+            with self._condition:
+                self._condition.wait_for(lambda: self._active_operation is None, timeout=2)
+        with self._condition:
             engine, self._engine = self._engine, None
             active = self._active_operation is not None
-            self._condition.notify_all()
         if engine is not None:
             if active:
                 engine.close()
@@ -327,12 +335,11 @@ class StockfishProvider:
             if not is_active and operation_id not in self._analysis_waiters:
                 return False
             self._interrupt_reasons[operation_id] = reason
-            engine = None
-            if is_active:
-                engine, self._engine = self._engine, None
+            analysis = self._active_analysis if is_active else None
             self._condition.notify_all()
-        if engine is not None:
-            engine.close()
+        if analysis is not None:
+            with suppress(chess.engine.EngineTerminatedError):
+                analysis.stop()
         return True
 
     def operation_status(self) -> EngineOperation | None:
@@ -356,7 +363,7 @@ class StockfishProvider:
                 self._analysis_waiters.discard(operation_id)
 
     def _acquire_gameplay(self, operation_id: str) -> None:
-        engine_to_close: chess.engine.SimpleEngine | None = None
+        analysis_to_stop: chess.engine.SimpleAnalysisResult | None = None
         with self._condition:
             if self._closed:
                 raise EngineUnavailable("The Stockfish provider is closed")
@@ -364,9 +371,10 @@ class StockfishProvider:
             active = self._active_operation
             if active is not None and active.kind == "analysis":
                 self._interrupt_reasons[active.token] = "preempted"
-                engine_to_close, self._engine = self._engine, None
-        if engine_to_close is not None:
-            engine_to_close.close()
+                analysis_to_stop = self._active_analysis
+        if analysis_to_stop is not None:
+            with suppress(chess.engine.EngineTerminatedError):
+                analysis_to_stop.stop()
         with self._condition:
             while (
                 self._active_operation is not None
@@ -385,6 +393,7 @@ class StockfishProvider:
         with self._condition:
             if self._active_operation and self._active_operation.token == operation_id:
                 self._active_operation = None
+                self._active_analysis = None
             self._interrupt_reasons.pop(operation_id, None)
             self._condition.notify_all()
 
@@ -423,6 +432,41 @@ class StockfishProvider:
                 self._engine = None
         with suppress(Exception):
             engine.close()
+
+    def _analyse(
+        self,
+        engine: chess.engine.SimpleEngine,
+        operation_id: str,
+        board: chess.Board,
+        limit: chess.engine.Limit,
+        *,
+        multipv: int | None = None,
+        root_moves: list[chess.Move] | None = None,
+    ) -> list[chess.engine.InfoDict]:
+        """Run interruptible analysis without destroying the persistent engine."""
+        analysis = engine.analysis(
+            board,
+            limit,
+            multipv=multipv,
+            root_moves=root_moves,
+            info=chess.engine.INFO_ALL,
+        )
+        with self._condition:
+            self._active_analysis = analysis
+            interrupted = operation_id in self._interrupt_reasons
+            self._condition.notify_all()
+        if interrupted:
+            analysis.stop()
+        try:
+            analysis.wait()
+            infos = analysis.multipv
+            self._raise_if_interrupted(operation_id)
+            return infos
+        finally:
+            with self._condition:
+                if self._active_analysis is analysis:
+                    self._active_analysis = None
+                self._condition.notify_all()
 
     def _with_engine_recovery(
         self,
@@ -501,11 +545,12 @@ class StockfishProvider:
                 if clear_hash and "Clear Hash" in engine.options:
                     engine.configure({"Clear Hash": None})
                 identity = engine.id
-                infos = engine.analyse(
+                infos = self._analyse(
+                    engine,
+                    operation_id,
                     board,
                     chess.engine.Limit(nodes=effective_budget),
                     multipv=min(3, board.legal_moves.count()),
-                    info=chess.engine.INFO_ALL,
                 )
                 candidates = [
                     self._candidate(board, info, rank, position_id, effective_budget)
@@ -514,21 +559,23 @@ class StockfishProvider:
                 comparison = None
                 if considered is not None:
                     best_move = chess.Move.from_uci(candidates[0].move_uci)
-                    best_constrained = engine.analyse(
+                    best_constrained = self._analyse(
+                        engine,
+                        operation_id,
                         board,
                         chess.engine.Limit(nodes=effective_budget),
                         root_moves=[best_move],
-                        info=chess.engine.INFO_ALL,
-                    )
+                    )[0]
                     considered_info = (
                         best_constrained
                         if considered == best_move
-                        else engine.analyse(
+                        else self._analyse(
+                            engine,
+                            operation_id,
                             board,
                             chess.engine.Limit(nodes=effective_budget),
                             root_moves=[considered],
-                            info=chess.engine.INFO_ALL,
-                        )
+                        )[0]
                     )
                     comparison = self._comparison(
                         board,

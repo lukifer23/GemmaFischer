@@ -29,7 +29,7 @@ class _FailAfterConfigureEngine:
     def configure(self, options: dict[str, Any]) -> None:
         self.configurations.append(options)
 
-    def analyse(self, *_args: Any, **_kwargs: Any) -> Any:
+    def analysis(self, *_args: Any, **_kwargs: Any) -> Any:
         raise RuntimeError("stop after configuration")
 
     def quit(self) -> None:
@@ -106,6 +106,7 @@ def test_analysis_restores_full_skill_after_gameplay_configuration() -> None:
     provider._engine = engine  # type: ignore[assignment]
     provider._condition = threading.Condition()
     provider._active_operation = None
+    provider._active_analysis = None
     provider._analysis_waiters = set()
     provider._gameplay_waiters = deque()
     provider._interrupt_reasons = {}
