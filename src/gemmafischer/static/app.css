@@ -51,7 +51,11 @@ main { min-height: calc(100dvh - 68px); max-width: 1720px; margin: 0 auto; paddi
 .moment-card { display: grid; grid-template-columns: 50px 1fr; gap: 16px; align-items: center; width: 100%; padding: 18px; color: var(--ink); background: #f9f7f0; border: 1px solid var(--line); text-align: left; }
 .moment-card h3, .moment-card p { margin: 0 0 5px; }
 .moment-card p { color: var(--muted); }
+.moment-status { margin: 0 0 10px; color: var(--green-dark); font-size: .75rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.moment-card[data-status="scheduled"] .primary, .moment-card[data-status="mastered"] .primary { display: none; }
 .moment-rank { color: var(--green); font: 750 .8rem/1 "SFMono-Regular", Consolas, monospace; }
+.study-board.locked { opacity: .68; }
+#analyze-another { margin-top: 8px; }
 .review-card { display: block; min-height: 58px; cursor: pointer; font-weight: 700; }
 .practice-layout { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(260px, .65fr); gap: 28px; align-items: start; }
 .study-board { width: min(100%, 600px); grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass, replace
 from typing import Literal
 
@@ -77,11 +78,30 @@ def create_interaction(
     )
     correct_id = concepts[0].concept if concepts else "calculate_forcing_moves"
     correct_label = CONCEPT_LABELS.get(correct_id, "Compare checks, captures, and threats")
-    distractors = [
-        TutorOption(option_id="improve_worst_piece", label="Improve the least active piece"),
-        TutorOption(option_id="reduce_counterplay", label="Reduce the opponent's counterplay"),
-    ]
-    options = (TutorOption(option_id=correct_id, label=correct_label), *distractors)
+    used = {correct_id}
+    distractors: list[TutorOption] = []
+    for concept in evidence.concepts:
+        if concept.concept in used or not concept.value:
+            continue
+        used.add(concept.concept)
+        distractors.append(
+            TutorOption(
+                option_id=concept.concept,
+                label=CONCEPT_LABELS.get(concept.concept, concept.concept.replace("_", " ")),
+            )
+        )
+        if len(distractors) == 2:
+            break
+    for option_id, label in (
+        ("improve_worst_piece", "Improve the least active piece"),
+        ("reduce_counterplay", "Reduce the opponent's counterplay"),
+    ):
+        if len(distractors) == 2:
+            break
+        if option_id not in used:
+            distractors.append(TutorOption(option_id=option_id, label=label))
+    options = [TutorOption(option_id=correct_id, label=correct_label), *distractors]
+    random.Random(interaction_id).shuffle(options)
     timestamp = now_utc()
     prompts = {
         "find-strongest-move": f"Find the strongest move for {evidence.side_to_move}.",
@@ -105,7 +125,7 @@ def create_interaction(
         ),
         follow_up=TutorFollowUp(
             prompt="Which idea best explains the engine's preferred move?",
-            options=options,
+            options=tuple(options),
         ),
         created_at=timestamp,
         updated_at=timestamp,
@@ -171,6 +191,8 @@ def grade_answer(
     else:
         outcome = "engine_preferred"
         message = f"The matched-budget comparison prefers {preferred.move_san}."
+    if outcome == "engine_preferred" and not record.view.hidden_miss:
+        return _update(record, hidden_miss=True)
     feedback = TutorFeedback(
         submitted_move_uci=submitted_move_uci,
         submitted_move_san=board.san(move),

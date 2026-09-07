@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import socket
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import time
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 
 from playwright.sync_api import ConsoleMessage, Page, sync_playwright
@@ -59,7 +61,22 @@ def session_id(page: Page) -> str:
     return value
 
 
-def run_flow(page: Page, url: str, capture_dir: Path) -> None:
+def make_reviews_due(history_path: Path) -> int:
+    now = datetime.now(UTC).isoformat()
+    with sqlite3.connect(history_path) as connection:
+        rows = connection.execute("SELECT moment_id, card_json FROM review_cards").fetchall()
+        for moment_id, payload in rows:
+            card = json.loads(payload)
+            card["due_at"] = now
+            connection.execute(
+                "UPDATE review_cards SET due_at = ?, card_json = ? WHERE moment_id = ?",
+                (now, json.dumps(card), moment_id),
+            )
+        connection.commit()
+        return len(rows)
+
+
+def run_flow(page: Page, url: str, capture_dir: Path, history_path: Path) -> None:
     errors: list[str] = []
 
     def record_console(message: ConsoleMessage) -> None:
@@ -86,6 +103,10 @@ def run_flow(page: Page, url: str, capture_dir: Path) -> None:
     page.locator('#study-board [data-square="g4"]').click()
     page.locator("#retry-moment").wait_for(state="visible", timeout=60_000)
     assert "engine prefers" not in page.locator("#attempt-feedback").inner_text().lower()
+    assert page.locator("#study-board").evaluate("node => node.classList.contains('locked')")
+    page.locator('#study-board [data-square="g2"]').click()
+    page.locator('#study-board [data-square="g4"]').click()
+    assert "engine prefers" not in page.locator("#attempt-feedback").inner_text().lower()
     page.locator("#retry-moment").click()
     page.locator('#study-board [data-square="g2"]').click()
     page.locator('#study-board [data-square="g4"]').click()
@@ -95,8 +116,43 @@ def run_flow(page: Page, url: str, capture_dir: Path) -> None:
     page.locator("#progress-grid strong").filter(has_text="2").wait_for()
     page.screenshot(path=capture_dir / "game-to-mastery-desktop.png", full_page=True)
 
+    assert make_reviews_due(history_path) >= 1
     page.reload(wait_until="networkidle")
+    page.locator('[data-view="review"]').click()
+    page.get_by_role("button", name="review now").click()
+    page.locator("#practice-work").wait_for(state="visible")
+    assert page.locator("#learn-view").is_visible()
+    assert page.locator("#review-view").is_hidden()
+    assert page.locator("#practice-phase").text_content() == "Delayed review"
+    page.locator("#close-study-practice").click()
     page.get_by_role("heading", name="Your learning moments are ready").wait_for()
+
+    page.locator("#analyze-another").click()
+    page.locator("#pgn-form").wait_for(state="visible")
+    page.locator("#pgn").fill(
+        '[White "Alice"]\n[Black "Bob"]\n[SetUp "1"]\n'
+        '[FEN "7k/P7/6K1/8/8/8/8/8 w - - 0 1"]\n\n1. Kg5'
+    )
+    page.locator("#player-name").fill("Alice")
+    page.locator("#import-submit").click()
+    page.get_by_role("article").filter(has_text="Kg5").get_by_role("button").wait_for(
+        timeout=60_000
+    )
+    page.get_by_role("article").filter(has_text="Kg5").get_by_role("button").click()
+    page.locator('#study-board [data-square="a7"]').click()
+    page.locator('#study-board [data-square="a8"]').click()
+    page.locator("#promotion-dialog").wait_for(state="visible")
+    page.locator('[data-promotion="n"]').click()
+    page.locator("#retry-moment").wait_for(state="visible", timeout=60_000)
+    page.locator("#retry-moment").click()
+    page.locator('#study-board [data-square="a7"]').click()
+    page.locator('#study-board [data-square="a8"]').click()
+    page.locator("#promotion-dialog").wait_for(state="visible")
+    page.locator('[data-promotion="q"]').click()
+    page.locator("#attempt-feedback").wait_for(state="visible", timeout=60_000)
+    assert "good" in page.locator("#attempt-feedback").inner_text().lower()
+    page.locator("#close-study-practice").click()
+
     page.get_by_role("button", name="Position Lab").click()
     page.locator("#status").wait_for(state="visible")
     assert_layout(page, mobile=False)
@@ -129,18 +185,14 @@ def run_flow(page: Page, url: str, capture_dir: Path) -> None:
     tutors = page.request.get(f"{url}/api/v1/sessions/{current_session}/tutor").json()
     interaction = tutors["items"][0]
     question_fen = interaction["question"]["fen"]
-    source = next(square for square in page.locator("#board .square").evaluate_all(
-        "nodes => nodes.map(node => node.dataset.square)"
-    ) if page.request.get(
-        f"{url}/api/v1/sessions/{current_session}/tutor/{interaction['interaction_id']}"
-        f"/legal-moves?from_square={square}"
-    ).json()["moves_uci"])
-    legal = page.request.get(
-        f"{url}/api/v1/sessions/{current_session}/tutor/{interaction['interaction_id']}"
-        f"/legal-moves?from_square={source}"
-    ).json()["moves_uci"][0]
-    page.locator(f'[data-square="{legal[:2]}"]').click()
-    page.locator(f'[data-square="{legal[2:4]}"]').click()
+    source_id = interaction["question"]["source_analysis_id"]
+    analysis = page.request.get(f"{url}/api/v1/analyses/{source_id}").json()
+    preferred = analysis["evidence"]["candidate_set"]["candidates"][0]["move_uci"]
+    page.locator(f'#board [data-square="{preferred[:2]}"]').click()
+    page.locator(f'#board [data-square="{preferred[2:4]}"]').click()
+    if preferred.endswith(("q", "r", "b", "n")) and len(preferred) == 5:
+        page.locator("#promotion-dialog").wait_for(state="visible")
+        page.locator(f'[data-promotion="{preferred[4]}"]').click()
     page.locator("#tutor-feedback").wait_for(state="visible", timeout=60_000)
     page.locator("#tutor-follow-up button").first.click()
     page.get_by_role("button", name="Return to game").last.click()
@@ -166,12 +218,13 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="gemmafischer-browser-") as directory:
         capture_dir = Path(directory) / "captures"
         capture_dir.mkdir()
+        history_path = Path(directory) / "history.sqlite3"
         process = subprocess.Popen(
             [
                 sys.executable,
                 str(ROOT / "scripts" / "acceptance_server.py"),
                 str(port),
-                str(Path(directory) / "history.sqlite3"),
+                str(history_path),
             ],
             cwd=ROOT,
         )
@@ -180,7 +233,7 @@ def main() -> int:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=True)
                 page = browser.new_page(viewport={"width": 1280, "height": 900})
-                run_flow(page, url, capture_dir)
+                run_flow(page, url, capture_dir, history_path)
                 browser.close()
         finally:
             process.terminate()
@@ -190,8 +243,9 @@ def main() -> int:
                 process.kill()
                 process.wait(timeout=5)
     print(
-        "Browser acceptance passed: PGN study, hidden retry, persisted restore, progress, "
-        "live analysis, tutor restore/dismiss, cited practice, and desktop/mobile layout."
+        "Browser acceptance passed: PGN study, hidden retry, locked miss, due-review "
+        "navigation, promotion choice, persisted restore, progress, live analysis, "
+        "tutor restore/dismiss, cited practice, and desktop/mobile layout."
     )
     return 0
 

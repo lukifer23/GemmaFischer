@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GemmaFischer Local Chess Coach</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/app.css?v=20260904">
+  <link rel="stylesheet" href="/app.css?v=20260907">
 </head>
 <body>
   <header class="site-header">
     <div><p class="eyebrow">Local chess, accountable coaching</p><h1>GemmaFischer</h1></div>
     <nav class="product-nav" aria-label="Primary">
       <button class="nav-tab active" data-view="learn" type="button">Learn</button>
-      <button class="nav-tab" data-view="review" type="button">Review <span id="due-count">0</span></button>
+      <button class="nav-tab" data-view="review" type="button" aria-label="Review, no cards due">Review <span id="due-count" hidden>0</span></button>
       <button class="nav-tab" data-view="progress" type="button">Progress</button>
       <button class="nav-tab" data-view="lab" type="button">Position Lab</button>
     </nav>
@@ -30,17 +30,18 @@
           <label for="player-name">Player name</label><input id="player-name" maxlength="120" autocomplete="name">
           <label for="study-rating">Playing level</label><select id="study-rating"><option>1000-1199</option><option>1200-1399</option><option selected>1400-1599</option><option>1600-1800</option></select>
         </div>
-        <button class="primary" type="submit">Find my learning moments</button>
+        <button class="primary" id="import-submit" type="submit">Find my learning moments</button>
         <p id="study-error" class="error" role="alert" hidden></p>
       </form>
+      <button id="analyze-another" class="text-button" type="button" hidden>Analyze another game</button>
     </section>
-    <section id="study-work" class="study-work" aria-live="polite" hidden>
-      <div class="study-progress"><div><p class="step">Game analysis</p><h2 id="study-state">Preparing your game…</h2></div><progress id="study-progress" max="1" value="0"></progress><button id="cancel-study" class="quiet" type="button">Cancel</button></div>
+    <section id="study-work" class="study-work" hidden>
+      <div class="study-progress"><div><p class="step">Game analysis</p><h2 id="study-state" aria-live="polite">Preparing your game…</h2></div><progress id="study-progress" max="1" value="0"></progress><button id="cancel-study" class="quiet" type="button">Cancel</button></div>
       <div id="moment-list" class="moment-list"></div>
     </section>
     <section id="practice-work" class="practice-work" hidden>
       <div class="section-heading"><div><p class="step" id="practice-phase">Solve before reveal</p><h2 id="practice-title">Find your move</h2></div><button id="close-study-practice" class="quiet" type="button">Back to moments</button></div>
-      <div class="practice-layout"><div><div id="study-board" class="board study-board" role="grid" aria-label="Practice chess position"></div><p id="study-board-status" class="status" role="status">Choose a piece, then a destination.</p></div><aside class="practice-coach"><p id="moment-context"></p><div id="attempt-feedback" class="review-status" hidden></div><button id="retry-moment" class="primary" type="button" hidden>Retry this position</button><button id="transfer-moment" class="primary" type="button" hidden>Try a related position</button></aside></div>
+      <div class="practice-layout"><div><div id="study-board" class="board study-board" role="grid" aria-label="Practice chess position"></div><p id="study-board-status" class="status" role="status">Choose a piece, then a destination.</p></div><aside class="practice-coach"><p id="moment-context"></p><div id="attempt-feedback" class="review-status" role="status" aria-live="polite" hidden></div><button id="retry-moment" class="primary" type="button" hidden>Retry this position</button><button id="transfer-moment" class="primary" type="button" hidden>Try a related position</button><button id="next-moment" class="primary" type="button" hidden>Solve the next moment</button></aside></div>
     </section>
   </main>
   <main id="review-view" class="product-view study-shell" hidden><section class="study-hero"><div><p class="step">Due review</p><h2>Bring the right ideas back before they fade.</h2><p>Reviews are scheduled from your actual attempts, with lapses returning sooner.</p></div><div id="review-list" class="moment-list"></div></section></main>
@@ -102,7 +103,7 @@
     </div>
   </main>
   <dialog id="promotion-dialog" aria-labelledby="promotion-title"><div class="promotion-card"><p class="step">Promotion</p><h2 id="promotion-title">Choose a piece</h2><div class="promotion-options"><button type="button" data-promotion="q">Queen</button><button type="button" data-promotion="r">Rook</button><button type="button" data-promotion="b">Bishop</button><button type="button" data-promotion="n">Knight</button></div><button id="promotion-cancel" class="text-button" type="button">Cancel promotion</button></div></dialog>
-  <script type="module" src="/app.js?v=20260904"></script>
-  <script type="module" src="/study.js?v=20260904"></script>
+  <script type="module" src="/app.js?v=20260907"></script>
+  <script type="module" src="/study.js?v=20260907"></script>
 </body>
 </html>

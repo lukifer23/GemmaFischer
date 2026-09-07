@@ -12,8 +12,9 @@ The supported product is intentionally narrow and real:
 - visible factual coaching is rendered from typed evidence and deterministic concept facts;
 - an optional qualified text model may select typed lesson claims, but never invent moves, scores, or prose;
 - sessions and bounded analysis history persist in local SQLite;
-- practice hides the answer on the first miss, accepts engine-equivalent moves, and schedules 1/3/7/14/30-day review intervals;
-- study, review, and progress history reads plus every mutation require a per-launch capability token, and the server accepts loopback traffic only.
+- practice hides the answer on the first miss in Learn and Position Lab, accepts engine-equivalent moves, and schedules 1/3/7/14/30-day review intervals;
+- visible coaching uses SAN and a comparison diagnosis, not UCI dumps or raw concept flags;
+- study, review, progress, and analysis-history reads plus every mutation require a per-launch capability token, and the server accepts loopback traffic only.
 
 The pre-recovery application, datasets, adapters, models, and reports were removed from `main` after being preserved in the remote tag `archive/pre-recovery-2026-08-30` (commit `ddff9f2d4ccb0d1d3aacb7f90c385266164c0e87`, tree `6c522a0938165c8d5631b8010fce7071cd8f5a8f`, 51 LFS paths).
 
@@ -100,13 +101,15 @@ uv run gemmafischer profile-model --backend lmstudio \
 `portable` runs Ruff, strict mypy, engine-free/model-free tests, JavaScript syntax, repository and OpenAPI drift audits, dependency compatibility, distribution builds, and an isolated installed-wheel smoke test. `local-alpha` adds the 70% model-free whole-package coverage ratchet, real Stockfish tests, and the real Chromium flow. `release` also enforces the checked-in release-status ledger. Optional model tests remain separate because missing Gemma assets must not block the deterministic product.
 
 The durable browser gate launches a real FastAPI server, real Stockfish,
-temporary SQLite, and Chromium. It proves position analysis, persisted tutor
-restore and dismissal across reload, cited hint display, legal board answer,
-evidence-based grading, follow-up completion, return to an unchanged live FEN,
-desktop column order, zero console errors, and no horizontal overflow at
-390×844. Physical-device, VoiceOver, endurance, human-usefulness, and
-optional-model release gates remain open and are listed in
-[release status](docs/release-status.md).
+temporary SQLite, and Chromium. It proves PGN import, locked hidden first miss,
+retry reveal, due-review navigation onto the Learn board, promotion choice,
+position analysis, persisted tutor restore and dismissal across reload, cited
+hint display, legal board answer, evidence-based grading, follow-up completion,
+return to an unchanged live FEN, desktop column order, zero console errors, and
+no horizontal overflow at 390×844. Physical-device, VoiceOver, remaining
+performance, human-usefulness, and optional-model release gates remain open and
+are listed in [release status](docs/release-status.md) and
+[current state](docs/current-state.md).
 
 ## Documentation
 

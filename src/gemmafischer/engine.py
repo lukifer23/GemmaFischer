@@ -130,6 +130,21 @@ def _fact(position_id: str, fact_type: str, value: bool | int | str) -> BoardFac
     return BoardFact(evidence_id=canonical_hash(payload), fact_type=fact_type, value=value)  # type: ignore[arg-type]
 
 
+def _pv_san(board: chess.Board, pv_uci: tuple[str, ...]) -> tuple[str, ...]:
+    copy = board.copy(stack=False)
+    rendered: list[str] = []
+    for token in pv_uci:
+        try:
+            move = chess.Move.from_uci(token)
+        except ValueError:
+            break
+        if move not in copy.legal_moves:
+            break
+        rendered.append(copy.san(move))
+        copy.push(move)
+    return tuple(rendered)
+
+
 def extract_board_facts(board: chess.Board, position_id: str) -> tuple[BoardFact, ...]:
     values = {
         chess.PAWN: 100,
@@ -758,6 +773,7 @@ class StockfishProvider:
         if wdl_value is not None:
             relative = wdl_value.pov(board.turn)
             wdl = WDL(win=relative.wins, draw=relative.draws, loss=relative.losses)
+        pv_uci = tuple(move.uci() for move in pv[:16])
         payload = {
             "schema_version": "2.0",
             "position_id": position_id,
@@ -768,7 +784,7 @@ class StockfishProvider:
             "score_cp": cp,
             "mate_in": mate,
             "nodes": int(info.get("nodes", self.node_budget)),
-            "pv_uci": [move.uci() for move in pv[:16]],
+            "pv_uci": list(pv_uci),
         }
         return CandidateEvidence(
             evidence_id=canonical_hash(payload),
@@ -781,7 +797,8 @@ class StockfishProvider:
             depth=info.get("depth"),
             seldepth=info.get("seldepth"),
             nodes=int(info.get("nodes", self.node_budget)),
-            pv_uci=tuple(move.uci() for move in pv[:16]),
+            pv_uci=pv_uci,
+            pv_san=_pv_san(board, pv_uci),
         )
 
     def _comparison(
@@ -826,6 +843,8 @@ class StockfishProvider:
             position_id=position_id,
             engine_move_uci=engine_move.uci(),
             considered_move_uci=considered_move.uci(),
+            engine_move_san=board.san(engine_move),
+            considered_move_san=board.san(considered_move),
             engine_score_cp=engine_cp,
             engine_mate_in=engine_mate,
             considered_score_cp=considered_cp,

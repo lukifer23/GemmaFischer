@@ -15,8 +15,10 @@ in a local SQLite WAL ledger. Internal tutor records also contain copied engine
 evidence and hidden answer keys; only the redacted view crosses the API. The
 browser stores only the server session ID and view preferences in
 same-origin local storage. Neither path is synchronized or intentionally exposed
-beyond the loopback API. Study, review, and progress reads require the launch
-capability; the root page supplies it in an HttpOnly cookie. History contains
+beyond the loopback API. Study, review, progress, and analysis-history reads
+require the launch capability; the root page supplies it in an HttpOnly cookie.
+Restoring an unanswered tutor turn does not fetch and render the source analysis
+answer key beside the practice board. History contains
 PGNs, FENs, move ledgers, engine evidence,
 and coaching output; the Mac account remains the privacy boundary because the
 database is not encrypted at rest.

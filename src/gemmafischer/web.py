@@ -104,7 +104,7 @@ def create_app(
         }:
             return _error("INVALID_ORIGIN", "The request origin is not local.", "security", 403)
         protected_history_read = request.method == "GET" and request.url.path.startswith(
-            ("/api/v1/study", "/api/v1/reviews", "/api/v1/progress")
+            ("/api/v1/study", "/api/v1/reviews", "/api/v1/progress", "/api/v1/analyses")
         )
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} or protected_history_read:
             supplied = request.headers.get("x-gemmafischer-token") or request.cookies.get(

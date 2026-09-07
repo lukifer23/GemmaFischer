@@ -60,8 +60,6 @@ const state = {
   exhibitionRunning: false,
   exhibitionTransition: false,
   exhibitionPromise: null,
-  promotionMoves: [],
-  promotionFocus: null,
 };
 const squareNodes = new Map();
 class StaleIntentError extends Error {}
@@ -381,32 +379,50 @@ async function selectSource(square) {
   renderBoard();
 }
 
-function openPromotion(candidates) {
-  state.promotionMoves = candidates;
-  state.promotionFocus = state.selected;
+let sharedPromotion = null;
+function openSharedPromotion(candidates, onChoose, onCancel) {
+  if (sharedPromotion) {
+    const previous = sharedPromotion;
+    sharedPromotion = null;
+    if ($("promotion-dialog").open) $("promotion-dialog").close();
+    previous.onCancel?.();
+  }
+  sharedPromotion = { candidates, onChoose, onCancel };
   const dialog = $("promotion-dialog");
   dialog.showModal();
   dialog.querySelector('[data-promotion="q"]').focus();
 }
+window.gemmafischerOpenPromotion = openSharedPromotion;
+function openPromotion(candidates) {
+  const focus = state.selected;
+  openSharedPromotion(
+    candidates,
+    (move) => {
+      clearSelection();
+      renderBoard();
+      if (state.tutorMode) void submitTutorAnswer(move);
+      else void playPlayerTurn(move);
+    },
+    () => {
+      renderBoard();
+      if (focus) squareNodes.get(focus)?.focus();
+    },
+  );
+}
 function cancelPromotion() {
-  state.promotionMoves = [];
+  const pending = sharedPromotion;
+  sharedPromotion = null;
   if ($("promotion-dialog").open) $("promotion-dialog").close();
-  renderBoard();
-  if (state.promotionFocus) squareNodes.get(state.promotionFocus)?.focus();
-  state.promotionFocus = null;
+  pending?.onCancel?.();
 }
 function choosePromotion(suffix) {
-  const move = state.promotionMoves.find((candidate) =>
-    candidate.endsWith(suffix),
-  );
+  const pending = sharedPromotion;
+  if (!pending) return;
+  const move = pending.candidates.find((candidate) => candidate.endsWith(suffix));
   if (!move) return;
-  state.promotionMoves = [];
+  sharedPromotion = null;
   $("promotion-dialog").close();
-  clearSelection();
-  renderBoard();
-  state.promotionFocus = null;
-  if (state.tutorMode) void submitTutorAnswer(move);
-  else void playPlayerTurn(move);
+  pending.onChoose(move);
 }
 
 function cancelAnimation() {
@@ -688,13 +704,25 @@ function renderResult(data) {
     );
   const lesson = (data.coaching.lesson_plan?.steps || []).map((step) => {
     const wrap = document.createElement("div"),
-      text = document.createElement("p"),
-      detail = document.createElement("div");
+      text = document.createElement("p");
     wrap.className = "claim lesson-step";
     text.textContent = step.text;
-    detail.className = "claim-evidence";
-    detail.textContent = evidenceText(byId[step.concept_id]);
-    wrap.append(text, detail);
+    wrap.append(text);
+    if (step.concept_id && byId[step.concept_id]) {
+      const button = document.createElement("button"),
+        detail = document.createElement("div");
+      button.type = "button";
+      button.textContent = "Show cited evidence";
+      button.setAttribute("aria-expanded", "false");
+      detail.className = "claim-evidence";
+      detail.hidden = true;
+      detail.textContent = evidenceText(byId[step.concept_id]);
+      button.addEventListener("click", () => {
+        detail.hidden = !detail.hidden;
+        button.setAttribute("aria-expanded", String(!detail.hidden));
+      });
+      wrap.append(button, detail);
+    }
     return wrap;
   });
   const claims = data.coaching.claims.map((claim) => {
@@ -784,6 +812,9 @@ function renderTutor() {
   $("tutor-hint").textContent = tutor.hint || "";
   $("tutor-hint-button").hidden =
     Boolean(tutor.hint) || tutor.status !== "awaiting_answer";
+  if (tutor.hidden_miss && tutor.status === "awaiting_answer" && !tutor.feedback) {
+    setTutorStatus("Not quite. The answer is still hidden—calculate once more.");
+  }
   const feedback = $("tutor-feedback");
   feedback.hidden = !tutor.feedback;
   feedback.className = tutor.feedback ? "tutor-feedback" : "";
@@ -851,6 +882,7 @@ function enterTutor(tutor, restored = false) {
       : "Practice mode: play the strongest move. Your live game will not change.",
   );
   renderTutor();
+  setLabPracticeLocked(true);
   $("tutor-question").focus?.();
 }
 function clearTutorView() {
@@ -859,6 +891,7 @@ function clearTutorView() {
   clearSelection();
   $("practice-banner").hidden = true;
   $("tutor-panel").hidden = true;
+  setLabPracticeLocked(false);
   setTutorStatus();
   setTutorError();
 }
@@ -869,8 +902,10 @@ async function restoreTutor() {
     ["awaiting_answer", "awaiting_follow_up"].includes(item.status),
   );
   if (!active) return false;
-  const source = await api(`/api/v1/analyses/${active.question.source_analysis_id}`);
-  if (source.evidence && source.coaching) renderResult(source);
+  if (active.status !== "awaiting_answer") {
+    const source = await api(`/api/v1/analyses/${active.question.source_analysis_id}`);
+    if (source.evidence && source.coaching) renderResult(source);
+  }
   enterTutor(active, true);
   return true;
 }
@@ -901,7 +936,11 @@ async function submitTutorAnswer(move) {
   try {
     await tutorCommand("answer", { move_uci: move });
     setTutorStatus();
-    setStatus("Answer graded. Complete the follow-up question.");
+    setStatus(
+      state.tutor?.status === "awaiting_answer"
+        ? "Not quite. Try again without seeing the answer."
+        : "Answer graded. Complete the follow-up question.",
+    );
     renderTutor();
   } catch (error) {
     if (!superseded(error))
@@ -950,11 +989,12 @@ async function leaveTutor() {
       }
     }
   }
+  const analysisId = state.lastAnalysisId;
   clearTutorView();
   if (state.session) {
     parseFen(state.session.fen);
-    $("result").hidden = !state.lastAnalysisId;
-    $("empty-guide").hidden = Boolean(state.lastAnalysisId);
+    $("result").hidden = !analysisId;
+    $("empty-guide").hidden = Boolean(analysisId);
     setStatus(
       state.session.outcome
         ? `Game over: ${state.session.outcome}.`
@@ -962,6 +1002,14 @@ async function leaveTutor() {
     );
     renderSession();
     $("result-title").focus();
+  }
+  if (analysisId) {
+    try {
+      const source = await api(`/api/v1/analyses/${analysisId}`);
+      if (source.evidence && source.coaching) renderResult(source);
+    } catch {
+      /* Returning to the live game does not require the review snapshot. */
+    }
   }
 }
 function evidenceText(item) {
@@ -989,13 +1037,23 @@ function claimText(claim, evidence) {
       ? `Mate evaluation: ${item.mate_in}.`
       : `Evaluation from the side to move: ${(item.score_cp / 100).toFixed(2)} pawns.`;
   }
-  if (claim.kind === "line")
-    return `Line to calculate: ${candidates[claim.candidate_id].pv_uci.slice(claim.start_ply, claim.end_ply).join(" ")}.`;
+  if (claim.kind === "line") {
+    const item = candidates[claim.candidate_id];
+    const line = (item.pv_san && item.pv_san.length
+      ? item.pv_san
+      : item.pv_uci
+    ).slice(claim.start_ply, claim.end_ply);
+    return `Line to calculate: ${line.join(" ")}.`;
+  }
   if (claim.kind === "comparison") {
     const item = evidence.move_comparison;
+    const engine = item.engine_move_san || item.engine_move_uci;
+    const considered = item.considered_move_san || item.considered_move_uci;
+    if (item.engine_move_uci === item.considered_move_uci)
+      return `${engine} matches the engine's preferred move.`;
     if (item.outcome === "equal")
-      return `${item.considered_move_uci} is effectively equal to ${item.engine_move_uci} within ${item.tolerance_cp} centipawns.`;
-    return `The matched-budget comparison favors ${item.outcome === "engine_better" ? item.engine_move_uci : item.considered_move_uci}.`;
+      return `${considered} is effectively equal to ${engine} within ${item.tolerance_cp} centipawns.`;
+    return `The matched-budget comparison favors ${item.outcome === "engine_better" ? engine : considered}.`;
   }
   return claim.template_id === "compare_candidate_moves"
     ? "Compare the forcing replies to both moves."
@@ -1059,6 +1117,25 @@ function restoreCommittedControls() {
   $("difficulty").value = state.session.white_difficulty;
   $("fen").value = state.session.fen;
 }
+function sideToMove(fen) {
+  return fen.trim().split(/\s+/)[1] === "b" ? "black" : "white";
+}
+function setLabPracticeLocked(locked) {
+  for (const id of [
+    "new-game",
+    "undo",
+    "apply-fen",
+    "load-example",
+    "session-mode",
+    "difficulty",
+    "analyze",
+    "exhibition",
+    "fen",
+  ]) {
+    const node = $(id);
+    if (node) node.disabled = locked;
+  }
+}
 async function createSession(fen = START_FEN) {
   const epoch = ++state.sessionEpoch,
     exhibition = $("session-mode").value === "exhibition";
@@ -1073,7 +1150,7 @@ async function createSession(fen = START_FEN) {
       body: JSON.stringify({
         mode: exhibition ? "exhibition" : "player",
         fen,
-        player_color: exhibition ? null : "white",
+        player_color: exhibition ? null : sideToMove(fen),
         white_difficulty: $("difficulty").value,
         black_difficulty: $("difficulty").value,
         rating_bucket: $("rating").value,
@@ -1268,16 +1345,20 @@ $("flip").addEventListener("click", () => {
   savePreferences();
 });
 $("new-game").addEventListener("click", () => {
+  if (state.tutorMode) return;
   requestSession();
 });
 $("load-example").addEventListener("click", () => {
+  if (state.tutorMode) return;
   $("fen").value = EXAMPLE_FEN;
   requestSession(EXAMPLE_FEN);
 });
 $("apply-fen").addEventListener("click", () => {
+  if (state.tutorMode) return;
   requestSession($("fen").value.trim());
 });
 $("analyze").addEventListener("click", () => {
+  if (state.tutorMode) return;
   void explainPosition();
 });
 $("cancel").addEventListener("click", () => {
@@ -1293,6 +1374,7 @@ $("tutor-hint-button").addEventListener("click", () => {
 $("return-game").addEventListener("click", () => void leaveTutor());
 $("end-practice").addEventListener("click", () => void leaveTutor());
 $("undo").addEventListener("click", async () => {
+  if (state.tutorMode) return;
   stopExhibition();
   cancelReview();
   try {
@@ -1305,9 +1387,11 @@ $("undo").addEventListener("click", async () => {
   }
 });
 $("session-mode").addEventListener("change", () => {
+  if (state.tutorMode) return;
   requestSession();
 });
 $("difficulty").addEventListener("change", () => {
+  if (state.tutorMode) return;
   savePreferences();
   requestSession(state.session?.initial_fen || START_FEN);
 });
@@ -1331,6 +1415,36 @@ document
     ),
   );
 
+let labReady = false;
+async function ensureLab() {
+  if (labReady) return;
+  labReady = true;
+  if (!state.session) {
+    await createSession(EXAMPLE_FEN);
+    return;
+  }
+  state.sessionEpoch += 1;
+  $("session-mode").value = state.session.mode;
+  renderMode();
+  renderSession();
+  setStatus(
+    state.session.status === "paused"
+      ? "Paused exhibition restored."
+      : "Session restored from the local database.",
+  );
+  const reviewed = [...state.session.plies]
+    .reverse()
+    .find((ply) => ply.analysis_id);
+  let tutorRestored = false;
+  try {
+    tutorRestored = await restoreTutor();
+  } catch (error) {
+    setTutorError(`Saved practice could not be restored: ${error.message}`);
+  }
+  if (reviewed && !tutorRestored)
+    void pollAnalysis(reviewed.analysis_id, `Review of ${reviewed.move_san}`);
+}
+window.gemmafischerEnsureLab = ensureLab;
 async function initialize() {
   initializeBoard();
   parseFen(START_FEN);
@@ -1342,29 +1456,6 @@ async function initialize() {
       state.session = await api(`/api/v1/sessions/${saved.sessionId}`);
   } catch {
     localStorage.removeItem(STORAGE_KEY);
-  }
-  if (!state.session) await createSession(EXAMPLE_FEN);
-  else {
-    state.sessionEpoch += 1;
-    $("session-mode").value = state.session.mode;
-    renderMode();
-    renderSession();
-    setStatus(
-      state.session.status === "paused"
-        ? "Paused exhibition restored."
-        : "Session restored from the local database.",
-    );
-    const reviewed = [...state.session.plies]
-      .reverse()
-      .find((ply) => ply.analysis_id);
-    let tutorRestored = false;
-    try {
-      tutorRestored = await restoreTutor();
-    } catch (error) {
-      setTutorError(`Saved practice could not be restored: ${error.message}`);
-    }
-    if (reviewed && !tutorRestored)
-      void pollAnalysis(reviewed.analysis_id, `Review of ${reviewed.move_san}`);
   }
   try {
     const capabilities = await api("/api/v1/capabilities");

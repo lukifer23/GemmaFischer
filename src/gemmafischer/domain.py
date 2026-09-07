@@ -172,6 +172,7 @@ class CandidateEvidence(StrictModel):
     seldepth: int | None = None
     nodes: int
     pv_uci: tuple[str, ...] = Field(max_length=16)
+    pv_san: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def one_score(self) -> CandidateEvidence:
@@ -201,6 +202,8 @@ class MoveComparisonEvidence(StrictModel):
     position_id: str
     engine_move_uci: str
     considered_move_uci: str
+    engine_move_san: str | None = None
+    considered_move_san: str | None = None
     engine_score_cp: int | None = None
     engine_mate_in: int | None = None
     considered_score_cp: int | None = None
@@ -344,6 +347,7 @@ class LessonStep(StrictModel):
         "notice_material_change",
         "notice_opponent_check",
         "notice_development",
+        "notice_calculation",
     ]
     text: str
 
@@ -520,6 +524,7 @@ class TutorInteractionView(StrictModel):
     hint_evidence_ids: tuple[str, ...] = ()
     feedback: TutorFeedback | None = None
     follow_up: TutorFollowUp | None = None
+    hidden_miss: bool = False
     created_at: datetime
     updated_at: datetime
 

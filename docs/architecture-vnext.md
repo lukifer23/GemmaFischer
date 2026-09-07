@@ -28,9 +28,12 @@ transaction writes the attempt and its review card.
 The loopback-only FastAPI server also owns Position Lab games. A `Session` contains the canonical
 FEN, mode, status, revision, move ledger, difficulty, and links from plies to
 their reviews. Every command carries `expected_revision`; stale mutations fail
-with a 409 conflict. The same screen supports player-v-Stockfish play, automatic
-move review, position explanation, and reviewed Stockfish-v-Stockfish
-exhibition. The browser stores only a session identifier and view preferences.
+with a 409 conflict. Player color follows the FEN side to move. The Lab tab is
+the first moment a session is created or a prior analysis is resumed, so Learn
+import does not share a ghost gameplay analysis. The same screen supports
+player-v-Stockfish play, automatic move review, position explanation, and
+reviewed Stockfish-v-Stockfish exhibition. The browser stores only a session
+identifier and view preferences.
 Training, arbitrary filesystem, model switching, and
 arbitrary process-control HTTP routes are absent. Post-training is an explicit
 offline CLI workflow with separate manifests, receipts, and preflight gates.
@@ -39,10 +42,12 @@ adapter directory containing one safetensors file and its adapter config.
 
 A tutor interaction copies the completed source evidence and freezes its FEN.
 It has its own optimistic revision and moves through `awaiting_answer`,
-`awaiting_follow_up`, and a terminal state. Hints cite copied evidence. Answers
-are legal-move checked and graded by a fresh equal-budget Stockfish comparison.
-The public view omits the answer key, and tutor commands never mutate session
-FEN, plies, or revision.
+`awaiting_follow_up`, and a terminal state. A first incorrect answer stays in
+`awaiting_answer` with `hidden_miss` and no preferred move. Hints cite copied
+evidence. Answers are legal-move checked and graded by a fresh equal-budget
+Stockfish comparison. Follow-up options are shuffled. The public view omits the
+answer key, live-game controls are disabled during practice, and tutor commands
+never mutate session FEN, plies, or revision.
 
 One analysis runs at a time. Only a pending interactive analysis may supersede
 another pending interactive analysis; automatic ply reviews are durable queue

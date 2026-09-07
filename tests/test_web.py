@@ -25,6 +25,11 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         assert "Explain current position" in page.text
         assert "Play the position. Understand the decision." in page.text
         assert "Engine vs engine" in page.text
+        assert 'id="attempt-feedback"' in page.text
+        assert 'aria-live="polite"' in page.text
+        assert 'id="next-moment"' in page.text
+        assert 'id="analyze-another"' in page.text
+        assert 'id="study-work" class="study-work" aria-live="polite"' not in page.text
         assert "https://" not in page.text
 
 
@@ -280,13 +285,37 @@ def test_analysis_history_survives_app_restart(tmp_path: Path) -> None:
     with TestClient(
         create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
     ) as client:
-        history = client.get("/api/v1/analyses").json()
-        restored = client.get(f"/api/v1/analyses/{analysis_id}")
+        history = client.get("/api/v1/analyses", headers={"X-GemmaFischer-Token": TOKEN}).json()
+        restored = client.get(
+            f"/api/v1/analyses/{analysis_id}",
+            headers={"X-GemmaFischer-Token": TOKEN},
+        )
 
     assert history["count"] == 1
     assert history["items"][0]["analysis_id"] == analysis_id
     assert history["items"][0]["state"] == terminal_state
     assert restored.json()["state"] == terminal_state
+
+
+def test_analysis_history_requires_capability_token(tmp_path: Path) -> None:
+    history_path = tmp_path / "history.sqlite3"
+    app = create_app(capability_token=TOKEN, node_budget=1, history_path=history_path)
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/v1/analyses",
+            headers={"X-GemmaFischer-Token": TOKEN},
+            json={
+                "mode": "position",
+                "fen": START_FEN,
+                "rating_bucket": "1400-1599",
+            },
+        )
+        analysis_id = created.json()["analysis_id"]
+        listed = client.get("/api/v1/analyses")
+        fetched = client.get(f"/api/v1/analyses/{analysis_id}")
+        assert listed.status_code == 403
+        assert fetched.status_code == 403
+        assert listed.json()["error"]["code"] == "CAPABILITY_TOKEN_REQUIRED"
 
 
 def test_legacy_control_plane_routes_do_not_exist() -> None:
@@ -446,7 +475,9 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
         analysis_id = replied["plies"][0]["analysis_id"]
         deadline = time.monotonic() + 20
         while True:
-            analysis = client.get(f"/api/v1/analyses/{analysis_id}").json()
+            analysis = client.get(
+                f"/api/v1/analyses/{analysis_id}", headers=headers
+            ).json()
             if analysis["state"] == "complete":
                 break
             assert time.monotonic() < deadline
@@ -478,7 +509,21 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
         assert answered.status_code == 200
         answer = answered.json()
         assert answer["feedback"]["outcome"] == "matched_engine"
-        option_id = answer["follow_up"]["options"][0]["option_id"]
+        known = {
+            "development",
+            "capture",
+            "check",
+            "promotion",
+            "castling",
+            "material_change",
+            "opponent_check",
+            "calculate_forcing_moves",
+        }
+        option_id = next(
+            option["option_id"]
+            for option in answer["follow_up"]["options"]
+            if option["option_id"] in known
+        )
         completed = client.post(
             f"/api/v1/sessions/{session['session_id']}/tutor/"
             f"{interaction['interaction_id']}/commands",
@@ -511,6 +556,69 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
         assert restored.json()["status"] == "complete"
 
 
+def test_tutor_hides_preferred_move_until_retry(tmp_path: Path) -> None:
+    headers = {"X-GemmaFischer-Token": TOKEN}
+    with TestClient(
+        create_app(
+            capability_token=TOKEN,
+            node_budget=5_000,
+            history_path=tmp_path / "history.sqlite3",
+        )
+    ) as client:
+        session = client.post(
+            "/api/v1/sessions",
+            headers=headers,
+            json={"mode": "player", "player_color": "white", "fen": START_FEN},
+        ).json()
+        analysis = client.post(
+            "/api/v1/analyses",
+            headers=headers,
+            json={"mode": "position", "fen": START_FEN, "rating_bucket": "1400-1599"},
+        ).json()
+        deadline = time.monotonic() + 20
+        while True:
+            completed = client.get(
+                f"/api/v1/analyses/{analysis['analysis_id']}", headers=headers
+            ).json()
+            if completed["state"] in {"complete", "engine_only"}:
+                break
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+        created = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor",
+            headers=headers,
+            json={"source_analysis_id": analysis["analysis_id"]},
+        ).json()
+        ranked = {
+            item["move_uci"]
+            for item in completed["evidence"]["candidate_set"]["candidates"]
+        }
+        wrong = next(move for move in ("a2a3", "h2h3", "a2a4", "b1a3") if move not in ranked)
+        missed = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor/"
+            f"{created['interaction_id']}/commands",
+            headers=headers,
+            json={"expected_revision": 0, "action": "answer", "move_uci": wrong},
+        ).json()
+        assert missed["status"] == "awaiting_answer"
+        assert missed["hidden_miss"] is True
+        assert missed["feedback"] is None
+        assert "preferred_move" not in missed
+        preferred = completed["evidence"]["candidate_set"]["candidates"][0]["move_uci"]
+        revealed = client.post(
+            f"/api/v1/sessions/{session['session_id']}/tutor/"
+            f"{created['interaction_id']}/commands",
+            headers=headers,
+            json={
+                "expected_revision": missed["revision"],
+                "action": "answer",
+                "move_uci": preferred,
+            },
+        ).json()
+        assert revealed["status"] == "awaiting_follow_up"
+        assert revealed["feedback"]["preferred_move_uci"] == preferred
+
+
 @pytest.mark.hardware
 def test_tutor_accepts_completed_analysis_of_current_session_position(tmp_path: Path) -> None:
     headers = {"X-GemmaFischer-Token": TOKEN}
@@ -529,7 +637,9 @@ def test_tutor_accepts_completed_analysis_of_current_session_position(tmp_path: 
         ).json()
         deadline = time.monotonic() + 20
         while True:
-            completed = client.get(f"/api/v1/analyses/{analysis['analysis_id']}").json()
+            completed = client.get(
+                f"/api/v1/analyses/{analysis['analysis_id']}", headers=headers
+            ).json()
             if completed["state"] == "complete":
                 break
             assert time.monotonic() < deadline

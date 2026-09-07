@@ -40,8 +40,9 @@ HTTP routes are:
   and delayed-review phases;
 - `GET /api/v1/reviews/due` and `GET` or `DELETE /api/v1/progress` for the local
   mastery schedule, and `DELETE /api/v1/studies/{job_id}` for cascading deletion;
-- `POST /api/v1/analyses` and `GET /api/v1/analyses` for analysis creation and local history;
-- `GET` and `DELETE /api/v1/analyses/{analysis_id}` for polling and cancellation;
+- `POST /api/v1/analyses` and token-gated `GET /api/v1/analyses` for analysis creation
+  and local history;
+- token-gated `GET` and `DELETE /api/v1/analyses/{analysis_id}` for polling and cancellation;
 - `POST` and `GET /api/v1/sessions` to create and list persistent games;
 - `GET` and `DELETE /api/v1/sessions/{session_id}` to resume or delete one;
 - `GET /api/v1/sessions/{session_id}/legal-moves` for authoritative selection;
@@ -57,9 +58,12 @@ HTTP routes are:
   resumes work paused by a transient storage failure.
 
 Tutor responses expose the frozen question, cited hint, submitted answer,
-comparison-backed feedback, and closed follow-up options. They never expose the
+comparison-backed feedback, and closed follow-up options. A first incorrect
+answer stays in `awaiting_answer` with `hidden_miss` and no preferred move.
+Retry reveals feedback. Follow-up options are shuffled. They never expose the
 hidden best move or correct follow-up key before submission. Tutor state copies
-its immutable source evidence and cannot alter the live session.
+its immutable source evidence and cannot alter the live session. Live-game
+controls are disabled while practice is active.
 
 The health contract reports capability/status only, including storage and worker
 state, and never returns resolved filesystem paths. Durable create routes accept
@@ -74,5 +78,7 @@ The old stateless `POST /api/v1/board/*` routes remain deprecated compatibility
 routes. New clients use study resources or server-owned sessions.
 
 The generated contract is committed as [openapi.json](openapi.json); CI fails on
-drift. Mutations plus study, review, and progress reads require the per-launch
-capability token.
+drift. Mutations plus study, review, progress, and analysis-history reads
+require the per-launch capability token. Candidate evidence may include display
+`pv_san`; comparison evidence may include display SAN for the engine and
+considered moves. Those fields are not part of evidence IDs.

@@ -297,6 +297,14 @@
             "title": "Nodes",
             "type": "integer"
           },
+          "pv_san": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pv San",
+            "type": "array"
+          },
           "pv_uci": {
             "items": {
               "type": "string"
@@ -1219,7 +1227,8 @@
               "notice_castling",
               "notice_material_change",
               "notice_opponent_check",
-              "notice_development"
+              "notice_development",
+              "notice_calculation"
             ],
             "title": "Template Id",
             "type": "string"
@@ -1320,6 +1329,17 @@
             ],
             "title": "Considered Mate In"
           },
+          "considered_move_san": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Considered Move San"
+          },
           "considered_move_uci": {
             "title": "Considered Move Uci",
             "type": "string"
@@ -1345,6 +1365,17 @@
               }
             ],
             "title": "Engine Mate In"
+          },
+          "engine_move_san": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Move San"
           },
           "engine_move_uci": {
             "title": "Engine Move Uci",
@@ -2526,6 +2557,11 @@
                 "type": "null"
               }
             ]
+          },
+          "hidden_miss": {
+            "default": false,
+            "title": "Hidden Miss",
+            "type": "boolean"
           },
           "hint": {
             "anyOf": [

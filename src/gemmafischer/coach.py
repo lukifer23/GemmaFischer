@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import chess
+
 from .domain import (
     CoachingClaim,
     CoachingResult,
@@ -10,6 +12,7 @@ from .domain import (
     LessonStep,
     LineClaim,
     MoveClaim,
+    MoveComparisonEvidence,
     RatingBucket,
     ScoreClaim,
 )
@@ -49,6 +52,14 @@ def _lesson_plan(evidence: EngineEvidence) -> LessonPlan:
                 text=text,
             )
         )
+    if not steps:
+        steps.append(
+            LessonStep(
+                concept_id=best.evidence_id,
+                template_id="notice_calculation",
+                text=f"Calculate why {best.move_san} is stronger than the alternatives.",
+            )
+        )
     return LessonPlan(title=f"Why {best.move_san}?", steps=tuple(steps[:4]))
 
 
@@ -73,7 +84,56 @@ def _score_text(evidence: EngineEvidence, candidate_id: str) -> str:
     if candidate.score_cp == 0:
         return "The engine evaluates the position as equal."
     favored = side if candidate.score_cp > 0 else ("Black" if side == "White" else "White")
+    if abs(candidate.score_cp) < 50:
+        return "The evaluation is close; the move quality is the lesson."
     return f"{favored} is better by {abs(candidate.score_cp) / 100:.2f} pawns."
+
+
+def _san(fen: str, move_uci: str) -> str:
+    board = chess.Board(fen)
+    try:
+        move = chess.Move.from_uci(move_uci)
+    except ValueError:
+        return move_uci
+    if move not in board.legal_moves:
+        return move_uci
+    return board.san(move)
+
+
+def _comparison_sans(
+    evidence: EngineEvidence, comparison: MoveComparisonEvidence
+) -> tuple[str, str]:
+    engine = comparison.engine_move_san or _san(evidence.fen, comparison.engine_move_uci)
+    considered = comparison.considered_move_san or _san(
+        evidence.fen, comparison.considered_move_uci
+    )
+    return engine, considered
+
+
+def _diagnosis(evidence: EngineEvidence, considered_move_uci: str | None) -> str | None:
+    comparison = evidence.move_comparison
+    if (
+        comparison is None
+        or not considered_move_uci
+        or comparison.considered_move_uci != considered_move_uci
+        or comparison.considered_move_uci == comparison.engine_move_uci
+    ):
+        return None
+    engine_san, considered_san = _comparison_sans(evidence, comparison)
+    if comparison.engine_mate_in is not None and comparison.engine_mate_in > 0:
+        return (
+            f"{considered_san} misses a forced mate. "
+            f"{engine_san} mates in {comparison.engine_mate_in}."
+        )
+    if comparison.engine_score_cp is not None and comparison.considered_score_cp is not None:
+        loss = comparison.engine_score_cp - comparison.considered_score_cp
+        if loss >= 200:
+            return f"{considered_san} loses material. Play {engine_san}."
+        if loss >= 50:
+            return f"{considered_san} is weaker than {engine_san}."
+    if comparison.outcome == "engine_better":
+        return f"Prefer {engine_san} over {considered_san}."
+    return None
 
 
 def deterministic_coach(
@@ -106,12 +166,12 @@ def deterministic_coach(
             )
         )
 
+    comparison = evidence.move_comparison
     if (
         considered_move_uci
-        and evidence.move_comparison
-        and evidence.move_comparison.considered_move_uci == considered_move_uci
+        and comparison is not None
+        and comparison.considered_move_uci == considered_move_uci
     ):
-        comparison = evidence.move_comparison
         claims.append(
             ComparisonClaim(
                 evidence_ids=(comparison.evidence_id,),
@@ -125,7 +185,12 @@ def deterministic_coach(
             )
         )
     )
-    summary = f"Start with {best.move_san}. {_score_text(evidence, best.evidence_id)}"
+    diagnosis = _diagnosis(evidence, considered_move_uci)
+    summary = (
+        f"Start with {best.move_san}. {diagnosis}"
+        if diagnosis
+        else f"Start with {best.move_san}. {_score_text(evidence, best.evidence_id)}"
+    )
     return CoachingResult(
         summary=summary,
         claims=tuple(claims[:5]),  # type: ignore[arg-type]
@@ -197,21 +262,23 @@ def render_claim(evidence: EngineEvidence, claim: object) -> str:
         return _score_text(evidence, claim.candidate_id)
     if isinstance(claim, LineClaim):
         item = candidates[claim.candidate_id]
-        return "Principal variation: " + " ".join(item.pv_uci[claim.start_ply : claim.end_ply])
+        line = item.pv_san[claim.start_ply : claim.end_ply] or item.pv_uci[
+            claim.start_ply : claim.end_ply
+        ]
+        return "Principal variation: " + " ".join(line)
     if isinstance(claim, ComparisonClaim):
         comparison = evidence.move_comparison
         if comparison is None or comparison.evidence_id != claim.comparison_id:
             raise ValueError("Comparison claim does not match the evidence bundle")
+        engine_san, considered_san = _comparison_sans(evidence, comparison)
+        if comparison.considered_move_uci == comparison.engine_move_uci:
+            return f"{engine_san} matches the engine's preferred move."
         if comparison.outcome == "equal":
             return (
-                f"{comparison.considered_move_uci} is effectively equal to "
-                f"{comparison.engine_move_uci} within {comparison.tolerance_cp} centipawns."
+                f"{considered_san} is effectively equal to {engine_san} "
+                f"within {comparison.tolerance_cp} centipawns."
             )
-        favored = (
-            comparison.engine_move_uci
-            if comparison.outcome == "engine_better"
-            else comparison.considered_move_uci
-        )
+        favored = engine_san if comparison.outcome == "engine_better" else considered_san
         return f"The matched-budget comparison favors {favored}."
     if isinstance(claim, GuidanceClaim):
         return {

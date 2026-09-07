@@ -37,6 +37,7 @@ def evidence(considered_move: str = "d2d4") -> EngineEvidence:
             wdl_permille=WDL(win=320, draw=600, loss=80),
             nodes=250_000,
             pv_uci=("f1b5", "a7a6", "b5a4", "g8f6"),
+            pv_san=("Bb5", "a6", "Ba4", "Nf6"),
         ),
         CandidateEvidence(
             evidence_id="considered",
@@ -46,6 +47,7 @@ def evidence(considered_move: str = "d2d4") -> EngineEvidence:
             score_cp=10,
             nodes=250_000,
             pv_uci=("d2d4", "e5d4"),
+            pv_san=("d4", "exd4"),
         ),
     )
     return EngineEvidence(
@@ -59,6 +61,8 @@ def evidence(considered_move: str = "d2d4") -> EngineEvidence:
             position_id="position",
             engine_move_uci="f1b5",
             considered_move_uci=considered_move,
+            engine_move_san="Bb5",
+            considered_move_san="Bb5" if considered_move == "f1b5" else "d4",
             engine_score_cp=42,
             considered_score_cp=42 if considered_move == "f1b5" else 10,
             outcome="equal" if considered_move == "f1b5" else "engine_better",
@@ -83,14 +87,16 @@ def test_deterministic_position_coach_is_evidence_grounded() -> None:
 def test_compare_workflow_mentions_considered_move() -> None:
     result = deterministic_coach(evidence(), RatingBucket.CLUB, "d2d4")
     rendered = [render_claim(evidence(), claim) for claim in result.claims]
-    assert any("matched-budget comparison favors f1b5" in line.lower() for line in rendered)
+    assert any("matched-budget comparison favors bb5" in line.lower() for line in rendered)
+    assert "Prefer Bb5 over d4" in result.summary
 
 
-def test_compare_workflow_confirms_best_move_match() -> None:
+def test_compare_workflow_omits_tautological_best_move_match() -> None:
     matched = evidence("f1b5")
     result = deterministic_coach(matched, RatingBucket.CLUB, "f1b5")
     rendered = [render_claim(matched, claim) for claim in result.claims]
-    assert any("effectively equal" in line for line in rendered)
+    assert any("matches the engine's preferred move" in line for line in rendered)
+    assert not any("f1b5 is effectively equal to f1b5" in line for line in rendered)
 
 
 def test_model_claim_validator_drops_unknown_and_invalid_pv() -> None:
