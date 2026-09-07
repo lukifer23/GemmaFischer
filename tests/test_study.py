@@ -8,7 +8,13 @@ import pytest
 
 from gemmafischer.service import AnalysisService
 from gemmafischer.storage import AnalysisStore
-from gemmafischer.study import decision_positions, parse_import, primary_idea
+from gemmafischer.study import (
+    candidates_to_records,
+    decision_positions,
+    parse_import,
+    primary_idea,
+    records_to_candidates,
+)
 from gemmafischer.study_domain import (
     AttemptOutcome,
     LearningMomentPrivate,
@@ -19,6 +25,7 @@ from gemmafischer.study_domain import (
     PracticePhase,
     ReviewCard,
     StudyJobState,
+    StudyJobView,
 )
 
 FOOLS_MATE = """[Event "Club game"]
@@ -216,3 +223,29 @@ def test_primary_idea_prefers_teaching_labels_over_geometry() -> None:
     assert primary_idea(("capture", "development")) is None
     assert primary_idea(("development", "hanging_piece", "capture")) == "hanging_piece"
     assert primary_idea(("missed_mate", "fork")) == "missed_mate"
+
+
+def test_screening_records_round_trip_without_engine_evidence() -> None:
+    from gemmafischer.study import ScreeningCandidate
+
+    original = [
+        ScreeningCandidate(1, "fen-a", "e2e4", "e4", 80, False),
+        ScreeningCandidate(3, "fen-b", "g2g4", "g4", None, True),
+    ]
+    restored = records_to_candidates(candidates_to_records(original))
+    assert [item.source_ply for item in restored] == [1, 3]
+    assert restored[1].mate_loss is True
+    dumped = StudyJobView.model_validate(
+        {
+            "job_id": "job",
+            "revision": 2,
+            "state": "screening",
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
+            "progress": {"completed_units": 3, "total_units": 10},
+            "screening_next_index": 3,
+            "screening_records": [item.model_dump() for item in candidates_to_records(original)],
+        }
+    )
+    assert dumped.screening_next_index == 3
+    assert dumped.screening_records[0].played_move_san == "e4"

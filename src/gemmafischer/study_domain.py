@@ -98,6 +98,15 @@ class LearningMomentPrivate(StrictModel):
     transfer_move_san: str | None = None
 
 
+class ScreeningRecord(StrictModel):
+    source_ply: int = Field(ge=1)
+    fen: str
+    played_move_uci: str
+    played_move_san: str
+    severity_cp: int | None = Field(default=None, ge=0)
+    mate_loss: bool = False
+
+
 class StudyJobView(StrictModel):
     schema_version: Literal["1.0"] = "1.0"
     job_id: str
@@ -109,6 +118,8 @@ class StudyJobView(StrictModel):
     game: ImportedGame | None = None
     moments: tuple[LearningMomentView, ...] = Field(default=(), max_length=3)
     error: ErrorDetail | None = None
+    screening_next_index: int = Field(default=0, ge=0)
+    screening_records: tuple[ScreeningRecord, ...] = ()
 
 
 class StudyJobAccepted(StrictModel):

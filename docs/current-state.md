@@ -57,7 +57,9 @@ candidate until a new qualification receipt is recorded.
 ## Open acceptance gates
 
 - Physical desktop and VoiceOver acceptance on supported target hardware.
-- Study screening checkpointing across gameplay preempt and restart.
+- Study screening persists a ply cursor and shortlist records so preempt/resume
+  does not replay ply 1. Practice and tutor grading retry when gameplay preempts
+  and do not hold session/create locks across Stockfish.
 - PGN stage timings, cold starts, natural exhibition, reduced-motion/keyboard/CLS.
 - Blinded human comparison of actual learning usefulness on the deterministic lesson.
 - A fully qualified adapter, if Gemma earns a role. Deterministic behavior remains the

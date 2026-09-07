@@ -15,6 +15,7 @@ from .study_domain import (
     LearningMomentPrivate,
     LearningMomentView,
     PGNImportRequest,
+    ScreeningRecord,
     StudyJobState,
     StudyJobView,
     StudyProgress,
@@ -59,7 +60,7 @@ class ScreeningCandidate:
     played_move_san: str
     severity_cp: int | None
     mate_loss: bool
-    evidence: EngineEvidence
+    evidence: EngineEvidence | None = None
 
     @property
     def sort_key(self) -> tuple[int, int, int]:
@@ -159,6 +160,34 @@ def screening_candidate(
 
 def select_shortlist(candidates: list[ScreeningCandidate]) -> tuple[ScreeningCandidate, ...]:
     return tuple(sorted(candidates, key=lambda item: item.sort_key, reverse=True)[:MAX_SHORTLIST])
+
+
+def records_to_candidates(records: tuple[ScreeningRecord, ...]) -> list[ScreeningCandidate]:
+    return [
+        ScreeningCandidate(
+            item.source_ply,
+            item.fen,
+            item.played_move_uci,
+            item.played_move_san,
+            item.severity_cp,
+            item.mate_loss,
+        )
+        for item in records
+    ]
+
+
+def candidates_to_records(candidates: list[ScreeningCandidate]) -> tuple[ScreeningRecord, ...]:
+    return tuple(
+        ScreeningRecord(
+            source_ply=item.source_ply,
+            fen=item.fen,
+            played_move_uci=item.played_move_uci,
+            played_move_san=item.played_move_san,
+            severity_cp=item.severity_cp,
+            mate_loss=item.mate_loss,
+        )
+        for item in candidates
+    )
 
 
 def build_moment(

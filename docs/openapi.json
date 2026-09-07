@@ -1996,6 +1996,53 @@
         "title": "ScoreClaim",
         "type": "object"
       },
+      "ScreeningRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "fen": {
+            "title": "Fen",
+            "type": "string"
+          },
+          "mate_loss": {
+            "default": false,
+            "title": "Mate Loss",
+            "type": "boolean"
+          },
+          "played_move_san": {
+            "title": "Played Move San",
+            "type": "string"
+          },
+          "played_move_uci": {
+            "title": "Played Move Uci",
+            "type": "string"
+          },
+          "severity_cp": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Cp"
+          },
+          "source_ply": {
+            "minimum": 1.0,
+            "title": "Source Ply",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_ply",
+          "fen",
+          "played_move_uci",
+          "played_move_san"
+        ],
+        "title": "ScreeningRecord",
+        "type": "object"
+      },
       "Session": {
         "additionalProperties": false,
         "properties": {
@@ -2355,6 +2402,20 @@
             "default": "1.0",
             "title": "Schema Version",
             "type": "string"
+          },
+          "screening_next_index": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Screening Next Index",
+            "type": "integer"
+          },
+          "screening_records": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ScreeningRecord"
+            },
+            "title": "Screening Records",
+            "type": "array"
           },
           "state": {
             "$ref": "#/components/schemas/StudyJobState"

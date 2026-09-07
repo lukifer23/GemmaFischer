@@ -33,7 +33,12 @@ from .domain import (
     TutorInteractionList,
     TutorInteractionView,
 )
-from .engine import EngineUnavailable, legal_moves_for_square, resolve_stockfish
+from .engine import (
+    EngineOperationPreempted,
+    EngineUnavailable,
+    legal_moves_for_square,
+    resolve_stockfish,
+)
 from .service import AnalysisService, SessionConflict, TutorStateConflict
 from .storage import (
     IdempotencyConflict,
@@ -644,6 +649,14 @@ def create_app(
             )
         except StorageError:
             raise
+        except EngineOperationPreempted:
+            return _error(
+                "ENGINE_PREEMPTED",
+                "Gameplay interrupted grading. Retry the answer.",
+                "engine",
+                503,
+                retryable=True,
+            )
         except Exception:
             return _error(
                 "ENGINE_FAILURE",
@@ -831,6 +844,14 @@ def create_app(
             )
         except ValueError:
             return _error("ILLEGAL_MOVE", "The submitted move is not legal.", "study", 422)
+        except EngineOperationPreempted:
+            return _error(
+                "ENGINE_PREEMPTED",
+                "Gameplay interrupted grading. Retry the attempt.",
+                "engine",
+                503,
+                retryable=True,
+            )
         except EngineUnavailable:
             return _error(
                 "ENGINE_UNAVAILABLE", "Stockfish is unavailable.", "engine", 503, retryable=True

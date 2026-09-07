@@ -24,6 +24,7 @@ from .domain import (
     CoachingResult,
     CreateSessionRequest,
     CreateTutorRequest,
+    EngineEvidence,
     EngineTurnRequest,
     EngineTurnResult,
     ErrorDetail,
@@ -61,6 +62,7 @@ from .study import (
     SCREENING_NODE_BUDGET,
     StudyWork,
     build_moment,
+    candidates_to_records,
     decision_positions,
     evidence_ids,
     failed_study,
@@ -68,6 +70,7 @@ from .study import (
     new_study_work,
     parse_import,
     primary_idea,
+    records_to_candidates,
     screening_candidate,
     select_shortlist,
 )
@@ -295,21 +298,37 @@ class AnalysisService:
         idempotency_key: str | None = None,
     ) -> PracticeAttemptView:
         with self._creation_lock:
-            return self._submit_practice_attempt_locked(
+            prepared = self._prepare_practice_attempt(
+                job_id, moment_id, request, idempotency_key=idempotency_key
+            )
+            if isinstance(prepared, PracticeAttemptView):
+                return prepared
+            challenge_fen, preferred_move, preferred_san, private, previous = prepared
+        evidence = self._compare_move(challenge_fen, request.move_uci)
+        with self._creation_lock:
+            return self._commit_practice_attempt(
                 job_id,
                 moment_id,
                 request,
+                evidence,
+                preferred_move,
+                preferred_san,
+                private,
+                previous,
                 idempotency_key=idempotency_key,
             )
 
-    def _submit_practice_attempt_locked(
+    def _prepare_practice_attempt(
         self,
         job_id: str,
         moment_id: str,
         request: PracticeAttemptRequest,
         *,
         idempotency_key: str | None = None,
-    ) -> PracticeAttemptView:
+    ) -> (
+        PracticeAttemptView
+        | tuple[str, str, str, LearningMomentPrivate, tuple[PracticeAttemptView, ...]]
+    ):
         payload_hash = canonical_hash(
             {
                 "job_id": job_id,
@@ -334,7 +353,6 @@ class AnalysisService:
             raise KeyError(moment_id)
         previous = self._store.attempts_for_moment(moment_id) if self._store else ()
         self._validate_practice_phase(private, previous, request)
-        attempt_number = len(previous) + 1
         transfer = request.phase is PracticePhase.TRANSFER
         if transfer and (
             private.transfer_fen is None
@@ -349,11 +367,41 @@ class AnalysisService:
         )
         assert challenge_fen is not None and preferred_move is not None
         assert preferred_san is not None
-        evidence = self._engine().analyze(
-            challenge_fen,
-            request.move_uci,
-            node_budget=self.node_budget,
+        return challenge_fen, preferred_move, preferred_san, private, previous
+
+    def _commit_practice_attempt(
+        self,
+        job_id: str,
+        moment_id: str,
+        request: PracticeAttemptRequest,
+        evidence: EngineEvidence,
+        preferred_move: str,
+        preferred_san: str,
+        private: LearningMomentPrivate,
+        previous: tuple[PracticeAttemptView, ...],
+        *,
+        idempotency_key: str | None = None,
+    ) -> PracticeAttemptView:
+        payload_hash = canonical_hash(
+            {
+                "job_id": job_id,
+                "moment_id": moment_id,
+                "request": request.model_dump(mode="json"),
+            }
         )
+        receipt_scope = f"practice-attempt:{moment_id}"
+        if idempotency_key:
+            replay = self._get_receipt(receipt_scope, idempotency_key, payload_hash)
+            if replay is not None:
+                return PracticeAttemptView.model_validate_json(replay)
+        job = self.get_study(job_id)
+        if job is None:
+            raise KeyError(job_id)
+        if job.revision != request.expected_revision:
+            raise SessionConflict("The study job revision changed.")
+        self._validate_practice_phase(private, previous, request)
+        attempt_number = len(previous) + 1
+        transfer = request.phase is PracticePhase.TRANSFER
         comparison = evidence.move_comparison
         if comparison is None:
             raise ValueError("The submitted move could not be compared")
@@ -592,8 +640,11 @@ class AnalysisService:
                 self._update_study(work, StudyJobState.SCREENING)
 
             decisions = decision_positions(game)
-            candidates = []
-            for completed, (ply, fen, move_uci, move_san) in enumerate(decisions, 1):
+            candidates = records_to_candidates(work.view.screening_records)
+            start = min(work.view.screening_next_index, len(decisions))
+            for index, (ply, fen, move_uci, move_san) in enumerate(decisions):
+                if index < start:
+                    continue
                 if work.cancelled:
                     return
                 operation_id = uuid.uuid4().hex
@@ -608,6 +659,7 @@ class AnalysisService:
                 candidate = screening_candidate(ply, fen, move_uci, move_san, evidence)
                 if candidate is not None:
                     candidates.append(candidate)
+                completed = index + 1
                 if completed % 4 == 0 or completed == len(decisions):
                     self._update_study(
                         work,
@@ -617,7 +669,20 @@ class AnalysisService:
                             total_units=len(decisions),
                             current_ply=ply,
                         ),
+                        screening_next_index=completed,
+                        screening_records=candidates_to_records(candidates),
                     )
+            if work.view.screening_next_index != len(decisions):
+                self._update_study(
+                    work,
+                    StudyJobState.SCREENING,
+                    progress=StudyProgress(
+                        completed_units=len(decisions),
+                        total_units=len(decisions),
+                    ),
+                    screening_next_index=len(decisions),
+                    screening_records=candidates_to_records(candidates),
+                )
 
             shortlist = select_shortlist(candidates)
             total = len(decisions) + len(shortlist)
@@ -1062,29 +1127,24 @@ class AnalysisService:
         command: TutorCommandRequest,
     ) -> TutorInteractionView:
         lock = self._session_lock(session_id)
+        if command.action == "answer":
+            assert command.move_uci is not None
+            with lock:
+                record = self._load_tutor_for_command(session_id, interaction_id, command)
+                fen = record.view.question.fen
+                revision = record.view.revision
+            evidence = self._compare_move(fen, command.move_uci)
+            with lock:
+                record = self._load_tutor_for_command(session_id, interaction_id, command)
+                if record.view.revision != revision:
+                    raise SessionConflict("The tutor changed before grading could be saved.")
+                updated = grade_answer(record, command.move_uci, evidence)
+                self._save_tutor(updated, expected_revision=record.view.revision)
+                return updated.view
         with lock:
-            record = self._tutors.get(interaction_id)
-            if record is None and self._store:
-                try:
-                    record = self._store.get_tutor(interaction_id)
-                except StorageError as exc:
-                    self._note_storage_error(exc)
-                    raise
-            if record is None or record.view.session_id != session_id:
-                raise KeyError(interaction_id)
-            if command.expected_revision != record.view.revision:
-                raise SessionConflict(
-                    f"Expected tutor revision {command.expected_revision}; "
-                    f"current revision is {record.view.revision}."
-                )
-            if record.view.status in {TutorStatus.COMPLETE, TutorStatus.DISMISSED}:
-                raise TutorStateConflict("This tutor interaction is already terminal")
+            record = self._load_tutor_for_command(session_id, interaction_id, command)
             if command.action == "hint":
                 updated = reveal_hint(record)
-            elif command.action == "answer":
-                assert command.move_uci is not None
-                evidence = self._engine().analyze(record.view.question.fen, command.move_uci)
-                updated = grade_answer(record, command.move_uci, evidence)
             elif command.action == "follow_up":
                 assert command.option_id is not None
                 updated = answer_follow_up(record, command.option_id)
@@ -1092,6 +1152,30 @@ class AnalysisService:
                 updated = dismiss(record)
             self._save_tutor(updated, expected_revision=record.view.revision)
             return updated.view
+
+    def _load_tutor_for_command(
+        self,
+        session_id: str,
+        interaction_id: str,
+        command: TutorCommandRequest,
+    ) -> TutorInteractionRecord:
+        record = self._tutors.get(interaction_id)
+        if record is None and self._store:
+            try:
+                record = self._store.get_tutor(interaction_id)
+            except StorageError as exc:
+                self._note_storage_error(exc)
+                raise
+        if record is None or record.view.session_id != session_id:
+            raise KeyError(interaction_id)
+        if command.expected_revision != record.view.revision:
+            raise SessionConflict(
+                f"Expected tutor revision {command.expected_revision}; "
+                f"current revision is {record.view.revision}."
+            )
+        if record.view.status in {TutorStatus.COMPLETE, TutorStatus.DISMISSED}:
+            raise TutorStateConflict("This tutor interaction is already terminal")
+        return record
 
     def _save_tutor(
         self,
@@ -1391,6 +1475,21 @@ class AnalysisService:
             if self._provider is None:
                 self._provider = StockfishProvider(self.engine_path, self.node_budget)
             return self._provider
+
+    def _compare_move(self, fen: str, move_uci: str) -> EngineEvidence:
+        last_error: EngineOperationPreempted | None = None
+        for _ in range(8):
+            operation_id = uuid.uuid4().hex
+            try:
+                return self._engine().analyze(
+                    fen,
+                    move_uci,
+                    operation_id=operation_id,
+                    node_budget=self.node_budget,
+                )
+            except EngineOperationPreempted as exc:
+                last_error = exc
+        raise EngineOperationPreempted(str(last_error) if last_error else operation_id)
 
     def _update(self, job: _Job, state: AnalysisState, **values: object) -> None:
         with self._condition:
