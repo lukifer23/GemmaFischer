@@ -30,7 +30,10 @@ candidate until a new qualification receipt is recorded.
   active. Restoring an unanswered tutor turn does not paint the source analysis answer key.
 - Deterministic coaching renders principal variations and comparisons in SAN, diagnoses
   a considered miss from matched-budget evidence, and keeps raw concept dumps behind
-  cited-evidence disclosure.
+  cited-evidence disclosure. Learning moments prefer teaching ideas (missed mate, hanging
+  piece, fork, back rank, missed capture, failed check evasion) over generic geometry.
+  Transfer is offered only for the same teaching idea. Learn has a cited hint that does
+  not reveal the move.
 - Analysis history reads, study/review/progress reads, and every mutation require the
   per-launch capability token. Follow-up options are shuffled and are never a fixed
   first-option key.

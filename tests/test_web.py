@@ -518,6 +518,12 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
             "material_change",
             "opponent_check",
             "calculate_forcing_moves",
+            "missed_mate",
+            "hanging_piece",
+            "missed_capture",
+            "back_rank",
+            "fork",
+            "failed_check_evasion",
         }
         option_id = next(
             option["option_id"]

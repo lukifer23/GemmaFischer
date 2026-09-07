@@ -26,6 +26,12 @@ CONCEPT_LABELS = {
     "material_change": "Change the material balance",
     "opponent_check": "Prevent the opponent's check",
     "development": "Develop a piece",
+    "missed_mate": "Force mate",
+    "hanging_piece": "Exploit an undefended piece",
+    "missed_capture": "Take the hanging material",
+    "back_rank": "Use the back rank",
+    "fork": "Attack two targets at once",
+    "failed_check_evasion": "Get out of check",
 }
 
 

@@ -39,6 +39,24 @@ def _lesson_plan(evidence: EngineEvidence) -> LessonPlan:
             "notice_development",
             f"{best.move_san} develops a minor piece from its starting square.",
         ),
+        "missed_mate": ("notice_missed_mate", f"{best.move_san} forces mate."),
+        "hanging_piece": (
+            "notice_hanging_piece",
+            "A piece was left undefended. Recapture or exploit the hang.",
+        ),
+        "missed_capture": (
+            "notice_missed_capture",
+            f"{best.move_san} wins material. Calculate the capture first.",
+        ),
+        "back_rank": (
+            "notice_back_rank",
+            f"{best.move_san} uses the back rank.",
+        ),
+        "fork": ("notice_fork", f"{best.move_san} attacks more than one target."),
+        "failed_check_evasion": (
+            "notice_failed_check_evasion",
+            "The side to move is in check; every legal evasion must be calculated.",
+        ),
     }
     steps: list[LessonStep] = []
     for concept in evidence.concepts:

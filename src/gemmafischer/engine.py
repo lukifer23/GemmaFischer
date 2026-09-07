@@ -287,6 +287,99 @@ def extract_concepts(
     return tuple(concepts)
 
 
+def _hanging_squares(board: chess.Board, color: chess.Color) -> set[int]:
+    hanging: set[int] = set()
+    for square, piece in board.piece_map().items():
+        if piece.color != color:
+            continue
+        if board.is_attacked_by(not color, square) and not board.is_attacked_by(color, square):
+            hanging.add(square)
+    return hanging
+
+
+def extract_idea_concepts(
+    board: chess.Board,
+    position_id: str,
+    best: CandidateEvidence,
+    considered: chess.Move,
+    comparison: MoveComparisonEvidence,
+) -> tuple[ConceptEvidence, ...]:
+    engine_move = chess.Move.from_uci(best.move_uci)
+    ideas: list[tuple[str, bool | int]] = []
+    missed_mate = (
+        comparison.engine_mate_in is not None
+        and comparison.engine_mate_in > 0
+        and (comparison.considered_mate_in is None or comparison.considered_mate_in <= 0)
+    )
+    ideas.append(("missed_mate", missed_mate))
+    ideas.append(
+        ("failed_check_evasion", board.is_check() and comparison.outcome == "engine_better")
+    )
+    ideas.append(
+        (
+            "missed_capture",
+            board.is_capture(engine_move) and not board.is_capture(considered),
+        )
+    )
+    mover = board.turn
+    after_considered = board.copy(stack=False)
+    after_considered.push(considered)
+    new_hangs = _hanging_squares(after_considered, mover) - _hanging_squares(board, mover)
+    ideas.append(("hanging_piece", bool(new_hangs)))
+
+    after_engine = board.copy(stack=False)
+    if engine_move in board.legal_moves:
+        after_engine.push(engine_move)
+        attacked = [
+            square
+            for square in after_engine.attacks(engine_move.to_square)
+            if (piece := after_engine.piece_at(square)) is not None and piece.color != mover
+        ]
+        non_king = [
+            square
+            for square in attacked
+            if (piece := after_engine.piece_at(square)) is not None
+            and piece.piece_type != chess.KING
+        ]
+        ideas.append(
+            ("fork", len(non_king) >= 2 or (after_engine.is_check() and len(non_king) >= 1))
+        )
+        king_square = after_engine.king(not mover)
+        back_rank = False
+        if after_engine.is_check() and king_square is not None:
+            rank = chess.square_rank(king_square)
+            if rank in {0, 7}:
+                checkers = after_engine.attackers(mover, king_square)
+                back_rank = after_engine.is_checkmate() or any(
+                    (piece := after_engine.piece_at(square)) is not None
+                    and piece.piece_type in {chess.ROOK, chess.QUEEN}
+                    and chess.square_rank(square) == rank
+                    for square in checkers
+                )
+        ideas.append(("back_rank", back_rank))
+    concepts: list[ConceptEvidence] = []
+    for concept, value in ideas:
+        if value is False or value == 0:
+            continue
+        payload = {
+            "schema_version": "2.0",
+            "position_id": position_id,
+            "candidate_id": best.evidence_id,
+            "concept": concept,
+            "value": value,
+        }
+        concepts.append(
+            ConceptEvidence(
+                evidence_id=canonical_hash(payload),
+                position_id=position_id,
+                candidate_id=best.evidence_id,
+                concept=concept,  # type: ignore[arg-type]
+                value=value,
+            )
+        )
+    return tuple(concepts)
+
+
 class StockfishProvider:
     def __init__(self, path: str | None = None, node_budget: int = NODE_BUDGET) -> None:
         self.path = resolve_stockfish(path)
@@ -634,7 +727,14 @@ class StockfishProvider:
             ),
             move_comparison=comparison,
             board_facts=extract_board_facts(board, position_id),
-            concepts=extract_concepts(board, position_id, candidates),
+            concepts=extract_concepts(board, position_id, candidates)
+            + (
+                extract_idea_concepts(
+                    board, position_id, candidates[0], considered, comparison
+                )
+                if considered is not None and comparison is not None and candidates
+                else ()
+            ),
         )
 
     def play_move(

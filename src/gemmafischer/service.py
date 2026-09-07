@@ -64,14 +64,17 @@ from .study import (
     decision_positions,
     evidence_ids,
     failed_study,
+    moment_hint_text,
     new_study_work,
     parse_import,
+    primary_idea,
     screening_candidate,
     select_shortlist,
 )
 from .study_domain import (
     AttemptOutcome,
     LearningMomentPrivate,
+    MomentHint,
     PGNImportRequest,
     PracticeAttemptRequest,
     PracticeAttemptView,
@@ -495,6 +498,22 @@ class AnalysisService:
             self._note_storage_error(exc)
             raise
 
+    def moment_hint(self, job_id: str, moment_id: str) -> MomentHint:
+        job = self.get_study(job_id)
+        if job is None:
+            raise KeyError(job_id)
+        private = self._private_moment(moment_id)
+        if private is None or not any(
+            moment.moment_id == private.view.moment_id for moment in job.moments
+        ):
+            raise KeyError(moment_id)
+        text, cited = moment_hint_text(private)
+        return MomentHint(
+            text=text,
+            evidence_ids=cited,
+            concept_key=primary_idea(private.view.concept_keys),
+        )
+
     def _private_moment(self, moment_id: str) -> LearningMomentPrivate | None:
         for work in self._study_jobs.values():
             for moment in work.private_moments:
@@ -636,11 +655,13 @@ class AnalysisService:
             work.operation_id = None
             moments = analyzed[:MAX_MOMENTS]
             for index, moment in enumerate(moments):
+                idea = primary_idea(moment.view.concept_keys)
                 alternatives = [
                     item
                     for item in analyzed
                     if item.view.moment_id != moment.view.moment_id
-                    and set(item.view.concept_keys) & set(moment.view.concept_keys)
+                    and idea is not None
+                    and primary_idea(item.view.concept_keys) == idea
                 ]
                 if not alternatives:
                     continue

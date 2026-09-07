@@ -127,6 +127,13 @@ class StudyJobCommand(StrictModel):
     action: Literal["resume"]
 
 
+class MomentHint(StrictModel):
+    text: str
+    evidence_ids: tuple[str, ...]
+    concept_key: str | None = None
+    hint_used: bool = False
+
+
 class PracticeAttemptRequest(StrictModel):
     expected_revision: int = Field(ge=0)
     phase: PracticePhase

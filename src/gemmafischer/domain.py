@@ -237,6 +237,12 @@ class ConceptEvidence(StrictModel):
         "material_change",
         "opponent_check",
         "development",
+        "missed_mate",
+        "hanging_piece",
+        "missed_capture",
+        "back_rank",
+        "fork",
+        "failed_check_evasion",
     ]
     value: bool | int
 
@@ -348,6 +354,12 @@ class LessonStep(StrictModel):
         "notice_opponent_check",
         "notice_development",
         "notice_calculation",
+        "notice_missed_mate",
+        "notice_hanging_piece",
+        "notice_missed_capture",
+        "notice_back_rank",
+        "notice_fork",
+        "notice_failed_check_evasion",
     ]
     text: str
 

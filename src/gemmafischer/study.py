@@ -24,6 +24,22 @@ SCREENING_NODE_BUDGET = 25_000
 MINIMUM_LOSS_CP = 50
 MAX_SHORTLIST = 6
 MAX_MOMENTS = 3
+TEACHING_IDEAS = (
+    "missed_mate",
+    "hanging_piece",
+    "failed_check_evasion",
+    "back_rank",
+    "fork",
+    "missed_capture",
+)
+HINT_TEXT = {
+    "missed_mate": "Look for a forced mate before anything else.",
+    "hanging_piece": "A piece is left undefended. Find the capture or the way to stop the hang.",
+    "failed_check_evasion": "The side to move is in check. Calculate every legal way out.",
+    "back_rank": "Check the back rank before choosing a quiet move.",
+    "fork": "Look for a move that attacks two things at once.",
+    "missed_capture": "There is a winning capture. Calculate it first.",
+}
 
 
 @dataclass
@@ -152,11 +168,13 @@ def build_moment(
     if comparison is None or not evidence.candidates:
         raise ValueError("Deep evidence lacks a move comparison")
     best = evidence.candidates[0]
-    concepts = tuple(
-        dict.fromkeys(
-            item.concept
-            for item in evidence.concepts
-            if item.candidate_id == best.evidence_id
+    concepts = _ordered_concept_keys(
+        tuple(
+            dict.fromkeys(
+                item.concept
+                for item in evidence.concepts
+                if item.candidate_id == best.evidence_id
+            )
         )
     )
     reasons = ["mate_loss" if candidate.mate_loss else "avoidable_loss"]
@@ -233,6 +251,35 @@ def _clean_header(value: str | None) -> str | None:
         return None
     cleaned = " ".join(value.replace("<", "").replace(">", "").split())[:120]
     return cleaned or None
+
+
+def _ordered_concept_keys(concepts: tuple[str, ...]) -> tuple[str, ...]:
+    priority = {idea: index for index, idea in enumerate(TEACHING_IDEAS)}
+    return tuple(sorted(concepts, key=lambda item: priority.get(item, len(priority))))
+
+
+def primary_idea(concept_keys: tuple[str, ...]) -> str | None:
+    for idea in TEACHING_IDEAS:
+        if idea in concept_keys:
+            return idea
+    return None
+
+
+def moment_hint_text(private: LearningMomentPrivate) -> tuple[str, tuple[str, ...]]:
+    idea = primary_idea(private.view.concept_keys)
+    evidence = EngineEvidence.model_validate_json(private.evidence_json)
+    cited = tuple(
+        item.evidence_id
+        for item in evidence.concepts
+        if idea is not None and item.concept == idea
+    )
+    if not cited and evidence.candidates:
+        cited = (evidence.candidates[0].evidence_id,)
+    text = HINT_TEXT.get(
+        idea or "",
+        "Compare forcing checks, captures, and threats before choosing.",
+    )
+    return text, cited
 
 
 def evidence_ids(private: LearningMomentPrivate) -> tuple[str, ...]:

@@ -168,3 +168,73 @@ def test_black_and_capture_underpromotions_are_preserved() -> None:
     assert chess.Board(capture.fen).piece_at(chess.A8) == chess.Piece(
         chess.ROOK, chess.WHITE
     )
+
+
+def _best_candidate(move_uci: str, move_san: str) -> Any:
+    from gemmafischer.domain import CandidateEvidence
+
+    return CandidateEvidence(
+        evidence_id="best",
+        rank=1,
+        move_uci=move_uci,
+        move_san=move_san,
+        score_cp=300,
+        nodes=100,
+        pv_uci=(move_uci,),
+    )
+
+
+def _comparison(
+    engine_uci: str,
+    considered_uci: str,
+    *,
+    engine_mate: int | None = None,
+    considered_mate: int | None = None,
+    engine_cp: int | None = 400,
+    considered_cp: int | None = 0,
+) -> Any:
+    from gemmafischer.domain import MoveComparisonEvidence
+
+    return MoveComparisonEvidence(
+        evidence_id="cmp",
+        position_id="pos",
+        engine_move_uci=engine_uci,
+        considered_move_uci=considered_uci,
+        engine_mate_in=engine_mate,
+        considered_mate_in=considered_mate,
+        engine_score_cp=engine_cp if engine_mate is None else None,
+        considered_score_cp=considered_cp if considered_mate is None else None,
+        outcome="engine_better",
+        node_budget_each=1000,
+    )
+
+
+def test_idea_concepts_detect_missed_mate_and_hanging_piece() -> None:
+    from gemmafischer.engine import extract_idea_concepts
+
+    mate_board = chess.Board("7k/P7/6K1/8/8/8/8/8 w - - 0 1")
+    mate_ideas = {
+        item.concept
+        for item in extract_idea_concepts(
+            mate_board,
+            "pos",
+            _best_candidate("a7a8q", "a8=Q#"),
+            chess.Move.from_uci("g6g5"),
+            _comparison("a7a8q", "g6g5", engine_mate=1, engine_cp=None, considered_cp=200),
+        )
+    }
+    assert "missed_mate" in mate_ideas
+
+    hang_board = chess.Board("4k3/8/8/8/8/r7/B7/R3K3 w Q - 0 1")
+    hang_ideas = {
+        item.concept
+        for item in extract_idea_concepts(
+            hang_board,
+            "pos",
+            _best_candidate("a2a3", "Bxa3"),
+            chess.Move.from_uci("a1b1"),
+            _comparison("a2a3", "a1b1"),
+        )
+    }
+    assert "hanging_piece" in hang_ideas
+    assert "missed_capture" in hang_ideas

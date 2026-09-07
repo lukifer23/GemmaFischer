@@ -44,6 +44,7 @@ from .storage import (
 )
 from .study_domain import (
     LearningMomentView,
+    MomentHint,
     PGNImportRequest,
     PracticeAttemptRequest,
     PracticeAttemptView,
@@ -785,6 +786,20 @@ def create_app(
             return legal_moves_for_square(moment.fen, from_square)
         except ValueError:
             return _error("INVALID_POSITION", "The study position is invalid.", "study", 422)
+
+    @app.get(
+        "/api/v1/studies/{job_id}/moments/{moment_id}/hint",
+        response_model=MomentHint,
+        responses={404: {"model": ErrorEnvelope}},
+    )
+    def learning_moment_hint(
+        job_id: str, moment_id: str, request: Request
+    ) -> MomentHint | JSONResponse:
+        service: AnalysisService = request.app.state.service
+        try:
+            return service.moment_hint(job_id, moment_id)
+        except KeyError:
+            return _error("MOMENT_NOT_FOUND", "No learning moment has this ID.", "lookup", 404)
 
     @app.post(
         "/api/v1/studies/{job_id}/moments/{moment_id}/attempts",

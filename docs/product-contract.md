@@ -16,8 +16,11 @@ engine exhibition, and single-position tutor workflows from 0.2.
 8. Grade with a fresh, equal-budget Stockfish comparison. A first wrong answer does not reveal
    the answer on Learn or on the Position Lab tutor. Retry reveals it. An engine-equivalent
    move is accepted as equivalent. Promotion is chosen explicitly; Learn never auto-queens.
-9. Offer a near-transfer position only when another deeply analyzed moment shares a detected
-   concept. Do not substitute a synthetic or unrelated position.
+9. Offer a near-transfer position only when another deeply analyzed moment shares the same
+   teaching idea (missed mate, hanging piece, fork, back rank, missed capture, or failed
+   check evasion). Do not transfer on generic `capture`/`development` overlap, and do not
+   substitute a synthetic or unrelated position. Learn offers a cited hint that never
+   names the answer.
 10. Schedule delayed review. The Review tab opens the due moment on the Learn board.
     Successful delayed reviews expand to 3, 7, 14, then 30 days; a lapse returns the
     interval to one day. Two successful delayed reviews mark mastery.

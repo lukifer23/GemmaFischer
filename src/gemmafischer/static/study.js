@@ -17,6 +17,7 @@ const study = {
   moves: [],
   focusSquare: "a8",
   locked: false,
+  hintUsed: false,
   pollController: null,
 };
 
@@ -286,6 +287,7 @@ function openMoment(moment, phase, fen = null) {
   study.selected = null;
   study.moves = [];
   study.locked = false;
+  study.hintUsed = false;
   study.focusSquare = study.job?.game?.perspective === "black" ? "h1" : "a8";
   $s("study-work").hidden = true;
   $s("practice-work").hidden = false;
@@ -297,6 +299,8 @@ function openMoment(moment, phase, fen = null) {
       ? "This idea is due. Play the stronger continuation again."
       : "Use the idea, not just your memory of the move.";
   $s("attempt-feedback").hidden = true;
+  $s("study-hint").hidden = true;
+  $s("study-hint-button").hidden = false;
   $s("retry-moment").hidden = true;
   $s("transfer-moment").hidden = true;
   $s("next-moment").hidden = true;
@@ -339,7 +343,7 @@ async function submitAttempt(move) {
           expected_revision: study.job.revision,
           phase: study.phase,
           move_uci: move,
-          hint_used: false,
+          hint_used: study.hintUsed,
         }),
       },
     );
@@ -490,6 +494,20 @@ $s("close-study-practice").addEventListener("click", () => {
   $s("practice-work").hidden = true;
   $s("study-work").hidden = false;
   if (study.job) renderJob(study.job);
+});
+$s("study-hint-button").addEventListener("click", async () => {
+  if (!study.job || !study.moment) return;
+  try {
+    const hint = await studyApi(
+      `/api/v1/studies/${study.job.job_id}/moments/${study.moment.moment_id}/hint`,
+    );
+    study.hintUsed = true;
+    $s("study-hint").hidden = false;
+    $s("study-hint").textContent = hint.text;
+    $s("study-hint-button").hidden = true;
+  } catch (error) {
+    $s("study-board-status").textContent = error.message;
+  }
 });
 $s("retry-moment").addEventListener("click", () => openMoment(study.moment, "retry"));
 $s("transfer-moment").addEventListener("click", (event) => openMoment(study.moment, "transfer", event.currentTarget.dataset.fen));

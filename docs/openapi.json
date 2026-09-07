@@ -539,7 +539,13 @@
               "castling",
               "material_change",
               "opponent_check",
-              "development"
+              "development",
+              "missed_mate",
+              "hanging_piece",
+              "missed_capture",
+              "back_rank",
+              "fork",
+              "failed_check_evasion"
             ],
             "title": "Concept",
             "type": "string"
@@ -1228,7 +1234,13 @@
               "notice_material_change",
               "notice_opponent_check",
               "notice_development",
-              "notice_calculation"
+              "notice_calculation",
+              "notice_missed_mate",
+              "notice_hanging_piece",
+              "notice_missed_capture",
+              "notice_back_rank",
+              "notice_fork",
+              "notice_failed_check_evasion"
             ],
             "title": "Template Id",
             "type": "string"
@@ -1285,6 +1297,44 @@
           "end_ply"
         ],
         "title": "LineClaim",
+        "type": "object"
+      },
+      "MomentHint": {
+        "additionalProperties": false,
+        "properties": {
+          "concept_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concept Key"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "hint_used": {
+            "default": false,
+            "title": "Hint Used",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "evidence_ids"
+        ],
+        "title": "MomentHint",
         "type": "object"
       },
       "MoveClaim": {
@@ -4012,6 +4062,64 @@
           }
         },
         "summary": "Create Practice Attempt"
+      }
+    },
+    "/api/v1/studies/{job_id}/moments/{moment_id}/hint": {
+      "get": {
+        "operationId": "learning_moment_hint_api_v1_studies__job_id__moments__moment_id__hint_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "moment_id",
+            "required": true,
+            "schema": {
+              "title": "Moment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MomentHint"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Learning Moment Hint"
       }
     },
     "/api/v1/studies/{job_id}/moments/{moment_id}/legal-moves": {

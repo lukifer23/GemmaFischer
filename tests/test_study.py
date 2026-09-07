@@ -8,7 +8,7 @@ import pytest
 
 from gemmafischer.service import AnalysisService
 from gemmafischer.storage import AnalysisStore
-from gemmafischer.study import decision_positions, parse_import
+from gemmafischer.study import decision_positions, parse_import, primary_idea
 from gemmafischer.study_domain import (
     AttemptOutcome,
     LearningMomentPrivate,
@@ -204,5 +204,15 @@ def test_first_miss_stays_hidden_then_retry_reveals_and_schedules(tmp_path: Path
         assert retried_moment.practice_status == "scheduled"
         assert service.progress().attempts == 2
         assert service.progress().learning == 1
+        hint = service.moment_hint(job.job_id, moment.moment_id)
+        assert hint.text
+        assert moment.played_move_uci not in hint.text
+        assert moment.played_move_san not in hint.text
     finally:
         service.close()
+
+
+def test_primary_idea_prefers_teaching_labels_over_geometry() -> None:
+    assert primary_idea(("capture", "development")) is None
+    assert primary_idea(("development", "hanging_piece", "capture")) == "hanging_piece"
+    assert primary_idea(("missed_mate", "fork")) == "missed_mate"
