@@ -59,7 +59,10 @@ candidate until a new qualification receipt is recorded.
 - Physical desktop and VoiceOver acceptance on supported target hardware.
 - Study screening persists a ply cursor and shortlist records so preempt/resume
   does not replay ply 1. Practice and tutor grading retry when gameplay preempts
-  and do not hold session/create locks across Stockfish.
+  and do not hold session/create locks across Stockfish. Analysis waits have a
+  120s deadline; gameplay searches cap at 30s; SQLite busy timeout is 1s.
+  Exhibition no longer blocks the next ply on review completion. Learn accepts a
+  PGN file up to 256 KiB.
 - PGN stage timings, cold starts, natural exhibition, reduced-motion/keyboard/CLS.
 - Blinded human comparison of actual learning usefulness on the deterministic lesson.
 - A fully qualified adapter, if Gemma earns a role. Deterministic behavior remains the

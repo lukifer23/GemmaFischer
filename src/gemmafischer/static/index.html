@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/app.css?v=20260907">
 </head>
 <body>
+  <a class="skip-link" href="#learn-view">Skip to Learn</a>
   <header class="site-header">
     <div><p class="eyebrow">Local chess, accountable coaching</p><h1>GemmaFischer</h1></div>
     <nav class="product-nav" aria-label="Primary">
@@ -25,6 +26,8 @@
       <form id="pgn-form" class="import-card">
         <label for="pgn">One game in PGN format</label>
         <textarea id="pgn" rows="9" required spellcheck="false" placeholder="[Event &quot;Club game&quot;]&#10;[White &quot;Your name&quot;]&#10;[Black &quot;Opponent&quot;]&#10;&#10;1. e4 e5 2. Nf3 …"></textarea>
+        <label for="pgn-file">Or load a PGN file</label>
+        <input id="pgn-file" type="file" accept=".pgn,text/plain,application/x-chess-pgn">
         <div class="import-options">
           <label for="study-perspective">Learn as</label><select id="study-perspective"><option value="auto">Detect by player name</option><option value="white">White</option><option value="black">Black</option></select>
           <label for="player-name">Player name</label><input id="player-name" maxlength="120" autocomplete="name">

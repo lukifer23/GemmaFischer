@@ -36,6 +36,8 @@ from .domain import (
 )
 
 NODE_BUDGET = 250_000
+ANALYSIS_WAIT_TIMEOUT = 120.0
+GAMEPLAY_TIME_CAP = 30.0
 ENGINE_OPTIONS: dict[str, int | bool] = {
     "Threads": 1,
     "Hash": 64,
@@ -384,7 +386,7 @@ class StockfishProvider:
     def __init__(self, path: str | None = None, node_budget: int = NODE_BUDGET) -> None:
         self.path = resolve_stockfish(path)
         self.node_budget = node_budget
-        self.binary_sha256 = sha256_file(self.path)
+        self._binary_sha256: str | None = None
         self._engine: chess.engine.SimpleEngine | None = None
         self._condition = threading.Condition()
         self._active_operation: EngineOperation | None = None
@@ -395,6 +397,16 @@ class StockfishProvider:
         self._closed = False
         self._started_at: datetime | None = None
         self._applied_options: dict[str, int | str | bool | None] = {}
+
+    @property
+    def binary_sha256(self) -> str:
+        if self._binary_sha256 is None:
+            self._binary_sha256 = sha256_file(self.path)
+        return self._binary_sha256
+
+    @binary_sha256.setter
+    def binary_sha256(self, value: str) -> None:
+        self._binary_sha256 = value
 
     def __enter__(self) -> StockfishProvider:
         return self
@@ -552,9 +564,20 @@ class StockfishProvider:
         root_moves: list[chess.Move] | None = None,
     ) -> list[chess.engine.InfoDict]:
         """Run interruptible analysis without destroying the persistent engine."""
+        time_cap = (
+            ANALYSIS_WAIT_TIMEOUT
+            if limit.time is None
+            else min(limit.time, ANALYSIS_WAIT_TIMEOUT)
+        )
+        capped = chess.engine.Limit(
+            nodes=limit.nodes,
+            time=time_cap,
+            depth=limit.depth,
+            mate=limit.mate,
+        )
         analysis = engine.analysis(
             board,
-            limit,
+            capped,
             multipv=multipv,
             root_moves=root_moves,
             info=chess.engine.INFO_ALL,
@@ -769,7 +792,10 @@ class StockfishProvider:
                         applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
                     engine.configure(applied)
                     self._applied_options = applied
-                    reply = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
+                    reply = engine.play(
+                        board,
+                        chess.engine.Limit(nodes=engine_nodes, time=GAMEPLAY_TIME_CAP),
+                    ).move
                     if reply is None:
                         raise RuntimeError("Stockfish returned no move")
                     return engine.id.get("name", "Stockfish"), reply
@@ -816,7 +842,10 @@ class StockfishProvider:
                     applied["Skill Level"] = GAME_SKILL_LEVEL[difficulty]
                 engine.configure(applied)
                 self._applied_options = applied
-                move = engine.play(board, chess.engine.Limit(nodes=engine_nodes)).move
+                move = engine.play(
+                    board,
+                    chess.engine.Limit(nodes=engine_nodes, time=GAMEPLAY_TIME_CAP),
+                ).move
                 if move is None:
                     raise RuntimeError("Stockfish returned no move")
                 return engine.id.get("name", "Stockfish"), move

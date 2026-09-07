@@ -997,7 +997,7 @@ class AnalysisStore:
             raise StorageUnavailable("The history database is unavailable.") from exc
 
     def _connect_raw(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path, timeout=0.25)
+        connection = sqlite3.connect(self.path, timeout=1.0)
         connection.execute("PRAGMA foreign_keys=ON")
         return connection
 

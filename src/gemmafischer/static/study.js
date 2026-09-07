@@ -18,6 +18,8 @@ const study = {
   focusSquare: "a8",
   locked: false,
   hintUsed: false,
+  lastMove: [],
+  engineMove: [],
   pollController: null,
 };
 
@@ -154,6 +156,10 @@ async function pollStudy(jobId) {
   setSubmitBusy(true);
   try {
     while (!controller.signal.aborted) {
+      if (document.hidden) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
       const job = await studyApi(`/api/v1/study-jobs/${jobId}`, { signal: controller.signal });
       renderJob(job);
       if (terminalStudyStates.has(job.state)) return;
@@ -193,6 +199,8 @@ function renderStudyBoard() {
     button.type = "button";
     button.className = `square ${(Math.floor(index / 8) + index) % 2 ? "dark" : "light"}`;
     if (study.selected === square) button.classList.add("selected");
+    if (study.lastMove.includes(square)) button.classList.add("last-move");
+    if (study.engineMove.includes(square)) button.classList.add("engine-move");
     if (!study.locked && study.moves.some((move) => move.slice(2, 4) === square)) {
       button.classList.add(position[square] ? "legal-capture" : "legal-target");
     }
@@ -221,6 +229,11 @@ function studyBoardKeydown(event) {
     study.selected = null;
     study.moves = [];
     renderStudyBoard();
+    return;
+  }
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    void selectStudySquare(event.currentTarget.dataset.square);
     return;
   }
   if (!(event.key in deltas)) return;
@@ -288,6 +301,8 @@ function openMoment(moment, phase, fen = null) {
   study.moves = [];
   study.locked = false;
   study.hintUsed = false;
+  study.lastMove = [];
+  study.engineMove = [];
   study.focusSquare = study.job?.game?.perspective === "black" ? "h1" : "a8";
   $s("study-work").hidden = true;
   $s("practice-work").hidden = false;
@@ -349,6 +364,7 @@ async function submitAttempt(move) {
     );
     const feedback = $s("attempt-feedback");
     feedback.hidden = false;
+    study.lastMove = [move.slice(0, 2), move.slice(2, 4)];
     if (!attempt.feedback) {
       feedback.textContent = "Not quite. The answer is still hidden. Retry this position and calculate once more.";
       $s("retry-moment").hidden = false;
@@ -356,6 +372,8 @@ async function submitAttempt(move) {
       return;
     }
     feedback.textContent = `${attempt.outcome === "incorrect" ? "The engine prefers" : "Good."} ${attempt.feedback.preferred_move_san}. ${attempt.feedback.message}`;
+    const preferred = attempt.feedback.preferred_move_uci;
+    study.engineMove = [preferred.slice(0, 2), preferred.slice(2, 4)];
     study.locked = true;
     study.selected = null;
     study.moves = [];
@@ -468,6 +486,16 @@ async function restoreLatestStudy() {
 
 document.querySelectorAll(".nav-tab").forEach((tab) => tab.addEventListener("click", () => showView(tab.dataset.view)));
 $s("study-perspective").addEventListener("change", () => { $s("player-name").disabled = $s("study-perspective").value !== "auto"; });
+$s("pgn-file").addEventListener("change", async (event) => {
+  const file = event.currentTarget.files?.[0];
+  if (!file) return;
+  if (file.size > 256 * 1024) {
+    setStudyError("PGN files are limited to 256 KiB.");
+    event.currentTarget.value = "";
+    return;
+  }
+  $s("pgn").value = await file.text();
+});
 $s("analyze-another").addEventListener("click", () => {
   setImportCollapsed(false);
   $s("pgn").focus();

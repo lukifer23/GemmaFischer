@@ -29,6 +29,8 @@ def test_health_and_player_are_local_and_self_hosted() -> None:
         assert 'aria-live="polite"' in page.text
         assert 'id="next-moment"' in page.text
         assert 'id="analyze-another"' in page.text
+        assert 'id="pgn-file"' in page.text
+        assert "skip-link" in page.text
         assert 'id="study-work" class="study-work" aria-live="polite"' not in page.text
         assert "https://" not in page.text
 

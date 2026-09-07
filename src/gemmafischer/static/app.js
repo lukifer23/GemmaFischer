@@ -262,6 +262,11 @@ function boardKeydown(event) {
     ArrowUp: [0, -1],
     ArrowDown: [0, 1],
   };
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    void selectSquare(event.currentTarget.dataset.square);
+    return;
+  }
   if (!(event.key in deltas)) return;
   event.preventDefault();
   const order = boardOrder(),
@@ -572,7 +577,7 @@ async function runExhibition(token) {
       savePreferences();
       endBusy(busyToken);
       if (ply.analysis_id)
-        await pollAnalysis(ply.analysis_id, `Review of ${ply.move_san}`);
+        void pollAnalysis(ply.analysis_id, `Review of ${ply.move_san}`);
       if (
         next.status === "complete" ||
         token !== state.exhibitionToken ||
@@ -606,6 +611,10 @@ async function pollAnalysis(analysisId, label) {
   $("cancel").hidden = false;
   try {
     while (token === state.reviewToken && contextIsCurrent(context)) {
+      if (document.hidden) {
+        await wait(500);
+        continue;
+      }
       const data = await api(`/api/v1/analyses/${analysisId}`, {
           signal: controller.signal,
         }),
