@@ -564,6 +564,7 @@ def test_tutor_practice_is_evidence_graded_redacted_and_persistent(tmp_path: Pat
         assert restored.json()["status"] == "complete"
 
 
+@pytest.mark.hardware
 def test_tutor_hides_preferred_move_until_retry(tmp_path: Path) -> None:
     headers = {"X-GemmaFischer-Token": TOKEN}
     with TestClient(
