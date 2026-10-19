@@ -14,7 +14,7 @@ dependencies = [
   "pydantic>=2.11,<3",
   "python-chess>=1.999,<2",
   "rfc8785>=0.1.4,<0.2",
-  "uvicorn>=0.52,<0.53",
+  "uvicorn>=0.52,<0.55",
 ]
 
 [project.optional-dependencies]
