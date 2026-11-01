@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
-  "fastapi>=0.141.1,<0.142",
+  "fastapi>=0.141.1,<0.163",
   "pydantic>=2.11,<3",
   "python-chess>=1.999,<2",
   "rfc8785>=0.1.4,<0.2",
