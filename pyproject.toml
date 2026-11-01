@@ -19,7 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 deterministic = []
-full = ["mlx-lm>=0.31.3,<0.32", "psutil>=7,<8"]
+full = ["mlx-lm>=0.31.3,<0.33", "psutil>=7,<8"]
 data = ["zstandard>=0.25,<0.26"]
 
 [dependency-groups]
