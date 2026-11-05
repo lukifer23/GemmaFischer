@@ -11,7 +11,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-from playwright.sync_api import ConsoleMessage, Page, sync_playwright
+from playwright.sync_api import ConsoleMessage, Page, expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -39,8 +39,10 @@ def wait_for_server(url: str, process: subprocess.Popen[bytes]) -> None:
 def assert_layout(page: Page, mobile: bool) -> None:
     overflow = page.evaluate("document.documentElement.scrollWidth > innerWidth")
     assert not overflow, "page has horizontal overflow"
-    assert page.locator("#board .square").count() == 64
-    assert page.locator('#board .square[tabindex="0"]').count() == 1
+    # Opening Position Lab starts async session creation. The board is intentionally
+    # unfocusable while that transition is pending, even though #status is visible.
+    expect(page.locator("#board .square")).to_have_count(64, timeout=10_000)
+    expect(page.locator('#board .square[tabindex="0"]')).to_have_count(1, timeout=10_000)
     if mobile:
         positions = page.evaluate(
             """() => ['board-pane','result-pane','controls-pane'].map(
